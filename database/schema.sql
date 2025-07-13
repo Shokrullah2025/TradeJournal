@@ -453,7 +453,6 @@ CREATE TABLE revenue_analytics (
 -- NOTE: For development, trial system is disabled
 -- These tables are ready for production use
 -- ========================================
-
 CREATE TABLE user_trials (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
@@ -466,16 +465,15 @@ CREATE TABLE user_trials (
     cancellation_reason TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE SET NULL,
-    INDEX idx_user_id (user_id),
-    INDEX idx_trial_type (trial_type),
-    INDEX idx_status (status),
-    INDEX idx_ends_at (ends_at),
-    UNIQUE KEY unique_user_trial_type (user_id, trial_type)
+    FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE
+    SET NULL,
+        INDEX idx_user_id (user_id),
+        INDEX idx_trial_type (trial_type),
+        INDEX idx_status (status),
+        INDEX idx_ends_at (ends_at),
+        UNIQUE KEY unique_user_trial_type (user_id, trial_type)
 );
-
 -- User account requirements tracking
 CREATE TABLE user_account_requirements (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -496,14 +494,12 @@ CREATE TABLE user_account_requirements (
     onboarding_completed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_requirements (user_id),
     INDEX idx_email_verified (email_verified),
     INDEX idx_payment_method_verified (payment_method_verified),
     INDEX idx_can_access_platform (can_access_platform)
 );
-
 -- Admin revenue dashboard views
 CREATE TABLE admin_revenue_filters (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -851,25 +847,20 @@ ELSE
 SET is_valid = FALSE;
 SET user_id = NULL;
 END IF;
-END // 
-
-DELIMITER ;
-
+END // DELIMITER;
 -- Admin revenue and user management procedures
-DELIMITER //
-CREATE PROCEDURE GetAdminUserList(
+DELIMITER // CREATE PROCEDURE GetAdminUserList(
     IN admin_user_id BIGINT,
     IN search_term VARCHAR(255),
     IN status_filter VARCHAR(50),
     IN subscription_filter VARCHAR(50),
     IN limit_count INT,
     IN offset_count INT
-)
-BEGIN
-    DECLARE sql_query TEXT;
-    
-    -- Build dynamic query based on filters
-    SET sql_query = CONCAT('
+) BEGIN
+DECLARE sql_query TEXT;
+-- Build dynamic query based on filters
+SET sql_query = CONCAT(
+        '
         SELECT 
             u.id,
             u.email,
@@ -892,40 +883,62 @@ BEGIN
         LEFT JOIN user_subscriptions us ON u.id = us.user_id AND us.status IN ("active", "trial")
         LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
         WHERE u.role != "admin"
-    ');
-    
-    -- Add search filter
-    IF search_term IS NOT NULL AND search_term != '' THEN
-        SET sql_query = CONCAT(sql_query, ' AND (u.email LIKE "%', search_term, '%" OR u.username LIKE "%', search_term, '%" OR CONCAT(up.first_name, " ", up.last_name) LIKE "%', search_term, '%")');
-    END IF;
-    
-    -- Add status filter
-    IF status_filter IS NOT NULL AND status_filter != '' AND status_filter != 'all' THEN
-        SET sql_query = CONCAT(sql_query, ' AND u.status = "', status_filter, '"');
-    END IF;
-    
-    -- Add subscription filter
-    IF subscription_filter IS NOT NULL AND subscription_filter != '' AND subscription_filter != 'all' THEN
-        IF subscription_filter = 'active' THEN
-            SET sql_query = CONCAT(sql_query, ' AND us.status = "active"');
-        ELSEIF subscription_filter = 'trial' THEN
-            SET sql_query = CONCAT(sql_query, ' AND us.status = "trial"');
-        ELSEIF subscription_filter = 'expired' THEN
-            SET sql_query = CONCAT(sql_query, ' AND (us.status = "expired" OR us.status IS NULL)');
-        END IF;
-    END IF;
-    
-    -- Add ordering and pagination
-    SET sql_query = CONCAT(sql_query, ' ORDER BY u.created_at DESC LIMIT ', limit_count, ' OFFSET ', offset_count);
-    
-    -- Execute the query
-    SET @sql = sql_query;
-    PREPARE stmt FROM @sql;
-    EXECUTE stmt;
-    DEALLOCATE PREPARE stmt;
-END //
-
--- Get user invoices with filtering
+    '
+    );
+-- Add search filter
+IF search_term IS NOT NULL
+AND search_term != '' THEN
+SET sql_query = CONCAT(
+        sql_query,
+        ' AND (u.email LIKE "%',
+        search_term,
+        '%" OR u.username LIKE "%',
+        search_term,
+        '%" OR CONCAT(up.first_name, " ", up.last_name) LIKE "%',
+        search_term,
+        '%")'
+    );
+END IF;
+-- Add status filter
+IF status_filter IS NOT NULL
+AND status_filter != ''
+AND status_filter != 'all' THEN
+SET sql_query = CONCAT(
+        sql_query,
+        ' AND u.status = "',
+        status_filter,
+        '"'
+    );
+END IF;
+-- Add subscription filter
+IF subscription_filter IS NOT NULL
+AND subscription_filter != ''
+AND subscription_filter != 'all' THEN IF subscription_filter = 'active' THEN
+SET sql_query = CONCAT(sql_query, ' AND us.status = "active"');
+ELSEIF subscription_filter = 'trial' THEN
+SET sql_query = CONCAT(sql_query, ' AND us.status = "trial"');
+ELSEIF subscription_filter = 'expired' THEN
+SET sql_query = CONCAT(
+        sql_query,
+        ' AND (us.status = "expired" OR us.status IS NULL)'
+    );
+END IF;
+END IF;
+-- Add ordering and pagination
+SET sql_query = CONCAT(
+        sql_query,
+        ' ORDER BY u.created_at DESC LIMIT ',
+        limit_count,
+        ' OFFSET ',
+        offset_count
+    );
+-- Execute the query
+SET @sql = sql_query;
+PREPARE stmt
+FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+END // -- Get user invoices with filtering
 CREATE PROCEDURE GetUserInvoices(
     IN user_id_param BIGINT,
     IN start_date DATE,
@@ -933,220 +946,238 @@ CREATE PROCEDURE GetUserInvoices(
     IN status_filter VARCHAR(50),
     IN limit_count INT,
     IN offset_count INT
-)
-BEGIN
-    SELECT 
-        i.id,
-        i.invoice_number,
-        i.amount_cents,
-        i.tax_amount_cents,
-        i.discount_amount_cents,
-        i.total_amount_cents,
-        i.currency,
-        i.status,
-        i.billing_period_start,
-        i.billing_period_end,
-        i.due_date,
-        i.paid_at,
-        i.invoice_pdf_url,
-        i.billing_details,
-        i.line_items,
-        i.created_at,
-        u.email as user_email,
-        CONCAT(up.first_name, " ", up.last_name) as user_full_name,
-        sp.name as plan_name
-    FROM invoices i
+) BEGIN
+SELECT i.id,
+    i.invoice_number,
+    i.amount_cents,
+    i.tax_amount_cents,
+    i.discount_amount_cents,
+    i.total_amount_cents,
+    i.currency,
+    i.status,
+    i.billing_period_start,
+    i.billing_period_end,
+    i.due_date,
+    i.paid_at,
+    i.invoice_pdf_url,
+    i.billing_details,
+    i.line_items,
+    i.created_at,
+    u.email as user_email,
+    CONCAT(up.first_name, " ", up.last_name) as user_full_name,
+    sp.name as plan_name
+FROM invoices i
     JOIN users u ON i.user_id = u.id
     LEFT JOIN user_profiles up ON u.id = up.user_id
     LEFT JOIN user_subscriptions us ON i.subscription_id = us.id
     LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
-    WHERE (user_id_param IS NULL OR i.user_id = user_id_param)
-    AND (start_date IS NULL OR i.billing_period_start >= start_date)
-    AND (end_date IS NULL OR i.billing_period_end <= end_date)
-    AND (status_filter IS NULL OR status_filter = 'all' OR i.status = status_filter)
-    ORDER BY i.created_at DESC
-    LIMIT limit_count OFFSET offset_count;
-END //
-
--- Calculate revenue for specific period
+WHERE (
+        user_id_param IS NULL
+        OR i.user_id = user_id_param
+    )
+    AND (
+        start_date IS NULL
+        OR i.billing_period_start >= start_date
+    )
+    AND (
+        end_date IS NULL
+        OR i.billing_period_end <= end_date
+    )
+    AND (
+        status_filter IS NULL
+        OR status_filter = 'all'
+        OR i.status = status_filter
+    )
+ORDER BY i.created_at DESC
+LIMIT limit_count OFFSET offset_count;
+END // -- Calculate revenue for specific period
 CREATE PROCEDURE CalculateRevenueAnalytics(
     IN period_type_param VARCHAR(10),
     IN start_date DATE,
     IN end_date DATE
-)
-BEGIN
-    DECLARE total_revenue_cents INT DEFAULT 0;
-    DECLARE subscription_revenue_cents INT DEFAULT 0;
-    DECLARE trial_conversions INT DEFAULT 0;
-    DECLARE new_subscriptions INT DEFAULT 0;
-    DECLARE cancelled_subscriptions INT DEFAULT 0;
-    DECLARE active_subscriptions INT DEFAULT 0;
-    DECLARE total_users INT DEFAULT 0;
-    DECLARE active_users INT DEFAULT 0;
-    DECLARE churn_rate DECIMAL(5, 2) DEFAULT 0.00;
-    DECLARE mrr_cents INT DEFAULT 0;
-    DECLARE arr_cents INT DEFAULT 0;
-    
-    -- Calculate total revenue from paid invoices
-    SELECT COALESCE(SUM(total_amount_cents), 0) INTO total_revenue_cents
-    FROM invoices 
-    WHERE status = 'paid' 
-    AND paid_at >= start_date 
+) BEGIN
+DECLARE total_revenue_cents INT DEFAULT 0;
+DECLARE subscription_revenue_cents INT DEFAULT 0;
+DECLARE trial_conversions INT DEFAULT 0;
+DECLARE new_subscriptions INT DEFAULT 0;
+DECLARE cancelled_subscriptions INT DEFAULT 0;
+DECLARE active_subscriptions INT DEFAULT 0;
+DECLARE total_users INT DEFAULT 0;
+DECLARE active_users INT DEFAULT 0;
+DECLARE churn_rate DECIMAL(5, 2) DEFAULT 0.00;
+DECLARE mrr_cents INT DEFAULT 0;
+DECLARE arr_cents INT DEFAULT 0;
+-- Calculate total revenue from paid invoices
+SELECT COALESCE(SUM(total_amount_cents), 0) INTO total_revenue_cents
+FROM invoices
+WHERE status = 'paid'
+    AND paid_at >= start_date
     AND paid_at <= end_date;
-    
-    -- Calculate subscription revenue (excluding one-time charges)
-    SELECT COALESCE(SUM(i.total_amount_cents), 0) INTO subscription_revenue_cents
-    FROM invoices i
+-- Calculate subscription revenue (excluding one-time charges)
+SELECT COALESCE(SUM(i.total_amount_cents), 0) INTO subscription_revenue_cents
+FROM invoices i
     JOIN user_subscriptions us ON i.subscription_id = us.id
-    WHERE i.status = 'paid' 
-    AND i.paid_at >= start_date 
+WHERE i.status = 'paid'
+    AND i.paid_at >= start_date
     AND i.paid_at <= end_date;
-    
-    -- Calculate trial conversions
-    SELECT COUNT(*) INTO trial_conversions
-    FROM user_trials ut
-    WHERE ut.status = 'converted'
-    AND ut.conversion_date >= start_date 
+-- Calculate trial conversions
+SELECT COUNT(*) INTO trial_conversions
+FROM user_trials ut
+WHERE ut.status = 'converted'
+    AND ut.conversion_date >= start_date
     AND ut.conversion_date <= end_date;
-    
-    -- Calculate new subscriptions
-    SELECT COUNT(*) INTO new_subscriptions
-    FROM user_subscriptions us
+-- Calculate new subscriptions
+SELECT COUNT(*) INTO new_subscriptions
+FROM user_subscriptions us
     JOIN subscription_plans sp ON us.plan_id = sp.id
-    WHERE us.status = 'active'
+WHERE us.status = 'active'
     AND sp.name != 'Trial'
-    AND us.starts_at >= start_date 
+    AND us.starts_at >= start_date
     AND us.starts_at <= end_date;
-    
-    -- Calculate cancelled subscriptions
-    SELECT COUNT(*) INTO cancelled_subscriptions
-    FROM user_subscriptions us
-    WHERE us.status = 'cancelled'
-    AND us.updated_at >= start_date 
+-- Calculate cancelled subscriptions
+SELECT COUNT(*) INTO cancelled_subscriptions
+FROM user_subscriptions us
+WHERE us.status = 'cancelled'
+    AND us.updated_at >= start_date
     AND us.updated_at <= end_date;
-    
-    -- Calculate active subscriptions
-    SELECT COUNT(*) INTO active_subscriptions
-    FROM user_subscriptions us
+-- Calculate active subscriptions
+SELECT COUNT(*) INTO active_subscriptions
+FROM user_subscriptions us
     JOIN subscription_plans sp ON us.plan_id = sp.id
-    WHERE us.status = 'active'
+WHERE us.status = 'active'
     AND sp.name != 'Trial'
     AND us.ends_at > NOW();
-    
-    -- Calculate total users
-    SELECT COUNT(*) INTO total_users
-    FROM users 
-    WHERE created_at >= start_date 
+-- Calculate total users
+SELECT COUNT(*) INTO total_users
+FROM users
+WHERE created_at >= start_date
     AND created_at <= end_date;
-    
-    -- Calculate active users (logged in during period)
-    SELECT COUNT(DISTINCT user_id) INTO active_users
-    FROM user_sessions
-    WHERE last_accessed_at >= start_date 
+-- Calculate active users (logged in during period)
+SELECT COUNT(DISTINCT user_id) INTO active_users
+FROM user_sessions
+WHERE last_accessed_at >= start_date
     AND last_accessed_at <= end_date;
-    
-    -- Calculate churn rate
-    IF (active_subscriptions + cancelled_subscriptions) > 0 THEN
-        SET churn_rate = (cancelled_subscriptions / (active_subscriptions + cancelled_subscriptions)) * 100;
-    END IF;
-    
-    -- Calculate MRR (Monthly Recurring Revenue)
-    SELECT COALESCE(SUM(
-        CASE 
-            WHEN sp.billing_cycle = 'monthly' THEN sp.price * 100
-            WHEN sp.billing_cycle = 'yearly' THEN (sp.price * 100) / 12
-            ELSE 0
-        END
-    ), 0) INTO mrr_cents
-    FROM user_subscriptions us
+-- Calculate churn rate
+IF (active_subscriptions + cancelled_subscriptions) > 0 THEN
+SET churn_rate = (
+        cancelled_subscriptions / (active_subscriptions + cancelled_subscriptions)
+    ) * 100;
+END IF;
+-- Calculate MRR (Monthly Recurring Revenue)
+SELECT COALESCE(
+        SUM(
+            CASE
+                WHEN sp.billing_cycle = 'monthly' THEN sp.price * 100
+                WHEN sp.billing_cycle = 'yearly' THEN (sp.price * 100) / 12
+                ELSE 0
+            END
+        ),
+        0
+    ) INTO mrr_cents
+FROM user_subscriptions us
     JOIN subscription_plans sp ON us.plan_id = sp.id
-    WHERE us.status = 'active' 
+WHERE us.status = 'active'
     AND sp.name != 'Trial'
     AND us.ends_at > NOW();
-    
-    -- Calculate ARR (Annual Recurring Revenue)
-    SET arr_cents = mrr_cents * 12;
-    
-    -- Insert or update revenue analytics
-    INSERT INTO revenue_analytics (
-        period_type, period_start, period_end, total_revenue_cents,
-        subscription_revenue_cents, trial_conversions, new_subscriptions,
-        cancelled_subscriptions, active_subscriptions, total_users,
-        active_users, churn_rate, mrr_cents, arr_cents
+-- Calculate ARR (Annual Recurring Revenue)
+SET arr_cents = mrr_cents * 12;
+-- Insert or update revenue analytics
+INSERT INTO revenue_analytics (
+        period_type,
+        period_start,
+        period_end,
+        total_revenue_cents,
+        subscription_revenue_cents,
+        trial_conversions,
+        new_subscriptions,
+        cancelled_subscriptions,
+        active_subscriptions,
+        total_users,
+        active_users,
+        churn_rate,
+        mrr_cents,
+        arr_cents
     )
-    VALUES (
-        period_type_param, start_date, end_date, total_revenue_cents,
-        subscription_revenue_cents, trial_conversions, new_subscriptions,
-        cancelled_subscriptions, active_subscriptions, total_users,
-        active_users, churn_rate, mrr_cents, arr_cents
-    )
-    ON DUPLICATE KEY UPDATE
-        total_revenue_cents = VALUES(total_revenue_cents),
-        subscription_revenue_cents = VALUES(subscription_revenue_cents),
-        trial_conversions = VALUES(trial_conversions),
-        new_subscriptions = VALUES(new_subscriptions),
-        cancelled_subscriptions = VALUES(cancelled_subscriptions),
-        active_subscriptions = VALUES(active_subscriptions),
-        total_users = VALUES(total_users),
-        active_users = VALUES(active_users),
-        churn_rate = VALUES(churn_rate),
-        mrr_cents = VALUES(mrr_cents),
-        arr_cents = VALUES(arr_cents),
-        updated_at = NOW();
-        
-    -- Return the calculated analytics
-    SELECT * FROM revenue_analytics 
-    WHERE period_type = period_type_param 
-    AND period_start = start_date 
+VALUES (
+        period_type_param,
+        start_date,
+        end_date,
+        total_revenue_cents,
+        subscription_revenue_cents,
+        trial_conversions,
+        new_subscriptions,
+        cancelled_subscriptions,
+        active_subscriptions,
+        total_users,
+        active_users,
+        churn_rate,
+        mrr_cents,
+        arr_cents
+    ) ON DUPLICATE KEY
+UPDATE total_revenue_cents =
+VALUES(total_revenue_cents),
+    subscription_revenue_cents =
+VALUES(subscription_revenue_cents),
+    trial_conversions =
+VALUES(trial_conversions),
+    new_subscriptions =
+VALUES(new_subscriptions),
+    cancelled_subscriptions =
+VALUES(cancelled_subscriptions),
+    active_subscriptions =
+VALUES(active_subscriptions),
+    total_users =
+VALUES(total_users),
+    active_users =
+VALUES(active_users),
+    churn_rate =
+VALUES(churn_rate),
+    mrr_cents =
+VALUES(mrr_cents),
+    arr_cents =
+VALUES(arr_cents),
+    updated_at = NOW();
+-- Return the calculated analytics
+SELECT *
+FROM revenue_analytics
+WHERE period_type = period_type_param
+    AND period_start = start_date
     AND period_end = end_date;
-END //
-
--- Remove admin users from subscription requirements
-CREATE PROCEDURE RemoveAdminSubscriptions()
-BEGIN
-    -- Cancel all admin subscriptions
-    UPDATE user_subscriptions us
+END // -- Remove admin users from subscription requirements
+CREATE PROCEDURE RemoveAdminSubscriptions() BEGIN -- Cancel all admin subscriptions
+UPDATE user_subscriptions us
     JOIN users u ON us.user_id = u.id
-    SET us.status = 'cancelled', us.auto_renew = FALSE
-    WHERE u.role = 'admin';
-    
-    -- Remove admin users from trials
-    UPDATE user_trials ut
+SET us.status = 'cancelled',
+    us.auto_renew = FALSE
+WHERE u.role = 'admin';
+-- Remove admin users from trials
+UPDATE user_trials ut
     JOIN users u ON ut.user_id = u.id
-    SET ut.status = 'cancelled'
-    WHERE u.role = 'admin';
-    
-    -- Update admin access requirements
-    UPDATE user_account_requirements uar
+SET ut.status = 'cancelled'
+WHERE u.role = 'admin';
+-- Update admin access requirements
+UPDATE user_account_requirements uar
     JOIN users u ON uar.user_id = u.id
-    SET uar.can_access_platform = TRUE,
-        uar.onboarding_completed = TRUE,
-        uar.onboarding_completed_at = NOW()
-    WHERE u.role = 'admin';
-END //
-
--- Get current month revenue
-CREATE PROCEDURE GetCurrentMonthRevenue()
-BEGIN
-    DECLARE current_month_start DATE;
-    DECLARE current_month_end DATE;
-    
-    SET current_month_start = DATE_FORMAT(NOW(), '%Y-%m-01');
-    SET current_month_end = LAST_DAY(NOW());
-    
-    CALL CalculateRevenueAnalytics('monthly', current_month_start, current_month_end);
-END //
-
--- Get current year revenue
-CREATE PROCEDURE GetCurrentYearRevenue()
-BEGIN
-    DECLARE current_year_start DATE;
-    DECLARE current_year_end DATE;
-    
-    SET current_year_start = DATE_FORMAT(NOW(), '%Y-01-01');
-    SET current_year_end = DATE_FORMAT(NOW(), '%Y-12-31');
-    
-    CALL CalculateRevenueAnalytics('yearly', current_year_start, current_year_end);
-END //
-
-DELIMITER ;
+SET uar.can_access_platform = TRUE,
+    uar.onboarding_completed = TRUE,
+    uar.onboarding_completed_at = NOW()
+WHERE u.role = 'admin';
+END // -- Get current month revenue
+CREATE PROCEDURE GetCurrentMonthRevenue() BEGIN
+DECLARE current_month_start DATE;
+DECLARE current_month_end DATE;
+SET current_month_start = DATE_FORMAT(NOW(), '%Y-%m-01');
+SET current_month_end = LAST_DAY(NOW());
+CALL CalculateRevenueAnalytics(
+    'monthly',
+    current_month_start,
+    current_month_end
+);
+END // -- Get current year revenue
+CREATE PROCEDURE GetCurrentYearRevenue() BEGIN
+DECLARE current_year_start DATE;
+DECLARE current_year_end DATE;
+SET current_year_start = DATE_FORMAT(NOW(), '%Y-01-01');
+SET current_year_end = DATE_FORMAT(NOW(), '%Y-12-31');
+CALL CalculateRevenueAnalytics('yearly', current_year_start, current_year_end);
+END // DELIMITER;

@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useReducer, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useState,
+} from "react";
 import { format } from "date-fns";
 
 const TradeContext = createContext();
@@ -189,12 +195,12 @@ const tradeReducer = (state, action) => {
       // Filter out trades that already exist (by brokerTradeId)
       const existingBrokerIds = new Set(
         state.trades
-          .filter(trade => trade.brokerTradeId)
-          .map(trade => trade.brokerTradeId)
+          .filter((trade) => trade.brokerTradeId)
+          .map((trade) => trade.brokerTradeId)
       );
 
       const newTrades = importedTrades.filter(
-        trade => !existingBrokerIds.has(trade.brokerTradeId)
+        (trade) => !existingBrokerIds.has(trade.brokerTradeId)
       );
 
       if (newTrades.length === 0) {
@@ -202,7 +208,7 @@ const tradeReducer = (state, action) => {
       }
 
       const allTrades = [...state.trades, ...newTrades];
-      
+
       return {
         ...state,
         trades: allTrades,
@@ -243,15 +249,15 @@ export const TradeProvider = ({ children }) => {
           strategy: "Breakout",
           entryDate: "2025-01-08",
           entryTime: "09:30",
-          entryPrice: 150.00,
-          exitPrice: 155.00,
+          entryPrice: 150.0,
+          exitPrice: 155.0,
           quantity: 100,
           status: "closed",
           setup: "Bull Flag",
           marketCondition: "Bullish",
-          fees: 2.50,
+          fees: 2.5,
           notes: "Clean breakout above resistance",
-          tags: ["momentum", "breakout"]
+          tags: ["momentum", "breakout"],
         },
         {
           id: 2,
@@ -261,15 +267,15 @@ export const TradeProvider = ({ children }) => {
           strategy: "Swing Trading",
           entryDate: "2025-01-09",
           entryTime: "10:15",
-          entryPrice: 220.00,
-          exitPrice: 210.00,
+          entryPrice: 220.0,
+          exitPrice: 210.0,
           quantity: 50,
           status: "closed",
           setup: "Support Bounce",
           marketCondition: "Bearish",
-          fees: 2.00,
+          fees: 2.0,
           notes: "Failed to hold support, cut losses",
-          tags: ["swing", "loss"]
+          tags: ["swing", "loss"],
         },
         {
           id: 3,
@@ -279,15 +285,15 @@ export const TradeProvider = ({ children }) => {
           strategy: "Day Trading",
           entryDate: "2025-01-10",
           entryTime: "11:00",
-          entryPrice: 420.00,
-          exitPrice: 425.00,
+          entryPrice: 420.0,
+          exitPrice: 425.0,
           quantity: 25,
           status: "closed",
           setup: "Momentum",
           marketCondition: "Bullish",
-          fees: 1.50,
+          fees: 1.5,
           notes: "Quick momentum play",
-          tags: ["day-trade", "momentum"]
+          tags: ["day-trade", "momentum"],
         },
         {
           id: 4,
@@ -297,15 +303,15 @@ export const TradeProvider = ({ children }) => {
           strategy: "Pullback",
           entryDate: "2025-01-11",
           entryTime: "14:30",
-          entryPrice: 175.00,
-          exitPrice: 170.00,
+          entryPrice: 175.0,
+          exitPrice: 170.0,
           quantity: 30,
           status: "closed",
           setup: "Bear Flag",
           marketCondition: "Bearish",
-          fees: 2.00,
+          fees: 2.0,
           notes: "Nice pullback trade",
-          tags: ["short", "pullback"]
+          tags: ["short", "pullback"],
         },
         {
           id: 5,
@@ -315,15 +321,15 @@ export const TradeProvider = ({ children }) => {
           strategy: "Breakout",
           entryDate: "2025-01-11",
           entryTime: "15:45",
-          entryPrice: 140.00,
+          entryPrice: 140.0,
           quantity: 40,
           status: "open",
           setup: "Bull Flag",
           marketCondition: "Bullish",
           fees: 0,
           notes: "Holding for breakout continuation",
-          tags: ["breakout", "open"]
-        }
+          tags: ["breakout", "open"],
+        },
       ];
       dispatch({ type: ACTIONS.LOAD_TRADES, payload: sampleTrades });
     }
@@ -426,3 +432,6 @@ export const useTrades = () => {
   }
   return context;
 };
+
+// Export the context itself for direct access if needed
+export { TradeContext };

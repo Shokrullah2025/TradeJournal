@@ -533,7 +533,8 @@ const Billing = () => {
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {payment.nextBillingDate?.toLocaleDateString() || "N/A"}
+                                  {payment.nextBillingDate?.toLocaleDateString() ||
+                                    "N/A"}
                                 </td>
                               </tr>
                             ))}
@@ -601,7 +602,9 @@ const Billing = () => {
                             <h3 className="text-2xl font-bold text-gray-900">
                               {plan.name}
                             </h3>
-                            <p className="mt-2 text-gray-500">{plan.description}</p>
+                            <p className="mt-2 text-gray-500">
+                              {plan.description}
+                            </p>
 
                             <div className="mt-6">
                               <div className="flex items-center justify-center">
@@ -609,17 +612,21 @@ const Billing = () => {
                                   ${getPlanPrice(plan)}
                                 </span>
                                 <span className="text-gray-500 ml-2">
-                                  /{billingCycle === "monthly" ? "month" : "year"}
+                                  /
+                                  {billingCycle === "monthly"
+                                    ? "month"
+                                    : "year"}
                                 </span>
                               </div>
 
-                              {billingCycle === "yearly" && plan.monthlyPrice > 0 && (
-                                <div className="mt-2">
-                                  <span className="text-sm text-green-600">
-                                    Save {getSavingsPercent(plan)}% vs monthly
-                                  </span>
-                                </div>
-                              )}
+                              {billingCycle === "yearly" &&
+                                plan.monthlyPrice > 0 && (
+                                  <div className="mt-2">
+                                    <span className="text-sm text-green-600">
+                                      Save {getSavingsPercent(plan)}% vs monthly
+                                    </span>
+                                  </div>
+                                )}
                             </div>
                           </div>
 
@@ -694,11 +701,20 @@ const Billing = () => {
                             <DollarSign className="w-6 h-6 text-blue-600" />
                           </div>
                           <div className="ml-4">
-                            <p className="text-sm font-medium text-blue-900">Total Paid</p>
+                            <p className="text-sm font-medium text-blue-900">
+                              Total Paid
+                            </p>
                             <p className="text-2xl font-bold text-blue-900">
-                              ${userPayments.reduce((total, payment) => 
-                                payment.status === 'completed' ? total + payment.amount : total, 0
-                              ).toFixed(2)}
+                              $
+                              {userPayments
+                                .reduce(
+                                  (total, payment) =>
+                                    payment.status === "completed"
+                                      ? total + payment.amount
+                                      : total,
+                                  0
+                                )
+                                .toFixed(2)}
                             </p>
                           </div>
                         </div>
@@ -710,9 +726,15 @@ const Billing = () => {
                             <Check className="w-6 h-6 text-green-600" />
                           </div>
                           <div className="ml-4">
-                            <p className="text-sm font-medium text-green-900">Invoices Paid</p>
+                            <p className="text-sm font-medium text-green-900">
+                              Invoices Paid
+                            </p>
                             <p className="text-2xl font-bold text-green-900">
-                              {userPayments.filter(payment => payment.status === 'completed').length}
+                              {
+                                userPayments.filter(
+                                  (payment) => payment.status === "completed"
+                                ).length
+                              }
                             </p>
                           </div>
                         </div>
@@ -724,9 +746,12 @@ const Billing = () => {
                             <Calendar className="w-6 h-6 text-gray-600" />
                           </div>
                           <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-900">Next Invoice</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              Next Invoice
+                            </p>
                             <p className="text-lg font-semibold text-gray-900">
-                              {userPayments.length > 0 && userPayments[0].nextBillingDate
+                              {userPayments.length > 0 &&
+                              userPayments[0].nextBillingDate
                                 ? userPayments[0].nextBillingDate.toLocaleDateString()
                                 : "N/A"}
                             </p>
@@ -766,10 +791,12 @@ const Billing = () => {
                               <tr key={payment.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm font-medium text-gray-900">
-                                    INV-{payment.id.toString().padStart(6, '0')}
+                                    INV-{payment.id.toString().padStart(6, "0")}
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {payment.plan.charAt(0).toUpperCase() + payment.plan.slice(1)} Plan
+                                    {payment.plan.charAt(0).toUpperCase() +
+                                      payment.plan.slice(1)}{" "}
+                                    Plan
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -777,10 +804,16 @@ const Billing = () => {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm text-gray-900">
-                                    {payment.plan.charAt(0).toUpperCase() + payment.plan.slice(1)} Subscription
+                                    {payment.plan.charAt(0).toUpperCase() +
+                                      payment.plan.slice(1)}{" "}
+                                    Subscription
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {payment.billingCycle.charAt(0).toUpperCase() + payment.billingCycle.slice(1)} billing
+                                    {payment.billingCycle
+                                      .charAt(0)
+                                      .toUpperCase() +
+                                      payment.billingCycle.slice(1)}{" "}
+                                    billing
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -796,16 +829,22 @@ const Billing = () => {
                                         : "bg-yellow-100 text-yellow-800"
                                     }`}
                                   >
-                                    {payment.status === "completed" ? "Paid" : payment.status}
+                                    {payment.status === "completed"
+                                      ? "Paid"
+                                      : payment.status}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                   <div className="flex space-x-2">
-                                    <button 
+                                    <button
                                       className="text-blue-600 hover:text-blue-900 inline-flex items-center"
                                       onClick={() => {
                                         // In a real app, this would generate and download the PDF
-                                        toast.success(`Invoice INV-${payment.id.toString().padStart(6, '0')} downloaded`);
+                                        toast.success(
+                                          `Invoice INV-${payment.id
+                                            .toString()
+                                            .padStart(6, "0")} downloaded`
+                                        );
                                       }}
                                     >
                                       <Download className="w-4 h-4 mr-1" />
@@ -828,9 +867,12 @@ const Billing = () => {
                         <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                           <Calendar className="w-12 h-12 text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No invoices yet</h3>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          No invoices yet
+                        </h3>
                         <p className="text-gray-500 mb-6">
-                          Your invoices will appear here after your first payment.
+                          Your invoices will appear here after your first
+                          payment.
                         </p>
                         <button
                           onClick={() => setActiveTab("plans")}
@@ -843,12 +885,19 @@ const Billing = () => {
 
                     {/* Invoice Settings */}
                     <div className="mt-8 pt-6 border-t border-gray-200">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Invoice Settings</h3>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Invoice Settings
+                      </h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">Email invoices automatically</p>
-                            <p className="text-sm text-gray-500">Receive invoices via email when payments are processed</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              Email invoices automatically
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Receive invoices via email when payments are
+                              processed
+                            </p>
                           </div>
                           <button
                             type="button"
@@ -859,11 +908,15 @@ const Billing = () => {
                             <span className="translate-x-5 pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200"></span>
                           </button>
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">Include detailed breakdown</p>
-                            <p className="text-sm text-gray-500">Show itemized details on invoices</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              Include detailed breakdown
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Show itemized details on invoices
+                            </p>
                           </div>
                           <button
                             type="button"

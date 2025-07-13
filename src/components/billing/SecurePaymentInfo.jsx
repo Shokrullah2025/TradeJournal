@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Shield, Lock } from 'lucide-react';
+import React, { useState } from "react";
+import { Eye, EyeOff, Shield, Lock } from "lucide-react";
 
 const SecurePaymentInfo = ({ payment }) => {
   const [showDetails, setShowDetails] = useState(false);
 
   // Mask sensitive information
   const maskCardNumber = (cardNumber) => {
-    if (!cardNumber) return '****';
+    if (!cardNumber) return "****";
     return `****${cardNumber.slice(-4)}`;
   };
 
   const maskEmail = (email) => {
-    if (!email) return '';
-    const [username, domain] = email.split('@');
-    const maskedUsername = username.slice(0, 2) + '*'.repeat(username.length - 2);
+    if (!email) return "";
+    const [username, domain] = email.split("@");
+    const maskedUsername =
+      username.slice(0, 2) + "*".repeat(username.length - 2);
     return `${maskedUsername}@${domain}`;
   };
 
@@ -22,14 +23,20 @@ const SecurePaymentInfo = ({ payment }) => {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
           <Shield className="w-4 h-4 text-green-600" />
-          <span className="text-sm font-medium text-gray-900">Secure Payment Info</span>
+          <span className="text-sm font-medium text-gray-900">
+            Secure Payment Info
+          </span>
         </div>
         <button
           onClick={() => setShowDetails(!showDetails)}
           className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
         >
-          {showDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          <span>{showDetails ? 'Hide' : 'Show'}</span>
+          {showDetails ? (
+            <EyeOff className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
+          <span>{showDetails ? "Hide" : "Show"}</span>
         </button>
       </div>
 
@@ -49,7 +56,7 @@ const SecurePaymentInfo = ({ payment }) => {
         <div className="flex justify-between">
           <span className="text-gray-600">Transaction ID:</span>
           <span className="text-gray-900 font-mono text-xs">
-            {showDetails ? payment.id : payment.id.slice(0, 8) + '...'}
+            {showDetails ? payment.id : payment.id.slice(0, 8) + "..."}
           </span>
         </div>
       </div>

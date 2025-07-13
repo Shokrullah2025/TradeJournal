@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Settings,
   Wifi,
@@ -15,6 +16,7 @@ import {
 import { useBroker } from "../../context/BrokerContext";
 
 const BrokerConfiguration = ({ onTradesImported }) => {
+  const navigate = useNavigate();
   const {
     brokers,
     selectedBroker,
@@ -35,14 +37,9 @@ const BrokerConfiguration = ({ onTradesImported }) => {
   } = useBroker();
 
   const [showConfig, setShowConfig] = useState(false);
-  const [selectedBrokerKey, setSelectedBrokerKey] = useState(selectedBroker || "");
 
-  const handleBrokerConnect = async (brokerKey) => {
-    setSelectedBrokerKey(brokerKey);
-    const success = await connectBroker(brokerKey);
-    if (success) {
-      setShowConfig(false);
-    }
+  const handleConnectBroker = () => {
+    navigate("/brokers");
   };
 
   const handleSync = () => {
@@ -83,10 +80,10 @@ const BrokerConfiguration = ({ onTradesImported }) => {
           </div>
         </div>
         <button
-          onClick={() => setShowConfig(!showConfig)}
+          onClick={handleConnectBroker}
           className="btn btn-secondary text-sm"
         >
-          {showConfig ? "Hide Brokers" : "Connect Broker"}
+          Connect Broker
         </button>
       </div>
 
@@ -161,7 +158,11 @@ const BrokerConfiguration = ({ onTradesImported }) => {
               disabled={syncStatus === "syncing"}
               className="btn btn-primary text-sm flex items-center space-x-1"
             >
-              <RefreshCw className={`w-4 h-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${
+                  syncStatus === "syncing" ? "animate-spin" : ""
+                }`}
+              />
               <span>Sync Now</span>
             </button>
 
@@ -195,109 +196,27 @@ const BrokerConfiguration = ({ onTradesImported }) => {
         </div>
       )}
 
-      {/* Broker Selection */}
-      {showConfig && (
-        <div className="space-y-4">
-          <div className="border-t border-gray-200 pt-4">
-            <h4 className="font-medium text-gray-900 mb-3">Select Your Broker</h4>
-            <p className="text-sm text-gray-600 mb-4">
-              Click on your broker to securely connect via OAuth 2.0. You'll be redirected to your broker's login page.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {Object.entries(brokers).map(([key, broker]) => (
-                <div
-                  key={key}
-                  onClick={() => handleBrokerConnect(key)}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                    selectedBrokerKey === key
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  } ${isConnecting ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{broker.logo}</span>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {broker.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {broker.description}
-                        </div>
-                        <div className="text-xs text-blue-600 flex items-center space-x-1 mt-1">
-                          <Shield className="w-3 h-3" />
-                          <span>OAuth 2.0 Secure</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-1 text-blue-600">
-                      <ExternalLink className="w-4 h-4" />
-                      <span className="text-sm">Connect</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* OAuth Info */}
-          <div className="border-t border-gray-200 pt-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-start space-x-2">
-                <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div>
-                  <h5 className="font-medium text-blue-900">Secure OAuth 2.0 Authentication</h5>
-                  <p className="text-sm text-blue-700 mt-1">
-                    We use OAuth 2.0 for secure authentication. Your login credentials are never shared with our application. 
-                    You'll be redirected to your broker's official login page, and we'll only receive an access token to read your trade data.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-2 pt-4 border-t border-gray-200">
-            {isConnected && (
-              <button
-                onClick={disconnectBroker}
-                className="btn btn-secondary text-sm"
-              >
-                Disconnect
-              </button>
-            )}
-            
-            <button
-              onClick={() => setShowConfig(false)}
-              className="btn btn-secondary text-sm"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Quick Status */}
-      {!showConfig && (
-        <div className="text-sm text-gray-600">
-          {isConnected ? (
-            <div className="flex items-center space-x-2">
-              <span>Connected to {currentBroker?.name}</span>
-              <span>•</span>
-              <span>{accounts.length} account(s)</span>
-              {autoSync && (
-                <>
-                  <span>•</span>
-                  <span>Auto-sync enabled</span>
-                </>
-              )}
-            </div>
-          ) : (
-            <span>No broker connected. Click "Connect Broker" to authenticate with your trading platform using OAuth 2.0.</span>
-          )}
-        </div>
-      )}
+      <div className="text-sm text-gray-600">
+        {isConnected ? (
+          <div className="flex items-center space-x-2">
+            <span>Connected to {currentBroker?.name}</span>
+            <span>•</span>
+            <span>{accounts.length} account(s)</span>
+            {autoSync && (
+              <>
+                <span>•</span>
+                <span>Auto-sync enabled</span>
+              </>
+            )}
+          </div>
+        ) : (
+          <span>
+            No broker connected. Click "Connect Broker" to authenticate with
+            your trading platform using OAuth 2.0.
+          </span>
+        )}
+      </div>
     </div>
   );
 };

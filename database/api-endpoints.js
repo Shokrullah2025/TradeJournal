@@ -19,8 +19,8 @@ const rateLimit = require("express-rate-limit");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const nodemailer = require('nodemailer');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const nodemailer = require("nodemailer");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -112,7 +112,7 @@ const authenticateToken = async (req, res, next) => {
 
 // Email configuration
 const emailTransporter = nodemailer.createTransporter({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: process.env.SMTP_PORT || 587,
   secure: false,
   auth: {
@@ -786,47 +786,47 @@ app.get("/api/user/performance", authenticateToken, async (req, res) => {
 // =============================================
 
 // Send email verification
-app.post('/api/auth/send-verification', async (req, res) => {
+app.post("/api/auth/send-verification", async (req, res) => {
   const { email } = req.body;
 
   try {
     const connection = await pool.getConnection();
-    
+
     // Find user by email
     const [users] = await connection.execute(
-      'SELECT id, email, email_verified FROM users WHERE email = ?',
+      "SELECT id, email, email_verified FROM users WHERE email = ?",
       [email]
     );
 
     if (users.length === 0) {
       connection.release();
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     const user = users[0];
-    
+
     if (user.email_verified) {
       connection.release();
-      return res.status(400).json({ error: 'Email already verified' });
+      return res.status(400).json({ error: "Email already verified" });
     }
 
     // Generate verification token
     const [tokenResult] = await connection.execute(
-      'CALL GenerateEmailVerificationToken(?, @token)'
+      "CALL GenerateEmailVerificationToken(?, @token)"
     );
-    
-    const [tokenRows] = await connection.execute('SELECT @token as token');
+
+    const [tokenRows] = await connection.execute("SELECT @token as token");
     const verificationToken = tokenRows[0].token;
 
     connection.release();
 
     // Send verification email
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-    
+
     await emailTransporter.sendMail({
-      from: process.env.FROM_EMAIL || 'noreply@tradejournalpro.com',
+      from: process.env.FROM_EMAIL || "noreply@tradejournalpro.com",
       to: email,
-      subject: 'Verify Your Email - Trade Journal Pro',
+      subject: "Verify Your Email - Trade Journal Pro",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #2563eb;">Welcome to Trade Journal Pro!</h1>
@@ -843,49 +843,51 @@ app.post('/api/auth/send-verification', async (req, res) => {
       `,
     });
 
-    res.json({ 
-      success: true, 
-      message: 'Verification email sent successfully' 
+    res.json({
+      success: true,
+      message: "Verification email sent successfully",
     });
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    res.status(500).json({ error: 'Failed to send verification email' });
+    console.error("Error sending verification email:", error);
+    res.status(500).json({ error: "Failed to send verification email" });
   }
 });
 
 // Verify email token
-app.post('/api/auth/verify-email', async (req, res) => {
+app.post("/api/auth/verify-email", async (req, res) => {
   const { token } = req.body;
 
   try {
     const connection = await pool.getConnection();
-    
+
     // Verify token
     const [result] = await connection.execute(
-      'CALL VerifyEmailToken(?, @is_valid, @user_id)'
+      "CALL VerifyEmailToken(?, @is_valid, @user_id)"
     );
-    
+
     const [verifyResult] = await connection.execute(
-      'SELECT @is_valid as is_valid, @user_id as user_id'
+      "SELECT @is_valid as is_valid, @user_id as user_id"
     );
-    
+
     const { is_valid, user_id } = verifyResult[0];
 
     if (!is_valid) {
       connection.release();
-      return res.status(400).json({ error: 'Invalid or expired verification token' });
+      return res
+        .status(400)
+        .json({ error: "Invalid or expired verification token" });
     }
 
     connection.release();
 
-    res.json({ 
-      success: true, 
-      message: 'Email verified successfully',
-      user_id: user_id
+    res.json({
+      success: true,
+      message: "Email verified successfully",
+      user_id: user_id,
     });
   } catch (error) {
-    console.error('Error verifying email:', error);
-    res.status(500).json({ error: 'Failed to verify email' });
+    console.error("Error verifying email:", error);
+    res.status(500).json({ error: "Failed to verify email" });
   }
 });
 
@@ -894,36 +896,34 @@ app.post('/api/auth/verify-email', async (req, res) => {
 // =============================================
 
 // Add payment method
-app.post('/api/user/payment-methods', authenticateToken, async (req, res) => {
-  const { 
-    payment_method_id, 
-    billing_name, 
-    billing_email, 
-    billing_address 
-  } = req.body;
+app.post("/api/user/payment-methods", authenticateToken, async (req, res) => {
+  const { payment_method_id, billing_name, billing_email, billing_address } =
+    req.body;
 
   try {
     // Retrieve payment method from Stripe
-    const paymentMethod = await stripe.paymentMethods.retrieve(payment_method_id);
-    
-    if (!paymentMethod || paymentMethod.type !== 'card') {
-      return res.status(400).json({ error: 'Invalid payment method' });
+    const paymentMethod = await stripe.paymentMethods.retrieve(
+      payment_method_id
+    );
+
+    if (!paymentMethod || paymentMethod.type !== "card") {
+      return res.status(400).json({ error: "Invalid payment method" });
     }
 
     // Attach payment method to customer (create customer if needed)
     let customerId = req.user.stripe_customer_id;
-    
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: req.user.email,
-        metadata: { user_id: req.user.id.toString() }
+        metadata: { user_id: req.user.id.toString() },
       });
       customerId = customer.id;
-      
+
       // Update user with customer ID
       const connection = await pool.getConnection();
       await connection.execute(
-        'UPDATE users SET stripe_customer_id = ? WHERE id = ?',
+        "UPDATE users SET stripe_customer_id = ? WHERE id = ?",
         [customerId, req.user.id]
       );
       connection.release();
@@ -936,16 +936,16 @@ app.post('/api/user/payment-methods', authenticateToken, async (req, res) => {
     // Verify payment method with small charge
     const verificationIntent = await stripe.paymentIntents.create({
       amount: 100, // $1.00 verification charge
-      currency: 'usd',
+      currency: "usd",
       payment_method: payment_method_id,
       customer: customerId,
-      confirmation_method: 'manual',
+      confirmation_method: "manual",
       confirm: true,
-      description: 'Payment method verification',
-      metadata: { 
+      description: "Payment method verification",
+      metadata: {
         user_id: req.user.id.toString(),
-        type: 'verification'
-      }
+        type: "verification",
+      },
     });
 
     const connection = await pool.getConnection();
@@ -954,98 +954,106 @@ app.post('/api/user/payment-methods', authenticateToken, async (req, res) => {
       await connection.beginTransaction();
 
       // Save payment method to database
-      const [pmResult] = await connection.execute(`
+      const [pmResult] = await connection.execute(
+        `
         INSERT INTO user_payment_methods (
           user_id, stripe_payment_method_id, card_brand, card_last_four,
           card_exp_month, card_exp_year, billing_name, billing_email, 
           billing_address, is_verified, verification_amount_cents, verified_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-      `, [
-        req.user.id,
-        payment_method_id,
-        paymentMethod.card.brand,
-        paymentMethod.card.last4,
-        paymentMethod.card.exp_month,
-        paymentMethod.card.exp_year,
-        billing_name,
-        billing_email,
-        JSON.stringify(billing_address),
-        verificationIntent.status === 'succeeded',
-        100
-      ]);
+      `,
+        [
+          req.user.id,
+          payment_method_id,
+          paymentMethod.card.brand,
+          paymentMethod.card.last4,
+          paymentMethod.card.exp_month,
+          paymentMethod.card.exp_year,
+          billing_name,
+          billing_email,
+          JSON.stringify(billing_address),
+          verificationIntent.status === "succeeded",
+          100,
+        ]
+      );
 
       // Record verification transaction
-      await connection.execute(`
+      await connection.execute(
+        `
         INSERT INTO payment_transactions (
           user_id, payment_method_id, stripe_payment_intent_id, 
           transaction_type, amount_cents, status, description
         ) VALUES (?, ?, ?, 'verification', 100, ?, 'Payment method verification')
-      `, [
-        req.user.id,
-        pmResult.insertId,
-        verificationIntent.id,
-        verificationIntent.status
-      ]);
+      `,
+        [
+          req.user.id,
+          pmResult.insertId,
+          verificationIntent.id,
+          verificationIntent.status,
+        ]
+      );
 
       // Update account requirements
-      await connection.execute(`
+      await connection.execute(
+        `
         UPDATE user_account_requirements 
         SET payment_method_added = TRUE, 
             payment_method_verified = ?, 
             payment_verified_at = ?
         WHERE user_id = ?
-      `, [
-        verificationIntent.status === 'succeeded',
-        verificationIntent.status === 'succeeded' ? new Date() : null,
-        req.user.id
-      ]);
+      `,
+        [
+          verificationIntent.status === "succeeded",
+          verificationIntent.status === "succeeded" ? new Date() : null,
+          req.user.id,
+        ]
+      );
 
       await connection.commit();
 
       // Refund the verification charge immediately
-      if (verificationIntent.status === 'succeeded') {
+      if (verificationIntent.status === "succeeded") {
         await stripe.refunds.create({
           payment_intent: verificationIntent.id,
-          reason: 'requested_by_customer',
-          metadata: { type: 'verification_refund' }
+          reason: "requested_by_customer",
+          metadata: { type: "verification_refund" },
         });
       }
 
-      res.json({ 
-        success: true, 
-        message: 'Payment method added and verified successfully',
-        verified: verificationIntent.status === 'succeeded'
+      res.json({
+        success: true,
+        message: "Payment method added and verified successfully",
+        verified: verificationIntent.status === "succeeded",
       });
-
     } catch (dbError) {
       await connection.rollback();
       throw dbError;
     } finally {
       connection.release();
     }
-
   } catch (error) {
-    console.error('Error adding payment method:', error);
-    res.status(500).json({ error: 'Failed to add payment method' });
+    console.error("Error adding payment method:", error);
+    res.status(500).json({ error: "Failed to add payment method" });
   }
 });
 
 // Check user access eligibility
-app.get('/api/user/access-check', authenticateToken, async (req, res) => {
+app.get("/api/user/access-check", authenticateToken, async (req, res) => {
   try {
     const connection = await pool.getConnection();
-    
+
     // Check user access
     const [result] = await connection.execute(
-      'CALL CheckUserAccess(?, @can_access)'
+      "CALL CheckUserAccess(?, @can_access)"
     );
-    
+
     const [accessResult] = await connection.execute(
-      'SELECT @can_access as can_access'
+      "SELECT @can_access as can_access"
     );
-    
+
     // Get detailed requirements
-    const [requirements] = await connection.execute(`
+    const [requirements] = await connection.execute(
+      `
       SELECT 
         email_verified,
         payment_method_added,
@@ -1054,28 +1062,33 @@ app.get('/api/user/access-check', authenticateToken, async (req, res) => {
         onboarding_completed
       FROM user_account_requirements 
       WHERE user_id = ?
-    `, [req.user.id]);
+    `,
+      [req.user.id]
+    );
 
     // Get trial status
-    const [trialStatus] = await connection.execute(`
+    const [trialStatus] = await connection.execute(
+      `
       SELECT 
         status,
         ends_at,
         DATEDIFF(ends_at, NOW()) as days_remaining
       FROM user_trials 
       WHERE user_id = ? AND status = 'active'
-    `, [req.user.id]);
+    `,
+      [req.user.id]
+    );
 
     connection.release();
 
-    res.json({ 
+    res.json({
       can_access: accessResult[0].can_access === 1,
       requirements: requirements[0] || {},
-      trial: trialStatus[0] || null
+      trial: trialStatus[0] || null,
     });
   } catch (error) {
-    console.error('Error checking user access:', error);
-    res.status(500).json({ error: 'Failed to check user access' });
+    console.error("Error checking user access:", error);
+    res.status(500).json({ error: "Failed to check user access" });
   }
 });
 
@@ -1084,39 +1097,41 @@ app.get('/api/user/access-check', authenticateToken, async (req, res) => {
 // =============================================
 
 // Start trial (called during registration)
-app.post('/api/user/start-trial', authenticateToken, async (req, res) => {
+app.post("/api/user/start-trial", authenticateToken, async (req, res) => {
   try {
     const connection = await pool.getConnection();
-    
+
     // Check if user already has a trial
     const [existingTrial] = await connection.execute(
-      'SELECT id FROM user_trials WHERE user_id = ?',
+      "SELECT id FROM user_trials WHERE user_id = ?",
       [req.user.id]
     );
 
     if (existingTrial.length > 0) {
       connection.release();
-      return res.status(400).json({ error: 'Trial already exists for this user' });
+      return res
+        .status(400)
+        .json({ error: "Trial already exists for this user" });
     }
 
     // Create trial
-    await connection.execute('CALL CreateUserTrial(?)', [req.user.id]);
+    await connection.execute("CALL CreateUserTrial(?)", [req.user.id]);
 
     connection.release();
 
-    res.json({ 
-      success: true, 
-      message: '7-day trial started successfully',
-      trial_ends: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    res.json({
+      success: true,
+      message: "7-day trial started successfully",
+      trial_ends: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     });
   } catch (error) {
-    console.error('Error starting trial:', error);
-    res.status(500).json({ error: 'Failed to start trial' });
+    console.error("Error starting trial:", error);
+    res.status(500).json({ error: "Failed to start trial" });
   }
 });
 
 // Convert trial to paid subscription
-app.post('/api/user/convert-trial', authenticateToken, async (req, res) => {
+app.post("/api/user/convert-trial", authenticateToken, async (req, res) => {
   const { plan_id, payment_method_id } = req.body;
 
   try {
@@ -1124,13 +1139,13 @@ app.post('/api/user/convert-trial', authenticateToken, async (req, res) => {
 
     // Get plan details
     const [plans] = await connection.execute(
-      'SELECT * FROM subscription_plans WHERE id = ? AND is_active = TRUE',
+      "SELECT * FROM subscription_plans WHERE id = ? AND is_active = TRUE",
       [plan_id]
     );
 
     if (plans.length === 0) {
       connection.release();
-      return res.status(404).json({ error: 'Plan not found' });
+      return res.status(404).json({ error: "Plan not found" });
     }
 
     const plan = plans[0];
@@ -1138,16 +1153,20 @@ app.post('/api/user/convert-trial', authenticateToken, async (req, res) => {
     // Create Stripe subscription
     const subscription = await stripe.subscriptions.create({
       customer: req.user.stripe_customer_id,
-      items: [{ 
-        price_data: {
-          currency: 'usd',
-          product_data: { name: plan.name },
-          unit_amount: Math.round(plan.price * 100),
-          recurring: { interval: plan.billing_cycle === 'yearly' ? 'year' : 'month' }
-        }
-      }],
+      items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: plan.name },
+            unit_amount: Math.round(plan.price * 100),
+            recurring: {
+              interval: plan.billing_cycle === "yearly" ? "year" : "month",
+            },
+          },
+        },
+      ],
       default_payment_method: payment_method_id,
-      metadata: { user_id: req.user.id.toString() }
+      metadata: { user_id: req.user.id.toString() },
     });
 
     await connection.beginTransaction();
@@ -1160,38 +1179,39 @@ app.post('/api/user/convert-trial', authenticateToken, async (req, res) => {
       );
 
       // Create new subscription
-      await connection.execute(`
+      await connection.execute(
+        `
         INSERT INTO user_subscriptions (
           user_id, plan_id, status, starts_at, ends_at, 
           auto_renew, stripe_subscription_id
         ) VALUES (?, ?, 'active', NOW(), ?, TRUE, ?)
-      `, [
-        req.user.id,
-        plan_id,
-        plan.billing_cycle === 'yearly' 
-          ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        subscription.id
-      ]);
+      `,
+        [
+          req.user.id,
+          plan_id,
+          plan.billing_cycle === "yearly"
+            ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          subscription.id,
+        ]
+      );
 
       await connection.commit();
 
-      res.json({ 
-        success: true, 
-        message: 'Trial converted to paid subscription successfully',
-        subscription_id: subscription.id
+      res.json({
+        success: true,
+        message: "Trial converted to paid subscription successfully",
+        subscription_id: subscription.id,
       });
-
     } catch (dbError) {
       await connection.rollback();
       throw dbError;
     } finally {
       connection.release();
     }
-
   } catch (error) {
-    console.error('Error converting trial:', error);
-    res.status(500).json({ error: 'Failed to convert trial' });
+    console.error("Error converting trial:", error);
+    res.status(500).json({ error: "Failed to convert trial" });
   }
 });
 
@@ -1203,25 +1223,25 @@ app.post('/api/user/convert-trial', authenticateToken, async (req, res) => {
 const authenticateAdmin = async (req, res, next) => {
   try {
     await authenticateToken(req, res, () => {});
-    
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
     }
-    
+
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Authentication failed' });
+    return res.status(401).json({ error: "Authentication failed" });
   }
 };
 
 // Get all users with filtering
-app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
-  const { 
-    search = '', 
-    status = 'all', 
-    subscription = 'all',
+app.get("/api/admin/users", authenticateAdmin, async (req, res) => {
+  const {
+    search = "",
+    status = "all",
+    subscription = "all",
     page = 1,
-    limit = 50
+    limit = 50,
   } = req.query;
 
   try {
@@ -1229,7 +1249,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     const offset = (page - 1) * limit;
 
     const [users] = await connection.execute(
-      'CALL GetAdminUserList(?, ?, ?, ?, ?, ?)',
+      "CALL GetAdminUserList(?, ?, ?, ?, ?, ?)",
       [req.user.id, search, status, subscription, parseInt(limit), offset]
     );
 
@@ -1245,12 +1265,12 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         total: countResult[0]?.total || 0,
-        pages: Math.ceil((countResult[0]?.total || 0) / limit)
-      }
+        pages: Math.ceil((countResult[0]?.total || 0) / limit),
+      },
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 

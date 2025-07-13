@@ -120,17 +120,20 @@ export const AuthProvider = ({ children }) => {
         if (token && userData) {
           const user = JSON.parse(userData);
           dispatch({ type: ActionTypes.SET_USER, payload: user });
-          
+
           // Mock access status for development
           const mockAccessStatus = {
             can_access: true,
             requirements: {
               email_verified: true,
               payment_method_verified: true,
-              onboarding_completed: true
-            }
+              onboarding_completed: true,
+            },
           };
-          dispatch({ type: ActionTypes.SET_ACCESS_STATUS, payload: mockAccessStatus });
+          dispatch({
+            type: ActionTypes.SET_ACCESS_STATUS,
+            payload: mockAccessStatus,
+          });
         } else {
           dispatch({ type: ActionTypes.SET_LOADING, payload: false });
         }
@@ -164,14 +167,17 @@ export const AuthProvider = ({ children }) => {
         requirements: {
           email_verified: true,
           payment_method_verified: true,
-          onboarding_completed: true
-        }
+          onboarding_completed: true,
+        },
       };
-      
-      dispatch({ type: ActionTypes.SET_ACCESS_STATUS, payload: mockAccessStatus });
+
+      dispatch({
+        type: ActionTypes.SET_ACCESS_STATUS,
+        payload: mockAccessStatus,
+      });
       return mockAccessStatus;
     } catch (error) {
-      console.error('Error checking user access:', error);
+      console.error("Error checking user access:", error);
     }
     return null;
   };
@@ -182,19 +188,19 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
 
       // Mock API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Check against mock users
       const users = JSON.parse(localStorage.getItem("all_users") || "[]");
-      const user = users.find(u => u.email === email);
+      const user = users.find((u) => u.email === email);
 
       if (!user) {
-        throw new Error('User not found');
+        throw new Error("User not found");
       }
 
       // For development, accept any password or check against stored mock password
       if (user.password && user.password !== password) {
-        throw new Error('Invalid password');
+        throw new Error("Invalid password");
       }
 
       // Mock access status for development
@@ -203,8 +209,8 @@ export const AuthProvider = ({ children }) => {
         requirements: {
           email_verified: true,
           payment_method_verified: true,
-          onboarding_completed: true
-        }
+          onboarding_completed: true,
+        },
       };
 
       // Store session
@@ -215,7 +221,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: ActionTypes.SET_USER, payload: user });
       dispatch({ type: ActionTypes.SET_ACCESS_STATUS, payload: accessStatus });
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-      
+
       toast.success("Login successful!");
       return user;
     } catch (error) {
@@ -231,7 +237,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
 
       // Mock API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Create mock user data
       const mockUser = {
@@ -240,15 +246,17 @@ export const AuthProvider = ({ children }) => {
         name: `${userData.first_name} ${userData.last_name}`,
         firstName: userData.first_name,
         lastName: userData.last_name,
-        role: 'user',
+        role: "user",
         createdAt: new Date(),
         isActive: true,
-        subscription: 'trial',
-        emailVerified: false
+        subscription: "trial",
+        emailVerified: false,
       };
 
       // Store user in mock users list
-      const existingUsers = JSON.parse(localStorage.getItem("all_users") || "[]");
+      const existingUsers = JSON.parse(
+        localStorage.getItem("all_users") || "[]"
+      );
       const updatedUsers = [...existingUsers, mockUser];
       localStorage.setItem("all_users", JSON.stringify(updatedUsers));
       dispatch({ type: ActionTypes.SET_USERS, payload: updatedUsers });
@@ -257,11 +265,13 @@ export const AuthProvider = ({ children }) => {
         user_id: mockUser.id,
         user: mockUser,
         token: `mock_token_${mockUser.id}`,
-        message: "Account created successfully"
+        message: "Account created successfully",
       };
 
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-      toast.success("Account created successfully! Please check your email for verification.");
+      toast.success(
+        "Account created successfully! Please check your email for verification."
+      );
       return mockResponse;
     } catch (error) {
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
@@ -282,7 +292,7 @@ export const AuthProvider = ({ children }) => {
   const sendEmailVerification = async (email) => {
     try {
       // Mock API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // For development, just simulate success
       toast.success("Verification email sent!");
@@ -297,7 +307,7 @@ export const AuthProvider = ({ children }) => {
   const verifyEmail = async (token) => {
     try {
       // Mock API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // For development, just simulate success
       toast.success("Email verified successfully!");
@@ -312,13 +322,13 @@ export const AuthProvider = ({ children }) => {
   const addPaymentMethod = async (paymentMethodData) => {
     try {
       const token = Cookies.get("auth_token");
-      const response = await fetch('/api/user/payment-methods', {
-        method: 'POST',
+      const response = await fetch("/api/user/payment-methods", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(paymentMethodData)
+        body: JSON.stringify(paymentMethodData),
       });
 
       const data = await response.json();
@@ -327,7 +337,7 @@ export const AuthProvider = ({ children }) => {
         toast.success("Payment method added successfully!");
         return data;
       } else {
-        throw new Error(data.error || 'Failed to add payment method');
+        throw new Error(data.error || "Failed to add payment method");
       }
     } catch (error) {
       toast.error(error.message);
@@ -339,12 +349,12 @@ export const AuthProvider = ({ children }) => {
   const startTrial = async () => {
     try {
       const token = Cookies.get("auth_token");
-      const response = await fetch('/api/user/start-trial', {
-        method: 'POST',
+      const response = await fetch("/api/user/start-trial", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
@@ -353,7 +363,7 @@ export const AuthProvider = ({ children }) => {
         toast.success("Trial started successfully!");
         return data;
       } else {
-        throw new Error(data.error || 'Failed to start trial');
+        throw new Error(data.error || "Failed to start trial");
       }
     } catch (error) {
       toast.error(error.message);

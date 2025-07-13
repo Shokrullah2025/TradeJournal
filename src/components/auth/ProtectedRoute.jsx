@@ -1,17 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import React, { useEffect, useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 // Component to protect routes that require authentication
 export const ProtectedRoute = ({ children }) => {
-  const { user, isAuthenticated, loading, accessStatus, checkUserAccess } = useAuth();
+  const { user, isAuthenticated, loading, accessStatus, checkUserAccess } =
+    useAuth();
   const location = useLocation();
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
 
   useEffect(() => {
     const checkAccess = async () => {
       if (isAuthenticated && user) {
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem("auth_token");
         if (token) {
           await checkUserAccess(token);
         }
@@ -39,9 +40,9 @@ export const ProtectedRoute = ({ children }) => {
 
   // For development purposes, we'll skip the strict access control checks
   // and only require basic authentication
-  
+
   // Admin users should always have access
-  if (user && user.role === 'admin') {
+  if (user && user.role === "admin") {
     return children;
   }
 
@@ -91,13 +92,17 @@ export const AdminRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== "admin") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">🚫</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
+          <p className="text-gray-600 mb-4">
+            You don't have permission to access this page.
+          </p>
           <Navigate to="/" replace />
         </div>
       </div>
@@ -128,12 +133,14 @@ export const BillingRoute = ({ children }) => {
   }
 
   // Only allow admin for advanced billing features
-  if (user?.role !== 'admin') {
+  if (user?.role !== "admin") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">�</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
           <p className="text-gray-600 mb-4">
             This section is only available to administrators.
           </p>
