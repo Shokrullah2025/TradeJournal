@@ -7,21 +7,27 @@ import {
   Search,
   List,
   Calendar as CalendarIcon,
+  TrendingUp,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
+import { useBroker } from "../context/BrokerContext";
 import TradeForm from "../components/trades/TradeForm";
 import TradeList from "../components/trades/TradeList";
 import TradeFilters from "../components/trades/TradeFilters";
 import TradeCalendar from "../components/trades/TradeCalendar";
-import BrokerConfiguration from "../components/trades/BrokerConfiguration";
+import BrokerModal from "../components/trades/BrokerModal";
 import { exportToExcel } from "../utils/exportUtils";
 import toast from "react-hot-toast";
 
 const Trades = () => {
   const { filteredTrades, trades, importTrades } = useTrades();
+  const { isConnected, selectedBroker, brokers } = useBroker();
   const location = useLocation();
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [editingTrade, setEditingTrade] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
@@ -90,6 +96,26 @@ const Trades = () => {
         </div>
 
         <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+          {/* Broker Connection Status Button */}
+          <button
+            onClick={() => setShowBrokerModal(true)}
+            className={`btn flex items-center space-x-2 ${
+              isConnected ? "btn-secondary" : "btn-primary"
+            }`}
+          >
+            {isConnected ? (
+              <>
+                <Wifi className="w-4 h-4" />
+                <span>{brokers[selectedBroker]?.name}</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4" />
+                <span>Connect Broker</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={handleExport}
             disabled={trades.length === 0}
@@ -109,37 +135,34 @@ const Trades = () => {
         </div>
       </div>
 
-      {/* Broker Configuration */}
-      <BrokerConfiguration onTradesImported={handleTradesImported} />
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <div className="text-2xl font-bold text-gray-900">
+      {/* Summary Stats - Horizontal Layout */}
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
+          <div className="text-lg font-bold text-gray-900">
             {filteredTrades.length}
           </div>
-          <div className="text-sm text-gray-600">Total Trades</div>
+          <div className="text-xs text-gray-600">Total Trades</div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <div className="text-2xl font-bold text-gray-900">
+        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
+          <div className="text-lg font-bold text-blue-600">
             {filteredTrades.filter((t) => t.status === "open").length}
           </div>
-          <div className="text-sm text-gray-600">Open Positions</div>
+          <div className="text-xs text-gray-600">Open Positions</div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <div className="text-2xl font-bold text-success-600">
+        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
+          <div className="text-lg font-bold text-success-600">
             {filteredTrades.filter((t) => t.pnl > 0).length}
           </div>
-          <div className="text-sm text-gray-600">Winning Trades</div>
+          <div className="text-xs text-gray-600">Winning Trades</div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <div className="text-2xl font-bold text-danger-600">
+        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
+          <div className="text-lg font-bold text-danger-600">
             {filteredTrades.filter((t) => t.pnl < 0).length}
           </div>
-          <div className="text-sm text-gray-600">Losing Trades</div>
+          <div className="text-xs text-gray-600">Losing Trades</div>
         </div>
       </div>
 
@@ -430,6 +453,13 @@ const Trades = () => {
           selectedDate={selectedDate}
         />
       )}
+
+      {/* Broker Modal */}
+      <BrokerModal
+        isOpen={showBrokerModal}
+        onClose={() => setShowBrokerModal(false)}
+        onTradesImported={handleTradesImported}
+      />
     </div>
   );
 };

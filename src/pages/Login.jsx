@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, LogIn, TrendingUp } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { loginSchema } from '../utils/validation';
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, LogIn, TrendingUp } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { loginSchema } from "../utils/validation";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,7 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || "/";
 
   const {
     register,
@@ -28,8 +28,8 @@ const Login = () => {
       navigate(from, { replace: true });
     } catch (error) {
       // Check if error is related to incomplete registration
-      if (error.message.includes('Email not verified')) {
-        navigate('/register?step=email');
+      if (error.message.includes("Email not verified")) {
+        navigate("/register?step=email");
       }
       // Other errors are handled in the auth context
     }
@@ -53,7 +53,7 @@ const Login = () => {
               Welcome back
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <Link
                 to="/register"
                 className="font-medium text-blue-600 hover:text-blue-500"
@@ -66,31 +66,39 @@ const Login = () => {
           <div className="mt-8">
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Email address
                 </label>
                 <div className="mt-1">
                   <input
-                    {...register('email')}
+                    {...register("email")}
                     type="email"
                     autoComplete="email"
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="Enter your email"
                   />
                   {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.email.message}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Password
                 </label>
                 <div className="mt-1 relative">
                   <input
-                    {...register('password')}
-                    type={showPassword ? 'text' : 'password'}
+                    {...register("password")}
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="Enter your password"
@@ -108,7 +116,9 @@ const Login = () => {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -120,13 +130,19 @@ const Login = () => {
                     type="checkbox"
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-900"
+                  >
                     Remember me
                   </label>
                 </div>
 
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                  <a
+                    href="#"
+                    className="font-medium text-blue-600 hover:text-blue-500"
+                  >
                     Forgot your password?
                   </a>
                 </div>
@@ -151,13 +167,15 @@ const Login = () => {
 
               {/* Development Login Buttons */}
               <div className="space-y-2">
-                <div className="text-xs text-gray-500 text-center">Development Quick Login:</div>
+                <div className="text-xs text-gray-500 text-center">
+                  Development Quick Login:
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={async () => {
                       try {
-                        await login('admin@tradejournalpro.com', 'admin123');
+                        await login("admin@tradejournalpro.com", "admin123");
                         navigate(from, { replace: true });
                       } catch (error) {
                         // Error handling is done in AuthContext
@@ -171,7 +189,7 @@ const Login = () => {
                     type="button"
                     onClick={async () => {
                       try {
-                        await login('user@example.com', 'user123');
+                        await login("user@example.com", "user123");
                         navigate(from, { replace: true });
                       } catch (error) {
                         // Error handling is done in AuthContext
@@ -187,10 +205,16 @@ const Login = () => {
 
             {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-900 mb-2">Demo Credentials:</h3>
+              <h3 className="text-sm font-medium text-gray-900 mb-2">
+                Demo Credentials:
+              </h3>
               <div className="text-xs text-gray-600 space-y-1">
-                <p><strong>Admin:</strong> admin@tradejournalpro.com / admin123</p>
-                <p><strong>User:</strong> user@example.com / user123</p>
+                <p>
+                  <strong>Admin:</strong> admin@tradejournalpro.com / admin123
+                </p>
+                <p>
+                  <strong>User:</strong> user@example.com / user123
+                </p>
               </div>
             </div>
           </div>
@@ -206,7 +230,8 @@ const Login = () => {
               Track Your Trading Success
             </h2>
             <p className="text-xl text-blue-100 mb-8">
-              Professional tools for analyzing your trading performance and maximizing profits.
+              Professional tools for analyzing your trading performance and
+              maximizing profits.
             </p>
             <div className="grid grid-cols-1 gap-4 text-left max-w-md">
               <div className="flex items-center space-x-3">

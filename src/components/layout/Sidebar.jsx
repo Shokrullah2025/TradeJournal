@@ -13,6 +13,8 @@ import {
   LogOut,
   User,
   UserCircle,
+  Link,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -22,6 +24,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Trades", href: "/trades", icon: BookOpen },
+    { name: "Brokers", href: "/brokers", icon: Link },
     { name: "Analytics", href: "/analytics", icon: BarChart3 },
     { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator },
     { name: "Settings", href: "/settings", icon: Settings },
