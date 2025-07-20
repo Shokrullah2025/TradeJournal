@@ -164,10 +164,10 @@ const normalizeAlpacaTrade = (trade) => ({
   instrument: trade.symbol,
   tradeType: trade.side === "buy" ? "long" : "short",
   entryDate: trade.filled_at
-    ? trade.filled_at.split("T")[0]
+    ? String(trade.filled_at).split("T")[0]
     : new Date().toISOString().split("T")[0],
   entryTime: trade.filled_at
-    ? trade.filled_at.split("T")[1].split("Z")[0]
+    ? String(trade.filled_at).split("T")[1].split("Z")[0]
     : new Date().toTimeString().split(" ")[0],
   entryPrice: parseFloat(trade.filled_avg_price || trade.limit_price || 0),
   quantity: parseInt(trade.filled_qty || trade.qty || 0),
@@ -233,10 +233,10 @@ const normalizeDemoTrade = (trade) => ({
   instrument: trade.symbol,
   tradeType: trade.side === "buy" ? "long" : "short",
   entryDate: trade.filled_at
-    ? trade.filled_at.split("T")[0]
+    ? String(trade.filled_at).split("T")[0]
     : new Date().toISOString().split("T")[0],
   entryTime: trade.filled_at
-    ? trade.filled_at.split("T")[1].split("Z")[0]
+    ? String(trade.filled_at).split("T")[1].split("Z")[0]
     : new Date().toTimeString().split(" ")[0],
   entryPrice: parseFloat(trade.filled_avg_price || 0),
   quantity: parseInt(trade.qty || 0),

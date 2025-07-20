@@ -262,6 +262,7 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          console.log("Editing trade:", trade); // Debug log
                           onEditTrade(trade);
                         }}
                         className="ml-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"

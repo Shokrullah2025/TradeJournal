@@ -76,11 +76,19 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       ? {
           ...trade,
           entryDate: trade.entryDate
-            ? new Date(trade.entryDate).toISOString().split("T")[0]
+            ? (typeof trade.entryDate === 'string' && trade.entryDate.includes('T')
+                ? trade.entryDate.split("T")[0]
+                : trade.entryDate)
             : "",
           exitDate: trade.exitDate
-            ? new Date(trade.exitDate).toISOString().split("T")[0]
+            ? (typeof trade.exitDate === 'string' && trade.exitDate.includes('T')
+                ? trade.exitDate.split("T")[0]
+                : trade.exitDate)
             : "",
+          // Ensure tags are properly formatted
+          tags: Array.isArray(trade.tags) 
+            ? trade.tags.join(", ")
+            : (trade.tags || ""),
         }
       : {
           entryDate: selectedDate
@@ -750,15 +758,15 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center">
             <Calendar className="w-6 h-6 mr-2 text-blue-600" />
             {isEditing ? "Edit Trade" : "Add New Trade"}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -772,8 +780,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               onClick={() => setActiveTab("quick")}
               className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md transition-colors ${
                 activeTab === "quick"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-600"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
               }`}
             >
               <Zap className="w-4 h-4 mr-2" />
@@ -784,8 +792,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               onClick={() => setActiveTab("advanced")}
               className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md transition-colors ${
                 activeTab === "advanced"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-600"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
               }`}
             >
               <Settings className="w-4 h-4 mr-2" />
@@ -843,12 +851,12 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         </p>
                       </div>
                     ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center text-gray-600 mb-2">
+                      <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                        <div className="flex items-center text-gray-600 dark:text-gray-400 mb-2">
                           <Target className="w-5 h-5 mr-2" />
                           <h4 className="font-semibold">Templates</h4>
                         </div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           No templates available. Create templates in Settings
                           for faster trade entry.
                         </p>
@@ -944,7 +952,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       ))}
                     </select>
                   ) : (
-                    <div className="input bg-gray-50 text-gray-500 flex items-center text-sm">
+                    <div className="input bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center text-sm border border-gray-300 dark:border-gray-600">
                       No risk profiles available - Create them in Settings
                     </div>
                   )}
@@ -1186,7 +1194,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Strategy & Setup */}
                   <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-gray-900 pb-2 border-b">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b border-gray-200 dark:border-gray-700">
                       Strategy & Setup
                     </h4>
 
@@ -1273,8 +1281,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
                   {/* Timing & Details */}
                   <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-gray-900 pb-2 border-b flex items-center">
-                      <Clock className="w-5 h-5 mr-2 text-blue-600" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center">
+                      <Clock className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
                       Timing & Details
                     </h4>
 
@@ -1335,8 +1343,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
                   {/* Risk Management */}
                   <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-gray-900 pb-2 border-b flex items-center">
-                      <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center">
+                      <BarChart3 className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
                       Risk Management
                     </h4>
 

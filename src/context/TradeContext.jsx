@@ -137,17 +137,30 @@ const tradeReducer = (state, action) => {
     }
 
     case ACTIONS.UPDATE_TRADE: {
-      const updatedTrades = state.trades.map((trade) =>
-        trade.id === action.payload.id
-          ? {
-              ...action.payload,
-              pnl:
-                action.payload.status === "closed"
-                  ? calculatePnL(action.payload)
-                  : 0,
-            }
-          : trade
-      );
+      const updatedTrades = state.trades.map((trade) => {
+        if (trade.id === action.payload.id) {
+          // Ensure data integrity when updating
+          const updatedTrade = {
+            ...trade,
+            ...action.payload,
+            // Ensure date fields are strings and properly formatted
+            entryDate: action.payload.entryDate 
+              ? (typeof action.payload.entryDate === 'string' && action.payload.entryDate.includes('T')
+                  ? action.payload.entryDate.split('T')[0] 
+                  : String(action.payload.entryDate))
+              : trade.entryDate,
+            exitDate: action.payload.exitDate 
+              ? (typeof action.payload.exitDate === 'string' && action.payload.exitDate.includes('T')
+                  ? action.payload.exitDate.split('T')[0] 
+                  : String(action.payload.exitDate))
+              : trade.exitDate,
+            // Calculate PnL if trade is closed
+            pnl: action.payload.status === "closed" ? calculatePnL(action.payload) : 0,
+          };
+          return updatedTrade;
+        }
+        return trade;
+      });
 
       return {
         ...state,
@@ -347,8 +360,32 @@ export const TradeProvider = ({ children }) => {
     dispatch({ type: ACTIONS.ADD_TRADE, payload: trade });
   };
 
-  const updateTrade = (trade) => {
-    dispatch({ type: ACTIONS.UPDATE_TRADE, payload: trade });
+  const updateTrade = (tradeId, updatedData) => {
+    // Ensure we have a valid trade ID and data
+    if (!tradeId || !updatedData) {
+      console.error("Invalid trade data for update:", { tradeId, updatedData });
+      return;
+    }
+
+    console.log("Updating trade:", tradeId, updatedData); // Debug log
+
+    // Ensure all date fields are properly formatted strings
+    const sanitizedData = {
+      ...updatedData,
+      id: tradeId,
+      entryDate: updatedData.entryDate ? String(updatedData.entryDate) : null,
+      exitDate: updatedData.exitDate ? String(updatedData.exitDate) : null,
+      entryTime: updatedData.entryTime ? String(updatedData.entryTime) : null,
+      exitTime: updatedData.exitTime ? String(updatedData.exitTime) : null,
+      tags: Array.isArray(updatedData.tags) 
+        ? updatedData.tags 
+        : updatedData.tags 
+          ? String(updatedData.tags).split(",").map(tag => tag.trim())
+          : [],
+    };
+
+    console.log("Sanitized trade data:", sanitizedData); // Debug log
+    dispatch({ type: ACTIONS.UPDATE_TRADE, payload: sanitizedData });
   };
 
   const deleteTrade = (tradeId) => {
