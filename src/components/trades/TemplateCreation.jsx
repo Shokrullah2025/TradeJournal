@@ -273,18 +273,18 @@ const TemplateCreation = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="template-creation space-y-6">
       {/* Header Actions */}
-      <div className="flex items-center justify-between">
+      <div className="template-creation__header flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Trade Templates</h2>
-          <p className="mt-1 text-gray-600">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Trade Templates</h2>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
             Create reusable templates to speed up trade entry
           </p>
         </div>
         <button
           onClick={handleCreateNew}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="btn btn-primary inline-flex items-center px-4 py-2 text-sm font-medium rounded-md"
         >
           <Plus className="mr-2 h-4 w-4" />
           New Template
@@ -293,9 +293,9 @@ const TemplateCreation = () => {
 
       {/* Template Creation/Edit Form */}
       {isCreating && (
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className="template-creation__form card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
               {editingTemplate ? "Edit Template" : "Create New Template"}
             </h3>
             <button

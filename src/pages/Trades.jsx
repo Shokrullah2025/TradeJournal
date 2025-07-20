@@ -89,8 +89,8 @@ const Trades = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Trade Journal</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Trade Journal</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Manage and track all your trades in one place
           </p>
         </div>
@@ -137,32 +137,32 @@ const Trades = () => {
 
       {/* Summary Stats - Horizontal Layout */}
       <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
-          <div className="text-lg font-bold text-gray-900">
+        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+          <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
             {filteredTrades.length}
           </div>
-          <div className="text-xs text-gray-600">Total Trades</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Total Trades</div>
         </div>
 
-        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
-          <div className="text-lg font-bold text-blue-600">
+        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+          <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
             {filteredTrades.filter((t) => t.status === "open").length}
           </div>
-          <div className="text-xs text-gray-600">Open Positions</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Open Positions</div>
         </div>
 
-        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
-          <div className="text-lg font-bold text-success-600">
+        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+          <div className="text-lg font-bold text-success-600 dark:text-success-400">
             {filteredTrades.filter((t) => t.pnl > 0).length}
           </div>
-          <div className="text-xs text-gray-600">Winning Trades</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Winning Trades</div>
         </div>
 
-        <div className="col-span-2 bg-white rounded-lg p-3 border border-gray-200">
-          <div className="text-lg font-bold text-danger-600">
+        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+          <div className="text-lg font-bold text-danger-600 dark:text-danger-400">
             {filteredTrades.filter((t) => t.pnl < 0).length}
           </div>
-          <div className="text-xs text-gray-600">Losing Trades</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">Losing Trades</div>
         </div>
       </div>
 
@@ -171,13 +171,13 @@ const Trades = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Search trades..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64"
+                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
             </div>
 
@@ -192,7 +192,7 @@ const Trades = () => {
             </button>
           </div>
 
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             Showing {filteredAndSearchedTrades.length} of {trades.length} trades
           </div>
         </div>

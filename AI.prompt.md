@@ -1,2 +1,6 @@
-Fix the take profit to get its value from the risk management in settings from the point target field the same way as Stop loss field is getting it's value based on the points as a loss set there.
-Even If I add a new trade and goes to Advanced section, I don't see the setup value that needs to come from settings Trade setup section.
+Update the following components to ensure full consistency with the dark mode theme:
+
+1. Apply dark mode styles to inputs and buttons in the `TradeForm` component.
+2. Update the `TradeList` component to display trades with appropriate dark mode styling.
+3. Ensure the `TradeFilters` component adheres to the dark mode theme.
+4. Review and update any other components or pages that do not fully support dark mode.

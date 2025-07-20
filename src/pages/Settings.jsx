@@ -663,21 +663,21 @@ const Settings = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="settings space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="settings__header flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Manage your preferences, templates, and data
           </p>
         </div>
       </div>
 
       {/* Main Content with Sidebar Layout */}
-      <div className="flex gap-8">
+      <div className="settings__content flex gap-8">
         {/* Left Sidebar - Tab Navigation */}
-        <div className="w-64 flex-shrink-0">
+        <div className="settings__nav w-64 flex-shrink-0">
           <nav className="space-y-2" aria-label="Settings Navigation">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -687,22 +687,24 @@ const Settings = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full group flex items-start p-4 text-left text-sm font-medium rounded-lg transition-all duration-200 ${
                     activeTab === tab.id
-                      ? "bg-blue-50 text-blue-700 border-l-4 border-blue-600"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-l-4 border-transparent"
+                      ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-l-4 border-primary-600 dark:border-primary-400"
+                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 border-l-4 border-transparent"
                   }`}
                 >
                   <Icon
                     className={`h-5 w-5 mr-3 mt-0.5 flex-shrink-0 ${
                       activeTab === tab.id
-                        ? "text-blue-600"
-                        : "text-gray-400 group-hover:text-gray-500"
+                        ? "text-primary-600 dark:text-primary-400"
+                        : "text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400"
                     }`}
                   />
                   <div className="flex-1">
                     <div className="font-medium">{tab.name}</div>
                     <p
                       className={`mt-1 text-xs leading-4 ${
-                        activeTab === tab.id ? "text-blue-600" : "text-gray-500"
+                        activeTab === tab.id 
+                          ? "text-primary-600 dark:text-primary-400" 
+                          : "text-gray-500 dark:text-gray-400"
                       }`}
                     >
                       {tab.description}

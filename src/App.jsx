@@ -21,6 +21,7 @@ import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { BillingProvider } from "./context/BillingContext";
 import { BrokerProvider } from "./context/BrokerContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -32,11 +33,12 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <AuthProvider>
-      <BillingProvider>
-        <TradeProvider>
-          <BrokerProvider>
-            <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <BillingProvider>
+          <TradeProvider>
+            <BrokerProvider>
+              <Router>
               <Routes>
                 {/* Public routes */}
                 <Route
@@ -76,7 +78,7 @@ function App() {
                         <div className="flex-1 flex flex-col overflow-hidden">
                           <Header onMenuClick={() => setSidebarOpen(true)} />
 
-                          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+                          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
                             <Routes>
                               <Route path="/" element={<Dashboard />} />
                               <Route path="/trades" element={<Trades />} />
@@ -120,9 +122,13 @@ function App() {
                 position="top-right"
                 toastOptions={{
                   duration: 3000,
+                  className: "toast-notification",
                   style: {
-                    background: "#363636",
-                    color: "#fff",
+                    borderRadius: '8px',
+                    background: 'var(--toast-bg)',
+                    color: 'var(--toast-color)',
+                    boxShadow: 'var(--toast-shadow)',
+                    border: '1px solid var(--toast-border)',
                   },
                 }}
               />
@@ -131,6 +137,7 @@ function App() {
         </TradeProvider>
       </BillingProvider>
     </AuthProvider>
+  </ThemeProvider>
   );
 }
 
