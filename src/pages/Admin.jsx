@@ -75,18 +75,18 @@ const Admin = () => {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="card">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Users className="h-6 w-6 text-gray-400" />
+                <Users className="h-6 w-6 text-gray-400 dark:text-gray-500" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Total Users
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {mockStats.totalUsers}
                   </dd>
                 </dl>
@@ -95,18 +95,18 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="card">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Activity className="h-6 w-6 text-gray-400" />
+                <Activity className="h-6 w-6 text-gray-400 dark:text-gray-500" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Active Users
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {mockStats.activeUsers}
                   </dd>
                 </dl>
@@ -115,18 +115,18 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="card">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <DollarSign className="h-6 w-6 text-gray-400" />
+                <DollarSign className="h-6 w-6 text-gray-400 dark:text-gray-500" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Total Revenue
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     ${mockStats.totalRevenue}
                   </dd>
                 </dl>
@@ -135,18 +135,18 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="card">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <User className="h-6 w-6 text-gray-400" />
+                <User className="h-6 w-6 text-gray-400 dark:text-gray-500" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     New Users Today
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {mockStats.newUsersToday}
                   </dd>
                 </dl>
@@ -155,18 +155,18 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="card">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <CreditCard className="h-6 w-6 text-gray-400" />
+                <CreditCard className="h-6 w-6 text-gray-400 dark:text-gray-500" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Active Subscriptions
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {mockStats.activeSubscriptions}
                   </dd>
                 </dl>
@@ -175,18 +175,18 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="card">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <TrendingUp className="h-6 w-6 text-gray-400" />
+                <TrendingUp className="h-6 w-6 text-gray-400 dark:text-gray-500" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Trial Users
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {mockStats.trialUsers}
                   </dd>
                 </dl>
@@ -197,33 +197,37 @@ const Admin = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white shadow rounded-lg">
+      <div className="card">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+          <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
             Recent Activity
           </h3>
           <div className="mt-5">
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <User className="h-5 w-5 text-gray-400" />
+                  <User className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-gray-900">
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
                     New user registration: john@example.com
                   </p>
-                  <p className="text-xs text-gray-500">2 minutes ago</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    2 minutes ago
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
+                  <CreditCard className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-gray-900">
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
                     Payment processed: $29.99
                   </p>
-                  <p className="text-xs text-gray-500">15 minutes ago</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    15 minutes ago
+                  </p>
                 </div>
               </div>
             </div>
@@ -236,14 +240,13 @@ const Admin = () => {
   const renderUsers = () => (
     <div className="space-y-6">
       {/* Search and Filters */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="card">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div className="flex-1 min-w-0">
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
               <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="input pl-10"
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -252,7 +255,7 @@ const Admin = () => {
           </div>
           <div className="flex space-x-3">
             <select
-              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              className="select"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -266,23 +269,23 @@ const Admin = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="card overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 User
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Subscription
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Created
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Last Login
               </th>
               <th className="relative px-6 py-3">
@@ -290,21 +293,23 @@ const Admin = () => {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {mockUsers.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <User className="h-5 w-5 text-blue-600" />
+                      <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                        <User className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                       </div>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {user.name}
                       </div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {user.email}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -312,27 +317,27 @@ const Admin = () => {
                   <span
                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       user.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
+                        ? "bg-success-100 dark:bg-success-900/30 text-success-800 dark:text-success-300"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
                     }`}
                   >
                     {user.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   {user.subscription}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   {user.createdAt}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   {user.lastLogin}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button className="text-blue-600 hover:text-blue-900 mr-3">
+                  <button className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 mr-3">
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button className="text-red-600 hover:text-red-900">
+                  <button className="text-danger-600 dark:text-danger-400 hover:text-danger-900 dark:hover:text-danger-300">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </td>
@@ -352,26 +357,54 @@ const Admin = () => {
         return renderUsers();
       case "billing":
         return (
-          <div className="p-6 bg-white rounded-lg shadow">
-            Billing overview coming soon...
+          <div className="card">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Billing Overview
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Billing management features coming soon...
+              </p>
+            </div>
           </div>
         );
       case "content":
         return (
-          <div className="p-6 bg-white rounded-lg shadow">
-            Content management coming soon...
+          <div className="card">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Content Management
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Content management features coming soon...
+              </p>
+            </div>
           </div>
         );
       case "analytics":
         return (
-          <div className="p-6 bg-white rounded-lg shadow">
-            Analytics coming soon...
+          <div className="card">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Analytics Dashboard
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Advanced analytics features coming soon...
+              </p>
+            </div>
           </div>
         );
       case "security":
         return (
-          <div className="p-6 bg-white rounded-lg shadow">
-            Security settings coming soon...
+          <div className="card">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Security Settings
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Security management features coming soon...
+              </p>
+            </div>
           </div>
         );
       default:
@@ -382,18 +415,18 @@ const Admin = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="border-b border-gray-200 pb-5">
-        <h1 className="text-3xl font-bold leading-6 text-gray-900">
+      <div className="border-b border-gray-200 dark:border-gray-700 pb-5">
+        <h1 className="text-3xl font-bold leading-6 text-gray-900 dark:text-gray-100">
           Admin Dashboard
         </h1>
-        <p className="mt-2 max-w-4xl text-sm text-gray-500">
+        <p className="mt-2 max-w-4xl text-sm text-gray-500 dark:text-gray-400">
           Manage users, content, and system settings for Trade Journal Pro.
         </p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="border-b border-gray-200">
+      <div className="card">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -403,8 +436,8 @@ const Admin = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`${
                     activeTab === tab.id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
                 >
                   <Icon className="h-5 w-5" />

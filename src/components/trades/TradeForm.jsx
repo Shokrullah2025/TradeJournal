@@ -76,19 +76,20 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       ? {
           ...trade,
           entryDate: trade.entryDate
-            ? (typeof trade.entryDate === 'string' && trade.entryDate.includes('T')
-                ? trade.entryDate.split("T")[0]
-                : trade.entryDate)
+            ? typeof trade.entryDate === "string" &&
+              trade.entryDate.includes("T")
+              ? trade.entryDate.split("T")[0]
+              : trade.entryDate
             : "",
           exitDate: trade.exitDate
-            ? (typeof trade.exitDate === 'string' && trade.exitDate.includes('T')
-                ? trade.exitDate.split("T")[0]
-                : trade.exitDate)
+            ? typeof trade.exitDate === "string" && trade.exitDate.includes("T")
+              ? trade.exitDate.split("T")[0]
+              : trade.exitDate
             : "",
           // Ensure tags are properly formatted
-          tags: Array.isArray(trade.tags) 
+          tags: Array.isArray(trade.tags)
             ? trade.tags.join(", ")
-            : (trade.tags || ""),
+            : trade.tags || "",
         }
       : {
           entryDate: selectedDate
@@ -121,7 +122,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       ? settingsStrategies.map((s) => s.name || s) // Handle both object and string formats
       : getUserOptions("strategies").concat([
           "Breakout",
-          "Scalping", 
+          "Scalping",
           "Swing Trading",
           "Day Trading",
           "Momentum",
@@ -134,7 +135,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       : getUserOptions("setups").concat([
           "Flag",
           "Pennant",
-          "Triangle", 
+          "Triangle",
           "Cup and Handle",
           "Support/Resistance",
           "Trendline Break",
@@ -302,86 +303,115 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     let selectedRiskProfile;
 
     console.log("=== Risk Profile Lookup Debug ===");
-    console.log("Template defaultRiskProfile field:", templateFields.defaultRiskProfile);
+    console.log(
+      "Template defaultRiskProfile field:",
+      templateFields.defaultRiskProfile
+    );
     console.log("Available settingsRiskProfiles:", settingsRiskProfiles);
     console.log("All template fields:", templateFields);
 
     // Check for defaultRiskProfile field in template
     if (templateFields.defaultRiskProfile) {
-      console.log("Looking for risk profile with name:", templateFields.defaultRiskProfile);
+      console.log(
+        "Looking for risk profile with name:",
+        templateFields.defaultRiskProfile
+      );
       // Find the risk profile by name
       selectedRiskProfile = settingsRiskProfiles.find(
-        profile => profile.name === templateFields.defaultRiskProfile
+        (profile) => profile.name === templateFields.defaultRiskProfile
       );
       console.log("Found matching profile:", selectedRiskProfile);
       if (selectedRiskProfile) {
         riskRewardToApply = `${selectedRiskProfile.riskRatio}:${selectedRiskProfile.rewardRatio}`;
-        console.log("Using template's default risk profile:", templateFields.defaultRiskProfile, "->", riskRewardToApply);
+        console.log(
+          "Using template's default risk profile:",
+          templateFields.defaultRiskProfile,
+          "->",
+          riskRewardToApply
+        );
       } else {
         console.log("ERROR: Risk profile not found in settings!");
-        console.log("Available profile names:", settingsRiskProfiles.map(p => p.name));
+        console.log(
+          "Available profile names:",
+          settingsRiskProfiles.map((p) => p.name)
+        );
       }
     } else {
       console.log("No defaultRiskProfile field in template");
-      console.log("Template might be using old format, checking legacy fields...");
+      console.log(
+        "Template might be using old format, checking legacy fields..."
+      );
     }
 
     // Fallback to legacy field names for backward compatibility
     if (!riskRewardToApply) {
       console.log("Checking legacy fields...");
-      
+
       // Check if template has direct riskReward value (old format)
       if (templateFields.riskReward) {
         const legacyValue = templateFields.riskReward;
         console.log("Found legacy riskReward:", legacyValue);
-        
+
         // If it's in "1:2" format, use it directly
         if (legacyValue.includes(":")) {
           riskRewardToApply = legacyValue;
           console.log("Legacy value is already in ratio format");
         } else {
           // If it's a profile name like "Conservative", find the matching profile
-          console.log("Legacy value is a profile name, looking for matching profile");
+          console.log(
+            "Legacy value is a profile name, looking for matching profile"
+          );
           const matchingProfile = settingsRiskProfiles.find(
-            profile => profile.name === legacyValue
+            (profile) => profile.name === legacyValue
           );
           if (matchingProfile) {
             riskRewardToApply = `${matchingProfile.riskRatio}:${matchingProfile.rewardRatio}`;
-            console.log(`Converted profile name "${legacyValue}" to ratio:`, riskRewardToApply);
+            console.log(
+              `Converted profile name "${legacyValue}" to ratio:`,
+              riskRewardToApply
+            );
           } else {
-            console.log(`Profile "${legacyValue}" not found in current profiles`);
+            console.log(
+              `Profile "${legacyValue}" not found in current profiles`
+            );
           }
         }
       } else if (templateFields.riskProfile) {
         const legacyValue = templateFields.riskProfile;
         console.log("Found legacy riskProfile:", legacyValue);
-        
+
         // Handle same way as riskReward
         if (legacyValue.includes(":")) {
           riskRewardToApply = legacyValue;
         } else {
           const matchingProfile = settingsRiskProfiles.find(
-            profile => profile.name === legacyValue
+            (profile) => profile.name === legacyValue
           );
           if (matchingProfile) {
             riskRewardToApply = `${matchingProfile.riskRatio}:${matchingProfile.rewardRatio}`;
-            console.log(`Converted profile name "${legacyValue}" to ratio:`, riskRewardToApply);
+            console.log(
+              `Converted profile name "${legacyValue}" to ratio:`,
+              riskRewardToApply
+            );
           }
         }
       } else if (templateFields["Default Risk Profile"]) {
         const legacyValue = templateFields["Default Risk Profile"];
         console.log("Found legacy 'Default Risk Profile':", legacyValue);
-        
+
         // Handle same way as others
         if (legacyValue.includes(":")) {
           riskRewardToApply = legacyValue;
         } else {
           const matchingProfile = settingsRiskProfiles.find(
-            profile => profile.name === legacyValue
+            (profile) => profile.name === legacyValue
           );
           if (matchingProfile) {
             riskRewardToApply = `${matchingProfile.riskRatio}:${matchingProfile.rewardRatio}`;
-            console.log(`Converted profile name "${legacyValue}" to ratio:`, riskRewardToApply);
+            console.log(
+              `Converted profile name "${legacyValue}" to ratio:`,
+              riskRewardToApply
+            );
           }
         }
       }
@@ -389,7 +419,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       console.log("Template risk reward search (legacy):");
       console.log("- riskReward:", templateFields.riskReward);
       console.log("- riskProfile:", templateFields.riskProfile);
-      console.log("- Default Risk Profile:", templateFields["Default Risk Profile"]);
+      console.log(
+        "- Default Risk Profile:",
+        templateFields["Default Risk Profile"]
+      );
       console.log("- Final legacy value:", riskRewardToApply);
     }
 
@@ -432,14 +465,17 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       setValue("riskReward", riskRewardToApply);
       console.log("Setting riskReward to:", riskRewardToApply);
       console.log("Form value after setting:", watch("riskReward"));
-      
+
       // Verify that the value matches one of the dropdown options
-      const availableOptions = settingsRiskProfiles.map(profile => 
-        `${profile.riskRatio}:${profile.rewardRatio}`
+      const availableOptions = settingsRiskProfiles.map(
+        (profile) => `${profile.riskRatio}:${profile.rewardRatio}`
       );
       console.log("Available dropdown options:", availableOptions);
-      console.log("Does set value match an option?", availableOptions.includes(riskRewardToApply));
-      
+      console.log(
+        "Does set value match an option?",
+        availableOptions.includes(riskRewardToApply)
+      );
+
       // Force trigger to update the form state
       trigger("riskReward");
     } else {
@@ -774,7 +810,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
         <div className="p-6">
           {/* Tab Navigation */}
-          <div className="flex space-x-1 mb-6 p-1 bg-gray-100 rounded-lg">
+          <div className="flex space-x-1 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
             <button
               type="button"
               onClick={() => setActiveTab("quick")}
@@ -809,13 +845,13 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   {/* Left Side - Template Selection */}
                   <div>
                     {settingsTemplates.length > 0 ? (
-                      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+                      <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-3">
-                          <div className="flex items-center text-green-800">
+                          <div className="flex items-center text-green-800 dark:text-green-200">
                             <Target className="w-5 h-5 mr-2" />
                             <h4 className="font-semibold">Use Template</h4>
                           </div>
-                          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                          <span className="text-xs text-green-600 dark:text-green-300 bg-green-100 dark:bg-green-800 px-2 py-1 rounded">
                             Recommended
                           </span>
                         </div>
@@ -982,7 +1018,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   <div>
                     <label className="label">Instrument *</label>
                     <input
-                      list="instruments"
+                      type="text"
                       {...register("instrument", {
                         required: "Instrument is required",
                       })}
@@ -1008,7 +1044,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 <div className="max-w-md mx-auto">
                   <label className="label">Direction *</label>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="flex items-center justify-center p-2 border rounded-lg cursor-pointer hover:bg-green-50 has-[:checked]:bg-green-100 has-[:checked]:border-green-300">
+                    <label className="flex items-center justify-center p-2 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 has-[:checked]:bg-green-100 dark:has-[:checked]:bg-green-900/40 has-[:checked]:border-green-300 dark:has-[:checked]:border-green-600">
                       <input
                         type="radio"
                         value="long"
@@ -1022,7 +1058,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         Long
                       </span>
                     </label>
-                    <label className="flex items-center justify-center p-2 border rounded-lg cursor-pointer hover:bg-red-50 has-[:checked]:bg-red-100 has-[:checked]:border-red-300">
+                    <label className="flex items-center justify-center p-2 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 has-[:checked]:bg-red-100 dark:has-[:checked]:bg-red-900/40 has-[:checked]:border-red-300 dark:has-[:checked]:border-red-600">
                       <input
                         type="radio"
                         value="short"
@@ -1032,7 +1068,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         className="sr-only"
                       />
                       <TrendingDown className="w-4 h-4 text-red-600 mr-1" />
-                      <span className="font-medium text-red-700 text-sm">
+                      <span className="font-medium text-red-700 dark:text-red-300 text-sm">
                         Short
                       </span>
                     </label>
@@ -1177,7 +1213,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                           type="number"
                           step="0.01"
                           {...register("pnl")}
-                          className="input bg-gray-50"
+                          className="input bg-gray-50 dark:bg-gray-700"
                           placeholder="Auto-calculated"
                           readOnly
                         />
@@ -1204,7 +1240,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         <select {...register("strategy")} className="input">
                           <option value="">Select strategy</option>
                           {settingsStrategies.map((strategy, index) => (
-                            <option key={strategy.id || strategy || index} value={strategy.name || strategy}>
+                            <option
+                              key={strategy.id || strategy || index}
+                              value={strategy.name || strategy}
+                            >
                               {strategy.name || strategy}
                             </option>
                           ))}
@@ -1232,7 +1271,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         <select {...register("setup")} className="input">
                           <option value="">Select setup</option>
                           {settingsSetups.map((setup, index) => (
-                            <option key={setup.id || setup || index} value={setup.name || setup}>
+                            <option
+                              key={setup.id || setup || index}
+                              value={setup.name || setup}
+                            >
                               {setup.name || setup}
                             </option>
                           ))}

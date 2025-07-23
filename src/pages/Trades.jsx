@@ -89,7 +89,9 @@ const Trades = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Trade Journal</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Trade Journal
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Manage and track all your trades in one place
           </p>
@@ -141,28 +143,36 @@ const Trades = () => {
           <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
             {filteredTrades.length}
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">Total Trades</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            Total Trades
+          </div>
         </div>
 
         <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
           <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
             {filteredTrades.filter((t) => t.status === "open").length}
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">Open Positions</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            Open Positions
+          </div>
         </div>
 
         <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
           <div className="text-lg font-bold text-success-600 dark:text-success-400">
             {filteredTrades.filter((t) => t.pnl > 0).length}
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">Winning Trades</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            Winning Trades
+          </div>
         </div>
 
         <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
           <div className="text-lg font-bold text-danger-600 dark:text-danger-400">
             {filteredTrades.filter((t) => t.pnl < 0).length}
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">Losing Trades</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            Losing Trades
+          </div>
         </div>
       </div>
 
@@ -198,21 +208,21 @@ const Trades = () => {
         </div>
 
         {showFilters && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <TradeFilters />
           </div>
         )}
       </div>
 
       {/* View Toggle Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveView("calendar")}
             className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeView === "calendar"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
             }`}
           >
             <div className="flex items-center space-x-2">
@@ -224,8 +234,8 @@ const Trades = () => {
             onClick={() => setActiveView("list")}
             className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeView === "list"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
             }`}
           >
             <div className="flex items-center space-x-2">
@@ -250,10 +260,10 @@ const Trades = () => {
 
           {/* P&L Summary Panel - Takes 1/4 of the width */}
           <div className="xl:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden sticky top-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden sticky top-6">
               {/* Header */}
               <div
-                className="border-b border-gray-200 p-4"
+                className="border-b border-gray-200 dark:border-gray-700 p-4"
                 style={{ backgroundColor: "rgb(2, 132, 199)" }}
               >
                 <h3 className="text-lg font-semibold text-white">
@@ -280,17 +290,21 @@ const Trades = () => {
                       .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
                       .toFixed(2)}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">Total P&L</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Total P&L
+                  </div>
                 </div>
 
                 {/* Divider */}
-                <div className="border-t border-gray-200"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700"></div>
 
                 {/* Stats Grid */}
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Win Rate</span>
-                    <span className="font-semibold">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Win Rate
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
                       {filteredAndSearchedTrades.length > 0
                         ? `${(
                             (filteredAndSearchedTrades.filter((t) => t.pnl > 0)
@@ -303,10 +317,10 @@ const Trades = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       Winning Trades
                     </span>
-                    <span className="font-semibold text-green-600">
+                    <span className="font-semibold text-success-600 dark:text-success-400">
                       {
                         filteredAndSearchedTrades.filter((t) => t.pnl > 0)
                           .length
@@ -315,8 +329,10 @@ const Trades = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Losing Trades</span>
-                    <span className="font-semibold text-red-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Losing Trades
+                    </span>
+                    <span className="font-semibold text-danger-600 dark:text-danger-400">
                       {
                         filteredAndSearchedTrades.filter((t) => t.pnl < 0)
                           .length
@@ -325,8 +341,10 @@ const Trades = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Avg Win</span>
-                    <span className="font-semibold text-green-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Avg Win
+                    </span>
+                    <span className="font-semibold text-success-600 dark:text-success-400">
                       $
                       {filteredAndSearchedTrades.filter((t) => t.pnl > 0)
                         .length > 0
@@ -342,8 +360,10 @@ const Trades = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Avg Loss</span>
-                    <span className="font-semibold text-red-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Avg Loss
+                    </span>
+                    <span className="font-semibold text-danger-600 dark:text-danger-400">
                       $
                       {filteredAndSearchedTrades.filter((t) => t.pnl < 0)
                         .length > 0
@@ -361,7 +381,7 @@ const Trades = () => {
 
                 {/* Visual Progress Bar for Win Rate */}
                 <div className="mt-4">
-                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
                     <span>Win Rate</span>
                     <span>
                       {filteredAndSearchedTrades.length > 0
@@ -374,7 +394,7 @@ const Trades = () => {
                         : "0%"}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300"
                       style={{
@@ -393,26 +413,26 @@ const Trades = () => {
                 </div>
 
                 {/* Monthly Performance */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                     This Month
                   </h4>
                   <div className="space-y-2">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-xl font-bold text-gray-900">
+                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
                         {filteredAndSearchedTrades.length}
                       </div>
-                      <div className="text-sm text-gray-600">Total Trades</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Total Trades</div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <div
                         className={`text-xl font-bold ${
                           filteredAndSearchedTrades.reduce(
                             (sum, trade) => sum + (trade.pnl || 0),
                             0
                           ) >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
+                            ? "text-success-600 dark:text-success-400"
+                            : "text-danger-600 dark:text-danger-400"
                         }`}
                       >
                         {filteredAndSearchedTrades.reduce(
@@ -426,7 +446,7 @@ const Trades = () => {
                           .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
                           .toFixed(0)}
                       </div>
-                      <div className="text-sm text-gray-600">Monthly P&L</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Monthly P&L</div>
                     </div>
                   </div>
                 </div>

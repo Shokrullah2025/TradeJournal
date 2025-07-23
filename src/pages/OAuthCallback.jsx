@@ -113,8 +113,8 @@ const OAuthCallback = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center border dark:border-gray-700">
         <div className="flex justify-center mb-6">{getStatusIcon()}</div>
 
         <h1 className={`text-2xl font-bold mb-4 ${getStatusColor()}`}>
@@ -123,10 +123,10 @@ const OAuthCallback = () => {
           {status === "error" && "Authentication Failed"}
         </h1>
 
-        <p className="text-gray-600 mb-6">{message}</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">{message}</p>
 
         {status === "success" && (
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             Redirecting to trades page...
           </p>
         )}
@@ -141,14 +141,14 @@ const OAuthCallback = () => {
               <span>Return to Trades</span>
             </button>
 
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               You can try connecting to your broker again from the trades page.
             </p>
           </div>
         )}
 
         {status === "processing" && (
-          <div className="text-sm text-gray-500 space-y-2">
+          <div className="text-sm text-gray-500 dark:text-gray-400 space-y-2">
             <p>Please wait while we complete the authentication process.</p>
             <p>This window will close automatically when complete.</p>
           </div>
