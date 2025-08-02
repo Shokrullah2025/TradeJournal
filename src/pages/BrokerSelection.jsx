@@ -90,8 +90,10 @@ const BrokerSelection = () => {
   const brokerCategories = getBrokersByCategory();
 
   const getBrokerStatusColor = (brokerKey) => {
-    if (brokerKey === "demo") return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300";
-    if (brokerKey === "tradovate") return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300";
+    if (brokerKey === "demo")
+      return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300";
+    if (brokerKey === "tradovate")
+      return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300";
     return "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300";
   };
 
@@ -290,7 +292,9 @@ const BrokerSelection = () => {
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Need Help?</h3>
+              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Need Help?
+              </h3>
               <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
                 <ul className="list-disc list-inside space-y-1">
                   <li>

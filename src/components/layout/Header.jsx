@@ -62,8 +62,12 @@ const Header = ({ onMenuClick }) => {
 
           <div className="header__profile flex items-center space-x-3">
             <div className="header__profile-info hidden md:block text-right">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Trader</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Pro Account</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Trader
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Pro Account
+              </p>
             </div>
 
             <div className="header__profile-avatar w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
