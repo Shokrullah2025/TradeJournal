@@ -1,5 +1,13 @@
 import React from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
   if (trades.length === 0) {
@@ -9,7 +17,9 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
           Instrument Analysis
         </h3>
         <div className="text-center py-8">
-          <p className="text-gray-500 dark:text-gray-400">No instrument data available</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            No instrument data available
+          </p>
         </div>
       </div>
     );
@@ -17,7 +27,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
 
   // Group trades by instrument
   const instrumentData = trades.reduce((acc, trade) => {
-    const instrument = trade.instrument || 'Unknown';
+    const instrument = trade.instrument || "Unknown";
     if (!acc[instrument]) {
       acc[instrument] = {
         name: instrument,
@@ -26,20 +36,23 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
         winningTrades: 0,
       };
     }
-    
+
     acc[instrument].totalTrades += 1;
     acc[instrument].totalPnL += trade.pnl || 0;
     if (trade.pnl > 0) {
       acc[instrument].winningTrades += 1;
     }
-    
+
     return acc;
   }, {});
 
   const chartData = Object.values(instrumentData)
-    .map(item => ({
+    .map((item) => ({
       ...item,
-      winRate: item.totalTrades > 0 ? (item.winningTrades / item.totalTrades) * 100 : 0
+      winRate:
+        item.totalTrades > 0
+          ? (item.winningTrades / item.totalTrades) * 100
+          : 0,
     }))
     .sort((a, b) => b.totalPnL - a.totalPnL)
     .slice(0, detailed ? 10 : 5);
@@ -89,7 +102,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
         Instrument Performance
       </h3>
-      
+
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>

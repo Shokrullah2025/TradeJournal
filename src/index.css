@@ -44,16 +44,24 @@
     @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-primary-500 dark:hover:bg-primary-600 dark:focus:ring-primary-400;
   }
   
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:focus:ring-gray-400;
+  .btn-accent {
+    @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:focus:ring-indigo-400;
   }
   
-  .btn-success {
-    @apply bg-success-600 text-white hover:bg-success-700 focus:ring-success-500 dark:bg-success-500 dark:hover:bg-success-600 dark:focus:ring-success-400;
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
   }
   
-  .btn-danger {
-    @apply bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 dark:bg-danger-500 dark:hover:bg-danger-600 dark:focus:ring-danger-400;
+  .btn-xs {
+    @apply px-2 py-1 text-xs;
+  }
+
+  .btn-icon {
+    @apply p-2 rounded-full;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:ring-gray-400;
   }
   
   .card {

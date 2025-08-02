@@ -70,22 +70,36 @@ const TemplateCreation = () => {
 
   // Available fields that can be included in templates
   const availableFields = [
-    { key: 'instrumentType', label: 'Instrument Type', category: 'Basic Info' },
-    { key: 'tradeType', label: 'Trade Type', category: 'Basic Info' },
-    { key: 'strategy', label: 'Strategy', category: 'Trading Setup' },
-    { key: 'setup', label: 'Setup', category: 'Trading Setup' },
-    { key: 'marketCondition', label: 'Market Condition', category: 'Trading Setup' },
-    { key: 'entryPrice', label: 'Entry Price', category: 'Price & Risk' },
-    { key: 'stopLoss', label: 'Stop Loss', category: 'Price & Risk' },
-    { key: 'takeProfit', label: 'Take Profit', category: 'Price & Risk' },
-    { key: 'quantity', label: 'Quantity', category: 'Price & Risk' },
-    { key: 'defaultRiskProfile', label: 'Default Risk Profile', category: 'Price & Risk' },
-    { key: 'status', label: 'Status', category: 'Basic Info' }
+    { key: "instrumentType", label: "Instrument Type", category: "Basic Info" },
+    { key: "tradeType", label: "Trade Type", category: "Basic Info" },
+    { key: "strategy", label: "Strategy", category: "Trading Setup" },
+    { key: "setup", label: "Setup", category: "Trading Setup" },
+    {
+      key: "marketCondition",
+      label: "Market Condition",
+      category: "Trading Setup",
+    },
+    { key: "entryPrice", label: "Entry Price", category: "Price & Risk" },
+    { key: "stopLoss", label: "Stop Loss", category: "Price & Risk" },
+    { key: "takeProfit", label: "Take Profit", category: "Price & Risk" },
+    { key: "quantity", label: "Quantity", category: "Price & Risk" },
+    {
+      key: "defaultRiskProfile",
+      label: "Default Risk Profile",
+      category: "Price & Risk",
+    },
+    { key: "status", label: "Status", category: "Basic Info" },
   ];
 
   // State to track which fields are included in the template
   const [includedFields, setIncludedFields] = useState(() => {
-    const defaultFields = ['instrumentType', 'tradeType', 'strategy', 'setup', 'defaultRiskProfile'];
+    const defaultFields = [
+      "instrumentType",
+      "tradeType",
+      "strategy",
+      "setup",
+      "defaultRiskProfile",
+    ];
     return new Set(defaultFields);
   });
 
@@ -138,7 +152,13 @@ const TemplateCreation = () => {
       },
     });
     // Reset to default included fields
-    const defaultFields = ['instrumentType', 'tradeType', 'strategy', 'setup', 'defaultRiskProfile'];
+    const defaultFields = [
+      "instrumentType",
+      "tradeType",
+      "strategy",
+      "setup",
+      "defaultRiskProfile",
+    ];
     setIncludedFields(new Set(defaultFields));
   };
 
@@ -151,22 +171,23 @@ const TemplateCreation = () => {
       fields: { ...template.fields },
     });
     // Set included fields based on template data
-    const templateIncludedFields = template.includedFields || Object.keys(template.fields);
+    const templateIncludedFields =
+      template.includedFields || Object.keys(template.fields);
     setIncludedFields(new Set(templateIncludedFields));
   };
 
   const toggleField = (fieldKey) => {
-    setIncludedFields(prev => {
+    setIncludedFields((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(fieldKey)) {
         newSet.delete(fieldKey);
         // Clear the field value when removing
-        setFormData(prevFormData => ({
+        setFormData((prevFormData) => ({
           ...prevFormData,
           fields: {
             ...prevFormData.fields,
-            [fieldKey]: ''
-          }
+            [fieldKey]: "",
+          },
         }));
       } else {
         newSet.add(fieldKey);
@@ -176,18 +197,21 @@ const TemplateCreation = () => {
   };
 
   const selectAllFields = () => {
-    setIncludedFields(new Set(availableFields.map(field => field.key)));
+    setIncludedFields(new Set(availableFields.map((field) => field.key)));
   };
 
   const deselectAllFields = () => {
     setIncludedFields(new Set());
     // Clear all field values
-    setFormData(prevFormData => ({
+    setFormData((prevFormData) => ({
       ...prevFormData,
-      fields: Object.keys(prevFormData.fields).reduce((acc, key) => ({
-        ...acc,
-        [key]: key === 'status' ? 'Open' : '' // Keep default status
-      }), {})
+      fields: Object.keys(prevFormData.fields).reduce(
+        (acc, key) => ({
+          ...acc,
+          [key]: key === "status" ? "Open" : "", // Keep default status
+        }),
+        {}
+      ),
     }));
   };
 
@@ -277,7 +301,9 @@ const TemplateCreation = () => {
       {/* Header Actions */}
       <div className="template-creation__header flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Trade Templates</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Trade Templates
+          </h2>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Create reusable templates to speed up trade entry
           </p>
@@ -368,44 +394,55 @@ const TemplateCreation = () => {
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                   <p className="text-sm text-gray-600 mb-3">
-                    Select which fields to include in this template ({includedFields.size} selected):
+                    Select which fields to include in this template (
+                    {includedFields.size} selected):
                   </p>
-                  
+
                   {/* Group fields by category */}
-                  {['Basic Info', 'Trading Setup', 'Price & Risk'].map(category => (
-                    <div key={category} className="space-y-2">
-                      <h5 className="text-sm font-medium text-gray-700 border-b border-gray-200 pb-1">
-                        {category}
-                      </h5>
-                      <div className="grid grid-cols-1 gap-2 ml-2">
-                        {availableFields
-                          .filter(field => field.category === category)
-                          .map(field => (
-                            <label key={field.key} className={`flex items-center justify-between space-x-2 text-sm cursor-pointer hover:bg-gray-100 p-2 rounded border-2 transition-all duration-200 ${
-                              includedFields.has(field.key) 
-                                ? 'border-blue-200 bg-blue-50' 
-                                : 'border-transparent'
-                            }`}>
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={includedFields.has(field.key)}
-                                  onChange={() => toggleField(field.key)}
-                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                <span className={includedFields.has(field.key) ? 'text-gray-900 font-medium' : 'text-gray-500'}>
-                                  {field.label}
-                                </span>
-                              </div>
-                              {includedFields.has(field.key) && (
-                                <Check className="w-4 h-4 text-blue-600" />
-                              )}
-                            </label>
-                          ))
-                        }
+                  {["Basic Info", "Trading Setup", "Price & Risk"].map(
+                    (category) => (
+                      <div key={category} className="space-y-2">
+                        <h5 className="text-sm font-medium text-gray-700 border-b border-gray-200 pb-1">
+                          {category}
+                        </h5>
+                        <div className="grid grid-cols-1 gap-2 ml-2">
+                          {availableFields
+                            .filter((field) => field.category === category)
+                            .map((field) => (
+                              <label
+                                key={field.key}
+                                className={`flex items-center justify-between space-x-2 text-sm cursor-pointer hover:bg-gray-100 p-2 rounded border-2 transition-all duration-200 ${
+                                  includedFields.has(field.key)
+                                    ? "border-blue-200 bg-blue-50"
+                                    : "border-transparent"
+                                }`}
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={includedFields.has(field.key)}
+                                    onChange={() => toggleField(field.key)}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span
+                                    className={
+                                      includedFields.has(field.key)
+                                        ? "text-gray-900 font-medium"
+                                        : "text-gray-500"
+                                    }
+                                  >
+                                    {field.label}
+                                  </span>
+                                </div>
+                                {includedFields.has(field.key) && (
+                                  <Check className="w-4 h-4 text-blue-600" />
+                                )}
+                              </label>
+                            ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             </div>
@@ -415,15 +452,16 @@ const TemplateCreation = () => {
               <h4 className="font-medium text-gray-900">
                 Default Field Values
               </h4>
-              
+
               {includedFields.size === 0 ? (
                 <div className="text-sm text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
-                  No fields selected. Use the checkboxes on the left to add fields to your template.
+                  No fields selected. Use the checkboxes on the left to add
+                  fields to your template.
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   {/* Render fields conditionally based on includedFields */}
-                  {includedFields.has('instrumentType') && (
+                  {includedFields.has("instrumentType") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Instrument Type
@@ -445,7 +483,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('tradeType') && (
+                  {includedFields.has("tradeType") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Trade Type
@@ -467,7 +505,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('strategy') && (
+                  {includedFields.has("strategy") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Strategy
@@ -489,14 +527,16 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('setup') && (
+                  {includedFields.has("setup") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Setup
                       </label>
                       <select
                         value={formData.fields.setup}
-                        onChange={(e) => handleFieldChange("setup", e.target.value)}
+                        onChange={(e) =>
+                          handleFieldChange("setup", e.target.value)
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select setup</option>
@@ -509,7 +549,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('marketCondition') && (
+                  {includedFields.has("marketCondition") && (
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Market Condition
@@ -531,7 +571,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('entryPrice') && (
+                  {includedFields.has("entryPrice") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Entry Price
@@ -549,7 +589,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('defaultRiskProfile') && (
+                  {includedFields.has("defaultRiskProfile") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Default Risk Profile
@@ -558,17 +598,18 @@ const TemplateCreation = () => {
                         <select
                           value={formData.fields.defaultRiskProfile}
                           onChange={(e) =>
-                            handleFieldChange("defaultRiskProfile", e.target.value)
+                            handleFieldChange(
+                              "defaultRiskProfile",
+                              e.target.value
+                            )
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select risk profile</option>
                           {riskProfiles.map((profile) => (
-                            <option
-                              key={profile.id}
-                              value={profile.name}
-                            >
-                              {profile.name} ({profile.riskRatio}:{profile.rewardRatio})
+                            <option key={profile.id} value={profile.name}>
+                              {profile.name} ({profile.riskRatio}:
+                              {profile.rewardRatio})
                             </option>
                           ))}
                         </select>
@@ -583,7 +624,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('stopLoss') && (
+                  {includedFields.has("stopLoss") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Stop Loss
@@ -601,7 +642,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('takeProfit') && (
+                  {includedFields.has("takeProfit") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Take Profit
@@ -619,7 +660,7 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('quantity') && (
+                  {includedFields.has("quantity") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Quantity
@@ -636,14 +677,16 @@ const TemplateCreation = () => {
                     </div>
                   )}
 
-                  {includedFields.has('status') && (
+                  {includedFields.has("status") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Status
                       </label>
                       <select
                         value={formData.fields.status}
-                        onChange={(e) => handleFieldChange("status", e.target.value)}
+                        onChange={(e) =>
+                          handleFieldChange("status", e.target.value)
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         {statuses.map((status) => (
@@ -721,21 +764,34 @@ const TemplateCreation = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Included Fields:</span>
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {template.includedFields ? template.includedFields.length : Object.keys(template.fields).filter(key => template.fields[key]).length} fields
+                    {template.includedFields
+                      ? template.includedFields.length
+                      : Object.keys(template.fields).filter(
+                          (key) => template.fields[key]
+                        ).length}{" "}
+                    fields
                   </span>
                 </div>
-                
+
                 {/* Show field preview */}
-                {template.includedFields 
-                  ? template.includedFields.slice(0, 3).map(fieldKey => {
+                {template.includedFields
+                  ? template.includedFields.slice(0, 3).map((fieldKey) => {
                       const fieldValue = template.fields[fieldKey];
                       if (!fieldValue) return null;
                       return (
-                        <div key={fieldKey} className="flex justify-between text-sm">
+                        <div
+                          key={fieldKey}
+                          className="flex justify-between text-sm"
+                        >
                           <span className="text-gray-500 capitalize">
-                            {availableFields.find(f => f.key === fieldKey)?.label || fieldKey.replace(/([A-Z])/g, " $1").trim()}:
+                            {availableFields.find((f) => f.key === fieldKey)
+                              ?.label ||
+                              fieldKey.replace(/([A-Z])/g, " $1").trim()}
+                            :
                           </span>
-                          <span className="text-gray-900 truncate ml-2">{fieldValue}</span>
+                          <span className="text-gray-900 truncate ml-2">
+                            {fieldValue}
+                          </span>
                         </div>
                       );
                     })
@@ -744,15 +800,19 @@ const TemplateCreation = () => {
                       .map(([key, value]) => {
                         if (!value) return null;
                         return (
-                          <div key={key} className="flex justify-between text-sm">
+                          <div
+                            key={key}
+                            className="flex justify-between text-sm"
+                          >
                             <span className="text-gray-500 capitalize">
                               {key.replace(/([A-Z])/g, " $1").trim()}:
                             </span>
-                            <span className="text-gray-900 truncate ml-2">{value}</span>
+                            <span className="text-gray-900 truncate ml-2">
+                              {value}
+                            </span>
                           </div>
                         );
-                      })
-                }
+                      })}
               </div>
 
               {/* Stats */}
