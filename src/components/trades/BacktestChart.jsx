@@ -100,9 +100,34 @@ const BacktestChart = ({
         borderDownColor: "#ef4444",
         wickUpColor: "#22c55e",
         wickDownColor: "#ef4444",
+        // Make candles narrower and more organized
+        priceScaleId: 'right',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.2,
+        },
       });
 
       mainSeries.setData(candleData);
+      
+      // Apply visual options to make candles narrower and more spaced
+      chartRef.current.applyOptions({
+        layout: {
+          ...chartOptions.layout
+        },
+        rightPriceScale: {
+          ...chartOptions.rightPriceScale,
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.2,
+          },
+        },
+        timeScale: {
+          ...chartOptions.timeScale,
+          barSpacing: 12, // Increase spacing between bars for better organization
+          minBarSpacing: 8, // Minimum spacing between bars
+        },
+      });
     }
 
     // Add equity curve data if available

@@ -63,18 +63,18 @@ const Analytics = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Analytics Dashboard
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+            📊 Analytics Dashboard
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Deep dive into your trading performance and patterns
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Comprehensive analysis of your trading performance, patterns, and insights
           </p>
         </div>
 
         <div className="mt-4 sm:mt-0 flex items-center space-x-3">
           <button
             onClick={handleExportReport}
-            className="btn btn-secondary flex items-center space-x-2"
+            className="btn btn-secondary flex items-center space-x-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30"
           >
             <Download className="w-4 h-4" />
             <span>Export Report</span>
@@ -83,15 +83,15 @@ const Analytics = () => {
       </div>
 
       {/* Filters */}
-      <div className="card">
+      <div className="card bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-primary-200 dark:border-primary-800">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <Calendar className="w-4 h-4 text-primary-600 dark:text-primary-400" />
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                className="border border-primary-300 dark:border-primary-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="all">All Time</option>
                 <option value="7d">Last 7 Days</option>
@@ -102,23 +102,23 @@ const Analytics = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <BarChart3 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
               <select
                 value={analysisType}
                 onChange={(e) => setAnalysisType(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                className="border border-primary-300 dark:border-primary-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
-                <option value="overview">Overview</option>
-                <option value="strategy">Strategy Analysis</option>
-                <option value="time">Time Analysis</option>
-                <option value="instrument">Instrument Analysis</option>
-                <option value="drawdown">Drawdown Analysis</option>
+                <option value="overview">📈 Overview</option>
+                <option value="strategy">🎯 Strategy Analysis</option>
+                <option value="time">⏰ Time Analysis</option>
+                <option value="instrument">🎯 Instrument Analysis</option>
+                <option value="drawdown">📉 Drawdown Analysis</option>
               </select>
             </div>
           </div>
 
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Analyzing {timeFilteredTrades.length} trades
+          <div className="text-sm text-primary-700 dark:text-primary-300 font-medium">
+            📊 Analyzing {timeFilteredTrades.length} trades
           </div>
         </div>
       </div>
@@ -154,16 +154,23 @@ const Analytics = () => {
       )}
 
       {timeFilteredTrades.length === 0 && (
-        <div className="card">
-          <div className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              No Data Available
+        <div className="card text-center py-16">
+          <div className="max-w-md mx-auto">
+            <BarChart3 className="w-24 h-24 text-gray-300 dark:text-gray-600 mx-auto mb-6" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              📊 No Trading Data Available
             </h3>
-            <p className="text-gray-500 dark:text-gray-400">
-              No trades found for the selected time period. Try adjusting your
-              filters or add some trades.
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              No trades found for the selected time period. Start trading or adjust your filters to view analytics.
             </p>
+            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <p>💡 Tips to get started:</p>
+              <ul className="list-disc list-inside space-y-1 text-left">
+                <li>Record your first trade in the Trade Entry section</li>
+                <li>Try selecting "All Time" for a broader view</li>
+                <li>Import historical trades if available</li>
+              </ul>
+            </div>
           </div>
         </div>
       )}

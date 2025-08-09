@@ -7,9 +7,9 @@ const Header = ({ onMenuClick }) => {
   const { stats } = useTrades();
 
   return (
-    <header className="header bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-      <div className="header__container flex items-center justify-between px-6 py-4">
-        <div className="header__left flex items-center space-x-4">
+    <header className="header bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 ">
+      <div className="header__container flex items-center justify-between px-6 py-4 h-16">
+        <div className="header__left flex items-center space-x-4 ">
           <button
             onClick={onMenuClick}
             className="header__menu-button lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -17,7 +17,7 @@ const Header = ({ onMenuClick }) => {
             <Menu className="w-5 h-5 dark:text-gray-300" />
           </button>
 
-          <div className="header__stats hidden md:flex items-center space-x-6">
+          <div className="header__stats hidden md:flex items-center space-x-6 ">
             <div className="header__pnl flex items-center space-x-2">
               <div className="w-2 h-2 bg-success-500 rounded-full"></div>
               <span className="text-sm text-gray-600 dark:text-gray-300">

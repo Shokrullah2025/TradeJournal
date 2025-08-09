@@ -473,7 +473,9 @@ const Backtest = () => {
 
           {/* Candlesticks */}
           {visibleCandles.map((candle, index) => {
-            const x = padding.left + index * 8;
+            const candleWidth = 0.6; // 1/10 of original width (was 6)
+            const candleSpacing = 8; // Maintain consistent spacing
+            const x = padding.left + index * candleSpacing;
             const isGreen = candle.close > candle.open;
             const color = isGreen ? "#10B981" : "#EF4444";
 
@@ -485,23 +487,44 @@ const Backtest = () => {
             const bodyTop = Math.min(openY, closeY);
             const bodyHeight = Math.abs(closeY - openY);
 
+            // Center the wick and candle body
+            const wickX = x + candleSpacing / 2;
+            const bodyX = wickX - candleWidth / 2;
+
             return (
               <g key={index}>
+                {/* High-Low Wick */}
                 <line
-                  x1={x + 3}
+                  x1={wickX}
                   y1={highY}
-                  x2={x + 3}
+                  x2={wickX}
                   y2={lowY}
                   stroke={color}
-                  strokeWidth="1"
+                  strokeWidth="0.5"
                 />
+                {/* Candle Body */}
                 <rect
-                  x={x}
+                  x={bodyX}
                   y={bodyTop}
-                  width="6"
+                  width={candleWidth}
                   height={Math.max(bodyHeight, 1)}
                   fill={color}
-                />
+                  stroke={color}
+                  strokeWidth="0.2"
+                >
+                  <title>{`Candle ${index + 1}\nOpen: $${candle.open.toFixed(
+                    2
+                  )}\nHigh: $${candle.high.toFixed(
+                    2
+                  )}\nLow: $${candle.low.toFixed(
+                    2
+                  )}\nClose: $${candle.close.toFixed(2)}\nChange: ${
+                    isGreen ? "+" : ""
+                  }${(
+                    ((candle.close - candle.open) / candle.open) *
+                    100
+                  ).toFixed(2)}%`}</title>
+                </rect>
               </g>
             );
           })}
@@ -1152,6 +1175,34 @@ const Backtest = () => {
 
             {/* Chart */}
             <div className="bg-gray-800 rounded-lg p-4 flex-1">
+              {/* Chart Legend */}
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-700">
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+                    <span className="text-xs text-gray-300">
+                      Bullish Candle
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                    <span className="text-xs text-gray-300">
+                      Bearish Candle
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className="w-6 h-0.5 bg-yellow-500"
+                      style={{ borderStyle: "dashed", borderWidth: "1px 0" }}
+                    ></div>
+                    <span className="text-xs text-gray-300">Current Price</span>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-400">
+                  Hover over candles for details
+                </div>
+              </div>
+
               <div className="h-96 overflow-x-auto">
                 {renderCandlestickChart()}
               </div>

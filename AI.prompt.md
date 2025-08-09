@@ -1,1 +1,3 @@
-Adjust the page layout to display content horizontally for better utilization of space. Implement functionality to simplify template creation, ensuring all existing templates are removed. Add a calendar view that shows the total trade of the day, including numerical values. Use light green to indicate a win and light red to indicate a loss.
+There are two issues remaining with the profile menu.
+1- When the profile button is clicked where it's collapsed, the profile menu opens under the main content.
+2- Icon doesn't stay in it's place when the sidebar is collapsing and shift to the center.

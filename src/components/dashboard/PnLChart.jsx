@@ -124,6 +124,8 @@ const PnLChart = ({ trades }) => {
         <BarChart
           data={data}
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          barCategoryGap="20%" // Increase gap between bar categories for better spacing
+          barGap={2} // Reduce gap between bars within the same category
         >
           <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
           <XAxis
@@ -149,6 +151,7 @@ const PnLChart = ({ trades }) => {
             fill={colors.wins}
             name="Wins"
             radius={[0, 0, 0, 0]}
+            maxBarSize={8} // Limit bar width to make them narrower (1/10 of default ~80px)
           />
           <Bar
             dataKey="losses"
@@ -156,6 +159,7 @@ const PnLChart = ({ trades }) => {
             fill={colors.losses}
             name="Losses"
             radius={[0, 0, 0, 0]}
+            maxBarSize={8} // Limit bar width to make them narrower
           />
         </BarChart>
       </ResponsiveContainer>
