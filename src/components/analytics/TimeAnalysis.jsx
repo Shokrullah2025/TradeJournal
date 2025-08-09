@@ -203,29 +203,50 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
       {/* Hourly Analysis */}
       {hourlyData.length > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-            Hourly Performance
-          </h3>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+                🕐 Hourly Performance Analysis
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Identify your most profitable trading hours throughout the day
+              </p>
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {hourlyData.length} active hours
+            </div>
+          </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <BarChart 
+                data={hourlyData}
+                barCategoryGap="15%" 
+                maxBarSize={8}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
                 <XAxis
                   dataKey="displayHour"
-                  stroke="#666"
+                  stroke="#6b7280"
                   fontSize={12}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  stroke="#666"
+                  stroke="#6b7280"
                   fontSize={12}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(value) => `$${value.toLocaleString()}`}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="totalPnL" fill="#0ea5e9" radius={[2, 2, 0, 0]} />
+                <Bar 
+                  dataKey="totalPnL" 
+                  fill="#22c55e" 
+                  radius={[3, 3, 0, 0]}
+                  stroke="#16a34a"
+                  strokeWidth={1}
+                  maxBarSize={8}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -234,29 +255,50 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
 
       {/* Daily Analysis */}
       <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-          Day of Week Performance
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+              📅 Day of Week Performance
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Analyze performance patterns across different days of the week
+            </p>
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {dailyData.length} trading days
+          </div>
+        </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dailyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <BarChart 
+              data={dailyData}
+              barCategoryGap="15%"
+              maxBarSize={8}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
               <XAxis
                 dataKey="name"
-                stroke="#666"
+                stroke="#6b7280"
                 fontSize={12}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                stroke="#666"
+                stroke="#6b7280"
                 fontSize={12}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="totalPnL" fill="#22c55e" radius={[2, 2, 0, 0]} />
+              <Bar 
+                dataKey="totalPnL" 
+                fill="#0ea5e9" 
+                radius={[3, 3, 0, 0]}
+                stroke="#0284c7"
+                strokeWidth={1}
+                maxBarSize={8}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -267,16 +309,30 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
           {/* Monthly Analysis */}
           {monthlyData.length > 0 && (
             <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-                Monthly Performance
-              </h3>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+                    📈 Monthly Performance Trends
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Track your trading performance evolution over time
+                  </p>
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {monthlyData.length} months analyzed
+                </div>
+              </div>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <BarChart 
+                    data={monthlyData}
+                    barCategoryGap="15%"
+                    maxBarSize={8}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
                     <XAxis
                       dataKey="displayMonth"
-                      stroke="#666"
+                      stroke="#6b7280"
                       fontSize={12}
                       axisLine={false}
                       tickLine={false}
@@ -285,7 +341,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                       height={60}
                     />
                     <YAxis
-                      stroke="#666"
+                      stroke="#6b7280"
                       fontSize={12}
                       axisLine={false}
                       tickLine={false}
@@ -295,7 +351,10 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                     <Bar
                       dataKey="totalPnL"
                       fill="#f59e0b"
-                      radius={[2, 2, 0, 0]}
+                      radius={[3, 3, 0, 0]}
+                      stroke="#d97706"
+                      strokeWidth={1}
+                      maxBarSize={8}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -305,9 +364,12 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
 
           {/* Time Insights */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Time-Based Insights
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              💡 Time-Based Trading Insights
             </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Key findings from your time-based trading patterns
+            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Best Trading Hours */}

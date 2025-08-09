@@ -85,14 +85,16 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
   const strategyData = analyzeStrategies();
 
   const COLORS = [
-    "#0ea5e9",
-    "#22c55e",
-    "#f59e0b",
-    "#ef4444",
-    "#8b5cf6",
-    "#06b6d4",
-    "#84cc16",
-    "#f97316",
+    "#0ea5e9", // Primary blue
+    "#22c55e", // Success green
+    "#f59e0b", // Warning amber
+    "#ef4444", // Danger red
+    "#8b5cf6", // Purple
+    "#06b6d4", // Cyan
+    "#84cc16", // Lime
+    "#f97316", // Orange
+    "#ec4899", // Pink
+    "#6366f1", // Indigo
   ];
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -182,17 +184,33 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
   return (
     <div className="space-y-6">
       <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-          Strategy Performance
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+              🎯 Strategy Performance Analysis
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Comprehensive breakdown of your trading strategies and their effectiveness
+            </p>
+          </div>
+          {!detailed && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {strategyData.length} strategies analyzed
+            </div>
+          )}
+        </div>
 
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={strategyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <BarChart 
+              data={strategyData}
+              barCategoryGap="15%"
+              maxBarSize={8}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
               <XAxis
                 dataKey="name"
-                stroke="#666"
+                stroke="#6b7280"
                 fontSize={12}
                 axisLine={false}
                 tickLine={false}
@@ -201,14 +219,21 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
                 height={60}
               />
               <YAxis
-                stroke="#666"
+                stroke="#6b7280"
                 fontSize={12}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="totalPnL" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+              <Bar 
+                dataKey="totalPnL" 
+                fill="#0ea5e9" 
+                radius={[4, 4, 0, 0]}
+                stroke="#0284c7"
+                strokeWidth={1}
+                maxBarSize={8}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -218,9 +243,12 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Strategy Distribution
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                📊 Strategy Distribution
               </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Proportion of trades across different strategies
+              </p>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -249,9 +277,12 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
             </div>
 
             <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Strategy Rankings
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                🏆 Strategy Rankings
               </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Performance-based ranking of your trading strategies
+              </p>
               <div className="space-y-3">
                 {strategyData.map((strategy, index) => (
                   <div
@@ -297,9 +328,12 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
           </div>
 
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Detailed Strategy Metrics
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              📈 Detailed Strategy Metrics
             </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              In-depth analysis of key performance indicators for each strategy
+            </p>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">

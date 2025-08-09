@@ -13,9 +13,9 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
   if (trades.length === 0) {
     return (
       <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Instrument Analysis
-        </h3>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-3">
+          🎯 Instrument Performance Analysis
+        </h2>
         <div className="text-center py-8">
           <p className="text-gray-500 dark:text-gray-400">
             No instrument data available
@@ -99,17 +99,31 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
 
   return (
     <div className="card">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-        Instrument Performance
-      </h3>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+            🎯 Instrument Performance Analysis
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Compare profitability across different trading instruments
+          </p>
+        </div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          {chartData.length} instruments analyzed
+        </div>
+      </div>
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <BarChart 
+            data={chartData}
+            barCategoryGap="15%"
+            maxBarSize={8}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
             <XAxis
               dataKey="name"
-              stroke="#666"
+              stroke="#6b7280"
               fontSize={12}
               axisLine={false}
               tickLine={false}
@@ -118,36 +132,46 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
               height={60}
             />
             <YAxis
-              stroke="#666"
+              stroke="#6b7280"
               fontSize={12}
               axisLine={false}
               tickLine={false}
               tickFormatter={(value) => `$${value.toLocaleString()}`}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="totalPnL" fill="#10b981" radius={[2, 2, 0, 0]} />
+            <Bar 
+              dataKey="totalPnL" 
+              fill="#10b981" 
+              radius={[3, 3, 0, 0]}
+              stroke="#059669"
+              strokeWidth={1}
+              maxBarSize={8}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {detailed && (
         <div className="mt-6">
-          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
-            Detailed Breakdown
+          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+            📊 Detailed Performance Breakdown
           </h4>
           <div className="space-y-2">
-            {chartData.map((instrument) => (
+            {chartData.map((instrument, index) => (
               <div
                 key={instrument.name}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
               >
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {instrument.name}
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                    {instrument.totalTrades} trades
-                  </span>
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <div>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      {instrument.name}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                      {instrument.totalTrades} trades
+                    </span>
+                  </div>
                 </div>
                 <div className="text-right">
                   <div
@@ -157,7 +181,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
                         : "text-danger-600 dark:text-danger-400"
                     }`}
                   >
-                    ${instrument.totalPnL.toLocaleString()}
+                    {instrument.totalPnL >= 0 ? "+" : ""}${instrument.totalPnL.toLocaleString()}
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     {instrument.winRate.toFixed(1)}% win rate
