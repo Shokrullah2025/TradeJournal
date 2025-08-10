@@ -8,6 +8,8 @@ const StatsCard = ({
   changeType,
   icon: Icon,
   color = "primary",
+  miniChart = null,
+  chartData = [],
 }) => {
   const colorClasses = {
     primary:
@@ -21,40 +23,44 @@ const StatsCard = ({
   };
 
   return (
-    <div className="card hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-            <Icon className="w-6 h-6" />
+    <div className="card hover:shadow-md transition-shadow duration-200 p-4">
+      <div className="flex items-start justify-between h-18">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className={`p-2 rounded-lg ${colorClasses[color]} flex-shrink-0`}>
+            <Icon className="w-4 h-4" />
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
               {title}
             </p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <p className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
               {value}
             </p>
           </div>
         </div>
 
-        <div className="text-right">
+        <div className="flex flex-col items-end ml-3 flex-shrink-0">
+          {/* Mini Chart */}
+          {miniChart && (
+            <div className="mb-1.5">
+              {miniChart}
+            </div>
+          )}
+          
           <div
-            className={`flex items-center space-x-1 text-sm font-medium ${
+            className={`flex items-center space-x-1 text-xs font-medium ${
               changeType === "positive"
                 ? "text-success-600 dark:text-success-400"
                 : "text-danger-600 dark:text-danger-400"
             }`}
           >
             {changeType === "positive" ? (
-              <TrendingUp className="w-4 h-4" />
+              <TrendingUp className="w-3 h-3" />
             ) : (
-              <TrendingDown className="w-4 h-4" />
+              <TrendingDown className="w-3 h-3" />
             )}
-            <span>{change}</span>
+            <span className="whitespace-nowrap">{change}</span>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            vs last month
-          </p>
         </div>
       </div>
     </div>
