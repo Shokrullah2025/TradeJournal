@@ -16,9 +16,9 @@ const DrawdownChart = ({ trades = [] }) => {
   if (trades.length === 0) {
     return (
       <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Drawdown Analysis
-        </h3>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-3">
+          📉 Drawdown Analysis
+        </h2>
         <div className="text-center py-8">
           <p className="text-gray-500 dark:text-gray-400">
             No drawdown data available
@@ -104,19 +104,22 @@ const DrawdownChart = ({ trades = [] }) => {
     <div className="card">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Drawdown Analysis
-          </h3>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+            📉 Portfolio Drawdown Analysis
+          </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Track your account equity curve and maximum drawdown
+            Monitor your account equity curve and risk exposure over time
           </p>
         </div>
         <div className="text-right">
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            Max Drawdown
+            Maximum Drawdown
           </div>
           <div className="text-lg font-bold text-danger-600 dark:text-danger-400">
             ${maxDrawdown.toLocaleString()}
+            <span className="text-sm ml-1">
+              ({peak !== 0 ? ((maxDrawdown / peak) * 100).toFixed(1) : 0}%)
+            </span>
           </div>
         </div>
       </div>
@@ -134,16 +137,16 @@ const DrawdownChart = ({ trades = [] }) => {
                 <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
             <XAxis
               dataKey="displayDate"
-              stroke="#666"
+              stroke="#6b7280"
               fontSize={12}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              stroke="#666"
+              stroke="#6b7280"
               fontSize={12}
               axisLine={false}
               tickLine={false}
@@ -171,32 +174,37 @@ const DrawdownChart = ({ trades = [] }) => {
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            $
-            {drawdownData[
-              drawdownData.length - 1
-            ]?.runningPnL.toLocaleString() || "0"}
+      <div className="mt-6">
+        <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          📊 Key Performance Metrics
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              $
+              {drawdownData[
+                drawdownData.length - 1
+              ]?.runningPnL.toLocaleString() || "0"}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Current Portfolio Value
+            </div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Current P&L
+          <div className="text-center p-4 bg-success-50 dark:bg-success-900/20 rounded-lg border border-success-200 dark:border-success-800">
+            <div className="text-xl font-bold text-success-600 dark:text-success-400">
+              ${peak.toLocaleString()}
+            </div>
+            <div className="text-sm text-success-700 dark:text-success-400 mt-1">
+              All-Time High
+            </div>
           </div>
-        </div>
-        <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div className="text-lg font-bold text-success-600 dark:text-success-400">
-            ${peak.toLocaleString()}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            All-Time High
-          </div>
-        </div>
-        <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div className="text-lg font-bold text-danger-600 dark:text-danger-400">
-            {peak !== 0 ? ((maxDrawdown / peak) * 100).toFixed(1) : 0}%
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Max Drawdown %
+          <div className="text-center p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-800">
+            <div className="text-xl font-bold text-danger-600 dark:text-danger-400">
+              {peak !== 0 ? ((maxDrawdown / peak) * 100).toFixed(1) : 0}%
+            </div>
+            <div className="text-sm text-danger-700 dark:text-danger-400 mt-1">
+              Maximum Drawdown
+            </div>
           </div>
         </div>
       </div>

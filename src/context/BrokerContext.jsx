@@ -20,13 +20,15 @@ const BROKERS = {
           import.meta.env.VITE_TRADOVATE_CLIENT_SECRET || "YOUR_CLIENT_SECRET",
         redirectUri: `${window.location.origin}/auth/callback/tradovate`,
         authUrl: "https://trader-test.tradovateapi.com/oauth",
-        baseUrl: "https://demo.tradovateapi.com",
+        baseUrl: "https://demo-api-d.tradovateapi.com",
         scopes: ["read", "trade"],
         endpoints: {
           authorize: "https://trader-test.tradovateapi.com/oauth",
-          token: "https://demo.tradovateapi.com/v1/auth/oauthtoken",
-          account: "https://demo.tradovateapi.com/v1/account/list",
-          orders: "https://demo.tradovateapi.com/v1/order/list",
+          token: "https://demo-api-d.tradovateapi.com/auth/oauthtoken",
+          account: "https://demo-api-d.tradovateapi.com/v1/account/list",
+          orders: "https://demo-api-d.tradovateapi.com/v1/order/list",
+          fills: "https://demo-api-d.tradovateapi.com/v1/fill/list",
+          positions: "https://demo-api-d.tradovateapi.com/v1/position/list",
         },
       },
       live: {
@@ -37,13 +39,15 @@ const BROKERS = {
           import.meta.env.VITE_TRADOVATE_CLIENT_SECRET || "YOUR_CLIENT_SECRET",
         redirectUri: `${window.location.origin}/auth/callback/tradovate`,
         authUrl: "https://trader.tradovate.com/oauth",
-        baseUrl: "https://live.tradovateapi.com",
+        baseUrl: "https://live-api-d.tradovateapi.com",
         scopes: ["read", "trade"],
         endpoints: {
           authorize: "https://trader.tradovate.com/oauth",
-          token: "https://live.tradovateapi.com/v1/auth/oauthtoken",
-          account: "https://live.tradovateapi.com/v1/account/list",
-          orders: "https://live.tradovateapi.com/v1/order/list",
+          token: "https://live-api-d.tradovateapi.com/auth/oauthtoken",
+          account: "https://live-api-d.tradovateapi.com/v1/account/list",
+          orders: "https://live-api-d.tradovateapi.com/v1/order/list",
+          fills: "https://live-api-d.tradovateapi.com/v1/fill/list",
+          positions: "https://live-api-d.tradovateapi.com/v1/position/list",
         },
       },
     },
@@ -207,13 +211,17 @@ class BrokerService {
 
   // Start OAuth flow
   startOAuthFlow(brokerKey, accountType = "live") {
+    console.log("🚀 Starting OAuth flow for:", { brokerKey, accountType });
+    
     const broker = BROKERS[brokerKey];
     if (!broker || !broker.oauthConfig) {
+      console.error("❌ OAuth not supported for broker:", brokerKey);
       throw new Error("OAuth not supported for this broker");
     }
 
     // Handle demo broker differently
     if (brokerKey === "demo") {
+      console.log("🎮 Handling demo OAuth");
       return this.handleDemoOAuth(brokerKey);
     }
 
@@ -222,18 +230,22 @@ class BrokerService {
     if (broker.oauthConfig.demo && broker.oauthConfig.live) {
       // Broker supports both demo and live
       config = broker.oauthConfig[accountType];
+      console.log("📋 Using account-specific config:", { accountType, config });
     } else {
       // Legacy single config
       config = broker.oauthConfig;
+      console.log("📋 Using legacy config:", config);
     }
 
     if (!config) {
+      console.error("❌ Account type not supported:", { brokerKey, accountType });
       throw new Error(
         `${accountType} account type not supported for this broker`
       );
     }
 
     const { clientId, redirectUri, authUrl, scopes } = config;
+    console.log("🔑 OAuth config:", { clientId, redirectUri, authUrl, scopes });
 
     // Build OAuth URL
     const params = new URLSearchParams({
@@ -249,6 +261,7 @@ class BrokerService {
     });
 
     const oauthUrl = `${authUrl}?${params.toString()}`;
+    console.log("🌐 Opening OAuth URL:", oauthUrl);
 
     // Open OAuth popup
     const popupWidth = 600;
@@ -261,6 +274,13 @@ class BrokerService {
       "oauth_popup",
       `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
     );
+
+    if (!this.oauthPopup) {
+      console.error("❌ Failed to open OAuth popup - popup blocked?");
+      throw new Error("Failed to open OAuth popup. Please allow popups and try again.");
+    }
+
+    console.log("✅ OAuth popup opened successfully");
 
     return new Promise((resolve, reject) => {
       this.oauthResolve = resolve;
@@ -452,35 +472,56 @@ class BrokerService {
     const { clientId, clientSecret, redirectUri } = oauthConfig;
     const tokenUrl = oauthConfig.endpoints.token;
 
+    // Check if we're using placeholder credentials
+    const isPlaceholder = clientId.includes("YOUR_") || clientId === "your_demo_client_id_here" || clientId === "your_live_client_id_here";
+    
+    if (isPlaceholder) {
+      throw new Error(
+        `⚠️ Setup Required: You're using placeholder Tradovate credentials. 
+        
+To connect to Tradovate:
+1. Register your app at ${accountType === 'demo' ? 'trader-test.tradovate.com' : 'trader.tradovate.com'}
+2. Get your Client ID and Secret
+3. Update your .env file with real credentials
+4. Restart the application
+
+See TRADOVATE_OAUTH_SETUP.md for detailed instructions.`
+      );
+    }
+
     try {
       // Prepare request body according to Tradovate OAuth spec
-      const requestBody = {
+      const requestBody = new URLSearchParams({
         grant_type: "authorization_code",
         code: authCode,
         redirect_uri: redirectUri,
         client_id: clientId,
-      };
+      });
 
       // Add client_secret if available
       if (clientSecret) {
-        requestBody.client_secret = clientSecret;
+        requestBody.append("client_secret", clientSecret);
       }
+
+      console.log("🔄 Exchanging code for token:", { brokerKey, tokenUrl, accountType });
 
       const response = await fetch(tokenUrl, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json",
         },
-        body: JSON.stringify(requestBody),
+        body: requestBody,
       });
 
+      console.log("📋 Token exchange response status:", response.status);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorText = await response.text().catch(() => "Unknown error");
+        console.error("❌ Token exchange failed:", errorText);
         throw new Error(
           `Token exchange failed: ${response.status}. ${
-            errorData.error_description ||
-            errorData.error ||
+            errorText ||
             "This is expected since we're using placeholder client credentials. To connect to real " +
               broker.name +
               ", you need to register your app with Tradovate and get valid client credentials."
@@ -489,6 +530,7 @@ class BrokerService {
       }
 
       const tokenData = await response.json();
+      console.log("✅ Token exchange successful:", tokenData);
 
       // Check for OAuth error response
       if (tokenData.error) {
@@ -1288,6 +1330,8 @@ export const BrokerProvider = ({ children }) => {
 
   // Connect to broker
   const connectBroker = async (brokerKey, config) => {
+    console.log("🔌 BrokerContext.connectBroker called with:", { brokerKey, config });
+    
     setState((prev) => ({
       ...prev,
       isConnecting: true,
@@ -1295,7 +1339,9 @@ export const BrokerProvider = ({ children }) => {
     }));
 
     try {
+      console.log("📞 Calling brokerService.connect...");
       const result = await brokerService.connect(brokerKey, config);
+      console.log("📋 BrokerService.connect result:", result);
 
       if (result.success) {
         const newState = {
@@ -1308,11 +1354,13 @@ export const BrokerProvider = ({ children }) => {
           selectedAccount: result.accounts[0]?.id || null,
         };
 
+        console.log("✅ Connection successful, updating state:", newState);
         setState((prev) => ({ ...prev, ...newState }));
         saveBrokerConfig(newState);
         toast.success(`Connected to ${BROKERS[brokerKey].name}`);
         return true;
       } else {
+        console.error("❌ Connection failed:", result.error);
         setState((prev) => ({
           ...prev,
           isConnecting: false,
@@ -1322,6 +1370,7 @@ export const BrokerProvider = ({ children }) => {
         return false;
       }
     } catch (error) {
+      console.error("💥 Exception in connectBroker:", error);
       setState((prev) => ({
         ...prev,
         isConnecting: false,

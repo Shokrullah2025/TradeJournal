@@ -3,6 +3,7 @@ import { useBroker } from "../context/BrokerContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import AccountTypeSelector from "../components/trades/AccountTypeSelector";
+import TradovateSetupStatus from "../components/trades/TradovateSetupStatus";
 
 const BrokerSelection = () => {
   const { brokerService, connectBroker, isConnecting } = useBroker();
@@ -13,15 +14,20 @@ const BrokerSelection = () => {
   const brokers = brokerService?.getBrokers() || {};
 
   const handleBrokerConnect = async (brokerKey) => {
+    console.log("🔗 Attempting to connect to broker:", brokerKey);
     const broker = brokers[brokerKey];
 
     if (!broker) {
+      console.error("❌ Broker not found:", brokerKey);
       toast.error("Broker not found");
       return;
     }
 
+    console.log("✅ Broker found:", broker);
+
     // For Tradovate, show account type selector first
     if (brokerKey === "tradovate") {
+      console.log("📋 Showing account type selector for Tradovate");
       setSelectedBroker(brokerKey);
       setShowAccountTypeSelector(true);
       return;
@@ -29,29 +35,38 @@ const BrokerSelection = () => {
 
     // For other brokers, connect directly
     try {
+      console.log("🚀 Connecting directly to broker:", brokerKey);
       await connectBroker(brokerKey);
       toast.success(`Connected to ${broker.name} successfully!`);
       navigate("/trades"); // Navigate back to trades page after connection
     } catch (error) {
+      console.error("❌ Connection failed:", error);
       toast.error(`Failed to connect to ${broker.name}: ${error.message}`);
     }
   };
 
   const handleAccountTypeSelect = async (accountType) => {
+    console.log("🎯 Account type selected:", accountType, "for broker:", selectedBroker);
     setShowAccountTypeSelector(false);
 
     try {
-      await connectBroker(selectedBroker, accountType);
+      // Pass account type in the config object
+      console.log("🔄 Calling connectBroker with config:", { accountType });
+      await connectBroker(selectedBroker, { accountType });
       const broker = brokers[selectedBroker];
+      console.log("✅ Successfully connected to:", broker?.name, "with account type:", accountType);
       toast.success(
-        `Connected to ${broker.name} (${accountType}) successfully!`
+        `Connected to ${broker?.name || 'Broker'} (${accountType}) successfully!`
       );
       navigate("/trades");
     } catch (error) {
-      const broker = brokers[selectedBroker];
-      toast.error(`Failed to connect to ${broker.name}: ${error.message}`);
+      console.error("❌ Account type connection failed:", error);
+      toast.error(`Failed to connect: ${error.message}`);
     }
+  };
 
+  const handleCancel = () => {
+    setShowAccountTypeSelector(false);
     setSelectedBroker(null);
   };
 
@@ -139,6 +154,9 @@ const BrokerSelection = () => {
             </button>
           </div>
         </div>
+
+        {/* Tradovate Setup Status */}
+        <TradovateSetupStatus />
 
         {/* Broker Categories */}
         {Object.entries(brokerCategories).map(([category, brokerList]) => {
@@ -320,15 +338,11 @@ const BrokerSelection = () => {
       </div>
 
       {/* Account Type Selector Modal */}
-      {showAccountTypeSelector && (
+      {showAccountTypeSelector && selectedBroker && brokers[selectedBroker] && (
         <AccountTypeSelector
-          isOpen={showAccountTypeSelector}
-          onClose={() => {
-            setShowAccountTypeSelector(false);
-            setSelectedBroker(null);
-          }}
+          broker={brokers[selectedBroker]}
           onSelect={handleAccountTypeSelect}
-          brokerName={selectedBroker ? brokers[selectedBroker]?.name : ""}
+          onCancel={handleCancel}
         />
       )}
     </div>
