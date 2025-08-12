@@ -80,15 +80,15 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
     return (
       <div className="card">
         <div className="text-center py-12">
-          <div className="w-24 h-24 mx-auto mb-4 text-gray-300">
+          <div className="w-24 h-24 mx-auto mb-4 text-gray-300 dark:text-gray-600">
             <svg fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
             No trades found
           </h3>
-          <p className="text-gray-500 mb-6">
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
             Get started by adding your first trade or adjust your filters.
           </p>
         </div>
@@ -102,26 +102,26 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
         // Compact view for sidebar
         <div className="space-y-2 p-4">
           {sortedTrades.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <p>No trades found</p>
             </div>
           ) : (
             sortedTrades.map((trade) => (
               <div
                 key={trade.id}
-                className="p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow cursor-pointer"
+                className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:shadow-sm dark:hover:shadow-gray-900/20 transition-shadow cursor-pointer bg-white dark:bg-gray-700"
                 onClick={() => setSelectedTrade(trade)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
                       {trade.instrument}
                     </span>
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
                         trade.tradeType === "long"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                          : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
                       }`}
                     >
                       {trade.tradeType === "long" ? "Long" : "Short"}
@@ -132,21 +132,21 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                       e.stopPropagation();
                       onEditTrade(trade);
                     }}
-                    className="p-1 text-gray-400 hover:text-blue-600"
+                    className="p-1 text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between text-sm text-gray-600">
+                <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                   <span>{new Date(trade.entryDate).toLocaleDateString()}</span>
                   <span
                     className={`font-medium ${
                       trade.pnl > 0
-                        ? "text-green-600"
+                        ? "text-green-600 dark:text-green-400"
                         : trade.pnl < 0
-                        ? "text-red-600"
-                        : "text-gray-600"
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     {trade.pnl > 0 ? "+" : ""}${trade.pnl?.toFixed(2) || "0.00"}
@@ -154,7 +154,7 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                 </div>
 
                 {trade.strategy && (
-                  <div className="mt-1 text-xs text-gray-500">
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     {trade.strategy}
                   </div>
                 )}
@@ -165,72 +165,72 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
       ) : (
         // Full table view
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th
                   onClick={() => handleSort("instrument")}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Instrument {getSortIcon("instrument")}
                 </th>
                 <th
                   onClick={() => handleSort("tradeType")}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Type {getSortIcon("tradeType")}
                 </th>
                 <th
                   onClick={() => handleSort("entryPrice")}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Entry {getSortIcon("entryPrice")}
                 </th>
                 <th
                   onClick={() => handleSort("exitPrice")}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Exit {getSortIcon("exitPrice")}
                 </th>
                 <th
                   onClick={() => handleSort("quantity")}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Quantity {getSortIcon("quantity")}
                 </th>
                 <th
                   onClick={() => handleSort("pnl")}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   P&L {getSortIcon("pnl")}
                 </th>
                 <th
                   onClick={() => handleSort("entryDate")}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Date {getSortIcon("entryDate")}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {sortedTrades.map((trade) => (
                 <tr
                   key={trade.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
                         {trade.instrument}
                       </div>
                       {trade.strategy && (
-                        <div className="text-sm text-gray-500 ml-2">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                           {trade.strategy}
                         </div>
                       )}
@@ -240,15 +240,15 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {trade.tradeType === "long" ? (
-                        <TrendingUp className="w-4 h-4 text-success-600 mr-1" />
+                        <TrendingUp className="w-4 h-4 text-success-600 dark:text-success-400 mr-1" />
                       ) : (
-                        <TrendingDown className="w-4 h-4 text-danger-600 mr-1" />
+                        <TrendingDown className="w-4 h-4 text-danger-600 dark:text-danger-400 mr-1" />
                       )}
                       <span
                         className={`text-sm font-medium ${
                           trade.tradeType === "long"
-                            ? "text-success-600"
-                            : "text-danger-600"
+                            ? "text-success-600 dark:text-success-400"
+                            : "text-danger-600 dark:text-danger-400"
                         }`}
                       >
                         {trade.tradeType.toUpperCase()}
@@ -256,17 +256,17 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     ${trade.entryPrice.toLocaleString()}
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     {trade.exitPrice
                       ? `$${trade.exitPrice.toLocaleString()}`
                       : "-"}
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     {trade.quantity.toLocaleString()}
                   </td>
 
@@ -274,16 +274,16 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                     <div
                       className={`text-sm font-semibold ${
                         trade.pnl > 0
-                          ? "text-success-600"
+                          ? "text-success-600 dark:text-success-400"
                           : trade.pnl < 0
-                          ? "text-danger-600"
-                          : "text-gray-500"
+                          ? "text-danger-600 dark:text-danger-400"
+                          : "text-gray-500 dark:text-gray-400"
                       }`}
                     >
                       {trade.pnl > 0 ? "+" : ""}${trade.pnl.toLocaleString()}
                     </div>
                     {trade.pnl !== 0 && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         {(
                           (trade.pnl / (trade.entryPrice * trade.quantity)) *
                           100
@@ -293,9 +293,9 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                     )}
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     <div className="flex items-center">
-                      <Calendar className="w-4 h-4 text-gray-400 mr-1" />
+                      <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-1" />
                       {format(new Date(trade.entryDate), "MMM dd, yyyy")}
                     </div>
                     {trade.entryTime && (

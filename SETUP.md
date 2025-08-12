@@ -3,17 +3,20 @@
 ## Recent Improvements
 
 ### 1. Horizontal Layout Optimization
+
 - **Calendar View**: Enhanced to use 4-column grid on XL screens (3 columns for calendar, 1 for P&L summary)
 - **Sticky P&L Panel**: The P&L summary panel now stays visible when scrolling
 - **Better Space Utilization**: More efficient use of screen real estate for wider displays
 
 ### 2. Simplified Template Creation
+
 - **One Template Only**: When creating a new template, all existing custom templates are automatically removed
 - **Clean Template Management**: Ensures users focus on one custom template at a time
 - **Clear User Feedback**: Users are notified when templates are replaced
 
 ### 3. Enhanced Calendar View
-- **Color-Coded Days**: 
+
+- **Color-Coded Days**:
   - Light green background for profitable days
   - Light red background for losing days
   - Blue for days with open trades only
@@ -22,6 +25,7 @@
 - **Better Visual Hierarchy**: Important information (P&L, counts) emphasized
 
 ### 4. Sample Data for Testing
+
 - **Pre-loaded Trades**: Added sample trades with various scenarios (wins, losses, open positions)
 - **Realistic Data**: Includes popular stocks (AAPL, TSLA, MSFT, GOOGL, NVDA) with realistic prices
 - **Multiple Strategies**: Demonstrates different trading strategies and setups
@@ -39,6 +43,7 @@ This system has been simplified for development purposes. The current flow inclu
 ## System Architecture
 
 ### Frontend Components
+
 - `MultiStepRegistration.jsx` - Main registration flow (2 steps: account + email)
 - `EmailVerification.jsx` - Email verification component
 - `PaymentMethodForm.jsx` - Credit card validation form (disabled for dev)
@@ -47,6 +52,7 @@ This system has been simplified for development purposes. The current flow inclu
 - Updated `ProtectedRoute.jsx` - Simplified access control for development
 
 ### Backend API Endpoints
+
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/send-verification` - Send email verification
 - `POST /api/auth/verify-email` - Verify email token
@@ -55,6 +61,7 @@ This system has been simplified for development purposes. The current flow inclu
 - `GET /api/user/access-check` - Check user access status (simplified in dev)
 
 ### Database Schema
+
 - `users` - User accounts with email verification status
 - `user_account_requirements` - Track completion of registration steps
 - `email_verification_tokens` - Email verification tokens
@@ -66,17 +73,20 @@ This system has been simplified for development purposes. The current flow inclu
 ## Registration Flow (Development Mode)
 
 ### Step 1: Account Creation
+
 - User enters first name, last name, email, password
 - Account is created with `status='pending'`
 - Email verification token is generated and sent
 
 ### Step 2: Email Verification
+
 - User receives email with verification link
 - Clicking link verifies email and updates `email_verified=true`
 - User can resend verification email if needed
 - After verification, user is redirected to dashboard
 
 ### Removed Steps (For Development)
+
 - **Payment Method Validation** - Temporarily disabled
 - **Trial Activation** - Temporarily disabled
 - **Strict Access Control** - Temporarily disabled
@@ -86,6 +96,7 @@ This system has been simplified for development purposes. The current flow inclu
 - Payment method is stored and marked as verified
 
 ### Step 4: Trial Activation
+
 - 7-day trial is created and activated
 - User gets full access to all Pro features
 - Trial expires after 7 days
@@ -93,6 +104,7 @@ This system has been simplified for development purposes. The current flow inclu
 ## Access Control
 
 Users cannot access the main platform until:
+
 - ✅ Email is verified
 - ✅ Payment method is added and verified
 - ✅ Trial is activated
@@ -102,12 +114,14 @@ The `ProtectedRoute` component enforces these requirements and redirects users t
 ## Trial Management
 
 ### Trial Features
+
 - 7-day duration from activation
 - Full access to all Pro features
 - No charges during trial period
 - Automatic expiration after 7 days
 
 ### Post-Trial
+
 - Users must subscribe to continue access
 - Expired trials redirect to billing page
 - All data is retained for conversion
@@ -142,23 +156,27 @@ FRONTEND_URL=http://localhost:3000
 ## Development Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Set up MySQL database:
+
 ```bash
 # Create database and run schema
 mysql -u root -p < database/schema.sql
 ```
 
 3. Start the backend server:
+
 ```bash
 # In a separate terminal
 node database/api-endpoints.js
 ```
 
 4. Start the frontend:
+
 ```bash
 npm run dev
 ```
@@ -184,6 +202,7 @@ npm run dev
 ## Stripe Integration
 
 The system uses Stripe for payment processing:
+
 - Payment methods are stored securely
 - $1 verification charges are automatically refunded
 - Subscription billing is ready for post-trial conversion
@@ -192,6 +211,7 @@ The system uses Stripe for payment processing:
 ## Database Scalability
 
 The schema is designed for 100,000+ users with:
+
 - Proper indexing on all lookup fields
 - Partitioning strategies for large tables
 - Stored procedures for complex operations
@@ -209,6 +229,7 @@ The schema is designed for 100,000+ users with:
 ## Support
 
 For questions or issues:
+
 - Check the API documentation in `database/README.md`
 - Review the database schema in `database/schema.sql`
 - Test endpoints are available in `database/api-endpoints.js`
