@@ -6,6 +6,7 @@ import {
   Target,
   Activity,
   Calendar,
+  BarChart3,
 } from "lucide-react";
 
 const PerformanceMetrics = ({ trades }) => {
