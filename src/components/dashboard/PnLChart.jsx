@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -10,6 +10,34 @@ import {
 } from "recharts";
 
 const PnLChart = ({ trades }) => {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check if dark mode is active
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+
+  // Theme-aware colors
+  const colors = {
+    grid: isDarkMode ? '#374151' : '#f0f0f0',
+    axis: isDarkMode ? '#9ca3af' : '#666666',
+    wins: isDarkMode ? '#4ade80' : '#22c55e',
+    losses: isDarkMode ? '#f87171' : '#ef4444',
+  };
+
   const generatePnLData = () => {
     const completedTrades = trades.filter((trade) => trade.status === "closed");
 
@@ -51,14 +79,14 @@ const PnLChart = ({ trades }) => {
       const total = wins + losses;
 
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900 mb-2">{label}</p>
+        <div className="card border border-gray-200 dark:border-gray-700 shadow-lg p-3">
+          <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">{label}</p>
           <div className="space-y-1">
-            <p className="text-sm text-success-600">Wins: {wins}</p>
-            <p className="text-sm text-danger-600">Losses: {losses}</p>
-            <p className="text-sm text-gray-600">Total: {total}</p>
+            <p className="text-sm text-success-600 dark:text-success-400">Wins: {wins}</p>
+            <p className="text-sm text-danger-600 dark:text-danger-400">Losses: {losses}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total: {total}</p>
             {total > 0 && (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Win Rate: {((wins / total) * 100).toFixed(1)}%
               </p>
             )}
@@ -71,7 +99,7 @@ const PnLChart = ({ trades }) => {
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
+      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
         <div className="text-center">
           <p>No closed trades available</p>
           <p className="text-sm mt-1">
@@ -89,10 +117,10 @@ const PnLChart = ({ trades }) => {
           data={data}
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
           <XAxis
             dataKey="label"
-            stroke="#666"
+            stroke={colors.axis}
             fontSize={10}
             axisLine={false}
             tickLine={false}
@@ -101,7 +129,7 @@ const PnLChart = ({ trades }) => {
             height={60}
           />
           <YAxis
-            stroke="#666"
+            stroke={colors.axis}
             fontSize={12}
             axisLine={false}
             tickLine={false}
@@ -110,14 +138,14 @@ const PnLChart = ({ trades }) => {
           <Bar
             dataKey="wins"
             stackId="a"
-            fill="#22c55e"
+            fill={colors.wins}
             name="Wins"
             radius={[0, 0, 0, 0]}
           />
           <Bar
             dataKey="losses"
             stackId="a"
-            fill="#ef4444"
+            fill={colors.losses}
             name="Losses"
             radius={[0, 0, 0, 0]}
           />

@@ -102,11 +102,11 @@ const Analytics = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4 text-gray-500" />
+              <BarChart3 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               <select
                 value={analysisType}
                 onChange={(e) => setAnalysisType(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="overview">Overview</option>
                 <option value="strategy">Strategy Analysis</option>
@@ -117,7 +117,7 @@ const Analytics = () => {
             </div>
           </div>
 
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             Analyzing {timeFilteredTrades.length} trades
           </div>
         </div>
@@ -156,11 +156,11 @@ const Analytics = () => {
       {timeFilteredTrades.length === 0 && (
         <div className="card">
           <div className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <BarChart3 className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               No Data Available
             </h3>
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               No trades found for the selected time period. Try adjusting your
               filters or add some trades.
             </p>

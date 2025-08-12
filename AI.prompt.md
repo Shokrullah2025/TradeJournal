@@ -1,6 +1,1 @@
-Update the following components to ensure full consistency with the dark mode theme:
-
-1. Apply dark mode styles to inputs and buttons in the `TradeForm` component.
-2. Update the `TradeList` component to display trades with appropriate dark mode styling.
-3. Ensure the `TradeFilters` component adheres to the dark mode theme.
-4. Review and update any other components or pages that do not fully support dark mode.
+Ensure a consistent theme across all application pages—Dashboard, Trades, Brokers, Analytics, Templates, Settings, Profile, Billing, and Admin Panel—as well as all components within each page. Apply uniform design guidelines for colors, fonts, styles, background colors, button styles, input fields, and typography to establish a cohesive and professional user experience. Prioritize both usability and aesthetics, adhering to best practices in UI/UX design.

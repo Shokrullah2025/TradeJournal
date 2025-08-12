@@ -147,26 +147,32 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900 mb-2">{label}</p>
+        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+          <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+            {label}
+          </p>
           <div className="space-y-1">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Total P&L:
               <span
                 className={`ml-1 font-semibold ${
-                  data.totalPnL >= 0 ? "text-success-600" : "text-danger-600"
+                  data.totalPnL >= 0
+                    ? "text-success-600 dark:text-success-400"
+                    : "text-danger-600 dark:text-danger-400"
                 }`}
               >
                 ${data.totalPnL.toLocaleString()}
               </span>
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Trades:
-              <span className="ml-1 font-semibold">{data.totalTrades}</span>
+              <span className="ml-1 font-semibold text-gray-900 dark:text-gray-100">
+                {data.totalTrades}
+              </span>
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Win Rate:
-              <span className="ml-1 font-semibold">
+              <span className="ml-1 font-semibold text-gray-900 dark:text-gray-100">
                 {data.winRate.toFixed(1)}%
               </span>
             </p>
@@ -180,11 +186,13 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
   if (trades.length === 0) {
     return (
       <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Time Analysis
         </h3>
         <div className="text-center py-8">
-          <p className="text-gray-500">No time data available</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            No time data available
+          </p>
         </div>
       </div>
     );
@@ -195,7 +203,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
       {/* Hourly Analysis */}
       {hourlyData.length > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
             Hourly Performance
           </h3>
           <div className="h-64">
@@ -226,7 +234,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
 
       {/* Daily Analysis */}
       <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
           Day of Week Performance
         </h3>
         <div className="h-64">
@@ -259,7 +267,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
           {/* Monthly Analysis */}
           {monthlyData.length > 0 && (
             <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
                 Monthly Performance
               </h3>
               <div className="h-64">
@@ -297,7 +305,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
 
           {/* Time Insights */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Time-Based Insights
             </h3>
 
@@ -305,7 +313,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
               {/* Best Trading Hours */}
               {hourlyData.length > 0 && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
                     Best Trading Hours
                   </h4>
                   <div className="space-y-2">
@@ -315,16 +323,16 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                       .map((hour, index) => (
                         <div
                           key={hour.hour}
-                          className="flex items-center justify-between p-2 bg-success-50 rounded"
+                          className="flex items-center justify-between p-2 bg-success-50 dark:bg-success-900/20 rounded"
                         >
-                          <span className="text-sm font-medium text-success-700">
+                          <span className="text-sm font-medium text-success-700 dark:text-success-400">
                             #{index + 1} {hour.displayHour}
                           </span>
                           <div className="text-right">
-                            <div className="text-sm font-semibold text-success-800">
+                            <div className="text-sm font-semibold text-success-800 dark:text-success-300">
                               ${hour.totalPnL.toLocaleString()}
                             </div>
-                            <div className="text-xs text-success-600">
+                            <div className="text-xs text-success-600 dark:text-success-500">
                               {hour.totalTrades} trades,{" "}
                               {hour.winRate.toFixed(1)}% win
                             </div>
@@ -337,7 +345,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
 
               {/* Best Trading Days */}
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
                   Best Trading Days
                 </h4>
                 <div className="space-y-2">
@@ -347,16 +355,16 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                     .map((day, index) => (
                       <div
                         key={day.day}
-                        className="flex items-center justify-between p-2 bg-primary-50 rounded"
+                        className="flex items-center justify-between p-2 bg-primary-50 dark:bg-primary-900/20 rounded"
                       >
-                        <span className="text-sm font-medium text-primary-700">
+                        <span className="text-sm font-medium text-primary-700 dark:text-primary-400">
                           #{index + 1} {day.name}
                         </span>
                         <div className="text-right">
-                          <div className="text-sm font-semibold text-primary-800">
+                          <div className="text-sm font-semibold text-primary-800 dark:text-primary-300">
                             ${day.totalPnL.toLocaleString()}
                           </div>
-                          <div className="text-xs text-primary-600">
+                          <div className="text-xs text-primary-600 dark:text-primary-500">
                             {day.totalTrades} trades, {day.winRate.toFixed(1)}%
                             win
                           </div>
@@ -368,11 +376,11 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
             </div>
 
             {/* Trading Patterns */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">
+            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
                 Trading Patterns
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
                 <div>
                   <strong>Most Active Day:</strong>{" "}
                   {

@@ -60,7 +60,7 @@ const Register = () => {
   const passwordStrength = getPasswordStrength(password);
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Left side - Feature Highlight */}
       <div className="hidden lg:block relative w-0 flex-1">
         <div className="absolute inset-0 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
@@ -103,18 +103,18 @@ const Register = () => {
               <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg">
                 <TrendingUp className="w-8 h-8 text-white" />
               </div>
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">
+              <h1 className="ml-3 text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Trade Journal Pro
               </h1>
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-gray-100">
               Create your account
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="font-medium text-blue-600 hover:text-blue-500"
+                className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
               >
                 Sign in here
               </Link>

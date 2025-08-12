@@ -22,14 +22,14 @@ const SecurePaymentInfo = ({ payment }) => {
     <div className="bg-gray-50 rounded-lg p-4 border">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <Shield className="w-4 h-4 text-green-600" />
-          <span className="text-sm font-medium text-gray-900">
+          <Shield className="w-4 h-4 text-success-600 dark:text-success-400" />
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
             Secure Payment Info
           </span>
         </div>
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
+          className="flex items-center space-x-1 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
         >
           {showDetails ? (
             <EyeOff className="w-4 h-4" />
@@ -43,19 +43,19 @@ const SecurePaymentInfo = ({ payment }) => {
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-gray-600">Email:</span>
-          <span className="text-gray-900">
+          <span className="text-gray-900 dark:text-gray-100">
             {showDetails ? payment.userEmail : maskEmail(payment.userEmail)}
           </span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Payment Method:</span>
-          <span className="text-gray-900 capitalize">
+          <span className="text-gray-900 dark:text-gray-100 capitalize">
             {payment.cardBrand} {maskCardNumber(payment.cardLast4)}
           </span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Transaction ID:</span>
-          <span className="text-gray-900 font-mono text-xs">
+          <span className="text-gray-900 dark:text-gray-100 font-mono text-xs">
             {showDetails ? payment.id : payment.id.slice(0, 8) + "..."}
           </span>
         </div>
