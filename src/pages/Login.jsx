@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, LogIn, TrendingUp } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { loginSchema } from '../utils/validation';
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, LogIn, TrendingUp } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { loginSchema } from "../utils/validation";
+import ThemeToggle from "../components/common/ThemeToggle";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,7 +13,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || "/";
 
   const {
     register,
@@ -28,15 +29,20 @@ const Login = () => {
       navigate(from, { replace: true });
     } catch (error) {
       // Check if error is related to incomplete registration
-      if (error.message.includes('Email not verified')) {
-        navigate('/register?step=email');
+      if (error.message.includes("Email not verified")) {
+        navigate("/register?step=email");
       }
       // Other errors are handled in the auth context
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+        <div className="min-h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      {/* Theme Toggle - Top Right */}
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeToggle size="md" showLabel />
+      </div>
+
       {/* Left side - Login Form */}
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
@@ -45,18 +51,18 @@ const Login = () => {
               <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg">
                 <TrendingUp className="w-8 h-8 text-white" />
               </div>
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">
+              <h1 className="ml-3 text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Trade Journal Pro
               </h1>
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-gray-100">
               Welcome back
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Don't have an account?{' '}
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Don't have an account?{" "}
               <Link
                 to="/register"
-                className="font-medium text-blue-600 hover:text-blue-500"
+                className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
               >
                 Sign up for free
               </Link>
@@ -66,33 +72,41 @@ const Login = () => {
           <div className="mt-8">
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Email address
                 </label>
                 <div className="mt-1">
                   <input
-                    {...register('email')}
+                    {...register("email")}
                     type="email"
                     autoComplete="email"
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="Enter your email"
                   />
                   {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {errors.email.message}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                   Password
                 </label>
                 <div className="mt-1 relative">
                   <input
-                    {...register('password')}
-                    type={showPassword ? 'text' : 'password'}
+                    {...register("password")}
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="Enter your password"
                   />
                   <button
@@ -101,14 +115,16 @@ const Login = () => {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
+                      <EyeOff className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
+                      <Eye className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     )}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -118,15 +134,21 @@ const Login = () => {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
+                  >
                     Remember me
                   </label>
                 </div>
 
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                  <a
+                    href="#"
+                    className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                  >
                     Forgot your password?
                   </a>
                 </div>
@@ -149,21 +171,23 @@ const Login = () => {
                 </button>
               </div>
 
-              {/* Development Login Buttons */}
+                {/* Development Login Buttons */}
               <div className="space-y-2">
-                <div className="text-xs text-gray-500 text-center">Development Quick Login:</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  Development Quick Login:
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={async () => {
                       try {
-                        await login('admin@tradejournalpro.com', 'admin123');
+                        await login("admin@tradejournalpro.com", "admin123");
                         navigate(from, { replace: true });
                       } catch (error) {
                         // Error handling is done in AuthContext
                       }
                     }}
-                    className="w-full py-2 px-3 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Admin Login
                   </button>
@@ -171,13 +195,13 @@ const Login = () => {
                     type="button"
                     onClick={async () => {
                       try {
-                        await login('user@example.com', 'user123');
+                        await login("user@example.com", "user123");
                         navigate(from, { replace: true });
                       } catch (error) {
                         // Error handling is done in AuthContext
                       }
                     }}
-                    className="w-full py-2 px-3 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     User Login
                   </button>
@@ -186,11 +210,17 @@ const Login = () => {
             </form>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-900 mb-2">Demo Credentials:</h3>
-              <div className="text-xs text-gray-600 space-y-1">
-                <p><strong>Admin:</strong> admin@tradejournalpro.com / admin123</p>
-                <p><strong>User:</strong> user@example.com / user123</p>
+            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                Demo Credentials:
+              </h3>
+              <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                <p>
+                  <strong>Admin:</strong> admin@tradejournalpro.com / admin123
+                </p>
+                <p>
+                  <strong>User:</strong> user@example.com / user123
+                </p>
               </div>
             </div>
           </div>
@@ -199,30 +229,31 @@ const Login = () => {
 
       {/* Right side - Feature Highlight */}
       <div className="hidden lg:block relative w-0 flex-1">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 flex items-center justify-center">
           <div className="text-center text-white px-8">
             <div className="text-6xl mb-6">📊</div>
             <h2 className="text-3xl font-bold mb-4">
               Track Your Trading Success
             </h2>
-            <p className="text-xl text-blue-100 mb-8">
-              Professional tools for analyzing your trading performance and maximizing profits.
+            <p className="text-xl text-blue-100 dark:text-blue-200 mb-8">
+              Professional tools for analyzing your trading performance and
+              maximizing profits.
             </p>
             <div className="grid grid-cols-1 gap-4 text-left max-w-md">
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                <div className="w-2 h-2 bg-blue-300 dark:bg-blue-400 rounded-full"></div>
                 <span>Advanced Analytics Dashboard</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                <div className="w-2 h-2 bg-blue-300 dark:bg-blue-400 rounded-full"></div>
                 <span>Risk Management Tools</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                <div className="w-2 h-2 bg-blue-300 dark:bg-blue-400 rounded-full"></div>
                 <span>Performance Tracking</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                <div className="w-2 h-2 bg-blue-300 dark:bg-blue-400 rounded-full"></div>
                 <span>Export & Reporting</span>
               </div>
             </div>

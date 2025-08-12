@@ -12,15 +12,39 @@ const BROKERS = {
     description: "Professional futures trading platform",
     logo: "📈",
     oauthConfig: {
-      clientId: "3239",
-      redirectUri: `${window.location.origin}/auth/callback/tradovate`,
-      authUrl: "https://trader.tradovate.com/oauth",
-      scopes: ["read", "trade"],
-      endpoints: {
-        authorize: "https://trader.tradovate.com/oauth",
-        token: "https://live.tradovateapi.com/v1/auth/accesstokenrequest",
-        account: "https://live.tradovateapi.com/v1/account/list",
-        orders: "https://live.tradovateapi.com/v1/order/list",
+      demo: {
+        clientId:
+          import.meta.env.VITE_TRADOVATE_DEMO_CLIENT_ID ||
+          "YOUR_DEMO_CLIENT_ID",
+        clientSecret:
+          import.meta.env.VITE_TRADOVATE_CLIENT_SECRET || "YOUR_CLIENT_SECRET",
+        redirectUri: `${window.location.origin}/auth/callback/tradovate`,
+        authUrl: "https://trader-test.tradovateapi.com/oauth",
+        baseUrl: "https://demo.tradovateapi.com",
+        scopes: ["read", "trade"],
+        endpoints: {
+          authorize: "https://trader-test.tradovateapi.com/oauth",
+          token: "https://demo.tradovateapi.com/v1/auth/oauthtoken",
+          account: "https://demo.tradovateapi.com/v1/account/list",
+          orders: "https://demo.tradovateapi.com/v1/order/list",
+        },
+      },
+      live: {
+        clientId:
+          import.meta.env.VITE_TRADOVATE_LIVE_CLIENT_ID ||
+          "YOUR_LIVE_CLIENT_ID",
+        clientSecret:
+          import.meta.env.VITE_TRADOVATE_CLIENT_SECRET || "YOUR_CLIENT_SECRET",
+        redirectUri: `${window.location.origin}/auth/callback/tradovate`,
+        authUrl: "https://trader.tradovate.com/oauth",
+        baseUrl: "https://live.tradovateapi.com",
+        scopes: ["read", "trade"],
+        endpoints: {
+          authorize: "https://trader.tradovate.com/oauth",
+          token: "https://live.tradovateapi.com/v1/auth/oauthtoken",
+          account: "https://live.tradovateapi.com/v1/account/list",
+          orders: "https://live.tradovateapi.com/v1/order/list",
+        },
       },
     },
   },
@@ -182,7 +206,7 @@ class BrokerService {
   }
 
   // Start OAuth flow
-  startOAuthFlow(brokerKey) {
+  startOAuthFlow(brokerKey, accountType = "live") {
     const broker = BROKERS[brokerKey];
     if (!broker || !broker.oauthConfig) {
       throw new Error("OAuth not supported for this broker");
@@ -193,7 +217,23 @@ class BrokerService {
       return this.handleDemoOAuth(brokerKey);
     }
 
-    const { clientId, redirectUri, authUrl, scopes } = broker.oauthConfig;
+    // Get config for the specific account type
+    let config;
+    if (broker.oauthConfig.demo && broker.oauthConfig.live) {
+      // Broker supports both demo and live
+      config = broker.oauthConfig[accountType];
+    } else {
+      // Legacy single config
+      config = broker.oauthConfig;
+    }
+
+    if (!config) {
+      throw new Error(
+        `${accountType} account type not supported for this broker`
+      );
+    }
+
+    const { clientId, redirectUri, authUrl, scopes } = config;
 
     // Build OAuth URL
     const params = new URLSearchParams({
@@ -201,7 +241,11 @@ class BrokerService {
       redirect_uri: redirectUri,
       response_type: "code",
       scope: scopes.join(" "),
-      state: JSON.stringify({ broker: brokerKey, timestamp: Date.now() }),
+      state: JSON.stringify({
+        broker: brokerKey,
+        accountType: accountType,
+        timestamp: Date.now(),
+      }),
     });
 
     const oauthUrl = `${authUrl}?${params.toString()}`;
@@ -392,7 +436,7 @@ class BrokerService {
   }
 
   // Exchange authorization code for access token
-  async exchangeCodeForToken(brokerKey, authCode) {
+  async exchangeCodeForToken(brokerKey, authCode, accountType = "demo") {
     const broker = BROKERS[brokerKey];
     if (!broker || !broker.oauthConfig) {
       throw new Error("OAuth not supported for this broker");
@@ -403,44 +447,69 @@ class BrokerService {
       return this.handleDemoTokenExchange(authCode);
     }
 
-    const { clientId, redirectUri } = broker.oauthConfig;
-    const tokenUrl = broker.oauthConfig.endpoints.token;
+    // Get the appropriate config based on account type
+    const oauthConfig = broker.oauthConfig[accountType] || broker.oauthConfig;
+    const { clientId, clientSecret, redirectUri } = oauthConfig;
+    const tokenUrl = oauthConfig.endpoints.token;
 
     try {
+      // Prepare request body according to Tradovate OAuth spec
+      const requestBody = {
+        grant_type: "authorization_code",
+        code: authCode,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+      };
+
+      // Add client_secret if available
+      if (clientSecret) {
+        requestBody.client_secret = clientSecret;
+      }
+
       const response = await fetch(tokenUrl, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          client_id: clientId,
-          redirect_uri: redirectUri,
-          code: authCode,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          `Token exchange failed: ${response.status}. This is expected since we're using placeholder client credentials. To connect to real ${broker.name}, you need to register your app and get valid client credentials.`
+          `Token exchange failed: ${response.status}. ${
+            errorData.error_description ||
+            errorData.error ||
+            "This is expected since we're using placeholder client credentials. To connect to real " +
+              broker.name +
+              ", you need to register your app with Tradovate and get valid client credentials."
+          }`
         );
       }
 
       const tokenData = await response.json();
 
-      // Store token securely
-      this.storeToken(brokerKey, tokenData);
+      // Check for OAuth error response
+      if (tokenData.error) {
+        throw new Error(tokenData.error_description || tokenData.error);
+      }
+
+      // Store token securely with account type
+      this.storeToken(brokerKey, tokenData, accountType);
 
       // Fetch account information
       const accountData = await this.fetchAccountInfo(
         brokerKey,
-        tokenData.access_token
+        tokenData.access_token,
+        accountType
       );
 
       return {
         success: true,
         token: tokenData,
         accounts: accountData,
+        accountType: accountType,
       };
     } catch (error) {
       throw new Error(`Token exchange failed: ${error.message}`);
@@ -483,20 +552,24 @@ class BrokerService {
   }
 
   // Store token securely
-  storeToken(brokerKey, tokenData) {
+  storeToken(brokerKey, tokenData, accountType = "live") {
     const tokenInfo = {
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
       expires_at: Date.now() + tokenData.expires_in * 1000,
       token_type: tokenData.token_type || "Bearer",
+      accountType: accountType,
     };
 
-    localStorage.setItem(`${brokerKey}_token`, JSON.stringify(tokenInfo));
+    const tokenKey = accountType
+      ? `${brokerKey}_${accountType}`
+      : `${brokerKey}_token`;
+    localStorage.setItem(tokenKey, JSON.stringify(tokenInfo));
   }
 
   // Get stored token
-  getStoredToken(brokerKey) {
-    const stored = localStorage.getItem(`${brokerKey}_token`);
+  getStoredToken(tokenKey) {
+    const stored = localStorage.getItem(tokenKey);
     if (!stored) return null;
 
     try {
@@ -701,7 +774,7 @@ class BrokerService {
   }
 
   // Connect to broker using OAuth
-  async connect(brokerKey) {
+  async connect(brokerKey, config = {}) {
     const broker = BROKERS[brokerKey];
     if (!broker) {
       throw new Error("Invalid broker selected");
@@ -711,27 +784,32 @@ class BrokerService {
       return this.connectDemo();
     }
 
-    // Check for existing valid token
-    const existingToken = this.getStoredToken(brokerKey);
+    const accountType = config.accountType || "live";
+
+    // Check for existing valid token for this account type
+    const tokenKey = `${brokerKey}_${accountType}`;
+    const existingToken = this.getStoredToken(tokenKey);
     if (existingToken) {
       try {
         const accountData = await this.fetchAccountInfo(
           brokerKey,
-          existingToken.access_token
+          existingToken.access_token,
+          accountType
         );
         return {
           success: true,
           accounts: accountData,
           token: existingToken,
+          accountType: accountType,
         };
       } catch (error) {
         // Token might be invalid, proceed with new OAuth flow
-        localStorage.removeItem(`${brokerKey}_token`);
+        localStorage.removeItem(tokenKey);
       }
     }
 
-    // Start OAuth flow (will show login page, but may fail at token exchange without real credentials)
-    return this.startOAuthFlow(brokerKey);
+    // Start OAuth flow with account type
+    return this.startOAuthFlow(brokerKey, accountType);
   }
 
   // Demo broker connection
@@ -1047,39 +1125,6 @@ class BrokerService {
     });
 
     return trades;
-  }
-
-  // Fetch demo trades (mock data)
-  async fetchDemoTrades() {
-    // Mock trade data
-    const demoTrades = [
-      {
-        id: "demo_1",
-        symbol: "AAPL",
-        side: "buy",
-        qty: 100,
-        filled_at: "2025-01-10T14:30:00Z",
-        filled_avg_price: 150.25,
-        order_type: "market",
-        status: "filled",
-      },
-      {
-        id: "demo_2",
-        symbol: "AAPL",
-        side: "sell",
-        qty: 100,
-        filled_at: "2025-01-10T15:45:00Z",
-        filled_avg_price: 152.75,
-        order_type: "market",
-        status: "filled",
-      },
-    ];
-
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(this.transformDemoTrades(demoTrades));
-      }, 1500);
-    });
   }
 
   // Transform Alpaca trades to our format

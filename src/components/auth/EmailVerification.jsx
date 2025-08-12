@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Mail, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
 
 const EmailVerification = ({ email, onVerified, onResendEmail }) => {
   const [searchParams] = useSearchParams();
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState('pending'); // pending, success, error
+  const [verificationStatus, setVerificationStatus] = useState("pending"); // pending, success, error
   const navigate = useNavigate();
   const { verifyEmail: verifyEmailAuth, sendEmailVerification } = useAuth();
 
   useEffect(() => {
-    const token = searchParams.get('token');
+    const token = searchParams.get("token");
     if (token) {
       verifyEmail(token);
     }
@@ -23,10 +23,10 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
     setIsVerifying(true);
     try {
       await verifyEmailAuth(token);
-      setVerificationStatus('success');
+      setVerificationStatus("success");
       onVerified?.(Date.now().toString()); // Mock user ID
     } catch (error) {
-      setVerificationStatus('error');
+      setVerificationStatus("error");
     } finally {
       setIsVerifying(false);
     }
@@ -62,7 +62,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
     );
   }
 
-  if (verificationStatus === 'success') {
+  if (verificationStatus === "success") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
@@ -72,11 +72,12 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
               Email Verified!
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Your email has been successfully verified. You can now proceed with your registration.
+              Your email has been successfully verified. You can now proceed
+              with your registration.
             </p>
             <div className="mt-6">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate("/dashboard")}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Go to Dashboard
@@ -88,7 +89,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
     );
   }
 
-  if (verificationStatus === 'error') {
+  if (verificationStatus === "error") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
@@ -98,7 +99,8 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
               Verification Failed
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              The verification link is invalid or has expired. Please request a new verification email.
+              The verification link is invalid or has expired. Please request a
+              new verification email.
             </p>
             <div className="mt-6">
               <button
@@ -136,7 +138,8 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
           </p>
           <p className="mt-1 text-sm font-medium text-gray-900">{email}</p>
           <p className="mt-4 text-sm text-gray-600">
-            Click the link in the email to verify your account. If you don't see the email, check your spam folder.
+            Click the link in the email to verify your account. If you don't see
+            the email, check your spam folder.
           </p>
         </div>
 
@@ -155,18 +158,18 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
               </>
             )}
           </button>
-          
+
           <button
-            onClick={() => navigate('/register')}
+            onClick={() => navigate("/register")}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Back to Registration
           </button>
-          
+
           {/* Development only - Skip email verification */}
           <button
             onClick={() => {
-              setVerificationStatus('success');
+              setVerificationStatus("success");
               onVerified?.(Date.now().toString());
             }}
             className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

@@ -14,11 +14,14 @@ import MultiStepRegistration from "./pages/MultiStepRegistration";
 import EmailVerification from "./components/auth/EmailVerification";
 import Admin from "./pages/Admin";
 import Billing from "./pages/Billing";
+import BrokerSelection from "./pages/BrokerSelection";
+import TradeEntry from "./pages/TradeEntry";
 import OAuthCallback from "./pages/OAuthCallback";
 import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { BillingProvider } from "./context/BillingContext";
 import { BrokerProvider } from "./context/BrokerContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -30,91 +33,111 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <AuthProvider>
-      <BillingProvider>
-        <TradeProvider>
-          <BrokerProvider>
-            <Router>
-            <Routes>
-              {/* Public routes */}
-              <Route
-                path="/login"
-                element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  <PublicRoute>
-                    <MultiStepRegistration />
-                  </PublicRoute>
-                }
-              />
-              <Route path="/verify-email" element={<EmailVerification />} />
-              <Route path="/auth/callback" element={<OAuthCallback />} />
-              <Route path="/auth/callback/tradovate" element={<OAuthCallback />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <BillingProvider>
+          <TradeProvider>
+            <BrokerProvider>
+              <Router>
+              <Routes>
+                {/* Public routes */}
+                <Route
+                  path="/login"
+                  element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <PublicRoute>
+                      <MultiStepRegistration />
+                    </PublicRoute>
+                  }
+                />
+                <Route path="/verify-email" element={<EmailVerification />} />
+                <Route path="/auth/callback" element={<OAuthCallback />} />
+                <Route
+                  path="/auth/callback/tradovate"
+                  element={<OAuthCallback />}
+                />
 
-              {/* Protected routes */}
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <div className="flex h-screen bg-gray-50">
-                      <Sidebar
-                        isOpen={sidebarOpen}
-                        onClose={() => setSidebarOpen(false)}
-                      />
+                {/* Protected routes */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <div className="flex h-screen bg-gray-50">
+                        <Sidebar
+                          isOpen={sidebarOpen}
+                          onClose={() => setSidebarOpen(false)}
+                        />
 
-                      <div className="flex-1 flex flex-col overflow-hidden">
-                        <Header onMenuClick={() => setSidebarOpen(true)} />
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                          <Header onMenuClick={() => setSidebarOpen(true)} />
 
-                        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-                          <Routes>
-                            <Route path="/" element={<Dashboard />} />
-                            <Route path="/trades" element={<Trades />} />
-                            <Route path="/analytics" element={<Analytics />} />
-                            <Route
-                              path="/risk-calculator"
-                              element={<RiskCalculator />}
-                            />
-                            <Route path="/settings" element={<Settings />} />
-                            <Route path="/profile" element={<Profile />} />
-                            <Route
-                              path="/admin"
-                              element={
-                                <AdminRoute>
-                                  <Admin />
-                                </AdminRoute>
-                              }
-                            />
-                            <Route path="/billing" element={<Billing />} />
-                          </Routes>
-                        </main>
+                          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
+                            <Routes>
+                              <Route path="/" element={<Dashboard />} />
+                              <Route path="/trades" element={<Trades />} />
+                              <Route
+                                path="/trade-entry"
+                                element={<TradeEntry />}
+                              />
+                              <Route
+                                path="/brokers"
+                                element={<BrokerSelection />}
+                              />
+                              <Route
+                                path="/analytics"
+                                element={<Analytics />}
+                              />
+                              <Route
+                                path="/risk-calculator"
+                                element={<RiskCalculator />}
+                              />
+                              <Route path="/settings" element={<Settings />} />
+                              <Route path="/profile" element={<Profile />} />
+                              <Route
+                                path="/admin"
+                                element={
+                                  <AdminRoute>
+                                    <Admin />
+                                  </AdminRoute>
+                                }
+                              />
+                              <Route path="/billing" element={<Billing />} />
+                            </Routes>
+                          </main>
+                        </div>
                       </div>
-                    </div>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
 
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: "#363636",
-                  color: "#fff",
-                },
-              }}
-            />
-          </Router>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 3000,
+                  className: "toast-notification",
+                  style: {
+                    borderRadius: '8px',
+                    background: 'var(--toast-bg)',
+                    color: 'var(--toast-color)',
+                    boxShadow: 'var(--toast-shadow)',
+                    border: '1px solid var(--toast-border)',
+                  },
+                }}
+              />
+            </Router>
           </BrokerProvider>
         </TradeProvider>
       </BillingProvider>
     </AuthProvider>
+  </ThemeProvider>
   );
 }
 

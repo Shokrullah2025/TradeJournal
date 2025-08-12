@@ -1,1 +1,6 @@
-Adjust the page layout to display content horizontally for better utilization of space. Implement functionality to simplify template creation, ensuring all existing templates are removed. Add a calendar view that shows the total trade of the day, including numerical values. Use light green to indicate a win and light red to indicate a loss.
+Update the following components to ensure full consistency with the dark mode theme:
+
+1. Apply dark mode styles to inputs and buttons in the `TradeForm` component.
+2. Update the `TradeList` component to display trades with appropriate dark mode styling.
+3. Ensure the `TradeFilters` component adheres to the dark mode theme.
+4. Review and update any other components or pages that do not fully support dark mode.
