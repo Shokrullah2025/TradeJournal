@@ -15,27 +15,27 @@ const PnLChart = ({ trades }) => {
   useEffect(() => {
     // Check if dark mode is active
     const checkDarkMode = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
+      setIsDarkMode(document.documentElement.classList.contains("dark"));
     };
-    
+
     checkDarkMode();
-    
+
     // Listen for theme changes
     const observer = new MutationObserver(checkDarkMode);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ["class"],
     });
-    
+
     return () => observer.disconnect();
   }, []);
 
   // Theme-aware colors
   const colors = {
-    grid: isDarkMode ? '#374151' : '#f0f0f0',
-    axis: isDarkMode ? '#9ca3af' : '#666666',
-    wins: isDarkMode ? '#4ade80' : '#22c55e',
-    losses: isDarkMode ? '#f87171' : '#ef4444',
+    grid: isDarkMode ? "#374151" : "#f0f0f0",
+    axis: isDarkMode ? "#9ca3af" : "#666666",
+    wins: isDarkMode ? "#4ade80" : "#22c55e",
+    losses: isDarkMode ? "#f87171" : "#ef4444",
   };
 
   const generatePnLData = () => {
@@ -80,11 +80,19 @@ const PnLChart = ({ trades }) => {
 
       return (
         <div className="card border border-gray-200 dark:border-gray-700 shadow-lg p-3">
-          <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">{label}</p>
+          <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+            {label}
+          </p>
           <div className="space-y-1">
-            <p className="text-sm text-success-600 dark:text-success-400">Wins: {wins}</p>
-            <p className="text-sm text-danger-600 dark:text-danger-400">Losses: {losses}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total: {total}</p>
+            <p className="text-sm text-success-600 dark:text-success-400">
+              Wins: {wins}
+            </p>
+            <p className="text-sm text-danger-600 dark:text-danger-400">
+              Losses: {losses}
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Total: {total}
+            </p>
             {total > 0 && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Win Rate: {((wins / total) * 100).toFixed(1)}%

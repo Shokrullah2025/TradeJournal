@@ -64,7 +64,9 @@ const Dashboard = () => {
       {/* Header */}
       <div className="dashboard__header flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Dashboard
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Track your trading performance and insights
           </p>
@@ -131,25 +133,33 @@ const Dashboard = () => {
             </h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Average Win</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Average Win
+                </span>
                 <span className="font-medium text-success-600 dark:text-success-400">
                   ${stats.avgWin.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Average Loss</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Average Loss
+                </span>
                 <span className="font-medium text-danger-600 dark:text-danger-400">
                   ${stats.avgLoss.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Max Drawdown</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Max Drawdown
+                </span>
                 <span className="font-medium text-danger-600 dark:text-danger-400">
                   ${stats.maxDrawdown.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Sharpe Ratio</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Sharpe Ratio
+                </span>
                 <span className="font-medium text-gray-900 dark:text-gray-100">
                   {stats.sharpeRatio.toFixed(2)}
                 </span>

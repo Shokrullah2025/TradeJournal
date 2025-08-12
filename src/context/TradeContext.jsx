@@ -144,18 +144,23 @@ const tradeReducer = (state, action) => {
             ...trade,
             ...action.payload,
             // Ensure date fields are strings and properly formatted
-            entryDate: action.payload.entryDate 
-              ? (typeof action.payload.entryDate === 'string' && action.payload.entryDate.includes('T')
-                  ? action.payload.entryDate.split('T')[0] 
-                  : String(action.payload.entryDate))
+            entryDate: action.payload.entryDate
+              ? typeof action.payload.entryDate === "string" &&
+                action.payload.entryDate.includes("T")
+                ? action.payload.entryDate.split("T")[0]
+                : String(action.payload.entryDate)
               : trade.entryDate,
-            exitDate: action.payload.exitDate 
-              ? (typeof action.payload.exitDate === 'string' && action.payload.exitDate.includes('T')
-                  ? action.payload.exitDate.split('T')[0] 
-                  : String(action.payload.exitDate))
+            exitDate: action.payload.exitDate
+              ? typeof action.payload.exitDate === "string" &&
+                action.payload.exitDate.includes("T")
+                ? action.payload.exitDate.split("T")[0]
+                : String(action.payload.exitDate)
               : trade.exitDate,
             // Calculate PnL if trade is closed
-            pnl: action.payload.status === "closed" ? calculatePnL(action.payload) : 0,
+            pnl:
+              action.payload.status === "closed"
+                ? calculatePnL(action.payload)
+                : 0,
           };
           return updatedTrade;
         }
@@ -377,11 +382,13 @@ export const TradeProvider = ({ children }) => {
       exitDate: updatedData.exitDate ? String(updatedData.exitDate) : null,
       entryTime: updatedData.entryTime ? String(updatedData.entryTime) : null,
       exitTime: updatedData.exitTime ? String(updatedData.exitTime) : null,
-      tags: Array.isArray(updatedData.tags) 
-        ? updatedData.tags 
-        : updatedData.tags 
-          ? String(updatedData.tags).split(",").map(tag => tag.trim())
-          : [],
+      tags: Array.isArray(updatedData.tags)
+        ? updatedData.tags
+        : updatedData.tags
+        ? String(updatedData.tags)
+            .split(",")
+            .map((tag) => tag.trim())
+        : [],
     };
 
     console.log("Sanitized trade data:", sanitizedData); // Debug log

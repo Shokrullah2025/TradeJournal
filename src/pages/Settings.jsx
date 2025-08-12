@@ -667,7 +667,9 @@ const Settings = () => {
       {/* Header */}
       <div className="settings__header flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Settings
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Manage your preferences, templates, and data
           </p>
@@ -702,8 +704,8 @@ const Settings = () => {
                     <div className="font-medium">{tab.name}</div>
                     <p
                       className={`mt-1 text-xs leading-4 ${
-                        activeTab === tab.id 
-                          ? "text-primary-600 dark:text-primary-400" 
+                        activeTab === tab.id
+                          ? "text-primary-600 dark:text-primary-400"
                           : "text-gray-500 dark:text-gray-400"
                       }`}
                     >
@@ -1928,7 +1930,9 @@ const Settings = () => {
                           </h4>
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-blue-700 dark:text-blue-300">Ratio:</span>
+                              <span className="text-blue-700 dark:text-blue-300">
+                                Ratio:
+                              </span>
                               <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
                                 {riskProfileFormData.riskRatio}:
                                 {riskProfileFormData.rewardRatio}
@@ -2175,7 +2179,9 @@ const Settings = () => {
                           </h5>
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Futures Profiles:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Futures Profiles:
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
@@ -2185,7 +2191,9 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Forex Profiles:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Forex Profiles:
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
@@ -2195,7 +2203,9 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Other Instruments:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Other Instruments:
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
@@ -2216,7 +2226,9 @@ const Settings = () => {
                           </h5>
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Conservative (&lt;2% risk):</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Conservative (&lt;2% risk):
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
@@ -2226,7 +2238,9 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Moderate (2-3% risk):</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Moderate (2-3% risk):
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
@@ -2238,7 +2252,9 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Aggressive (&gt;3% risk):</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Aggressive (&gt;3% risk):
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
@@ -2256,7 +2272,9 @@ const Settings = () => {
                           </h5>
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Average R/R Ratio:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Average R/R Ratio:
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 1:
                                 {(
@@ -2268,7 +2286,9 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Highest R/R:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Highest R/R:
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 1:
                                 {Math.max(
@@ -2277,7 +2297,9 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Most Conservative:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Most Conservative:
+                              </span>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
                                 1:
                                 {Math.min(

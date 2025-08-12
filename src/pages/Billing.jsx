@@ -234,19 +234,25 @@ const Billing = () => {
                   </h3>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Basic</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Basic
+                      </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {billingAnalytics.subscriptionsByPlan.basic}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Premium</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Premium
+                      </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {billingAnalytics.subscriptionsByPlan.premium}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Enterprise</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Enterprise
+                      </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {billingAnalytics.subscriptionsByPlan.enterprise}
                       </span>
@@ -342,7 +348,9 @@ const Billing = () => {
                       ? "29"
                       : "99"}
                   </div>
-                  <div className="text-sm text-blue-600 dark:text-blue-300">per month</div>
+                  <div className="text-sm text-blue-600 dark:text-blue-300">
+                    per month
+                  </div>
                 </div>
               </div>
             </div>
@@ -788,7 +796,10 @@ const Billing = () => {
                           </thead>
                           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {userPayments.map((payment) => (
-                              <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <tr
+                                key={payment.id}
+                                className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                     INV-{payment.id.toString().padStart(6, "0")}
