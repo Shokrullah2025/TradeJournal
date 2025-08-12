@@ -37,7 +37,7 @@ const Login = () => {
   };
 
   return (
-        <div className="min-h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Theme Toggle - Top Right */}
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle size="md" showLabel />
@@ -171,7 +171,7 @@ const Login = () => {
                 </button>
               </div>
 
-                {/* Development Login Buttons */}
+              {/* Development Login Buttons */}
               <div className="space-y-2">
                 <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
                   Development Quick Login:

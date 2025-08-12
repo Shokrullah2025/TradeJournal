@@ -14,9 +14,9 @@ import {
 import { useTrades } from "../context/TradeContext";
 import { useBroker } from "../context/BrokerContext";
 import TradeForm from "../components/trades/TradeForm";
-import TradeList from "../components/trades/TradeList";
 import TradeFilters from "../components/trades/TradeFilters";
 import TradeCalendar from "../components/trades/TradeCalendar";
+import TradeList from "../components/trades/TradeList";
 import BrokerModal from "../components/trades/BrokerModal";
 import { exportToExcel } from "../utils/exportUtils";
 import toast from "react-hot-toast";
@@ -31,7 +31,7 @@ const Trades = () => {
   const [editingTrade, setEditingTrade] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
-  const [activeView, setActiveView] = useState("calendar"); // Add back view state
+  const [activeView, setActiveView] = useState("calendar");
 
   // Handle OAuth success message
   useEffect(() => {
@@ -260,7 +260,7 @@ const Trades = () => {
 
           {/* P&L Summary Panel - Takes 1/4 of the width */}
           <div className="xl:col-span-1">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden sticky top-6">
+            <div className="card sticky top-6">
               {/* Header */}
               <div
                 className="border-b border-gray-200 dark:border-gray-700 p-4"
@@ -276,13 +276,13 @@ const Trades = () => {
                 {/* Total P&L */}
                 <div className="text-center">
                   <div
-                    className={`text-3xl font-bold ${
+                    className={`text-2xl font-bold ${
                       filteredAndSearchedTrades.reduce(
                         (sum, trade) => sum + (trade.pnl || 0),
                         0
                       ) >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
+                        ? "text-success-600 dark:text-success-400"
+                        : "text-danger-600 dark:text-danger-400"
                     }`}
                   >
                     $
@@ -396,7 +396,7 @@ const Trades = () => {
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
-                      className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-success-500 to-success-600 h-2 rounded-full transition-all duration-300"
                       style={{
                         width: `${
                           filteredAndSearchedTrades.length > 0
@@ -422,7 +422,9 @@ const Trades = () => {
                       <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
                         {filteredAndSearchedTrades.length}
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Total Trades</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Total Trades
+                      </div>
                     </div>
                     <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <div
@@ -446,7 +448,9 @@ const Trades = () => {
                           .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
                           .toFixed(0)}
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Monthly P&L</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Monthly P&L
+                      </div>
                     </div>
                   </div>
                 </div>

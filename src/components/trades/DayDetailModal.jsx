@@ -12,19 +12,32 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
-const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade }) => {
+const DayDetailModal = ({
+  isOpen,
+  date,
+  trades,
+  onClose,
+  onEditTrade,
+  onAddTrade,
+}) => {
   if (!isOpen || !date) return null;
 
   // Calculate day statistics
   const closedTrades = trades.filter((trade) => trade.status === "closed");
   const openTrades = trades.filter((trade) => trade.status === "open");
-  const totalPnL = closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+  const totalPnL = closedTrades.reduce(
+    (sum, trade) => sum + (trade.pnl || 0),
+    0
+  );
   const winningTrades = closedTrades.filter((trade) => trade.pnl > 0);
   const losingTrades = closedTrades.filter((trade) => trade.pnl < 0);
-  const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
+  const winRate =
+    closedTrades.length > 0
+      ? (winningTrades.length / closedTrades.length) * 100
+      : 0;
 
   const formatCurrency = (amount) => {
-    return `${amount >= 0 ? '+' : ''}$${amount.toFixed(2)}`;
+    return `${amount >= 0 ? "+" : ""}$${amount.toFixed(2)}`;
   };
 
   const getTradeTypeColor = (tradeType) => {
@@ -49,7 +62,8 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                 {format(date, "EEEE, MMMM d, yyyy")}
               </h2>
               <p className="text-sm text-gray-600">
-                {trades.length} trade{trades.length !== 1 ? "s" : ""} • {closedTrades.length} closed
+                {trades.length} trade{trades.length !== 1 ? "s" : ""} •{" "}
+                {closedTrades.length} closed
               </p>
             </div>
           </div>
@@ -77,16 +91,18 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
               <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
               Daily Performance Summary
             </h3>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {/* Total P&L */}
-              <div className={`p-4 rounded-lg border-2 ${
-                totalPnL > 0 
-                  ? "bg-green-50 border-green-200" 
-                  : totalPnL < 0 
-                  ? "bg-red-50 border-red-200" 
-                  : "bg-gray-50 border-gray-200"
-              }`}>
+              <div
+                className={`p-4 rounded-lg border-2 ${
+                  totalPnL > 0
+                    ? "bg-green-50 border-green-200"
+                    : totalPnL < 0
+                    ? "bg-red-50 border-red-200"
+                    : "bg-gray-50 border-gray-200"
+                }`}
+              >
                 <div className="text-sm text-gray-600 mb-1">Total P&L</div>
                 <div className={`text-2xl font-bold ${getPnLColor(totalPnL)}`}>
                   {formatCurrency(totalPnL)}
@@ -96,7 +112,11 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
               {/* Win Rate */}
               <div className="bg-white p-4 rounded-lg border border-gray-200">
                 <div className="text-sm text-gray-600 mb-1">Win Rate</div>
-                <div className={`text-2xl font-bold ${winRate >= 50 ? "text-green-600" : "text-red-600"}`}>
+                <div
+                  className={`text-2xl font-bold ${
+                    winRate >= 50 ? "text-green-600" : "text-red-600"
+                  }`}
+                >
                   {closedTrades.length > 0 ? `${winRate.toFixed(0)}%` : "N/A"}
                 </div>
               </div>
@@ -109,7 +129,9 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                 </div>
                 {winningTrades.length > 0 && (
                   <div className="text-xs text-green-600 mt-1">
-                    {formatCurrency(winningTrades.reduce((sum, trade) => sum + trade.pnl, 0))}
+                    {formatCurrency(
+                      winningTrades.reduce((sum, trade) => sum + trade.pnl, 0)
+                    )}
                   </div>
                 )}
               </div>
@@ -122,7 +144,9 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                 </div>
                 {losingTrades.length > 0 && (
                   <div className="text-xs text-red-600 mt-1">
-                    {formatCurrency(losingTrades.reduce((sum, trade) => sum + trade.pnl, 0))}
+                    {formatCurrency(
+                      losingTrades.reduce((sum, trade) => sum + trade.pnl, 0)
+                    )}
                   </div>
                 )}
               </div>
@@ -168,11 +192,13 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                           <h4 className="font-semibold text-gray-900">
                             {trade.instrument}
                           </h4>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            trade.tradeType === "long" 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-red-100 text-red-800"
-                          }`}>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              trade.tradeType === "long"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {trade.tradeType === "long" ? (
                               <TrendingUp className="w-3 h-3 mr-1" />
                             ) : (
@@ -180,11 +206,13 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                             )}
                             {trade.tradeType?.toUpperCase()}
                           </span>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            trade.status === "open" 
-                              ? "bg-blue-100 text-blue-800" 
-                              : "bg-gray-100 text-gray-800"
-                          }`}>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              trade.status === "open"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
                             {trade.status?.toUpperCase()}
                           </span>
                         </div>
@@ -192,7 +220,9 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-gray-600">Entry Price:</span>
-                            <div className="font-medium">${trade.entryPrice}</div>
+                            <div className="font-medium">
+                              ${trade.entryPrice}
+                            </div>
                           </div>
                           <div>
                             <span className="text-gray-600">Quantity:</span>
@@ -210,7 +240,11 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                           {trade.status === "closed" && (
                             <div>
                               <span className="text-gray-600">P&L:</span>
-                              <div className={`font-bold ${getPnLColor(trade.pnl || 0)}`}>
+                              <div
+                                className={`font-bold ${getPnLColor(
+                                  trade.pnl || 0
+                                )}`}
+                              >
                                 {formatCurrency(trade.pnl || 0)}
                               </div>
                             </div>
@@ -236,7 +270,8 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                         {/* Notes */}
                         {trade.notes && (
                           <div className="mt-2 text-sm text-gray-600 italic">
-                            "{trade.notes.substring(0, 100)}{trade.notes.length > 100 ? '...' : ''}"
+                            "{trade.notes.substring(0, 100)}
+                            {trade.notes.length > 100 ? "..." : ""}"
                           </div>
                         )}
 
@@ -245,14 +280,22 @@ const DayDetailModal = ({ isOpen, date, trades, onClose, onEditTrade, onAddTrade
                           <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
                             {trade.stopLoss && (
                               <div>
-                                <span className="text-gray-600">Stop Loss:</span>
-                                <span className="ml-1 font-medium text-red-600">${trade.stopLoss}</span>
+                                <span className="text-gray-600">
+                                  Stop Loss:
+                                </span>
+                                <span className="ml-1 font-medium text-red-600">
+                                  ${trade.stopLoss}
+                                </span>
                               </div>
                             )}
                             {trade.takeProfit && (
                               <div>
-                                <span className="text-gray-600">Take Profit:</span>
-                                <span className="ml-1 font-medium text-green-600">${trade.takeProfit}</span>
+                                <span className="text-gray-600">
+                                  Take Profit:
+                                </span>
+                                <span className="ml-1 font-medium text-green-600">
+                                  ${trade.takeProfit}
+                                </span>
                               </div>
                             )}
                           </div>

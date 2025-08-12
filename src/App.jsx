@@ -5,9 +5,10 @@ import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import Dashboard from "./pages/Dashboard";
 import Trades from "./pages/Trades";
+import Backtest from "./pages/Backtest";
 import Analytics from "./pages/Analytics";
 import RiskCalculator from "./pages/RiskCalculator";
-import Settings from "./pages/Settings";
+import Settings from "./pages/Settings_new";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import MultiStepRegistration from "./pages/MultiStepRegistration";
@@ -21,6 +22,7 @@ import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { BillingProvider } from "./context/BillingContext";
 import { BrokerProvider } from "./context/BrokerContext";
+import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import {
   ProtectedRoute,
@@ -31,6 +33,7 @@ import {
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <ThemeProvider>
@@ -38,106 +41,130 @@ function App() {
         <BillingProvider>
           <TradeProvider>
             <BrokerProvider>
-              <Router>
-              <Routes>
-                {/* Public routes */}
-                <Route
-                  path="/login"
-                  element={
-                    <PublicRoute>
-                      <Login />
-                    </PublicRoute>
-                  }
-                />
-                <Route
-                  path="/register"
-                  element={
-                    <PublicRoute>
-                      <MultiStepRegistration />
-                    </PublicRoute>
-                  }
-                />
-                <Route path="/verify-email" element={<EmailVerification />} />
-                <Route path="/auth/callback" element={<OAuthCallback />} />
-                <Route
-                  path="/auth/callback/tradovate"
-                  element={<OAuthCallback />}
-                />
+              <BacktestProvider>
+                <Router>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route
+                      path="/login"
+                      element={
+                        <PublicRoute>
+                          <Login />
+                        </PublicRoute>
+                      }
+                    />
+                    <Route
+                      path="/register"
+                      element={
+                        <PublicRoute>
+                          <MultiStepRegistration />
+                        </PublicRoute>
+                      }
+                    />
+                    <Route
+                      path="/verify-email"
+                      element={<EmailVerification />}
+                    />
+                    <Route path="/auth/callback" element={<OAuthCallback />} />
+                    <Route
+                      path="/auth/callback/tradovate"
+                      element={<OAuthCallback />}
+                    />
 
-                {/* Protected routes */}
-                <Route
-                  path="/*"
-                  element={
-                    <ProtectedRoute>
-                      <div className="flex h-screen bg-gray-50">
-                        <Sidebar
-                          isOpen={sidebarOpen}
-                          onClose={() => setSidebarOpen(false)}
-                        />
+                    {/* Protected routes */}
+                    <Route
+                      path="/*"
+                      element={
+                        <ProtectedRoute>
+                          <div className="flex h-screen bg-gray-50">
+                            <Sidebar
+                              isOpen={sidebarOpen}
+                              onClose={() => setSidebarOpen(false)}
+                              isCollapsed={sidebarCollapsed}
+                              onToggleCollapse={() =>
+                                setSidebarCollapsed(!sidebarCollapsed)
+                              }
+                            />
 
-                        <div className="flex-1 flex flex-col overflow-hidden">
-                          <Header onMenuClick={() => setSidebarOpen(true)} />
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                              <Header
+                                onMenuClick={() => setSidebarOpen(true)}
+                              />
 
-                          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
-                            <Routes>
-                              <Route path="/" element={<Dashboard />} />
-                              <Route path="/trades" element={<Trades />} />
-                              <Route
-                                path="/trade-entry"
-                                element={<TradeEntry />}
-                              />
-                              <Route
-                                path="/brokers"
-                                element={<BrokerSelection />}
-                              />
-                              <Route
-                                path="/analytics"
-                                element={<Analytics />}
-                              />
-                              <Route
-                                path="/risk-calculator"
-                                element={<RiskCalculator />}
-                              />
-                              <Route path="/settings" element={<Settings />} />
-                              <Route path="/profile" element={<Profile />} />
-                              <Route
-                                path="/admin"
-                                element={
-                                  <AdminRoute>
-                                    <Admin />
-                                  </AdminRoute>
-                                }
-                              />
-                              <Route path="/billing" element={<Billing />} />
-                            </Routes>
-                          </main>
-                        </div>
-                      </div>
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
+                              <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
+                                <Routes>
+                                  <Route path="/" element={<Dashboard />} />
+                                  <Route path="/trades" element={<Trades />} />
+                                  <Route
+                                    path="/backtest"
+                                    element={<Backtest />}
+                                  />
+                                  <Route
+                                    path="/trade-entry"
+                                    element={<TradeEntry />}
+                                  />
+                                  <Route
+                                    path="/brokers"
+                                    element={<BrokerSelection />}
+                                  />
+                                  <Route
+                                    path="/analytics"
+                                    element={<Analytics />}
+                                  />
+                                  <Route
+                                    path="/risk-calculator"
+                                    element={<RiskCalculator />}
+                                  />
+                                  <Route
+                                    path="/settings"
+                                    element={<Settings />}
+                                  />
+                                  <Route
+                                    path="/profile"
+                                    element={<Profile />}
+                                  />
+                                  <Route
+                                    path="/admin"
+                                    element={
+                                      <AdminRoute>
+                                        <Admin />
+                                      </AdminRoute>
+                                    }
+                                  />
+                                  <Route
+                                    path="/billing"
+                                    element={<Billing />}
+                                  />
+                                </Routes>
+                              </main>
+                            </div>
+                          </div>
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
 
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 3000,
-                  className: "toast-notification",
-                  style: {
-                    borderRadius: '8px',
-                    background: 'var(--toast-bg)',
-                    color: 'var(--toast-color)',
-                    boxShadow: 'var(--toast-shadow)',
-                    border: '1px solid var(--toast-border)',
-                  },
-                }}
-              />
-            </Router>
-          </BrokerProvider>
-        </TradeProvider>
-      </BillingProvider>
-    </AuthProvider>
-  </ThemeProvider>
+                  <Toaster
+                    position="top-right"
+                    toastOptions={{
+                      duration: 3000,
+                      className: "toast-notification",
+                      style: {
+                        borderRadius: "8px",
+                        background: "var(--toast-bg)",
+                        color: "var(--toast-color)",
+                        boxShadow: "var(--toast-shadow)",
+                        border: "1px solid var(--toast-border)",
+                      },
+                    }}
+                  />
+                </Router>
+              </BacktestProvider>
+            </BrokerProvider>
+          </TradeProvider>
+        </BillingProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -16,27 +16,27 @@ const PerformanceChart = ({ trades }) => {
   useEffect(() => {
     // Check if dark mode is active
     const checkDarkMode = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
+      setIsDarkMode(document.documentElement.classList.contains("dark"));
     };
-    
+
     checkDarkMode();
-    
+
     // Listen for theme changes
     const observer = new MutationObserver(checkDarkMode);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ["class"],
     });
-    
+
     return () => observer.disconnect();
   }, []);
 
   // Theme-aware colors
   const colors = {
-    grid: isDarkMode ? '#374151' : '#f0f0f0',
-    axis: isDarkMode ? '#9ca3af' : '#666666',
-    line: isDarkMode ? '#60a5fa' : '#0ea5e9',
-    dot: isDarkMode ? '#60a5fa' : '#0ea5e9',
+    grid: isDarkMode ? "#374151" : "#f0f0f0",
+    axis: isDarkMode ? "#9ca3af" : "#666666",
+    line: isDarkMode ? "#60a5fa" : "#0ea5e9",
+    dot: isDarkMode ? "#60a5fa" : "#0ea5e9",
   };
 
   // Generate data for the last 30 days
@@ -78,11 +78,13 @@ const PerformanceChart = ({ trades }) => {
       const data = payload[0].payload;
       return (
         <div className="card border border-gray-200 dark:border-gray-700 shadow-lg p-3">
-          <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">{label}</p>
+          <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+            {label}
+          </p>
           <p
             className={`text-sm ${
-              data.value >= 0 
-                ? "text-success-600 dark:text-success-400" 
+              data.value >= 0
+                ? "text-success-600 dark:text-success-400"
                 : "text-danger-600 dark:text-danger-400"
             }`}
           >
@@ -91,7 +93,9 @@ const PerformanceChart = ({ trades }) => {
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Daily P&L: ${data.dailyPnL.toLocaleString()}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Trades: {data.trades}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Trades: {data.trades}
+          </p>
         </div>
       );
     }
@@ -138,7 +142,6 @@ const PerformanceChart = ({ trades }) => {
             strokeWidth={2}
             dot={{ fill: colors.dot, strokeWidth: 2, r: 4 }}
             activeDot={{ r: 6, stroke: colors.line, strokeWidth: 2 }}
-          />
           />
         </LineChart>
       </ResponsiveContainer>

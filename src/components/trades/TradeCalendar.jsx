@@ -137,15 +137,19 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
               return acc + tradeProfit;
             }, 0);
             // Determine background color based on P&L
-            let dayColorClass = "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700";
-            
+            let dayColorClass =
+              "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700";
+
             if (hasTrades) {
               if (dailyPnL > 0) {
-                dayColorClass = "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-700";
+                dayColorClass =
+                  "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-700";
               } else if (dailyPnL < 0) {
-                dayColorClass = "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-700";
+                dayColorClass =
+                  "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-700";
               } else {
-                dayColorClass = "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
+                dayColorClass =
+                  "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
               }
             }
 

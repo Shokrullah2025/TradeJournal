@@ -11,9 +11,9 @@ import {
   Shield,
   CreditCard,
   LogOut,
-  User,
   UserCircle,
   Link,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -23,6 +23,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Trades", href: "/trades", icon: BookOpen },
+    { name: "Backtest", href: "/backtest", icon: Activity },
     { name: "Brokers", href: "/brokers", icon: Link },
     { name: "Analytics", href: "/analytics", icon: BarChart3 },
     { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator },
@@ -53,63 +54,38 @@ const Sidebar = ({ isOpen, onClose }) => {
       )}
 
       <div
-        className={`sidebar fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        className={`sidebar fixed inset-y-0 left-0 z-30 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-500 ease-in-out lg:translate-x-0 lg:static lg:inset-0 overflow-hidden ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } w-64`}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-primary-600 rounded-lg">
+        <div
+          className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 transition-all duration-500 relative overflow-hidden px-6 py-6"
+        >
+          <div className="flex items-center space-x-3 transition-opacity duration-500">
+            <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Trade Journal</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Pro Version</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-          </button>
-        </div>
-
-        {/* User Info */}
-        <div className="sidebar__user p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user?.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {user?.name || "Trader"}
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Trade Journal
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Pro Version
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "trader@example.com"}</p>
-              <span
-                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  user?.subscription === "premium"
-                    ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300"
-                    : user?.subscription === "enterprise"
-                    ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
-                }`}
-              >
-                {user?.subscription || "basic"}
-              </span>
             </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-500"
+            >
+              <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            </button>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto transition-all duration-500">
+          {/* Removed user info section - starts directly with navigation */}
           {/* Main Navigation */}
           <div className="space-y-1">
             {navigation.map((item) => {
@@ -120,15 +96,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                   to={item.href}
                   onClick={() => onClose()}
                   className={({ isActive }) =>
-                    `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    `group flex items-center text-sm font-medium rounded-lg transition-all duration-500 px-3 py-2 ${
                       isActive
                         ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`
                   }
                 >
-                  <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  {item.name}
+                  <Icon className="h-5 w-5 flex-shrink-0 mr-3" />
+                  <span className="transition-opacity duration-500">{item.name}</span>
                 </NavLink>
               );
             })}
@@ -148,7 +124,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     to={item.href}
                     onClick={() => onClose()}
                     className={({ isActive }) =>
-                      `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-500 ${
                         isActive
                           ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -178,7 +154,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                       to={item.href}
                       onClick={() => onClose()}
                       className={({ isActive }) =>
-                        `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-500 ${
                           isActive
                             ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -195,13 +171,13 @@ const Sidebar = ({ isOpen, onClose }) => {
           )}
         </nav>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="border-t border-gray-200 dark:border-gray-700 transition-all duration-500 p-4">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center w-full text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-500 px-3 py-2"
           >
-            <LogOut className="mr-3 h-5 w-5" />
-            Sign Out
+            <LogOut className="h-5 w-5 mr-3" />
+            <span className="transition-opacity duration-500">Sign Out</span>
           </button>
         </div>
       </div>
