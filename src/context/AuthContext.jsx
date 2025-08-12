@@ -113,6 +113,18 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Initialize users first (in real app, fetch from backend)
+        const storedUsers = localStorage.getItem("all_users");
+        if (storedUsers) {
+          dispatch({
+            type: ActionTypes.SET_USERS,
+            payload: JSON.parse(storedUsers),
+          });
+        } else {
+          localStorage.setItem("all_users", JSON.stringify(mockUsers));
+          dispatch({ type: ActionTypes.SET_USERS, payload: mockUsers });
+        }
+
         // Check for stored user session
         const token = Cookies.get("auth_token");
         const userData = localStorage.getItem("user_data");
@@ -135,19 +147,26 @@ export const AuthProvider = ({ children }) => {
             payload: mockAccessStatus,
           });
         } else {
-          dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-        }
-
-        // Initialize users (in real app, fetch from backend)
-        const storedUsers = localStorage.getItem("all_users");
-        if (storedUsers) {
+          // FOR DEVELOPMENT: Auto-login with admin user
+          const adminUser = mockUsers[0]; // Admin user
+          const mockToken = `mock_token_${adminUser.id}`;
+          Cookies.set("auth_token", mockToken, { expires: 7 });
+          localStorage.setItem("user_data", JSON.stringify(adminUser));
+          dispatch({ type: ActionTypes.SET_USER, payload: adminUser });
+          
+          const mockAccessStatus = {
+            can_access: true,
+            requirements: {
+              email_verified: true,
+              payment_method_verified: true,
+              onboarding_completed: true,
+            },
+          };
           dispatch({
-            type: ActionTypes.SET_USERS,
-            payload: JSON.parse(storedUsers),
+            type: ActionTypes.SET_ACCESS_STATUS,
+            payload: mockAccessStatus,
           });
-        } else {
-          localStorage.setItem("all_users", JSON.stringify(mockUsers));
-          dispatch({ type: ActionTypes.SET_USERS, payload: mockUsers });
+          dispatch({ type: ActionTypes.SET_LOADING, payload: false });
         }
       } catch (error) {
         console.error("Error initializing auth:", error);

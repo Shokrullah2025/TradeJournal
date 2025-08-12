@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -9,46 +9,17 @@ import {
   TrendingUp,
   X,
   Shield,
-  CreditCard,
-  LogOut,
-  UserCircle,
   Link,
   Activity,
   ChevronLeft,
   ChevronRight,
   Menu,
-  ChevronUp,
-  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
-  const { user, logout } = useAuth();
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef(null);
-
-  // Close profile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target)
-      ) {
-        setIsProfileMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Close profile menu when sidebar is collapsed/expanded
-  useEffect(() => {
-    setIsProfileMenuOpen(false);
-  }, [isCollapsed]);
-
+  const { user } = useAuth();
+  
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Trades", href: "/trades", icon: BookOpen },
@@ -63,35 +34,6 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Admin Panel", href: "/admin", icon: Shield, adminOnly: true },
   ];
 
-  const accountNavigation = [
-    { name: "Profile", href: "/profile", icon: UserCircle },
-    { name: "Billing", href: "/billing", icon: CreditCard },
-  ];
-
-  const profileMenuItems = [
-    { name: "Profile", href: "/profile", icon: UserCircle },
-    { name: "Billing", href: "/billing", icon: CreditCard },
-    { name: "Sign Out", action: "logout", icon: LogOut },
-  ];
-
-  const handleLogout = () => {
-    logout();
-    onClose();
-  };
-
-  const toggleProfileMenu = () => {
-    setIsProfileMenuOpen(!isProfileMenuOpen);
-  };
-
-  const handleProfileMenuClick = (item) => {
-    if (item.action === "logout") {
-      handleLogout();
-    } else {
-      onClose();
-    }
-    setIsProfileMenuOpen(false);
-  };
-
   return (
     <>
       {isOpen && (
@@ -102,13 +44,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       )}
 
       <div
-        className={`sidebar fixed inset-y-0 left-0 z-30 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 overflow-hidden relative ${
+        className={`sidebar fixed inset-y-0 left-0 z-30 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 overflow-hidden ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } ${isCollapsed ? "lg:w-16" : "w-64"}`}
       >
         <div
           className={`flex items-center justify-between border-b border-gray-200 dark:border-gray-700 transition-all duration-300 relative overflow-hidden h-16 ${
-            isCollapsed ? "px-2" : "px-6"
+            isCollapsed ? "px-2 hover:bg-gray-50 dark:hover:bg-gray-700/30" : "px-6"
           }`}
         >
           <div
@@ -119,10 +61,18 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
             {isCollapsed ? (
               <button
                 onClick={onToggleCollapse}
-                className="group flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 hover:scale-105"
+                className="relative flex items-center justify-center w-full group"
                 title="Expand Sidebar"
               >
-                <ChevronRight className="w-6 h-6 text-white group-hover:translate-x-0.5 transition-transform duration-200" />
+                {/* App Logo - visible by default, hidden on hover */}
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg group-hover:opacity-0 transition-opacity duration-200">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                
+                {/* Expand icon - hidden by default, visible on hover, same size as logo */}
+                <div className="absolute flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-blue-700 transition-all duration-200">
+                  <ChevronRight className="w-6 h-6 text-white" />
+                </div>
               </button>
             ) : (
               <>
@@ -257,148 +207,6 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
             </div>
           )}
         </nav>
-
-        {/* Profile Menu */}
-        <div
-          ref={profileMenuRef}
-          className={`absolute bottom-4 transition-all duration-300 ${
-            isCollapsed ? "left-2 right-2" : "left-4 right-4"
-          }`}
-        >
-          {isCollapsed ? (
-            /* Collapsed Profile - Icon Only */
-            <div className="relative">
-              <button
-                onClick={toggleProfileMenu}
-                className="flex items-center px-3 py-2 w-full text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
-                title="Profile Menu"
-              >
-                <UserCircle className="h-5 w-5 flex-shrink-0" />
-              </button>
-              
-              {/* Collapsed Dropdown Menu */}
-              {isProfileMenuOpen && (
-                <div className="fixed bottom-4 left-20 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 py-2 z-[99999]">
-                  {/* User Info Header */}
-                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
-                          <UserCircle className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {user?.name || user?.email?.split('@')[0] || 'User'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {user?.email || 'user@example.com'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Menu Items */}
-                  <div className="py-1">
-                    {profileMenuItems.map((item) => {
-                      const Icon = item.icon;
-                      if (item.action === "logout") {
-                        return (
-                          <button
-                            key={item.name}
-                            onClick={() => handleProfileMenuClick(item)}
-                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 group"
-                          >
-                            <Icon className="mr-3 h-4 w-4 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
-                            <span>{item.name}</span>
-                          </button>
-                        );
-                      }
-                      return (
-                        <NavLink
-                          key={item.name}
-                          to={item.href}
-                          onClick={() => handleProfileMenuClick(item)}
-                          className={({ isActive }) =>
-                            `flex items-center px-4 py-2 text-sm transition-all duration-200 group ${
-                              isActive
-                                ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            }`
-                          }
-                        >
-                          <Icon className="mr-3 h-4 w-4 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
-                          <span>{item.name}</span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Expanded Profile - Full Info with Dropdown */
-            <div className="relative">
-              <div className="px-4 py-3">
-                <button
-                  onClick={toggleProfileMenu}
-                  className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
-                >
-                  <UserCircle className="mr-3 h-5 w-5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {user?.name || user?.email?.split('@')[0] || 'User'}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {user?.plan || 'Free Plan'}
-                    </p>
-                  </div>
-                  <ChevronUp className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
-                    isProfileMenuOpen ? 'rotate-180' : ''
-                  }`} />
-                </button>
-              </div>
-              
-              {/* Expanded Dropdown Menu */}
-              {isProfileMenuOpen && (
-                <div className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-[99999]">
-                  {profileMenuItems.map((item) => {
-                    const Icon = item.icon;
-                    if (item.action === "logout") {
-                      return (
-                        <button
-                          key={item.name}
-                          onClick={() => handleProfileMenuClick(item)}
-                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 group"
-                        >
-                          <Icon className="mr-3 h-4 w-4 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
-                          <span>{item.name}</span>
-                        </button>
-                      );
-                    }
-                    return (
-                      <NavLink
-                        key={item.name}
-                        to={item.href}
-                        onClick={() => handleProfileMenuClick(item)}
-                        className={({ isActive }) =>
-                          `flex items-center px-4 py-2 text-sm transition-all duration-200 group ${
-                            isActive
-                              ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                              : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                          }`
-                        }
-                      >
-                        <Icon className="mr-3 h-4 w-4 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
-                        <span>{item.name}</span>
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </>
   );

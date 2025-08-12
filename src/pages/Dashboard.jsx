@@ -14,7 +14,9 @@ import { useAuth } from "../context/AuthContext";
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentTrades from "../components/dashboard/RecentTrades";
 import PerformanceChart from "../components/dashboard/PerformanceChart";
-import PnLChart from "../components/dashboard/PnLChart";
+import PnLChart from "../components/dashboard/PnLChart_simple";
+import CumulativePnLChart from "../components/dashboard/CumulativePnLChart";
+import { MiniLineChart, MiniBarChart, MiniDonutChart, MiniAreaChart, MiniRiskRewardChart, MiniDrawdownChart } from "../components/dashboard/MiniCharts";
 
 const Dashboard = () => {
   const { trades, stats } = useTrades();
@@ -39,23 +41,23 @@ const Dashboard = () => {
       change: "+2.1%",
       changeType: "positive",
       icon: Target,
-      color: "primary",
+      color: stats.winRate >= 60 ? "success" : stats.winRate >= 50 ? "primary" : "danger",
     },
     {
-      title: "Total Trades",
-      value: stats.totalTrades.toString(),
-      change: "+5",
-      changeType: "positive",
-      icon: BarChart3,
-      color: "warning",
+      title: "Max Drawdown",
+      value: `$${stats.maxDrawdown.toLocaleString()}`,
+      change: stats.maxDrawdown < 1000 ? "-200" : "+150",
+      changeType: stats.maxDrawdown < 1000 ? "positive" : "negative",
+      icon: AlertCircle,
+      color: stats.maxDrawdown < 1000 ? "success" : stats.maxDrawdown < 2000 ? "warning" : "danger",
     },
     {
-      title: "Profit Factor",
-      value: stats.profitFactor.toFixed(2),
-      change: stats.profitFactor > 1 ? "+0.3" : "-0.1",
-      changeType: stats.profitFactor > 1 ? "positive" : "negative",
+      title: "Avg Win/Loss",
+      value: stats.avgWin > 0 && stats.avgLoss > 0 ? `${(stats.avgWin / stats.avgLoss).toFixed(1)}:1` : "N/A",
+      change: stats.avgWin > stats.avgLoss ? "+0.2" : "-0.1",
+      changeType: stats.avgWin > stats.avgLoss ? "positive" : "negative",
       icon: Award,
-      color: stats.profitFactor > 1 ? "success" : "danger",
+      color: stats.avgWin > stats.avgLoss * 1.5 ? "success" : stats.avgWin > stats.avgLoss ? "primary" : "danger",
     },
   ];
 
@@ -80,15 +82,102 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="dashboard__stats grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCards.map((card, index) => (
-          <StatsCard key={index} {...card} />
-        ))}
+      {/* Stats Cards with Mini Charts */}
+      <div className="dashboard__stats grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statsCards.map((card, index) => {
+          // Generate meaningful data for mini charts based on real trades
+          let miniChart = null;
+          
+          if (card.title === "Total P&L" && trades.length > 0) {
+            // Show last 15 trading days P&L trend
+            const dailyPnL = {};
+            trades.filter(t => t.status === 'closed').forEach(trade => {
+              const date = new Date(trade.exitDate || trade.createdAt).toISOString().split('T')[0];
+              dailyPnL[date] = (dailyPnL[date] || 0) + (trade.pnl || 0);
+            });
+            
+            const sortedData = Object.values(dailyPnL).slice(-15);
+            if (sortedData.length > 0) {
+              // Convert to cumulative for area chart
+              let cumulative = 0;
+              const cumulativeData = sortedData.map(val => cumulative += val);
+              miniChart = <MiniAreaChart 
+                data={cumulativeData} 
+                color="green" 
+                positive={stats.totalPnL >= 0} 
+              />;
+            }
+          } else if (card.title === "Win Rate") {
+            const percentage = parseFloat(card.value.replace('%', ''));
+            miniChart = <MiniDonutChart percentage={percentage} color="blue" />;
+            
+          } else if (card.title === "Max Drawdown" && trades.length > 0) {
+            // Show drawdown progression over time
+            const closedTrades = trades.filter(t => t.status === 'closed')
+              .sort((a, b) => new Date(a.exitDate || a.createdAt) - new Date(b.exitDate || b.createdAt));
+            
+            if (closedTrades.length > 0) {
+              let runningPnL = 0;
+              let peak = 0;
+              const drawdownData = [];
+              
+              closedTrades.forEach(trade => {
+                runningPnL += trade.pnl || 0;
+                if (runningPnL > peak) peak = runningPnL;
+                const drawdown = -(peak - runningPnL); // Negative for underwater curve
+                drawdownData.push(drawdown);
+              });
+              
+              miniChart = <MiniDrawdownChart drawdownData={drawdownData.slice(-15)} color="red" />;
+            }
+            
+          } else if (card.title === "Avg Win/Loss" && stats.avgWin > 0 && stats.avgLoss > 0) {
+            // Show win vs loss amounts comparison
+            miniChart = <MiniRiskRewardChart 
+              winAmount={stats.avgWin} 
+              lossAmount={stats.avgLoss} 
+              color="blue" 
+            />;
+          }
+          
+          return <StatsCard key={index} {...card} miniChart={miniChart} />;
+        })}
       </div>
 
-      {/* Charts Section */}
-      <div className="dashboard__charts grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Section - 3 columns, each 1/3 width */}
+      <div className="dashboard__charts grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* P&L Distribution Chart */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Daily P&L Distribution
+            </h3>
+            <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="w-3 h-3 bg-success-500 rounded-full"></div>
+              <span>Wins</span>
+              <div className="w-3 h-3 bg-danger-500 rounded-full"></div>
+              <span>Losses</span>
+            </div>
+          </div>
+          <PnLChart trades={trades} />
+        </div>
+
+        {/* Cumulative P&L Chart */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Cumulative P&L
+            </h3>
+            <select className="select text-sm px-3 py-1">
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+              <option value="1y">Last year</option>
+            </select>
+          </div>
+          <CumulativePnLChart trades={trades} />
+        </div>
+
+        {/* Performance Overview Chart */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -101,21 +190,6 @@ const Dashboard = () => {
             </select>
           </div>
           <PerformanceChart trades={trades} />
-        </div>
-
-        <div className="card">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              P&L Distribution
-            </h3>
-            <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-              <div className="w-3 h-3 bg-success-500 rounded-full"></div>
-              <span>Wins</span>
-              <div className="w-3 h-3 bg-danger-500 rounded-full"></div>
-              <span>Losses</span>
-            </div>
-          </div>
-          <PnLChart trades={trades} />
         </div>
       </div>
 
