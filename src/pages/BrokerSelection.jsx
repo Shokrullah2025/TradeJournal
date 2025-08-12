@@ -90,9 +90,9 @@ const BrokerSelection = () => {
   const brokerCategories = getBrokersByCategory();
 
   const getBrokerStatusColor = (brokerKey) => {
-    if (brokerKey === "demo") return "bg-green-100 text-green-800";
-    if (brokerKey === "tradovate") return "bg-blue-100 text-blue-800";
-    return "bg-orange-100 text-orange-800";
+    if (brokerKey === "demo") return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300";
+    if (brokerKey === "tradovate") return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300";
+    return "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300";
   };
 
   const getBrokerStatus = (brokerKey) => {
@@ -102,23 +102,23 @@ const BrokerSelection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                 Connect Your Broker
               </h1>
-              <p className="mt-2 text-gray-600">
+              <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Choose a broker to connect and start importing your trades
                 automatically
               </p>
             </div>
             <button
               onClick={() => navigate("/trades")}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800"
             >
               <svg
                 className="mr-2 h-4 w-4"
@@ -144,14 +144,14 @@ const BrokerSelection = () => {
 
           return (
             <div key={category} className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {category}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {brokerList.map((broker) => (
                   <div
                     key={broker.key}
-                    className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden"
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg dark:hover:shadow-xl transition-shadow duration-200 overflow-hidden border border-gray-200 dark:border-gray-700"
                   >
                     <div className="p-6">
                       {/* Broker Header */}
@@ -159,10 +159,10 @@ const BrokerSelection = () => {
                         <div className="flex items-center">
                           <div className="text-3xl mr-3">{broker.logo}</div>
                           <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                               {broker.name}
                             </h3>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
                               {broker.description}
                             </p>
                           </div>
@@ -179,18 +179,18 @@ const BrokerSelection = () => {
                       {/* Broker Features */}
                       <div className="mb-4">
                         <div className="flex flex-wrap gap-2">
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-800">
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                             {broker.authType === "oauth"
                               ? "OAuth 2.0"
                               : "API Key"}
                           </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-800">
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                             {broker.type === "live"
                               ? "Live Trading"
                               : "Demo Only"}
                           </span>
                           {broker.key === "tradovate" && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-green-100 text-green-800">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                               Demo + Live
                             </span>
                           )}
@@ -257,7 +257,7 @@ const BrokerSelection = () => {
 
                       {/* Setup Info */}
                       {broker.key !== "demo" && (
-                        <div className="mt-3 text-xs text-gray-500">
+                        <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                           {broker.key === "tradovate"
                             ? "Requires Tradovate developer account and OAuth setup"
                             : "Requires API credentials setup"}
@@ -272,11 +272,11 @@ const BrokerSelection = () => {
         })}
 
         {/* Help Section */}
-        <div className="mt-12 bg-blue-50 rounded-lg p-6">
+        <div className="mt-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <svg
-                className="h-6 w-6 text-blue-400"
+                className="h-6 w-6 text-blue-400 dark:text-blue-300"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -290,8 +290,8 @@ const BrokerSelection = () => {
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">Need Help?</h3>
-              <div className="mt-2 text-sm text-blue-700">
+              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Need Help?</h3>
+              <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
                 <ul className="list-disc list-inside space-y-1">
                   <li>
                     For Tradovate: You need to register your app at

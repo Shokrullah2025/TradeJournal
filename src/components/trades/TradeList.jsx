@@ -321,7 +321,7 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                     <div className="flex items-center justify-end space-x-2">
                       <button
                         onClick={() => setSelectedTrade(trade)}
-                        className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100"
+                        className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                         title="View Details"
                       >
                         <Eye className="w-4 h-4" />
@@ -329,7 +329,7 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
 
                       <button
                         onClick={() => onEditTrade(trade)}
-                        className="text-primary-600 hover:text-primary-900 p-1 rounded hover:bg-primary-50"
+                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 p-1 rounded hover:bg-primary-50 dark:hover:bg-primary-900/20"
                         title="Edit Trade"
                       >
                         <Edit className="w-4 h-4" />
@@ -337,7 +337,7 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
 
                       <button
                         onClick={() => handleDelete(trade.id)}
-                        className="text-danger-600 hover:text-danger-900 p-1 rounded hover:bg-danger-50"
+                        className="text-danger-600 dark:text-danger-400 hover:text-danger-900 dark:hover:text-danger-300 p-1 rounded hover:bg-danger-50 dark:hover:bg-danger-900/20"
                         title="Delete Trade"
                       >
                         <Trash2 className="w-4 h-4" />

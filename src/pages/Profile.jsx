@@ -113,7 +113,7 @@ const Profile = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Profile Settings</h1>
           <p className="text-gray-600 mt-1">
             Manage your personal information and trading preferences
           </p>
@@ -175,8 +175,8 @@ const Profile = () => {
         {/* Profile Picture Section */}
         <div className="card">
           <div className="flex items-center space-x-2 mb-4">
-            <User className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
+            <User className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Profile Picture
             </h2>
           </div>
@@ -187,8 +187,8 @@ const Profile = () => {
         {/* Personal Information */}
         <div className="card">
           <div className="flex items-center space-x-2 mb-4">
-            <User className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
+            <User className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Personal Information
             </h2>
           </div>
@@ -288,8 +288,8 @@ const Profile = () => {
         {/* Address Information */}
         <div className="card">
           <div className="flex items-center space-x-2 mb-4">
-            <MapPin className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
+            <MapPin className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Address Information
             </h2>
           </div>
@@ -365,8 +365,8 @@ const Profile = () => {
         {/* Trading Profile */}
         <div className="card">
           <div className="flex items-center space-x-2 mb-4">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
+            <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Trading Profile
             </h2>
           </div>

@@ -724,8 +724,8 @@ const Settings = () => {
               {/* Trading Preferences */}
               <div className="card">
                 <div className="flex items-center space-x-3 mb-6">
-                  <User className="w-5 h-5 text-primary-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <User className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                     Trading Preferences
                   </h2>
                 </div>
@@ -930,12 +930,12 @@ const Settings = () => {
               <div className="card">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
-                    <Layout className="w-5 h-5 text-primary-600" />
+                    <Layout className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                         Trade Templates
                       </h2>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Create reusable templates to speed up trade entry
                       </p>
                     </div>
@@ -955,16 +955,16 @@ const Settings = () => {
                     className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
                     onClick={handleModalClose}
                   >
-                    <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+                    <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-medium text-gray-900">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                           {editingTemplate
                             ? "Edit Template"
                             : "Create New Template"}
                         </h3>
                         <button
                           onClick={() => setIsCreatingTemplate(false)}
-                          className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold"
                         >
                           ×
                         </button>
@@ -1197,13 +1197,13 @@ const Settings = () => {
                             className="input"
                             placeholder="Enter tags separated by commas (e.g., scalp, momentum, high-volume)"
                           />
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             Add tags to help categorize and filter your trades
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+                      <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
                         <button
                           onClick={() => setIsCreatingTemplate(false)}
                           className="btn btn-secondary"
@@ -1231,22 +1231,22 @@ const Settings = () => {
                   {templates.map((template) => (
                     <div
                       key={template.id}
-                      className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+                      className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <h3 className="font-medium text-gray-900">
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100">
                               {template.name}
                             </h3>
                             {template.isDefault && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
                                 <Star className="w-3 h-3 mr-1" />
                                 Default
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {template.description}
                           </p>
 
@@ -1259,7 +1259,7 @@ const Settings = () => {
                                 return (
                                   <span
                                     key={key}
-                                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800"
+                                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                                   >
                                     {key === "riskReward"
                                       ? `R:R ${value}`
@@ -1269,13 +1269,13 @@ const Settings = () => {
                               })}
                             {/* Show tags separately if they exist */}
                             {template.fields.tags && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">
                                 🏷️ {template.fields.tags}
                               </span>
                             )}
                           </div>
 
-                          <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
+                          <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                             <span>Used {template.usageCount} times</span>
                             <span>Created {template.createdAt}</span>
                           </div>
@@ -1284,7 +1284,7 @@ const Settings = () => {
                         <div className="flex items-center space-x-2 ml-4">
                           <button
                             onClick={() => toggleTemplateDefault(template.id)}
-                            className="text-gray-400 hover:text-yellow-500"
+                            className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400"
                             title="Toggle default"
                           >
                             {template.isDefault ? (
@@ -1295,21 +1295,21 @@ const Settings = () => {
                           </button>
                           <button
                             onClick={() => handleEditTemplate(template)}
-                            className="text-gray-400 hover:text-blue-600"
+                            className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
                             title="Edit template"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDuplicateTemplate(template)}
-                            className="text-gray-400 hover:text-green-600"
+                            className="text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400"
                             title="Duplicate template"
                           >
                             <Copy className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteTemplate(template.id)}
-                            className="text-gray-400 hover:text-red-600"
+                            className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                             title="Delete template"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1321,11 +1321,11 @@ const Settings = () => {
 
                   {templates.length === 0 && !isCreatingTemplate && (
                     <div className="text-center py-12">
-                      <Layout className="mx-auto h-12 w-12 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      <Layout className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
                         No templates yet
                       </h3>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Get started by creating your first trade template.
                       </p>
                       <div className="mt-4">
@@ -1350,12 +1350,12 @@ const Settings = () => {
               <div className="card">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
-                    <TrendingUp className="w-5 h-5 text-primary-600" />
+                    <TrendingUp className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                         Trading Strategies & Setups
                       </h2>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Manage your custom strategies and setups for easy
                         selection
                       </p>
@@ -1366,11 +1366,11 @@ const Settings = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Strategies Management */}
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b">
-                      <h3 className="text-lg font-medium text-gray-900">
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                         📈 Trading Strategies
                       </h3>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         {userStrategies.length} strategies
                       </span>
                     </div>
@@ -1403,14 +1403,14 @@ const Settings = () => {
                       {userStrategies.map((strategy) => (
                         <div
                           key={strategy}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                         >
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
                             {strategy}
                           </span>
                           <button
                             onClick={() => removeStrategy(strategy)}
-                            className="text-red-500 hover:text-red-700 p-1 rounded"
+                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded"
                             title="Remove strategy"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1419,8 +1419,8 @@ const Settings = () => {
                       ))}
 
                       {userStrategies.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <TrendingUp className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <TrendingUp className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                           <p className="text-sm">No strategies yet</p>
                           <p className="text-xs">
                             Add your first trading strategy above
@@ -1432,11 +1432,11 @@ const Settings = () => {
 
                   {/* Setups Management */}
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b">
-                      <h3 className="text-lg font-medium text-gray-900">
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                         🎯 Trade Setups
                       </h3>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         {userSetups.length} setups
                       </span>
                     </div>
@@ -1469,14 +1469,14 @@ const Settings = () => {
                       {userSetups.map((setup) => (
                         <div
                           key={setup}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                         >
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
                             {setup}
                           </span>
                           <button
                             onClick={() => removeSetup(setup)}
-                            className="text-red-500 hover:text-red-700 p-1 rounded"
+                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded"
                             title="Remove setup"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1485,8 +1485,8 @@ const Settings = () => {
                       ))}
 
                       {userSetups.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <Target className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <Target className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                           <p className="text-sm">No setups yet</p>
                           <p className="text-xs">
                             Add your first trade setup above
@@ -1498,8 +1498,8 @@ const Settings = () => {
                 </div>
 
                 {/* Help Section */}
-                <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center">
+                <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2 flex items-center">
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="currentColor"
@@ -1513,7 +1513,7 @@ const Settings = () => {
                     </svg>
                     How It Works
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800 dark:text-blue-300">
                     <div>
                       <h5 className="font-medium mb-1">📈 Strategies</h5>
                       <p>
@@ -1529,7 +1529,7 @@ const Settings = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3 text-xs text-blue-700">
+                  <div className="mt-3 text-xs text-blue-700 dark:text-blue-400">
                     💡 <strong>Pro Tip:</strong> These custom values will appear
                     in your templates and trade entry forms for quick selection
                   </div>
@@ -1544,12 +1544,12 @@ const Settings = () => {
               <div className="card">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
-                    <Target className="w-5 h-5 text-primary-600" />
+                    <Target className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                         Risk Management Profiles
                       </h2>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Create risk/reward profiles to automatically calculate
                         stop loss and take profit levels
                       </p>
@@ -1565,8 +1565,8 @@ const Settings = () => {
                 </div>
 
                 {/* Help Section */}
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center">
+                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2 flex items-center">
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="currentColor"
@@ -1580,7 +1580,7 @@ const Settings = () => {
                     </svg>
                     How Risk Profiles Work
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800 dark:text-blue-300">
                     <div>
                       <h5 className="font-medium mb-1">📈 Trade Entry</h5>
                       <p>
@@ -1618,19 +1618,19 @@ const Settings = () => {
                 {/* Risk Profile Creation/Edit Modal */}
                 {isCreatingRiskProfile && (
                   <div
-                    className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+                    className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-50"
                     onClick={handleModalClose}
                   >
-                    <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+                    <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-medium text-gray-900">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                           {editingRiskProfile
                             ? "Edit Risk Profile"
                             : "Create New Risk Profile"}
                         </h3>
                         <button
                           onClick={() => setIsCreatingRiskProfile(false)}
-                          className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold"
                         >
                           ×
                         </button>
@@ -1748,7 +1748,7 @@ const Settings = () => {
                                 </label>
                               ))}
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               Select currency pairs this profile applies to
                             </p>
                           </div>
@@ -1771,7 +1771,7 @@ const Settings = () => {
                               className="input"
                               placeholder="1"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               Risk amount (usually 1)
                             </p>
                           </div>
@@ -1792,7 +1792,7 @@ const Settings = () => {
                               className="input"
                               placeholder="2"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               Reward multiple (e.g., 2 = 1:2)
                             </p>
                           </div>
@@ -1816,7 +1816,7 @@ const Settings = () => {
                               className="input"
                               placeholder="2"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               % of account to risk
                             </p>
                           </div>
@@ -1871,7 +1871,7 @@ const Settings = () => {
                                 placeholder="100"
                               />
                             )}
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               {riskProfileFormData.usePercentage
                                 ? "% of account"
                                 : "Fixed dollar amount"}
@@ -1914,7 +1914,7 @@ const Settings = () => {
                                 placeholder="20"
                               />
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               {riskProfileFormData.instrumentType === "forex"
                                 ? "Pips to risk / target"
                                 : "Points to risk / target"}
@@ -1922,47 +1922,47 @@ const Settings = () => {
                           </div>
                         </div>
 
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <h4 className="font-medium text-blue-900 mb-2">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                          <h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">
                             Risk Profile Summary
                           </h4>
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-blue-700">Ratio:</span>
-                              <span className="ml-2 font-medium">
+                              <span className="text-blue-700 dark:text-blue-300">Ratio:</span>
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
                                 {riskProfileFormData.riskRatio}:
                                 {riskProfileFormData.rewardRatio}
                               </span>
                             </div>
                             <div>
-                              <span className="text-blue-700">
+                              <span className="text-blue-700 dark:text-blue-300">
                                 Risk per Trade:
                               </span>
-                              <span className="ml-2 font-medium">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
                                 {riskProfileFormData.usePercentage
                                   ? `${riskProfileFormData.accountPercentage}% of account`
                                   : `$${riskProfileFormData.riskPerTradeAmount}`}
                               </span>
                             </div>
                             <div>
-                              <span className="text-blue-700">
+                              <span className="text-blue-700 dark:text-blue-300">
                                 {riskProfileFormData.instrumentType === "forex"
                                   ? "Pip"
                                   : "Point"}{" "}
                                 Risk:
                               </span>
-                              <span className="ml-2 font-medium">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
                                 {riskProfileFormData.pointRisk}
                               </span>
                             </div>
                             <div>
-                              <span className="text-blue-700">
+                              <span className="text-blue-700 dark:text-blue-300">
                                 {riskProfileFormData.instrumentType === "forex"
                                   ? "Pip"
                                   : "Point"}{" "}
                                 Target:
                               </span>
-                              <span className="ml-2 font-medium">
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
                                 {riskProfileFormData.pointProfit}
                               </span>
                             </div>
@@ -1970,10 +1970,10 @@ const Settings = () => {
                           {riskProfileFormData.instrumentType === "forex" &&
                             riskProfileFormData.currencyPairs.length > 0 && (
                               <div className="mt-2">
-                                <span className="text-blue-700">
+                                <span className="text-blue-700 dark:text-blue-300">
                                   Currency Pairs:
                                 </span>
-                                <span className="ml-2 font-medium">
+                                <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
                                   {riskProfileFormData.currencyPairs.join(", ")}
                                 </span>
                               </div>
@@ -1981,7 +1981,7 @@ const Settings = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+                      <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
                         <button
                           onClick={() => setIsCreatingRiskProfile(false)}
                           className="btn btn-secondary"
@@ -2009,39 +2009,39 @@ const Settings = () => {
                   {riskProfiles.map((profile) => (
                     <div
                       key={profile.id}
-                      className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+                      className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <h3 className="font-medium text-gray-900">
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100">
                               {profile.name}
                             </h3>
                             {profile.isDefault && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
                                 <Star className="w-3 h-3 mr-1" />
                                 Default
                               </span>
                             )}
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
                               {profile.riskRatio}:{profile.rewardRatio} R/R
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {profile.description}
                           </p>
 
                           <div className="mt-2 flex flex-wrap gap-2">
                             {profile.strategy && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">
                                 📈 {profile.strategy}
                               </span>
                             )}
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
                               🎯 {profile.maxRiskPerTrade}% max risk
                             </span>
                             {profile.instrumentType && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-400">
                                 🔧{" "}
                                 {profile.instrumentType
                                   .charAt(0)
@@ -2050,16 +2050,16 @@ const Settings = () => {
                               </span>
                             )}
                             {profile.usePercentage ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
                                 💰 {profile.accountPercentage}% of account
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
                                 💵 ${profile.riskPerTradeAmount} fixed
                               </span>
                             )}
                             {profile.pointRisk && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400">
                                 📊 {profile.pointRisk}/{profile.pointProfit}{" "}
                                 {profile.instrumentType === "forex"
                                   ? "pips"
@@ -2074,7 +2074,7 @@ const Settings = () => {
                             profile.currencyPairs.length > 0 && (
                               <div className="mt-2">
                                 <div className="flex flex-wrap gap-1">
-                                  <span className="text-xs text-gray-500 mr-1">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">
                                     Pairs:
                                   </span>
                                   {profile.currencyPairs
@@ -2082,13 +2082,13 @@ const Settings = () => {
                                     .map((pair) => (
                                       <span
                                         key={pair}
-                                        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                                        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                                       >
                                         {pair}
                                       </span>
                                     ))}
                                   {profile.currencyPairs.length > 3 && (
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
                                       +{profile.currencyPairs.length - 3} more
                                     </span>
                                   )}
@@ -2096,7 +2096,7 @@ const Settings = () => {
                               </div>
                             )}
 
-                          <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
+                          <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                             <span>Created {profile.createdAt}</span>
                           </div>
                         </div>
@@ -2104,7 +2104,7 @@ const Settings = () => {
                         <div className="flex items-center space-x-2 ml-4">
                           <button
                             onClick={() => toggleRiskProfileDefault(profile.id)}
-                            className="text-gray-400 hover:text-yellow-500"
+                            className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400"
                             title="Toggle default"
                           >
                             {profile.isDefault ? (
@@ -2115,21 +2115,21 @@ const Settings = () => {
                           </button>
                           <button
                             onClick={() => handleEditRiskProfile(profile)}
-                            className="text-gray-400 hover:text-blue-600"
+                            className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
                             title="Edit profile"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDuplicateRiskProfile(profile)}
-                            className="text-gray-400 hover:text-green-600"
+                            className="text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400"
                             title="Duplicate profile"
                           >
                             <Copy className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteRiskProfile(profile.id)}
-                            className="text-gray-400 hover:text-red-600"
+                            className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                             title="Delete profile"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -2163,20 +2163,20 @@ const Settings = () => {
 
                   {/* Risk Profile Analytics Section */}
                   {riskProfiles.length > 0 && (
-                    <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <BarChart className="w-5 h-5 mr-2 text-blue-600" />
+                    <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                        <BarChart className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
                         Risk Profile Insights
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white p-4 rounded-lg border border-gray-100">
-                          <h5 className="font-medium text-gray-700 mb-2">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
                             📊 Profile Distribution
                           </h5>
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span>Futures Profiles:</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Futures Profiles:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
                                     (p) => p.instrumentType === "futures"
@@ -2185,8 +2185,8 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>Forex Profiles:</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Forex Profiles:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
                                     (p) => p.instrumentType === "forex"
@@ -2195,8 +2195,8 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>Other Instruments:</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Other Instruments:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
                                     (p) =>
@@ -2210,14 +2210,14 @@ const Settings = () => {
                           </div>
                         </div>
 
-                        <div className="bg-white p-4 rounded-lg border border-gray-100">
-                          <h5 className="font-medium text-gray-700 mb-2">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
                             ⚖️ Risk Tolerance
                           </h5>
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span>Conservative (&lt;2% risk):</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Conservative (&lt;2% risk):</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
                                     (p) => p.maxRiskPerTrade < 2
@@ -2226,8 +2226,8 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>Moderate (2-3% risk):</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Moderate (2-3% risk):</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
                                     (p) =>
@@ -2238,8 +2238,8 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>Aggressive (&gt;3% risk):</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Aggressive (&gt;3% risk):</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {
                                   riskProfiles.filter(
                                     (p) => p.maxRiskPerTrade > 3
@@ -2250,14 +2250,14 @@ const Settings = () => {
                           </div>
                         </div>
 
-                        <div className="bg-white p-4 rounded-lg border border-gray-100">
-                          <h5 className="font-medium text-gray-700 mb-2">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
                             🎯 Reward Targets
                           </h5>
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span>Average R/R Ratio:</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Average R/R Ratio:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 1:
                                 {(
                                   riskProfiles.reduce(
@@ -2268,8 +2268,8 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>Highest R/R:</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Highest R/R:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 1:
                                 {Math.max(
                                   ...riskProfiles.map((p) => p.rewardRatio)
@@ -2277,8 +2277,8 @@ const Settings = () => {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>Most Conservative:</span>
-                              <span className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Most Conservative:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
                                 1:
                                 {Math.min(
                                   ...riskProfiles.map((p) => p.rewardRatio)
@@ -2289,8 +2289,8 @@ const Settings = () => {
                         </div>
                       </div>
 
-                      <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-                        <p className="text-sm text-blue-800">
+                      <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
                           <strong>💡 Smart Suggestions:</strong> Consider
                           creating profiles for different market conditions and
                           trading sessions. Forex traders often benefit from
@@ -2311,12 +2311,12 @@ const Settings = () => {
             <div>
               <div className="card">
                 <div className="flex items-center space-x-3 mb-6">
-                  <Database className="w-5 h-5 text-primary-600" />
+                  <Database className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                       Data Management
                     </h2>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Import, export, and manage your trading data
                     </p>
                   </div>
@@ -2324,10 +2324,10 @@ const Settings = () => {
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
                       Export Data
                     </h3>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                       Download your complete trading data as an Excel file for
                       backup or analysis in other tools.
                     </p>
