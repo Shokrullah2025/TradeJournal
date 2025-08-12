@@ -1,3 +1,1 @@
-There are two issues remaining with the profile menu.
-1- When the profile button is clicked where it's collapsed, the profile menu opens under the main content.
-2- Icon doesn't stay in it's place when the sidebar is collapsing and shift to the center.
+When a day is red, it should draw the candle from zero to down and the same for green if the day is profit need to draw the candle from zero to up for Daily P&L Distribution.
