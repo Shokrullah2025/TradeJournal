@@ -1,30 +1,27 @@
-import React, {
-  useCallback,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useId, useMemo, useRef, useState } from "react";
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const PAD     = { left: 36, right: 6, top: 8, bottom: 30 };
+const PAD     = { left: 28, right: 6, top: 8, bottom: 30 };
+const VB_W    = 800;
+const VB_H    = 260;
+const CHART_W = VB_W - PAD.left - PAD.right;  // 766
+const CHART_H = VB_H - PAD.top  - PAD.bottom; // 222
 
-const fmtDate = (d, fmt) => {
+const fmtDate = (d) => {
   if (!d) return '';
   const m  = String(d.getMonth() + 1).padStart(2, '0');
   const dy = String(d.getDate()).padStart(2, '0');
-  if (fmt === 'MMM D') return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
-  if (fmt === 'D MMM') return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
   return `${m}/${dy}`;
 };
 
-const fmtK = (v) => {
+const fmtK   = (v) => {
   const s = v >= 0 ? '+' : '';
   if (Math.abs(v) >= 1000)
     return `${s}${(v / 1000).toFixed(1).replace(/\.0$/, '')}K`;
   return `${s}${Math.round(v)}`;
 };
+
+const fmtFull = (v) =>
+  `${v >= 0 ? '+' : '-'}$${Math.abs(v).toLocaleString()}`;
 
 /**
  * Cumulative P&L line chart.
@@ -33,53 +30,29 @@ const fmtK = (v) => {
  *   data        number[]   — cumulative running totals, one per trading day
  *   dates       Date[]     — matching Date objects (same length as data)
  *   minSpacing  number     — minimum px between x-axis date labels (default 60)
- *   dateFmt     string     — 'MM/DD' | 'MMM D' | 'D MMM'
  */
 const CumulativePnLChart = ({
   data = [],
   dates = [],
   minSpacing = 60,
-  dateFmt = 'MM/DD',
 }) => {
   const uid     = useId().replace(/:/g, '_');
   const wrapRef = useRef(null);
-  const [size, setSize] = useState({ w: 400, h: 200 });
+  const [hover, setHover] = useState({ idx: null, x: 0, y: 0 });
 
-  // Measure both width AND height so the SVG fills the flex-1 container exactly.
-  useLayoutEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      setSize({
-        w: Math.max(60,  Math.round(r.width)),
-        h: Math.max(80,  Math.round(r.height)),
-      });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const n = data.length;
 
-  const n      = data.length;
-  const W      = size.w;
-  const H      = size.h;
-  const chartW = Math.max(1, W - PAD.left - PAD.right);
-  const chartH = Math.max(20, H - PAD.top - PAD.bottom);
-
-  // Domain always includes 0 so zero line is always visible.
   const domainMin = useMemo(() => Math.min(...data, 0), [data]);
   const domainMax = useMemo(() => Math.max(...data, 0), [data]);
   const range     = useMemo(() => domainMax - domainMin || 1, [domainMax, domainMin]);
 
   const px = useCallback(
-    (i) => PAD.left + (n > 1 ? i / (n - 1) : 0.5) * chartW,
-    [n, chartW]
+    (i) => PAD.left + (n > 1 ? i / (n - 1) : 0.5) * CHART_W,
+    [n]
   );
   const py = useCallback(
-    (v) => PAD.top + (1 - (v - domainMin) / range) * chartH,
-    [domainMin, range, chartH]
+    (v) => PAD.top + (1 - (v - domainMin) / range) * CHART_H,
+    [domainMin, range]
   );
 
   const zeroY = useMemo(() => py(0), [py]);
@@ -94,24 +67,47 @@ const CumulativePnLChart = ({
   // Area closes at chart bottom — clipPaths handle the green/red colour split.
   const areaPath = useMemo(() => {
     if (n < 2) return '';
-    const bottom = (PAD.top + chartH).toFixed(1);
+    const bottom = (PAD.top + CHART_H).toFixed(1);
     const pts = data
       .map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`)
       .join(' ');
     return `${pts} L${px(n - 1).toFixed(1)},${bottom} L${px(0).toFixed(1)},${bottom} Z`;
-  }, [data, n, px, py, chartH]);
+  }, [data, n, px, py]);
 
   // Date-label indices: start from step (never index 0), always show last.
-  // Minimum step of 2 guarantees at least one session gap between every label.
   const labelIndices = useMemo(() => {
     if (n < 2) return [];
-    const maxLabels = Math.max(2, Math.floor(chartW / minSpacing));
+    const maxLabels = Math.max(2, Math.floor(CHART_W / minSpacing));
     const step      = Math.max(2, Math.ceil((n - 1) / (maxLabels - 1)));
     const set       = new Set();
     for (let i = step; i < n; i += step) set.add(i);
     set.add(n - 1);
     return [...set].sort((a, b) => a - b);
-  }, [n, chartW, minSpacing]);
+  }, [n, minSpacing]);
+
+  // Map screen mouse x → data index, accounting for viewBox scaling.
+  const handleMouseMove = useCallback((e) => {
+    const el = wrapRef.current;
+    if (!el || n < 2) return;
+    const rect          = el.getBoundingClientRect();
+    const relX          = e.clientX - rect.left;
+    const relY          = e.clientY - rect.top;
+    const scaleX        = rect.width / VB_W;
+    const chartStartPx  = PAD.left * scaleX;
+    const chartEndPx    = (PAD.left + CHART_W) * scaleX;
+    if (relX < chartStartPx - 4 || relX > chartEndPx + 4) {
+      setHover((h) => (h.idx === null ? h : { idx: null, x: 0, y: 0 }));
+      return;
+    }
+    const t   = Math.max(0, Math.min(1, (relX - chartStartPx) / (chartEndPx - chartStartPx)));
+    const idx = Math.round(t * (n - 1));
+    setHover({ idx, x: relX, y: relY });
+  }, [n]);
+
+  const handleMouseLeave = useCallback(
+    () => setHover((h) => (h.idx === null ? h : { idx: null, x: 0, y: 0 })),
+    []
+  );
 
   if (n < 2) {
     return (
@@ -129,21 +125,33 @@ const CumulativePnLChart = ({
     );
   }
 
-  const aboveH = Math.max(0, zeroY - PAD.top);
-  const belowH = Math.max(0, PAD.top + chartH - zeroY);
+  const aboveH  = Math.max(0, zeroY - PAD.top);
+  const belowH  = Math.max(0, PAD.top + CHART_H - zeroY);
+  const hovered = hover.idx !== null ? { v: data[hover.idx], d: dates[hover.idx] } : null;
 
   return (
-    // flex-1 min-h-0 fills the remaining space inside the card's flex column.
+    // SVG is absolutely positioned so the div size is driven by flexbox, not SVG content.
+    // viewBox + preserveAspectRatio="none" maps the fixed coordinate space to the full
+    // container on every render — no JS measurement needed, correct on every refresh.
     <div
       ref={wrapRef}
-      className="flex-1 min-h-0 w-full"
+      className="relative flex-1 min-h-0 w-full"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       data-testid="cumulative-pnl-chart"
     >
       <svg
-        width={W}
-        height={H}
-        viewBox={`0 0 ${W} ${H}`}
-        style={{ display: 'block', overflow: 'visible' }}
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        preserveAspectRatio="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          display: "block",
+          overflow: "visible",
+        }}
         role="img"
         aria-label="Cumulative P&L over time"
       >
@@ -160,14 +168,14 @@ const CumulativePnLChart = ({
           </linearGradient>
           {/* Clip above the zero line */}
           <clipPath id={`ca_${uid}`}>
-            <rect x={PAD.left} y={PAD.top} width={chartW} height={aboveH} />
+            <rect x={PAD.left} y={PAD.top} width={CHART_W} height={aboveH} />
           </clipPath>
           {/* Clip below the zero line */}
           <clipPath id={`cb_${uid}`}>
             <rect
               x={PAD.left}
               y={zeroY.toFixed(1)}
-              width={chartW}
+              width={CHART_W}
               height={belowH}
             />
           </clipPath>
@@ -181,7 +189,7 @@ const CumulativePnLChart = ({
             <g key={i}>
               <line
                 x1={PAD.left}
-                x2={PAD.left + chartW}
+                x2={PAD.left + CHART_W}
                 y1={y.toFixed(1)}
                 y2={y.toFixed(1)}
                 stroke={isZero ? '#d1d5db' : '#f3f4f6'}
@@ -240,7 +248,7 @@ const CumulativePnLChart = ({
         {/* Date labels — 45° rotated, never at index 0, always show last */}
         {labelIndices.map((i) => {
           const x  = px(i);
-          const ly = PAD.top + chartH + 14;
+          const ly = PAD.top + CHART_H + 14;
           return (
             <g
               key={i}
@@ -255,12 +263,68 @@ const CumulativePnLChart = ({
                 fill="#b0b8c4"
                 fontFamily="inherit"
               >
-                {fmtDate(dates[i], dateFmt)}
+                {fmtDate(dates[i])}
               </text>
             </g>
           );
         })}
+
+        {/* Hover indicator — vertical rule + dot */}
+        {hover.idx !== null && (() => {
+          const ix = px(hover.idx);
+          const iy = py(data[hover.idx]);
+          const pos = data[hover.idx] >= 0;
+          return (
+            <g>
+              <line
+                x1={ix.toFixed(1)} x2={ix.toFixed(1)}
+                y1={PAD.top} y2={PAD.top + CHART_H}
+                stroke="#9ca3af"
+                strokeWidth="1"
+                strokeDasharray="3,2"
+              />
+              <circle
+                cx={ix.toFixed(1)}
+                cy={iy.toFixed(1)}
+                r="3.5"
+                fill={pos ? "#16a34a" : "#ef4444"}
+                stroke="white"
+                strokeWidth="1.5"
+              />
+            </g>
+          );
+        })()}
       </svg>
+
+      {/* Hover tooltip */}
+      {hovered && (
+        <div
+          className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
+          data-testid="cumulative-pnl-chart-tooltip"
+          style={{
+            left: hover.x,
+            top: hover.y - 10,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          <div
+            className={
+              hovered.v >= 0
+                ? "font-semibold text-green-400 dark:text-green-600"
+                : "font-semibold text-red-400 dark:text-red-600"
+            }
+            data-testid="cumulative-pnl-chart-tooltip-value"
+          >
+            {fmtFull(hovered.v)}
+          </div>
+          {hovered.d && (
+            <div className="opacity-75 mt-0.5">
+              {hovered.d.toLocaleDateString("en-US", { weekday: "short" })},{" "}
+              {fmtDate(hovered.d)}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
