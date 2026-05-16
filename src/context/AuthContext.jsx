@@ -1,478 +1,292 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
-import Cookies from "js-cookie";
+import { supabase } from "../lib/supabase";
 
-// Initial state
+// ── State ──────────────────────────────────────────────────────────────────
 const initialState = {
   user: null,
   isAuthenticated: false,
   loading: true,
-  users: [], // For admin to manage users
-  accessStatus: null, // Track user access requirements
 };
 
-// Action types
 const ActionTypes = {
-  SET_USER: "SET_USER",
-  LOGOUT: "LOGOUT",
+  SET_USER:    "SET_USER",
+  LOGOUT:      "LOGOUT",
   SET_LOADING: "SET_LOADING",
-  SET_USERS: "SET_USERS",
-  ADD_USER: "ADD_USER",
-  UPDATE_USER: "UPDATE_USER",
-  DELETE_USER: "DELETE_USER",
-  SET_ACCESS_STATUS: "SET_ACCESS_STATUS",
 };
 
-// Reducer
 const authReducer = (state, action) => {
   switch (action.type) {
     case ActionTypes.SET_USER:
-      return {
-        ...state,
-        user: action.payload,
-        isAuthenticated: !!action.payload,
-        loading: false,
-      };
+      return { ...state, user: action.payload, isAuthenticated: !!action.payload, loading: false };
     case ActionTypes.LOGOUT:
-      return {
-        ...state,
-        user: null,
-        isAuthenticated: false,
-        loading: false,
-        accessStatus: null,
-      };
+      return { ...state, user: null, isAuthenticated: false, loading: false };
     case ActionTypes.SET_LOADING:
-      return {
-        ...state,
-        loading: action.payload,
-      };
-    case ActionTypes.SET_USERS:
-      return {
-        ...state,
-        users: action.payload,
-      };
-    case ActionTypes.ADD_USER:
-      return {
-        ...state,
-        users: [...state.users, action.payload],
-      };
-    case ActionTypes.UPDATE_USER:
-      return {
-        ...state,
-        users: state.users.map((user) =>
-          user.id === action.payload.id ? action.payload : user
-        ),
-      };
-    case ActionTypes.DELETE_USER:
-      return {
-        ...state,
-        users: state.users.filter((user) => user.id !== action.payload),
-      };
-    case ActionTypes.SET_ACCESS_STATUS:
-      return {
-        ...state,
-        accessStatus: action.payload,
-      };
+      return { ...state, loading: action.payload };
     default:
       return state;
   }
 };
 
-// Create context
+// ── Supabase error → friendly message ─────────────────────────────────────
+const friendlyError = (error) => {
+  const msg = error?.message || "";
+  if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials"))
+    return "Incorrect email or password.";
+  if (msg.includes("Email not confirmed") || msg.includes("email_not_confirmed"))
+    return "Please verify your email before signing in. Check your inbox.";
+  if (msg.includes("already registered") || msg.includes("user_already_exists") || msg.includes("23505"))
+    return "An account with this email already exists.";
+  if (msg.includes("rate limit") || msg.includes("over_email_send_rate_limit"))
+    return "Too many attempts. Please wait a few minutes and try again.";
+  if (msg.includes("weak_password"))
+    return "Password is too weak. Use at least 8 characters with uppercase, lowercase, and a number.";
+  if (msg.includes("network") || msg.includes("fetch"))
+    return "Connection error. Please check your internet and try again.";
+  return "Something went wrong. Please try again.";
+};
+
+// ── Fetch the full user profile from public.users + public.user_profiles ──
+const fetchUserProfile = async (authUser) => {
+  console.log("[Auth] fetchUserProfile start — id:", authUser.id);
+
+  console.log("[Auth] querying public.users...");
+  const { data: userRow, error: userError } = await supabase
+    .from("users")
+    .select("role, status")
+    .eq("id", authUser.id)
+    .maybeSingle();
+  console.log("[Auth] public.users result:", { userRow, userError });
+
+  console.log("[Auth] querying public.user_profiles...");
+  const { data: profileRow, error: profileError } = await supabase
+    .from("user_profiles")
+    .select("first_name, last_name, display_name, avatar_url, timezone, currency, language")
+    .eq("user_id", authUser.id)
+    .maybeSingle();
+  console.log("[Auth] public.user_profiles result:", { profileRow, profileError });
+
+  if (userError) console.error("[Auth] users table error:", userError);
+  if (profileError) console.error("[Auth] user_profiles table error:", profileError);
+
+  const profile = {
+    id:            authUser.id,
+    email:         authUser.email,
+    emailVerified: !!authUser.email_confirmed_at,
+    role:          userRow?.role    ?? "user",
+    status:        userRow?.status  ?? "active",
+    firstName:     profileRow?.first_name   ?? "",
+    lastName:      profileRow?.last_name    ?? "",
+    displayName:   profileRow?.display_name ?? "",
+    avatarUrl:     profileRow?.avatar_url   ?? "",
+    timezone:      profileRow?.timezone     ?? "UTC",
+    currency:      profileRow?.currency     ?? "USD",
+    language:      profileRow?.language     ?? "en",
+  };
+  console.log("[Auth] fetchUserProfile done:", profile);
+  return profile;
+};
+
+// ── Context ────────────────────────────────────────────────────────────────
 const AuthContext = createContext();
 
-// Mock users data (in real app, this would come from a backend)
-const mockUsers = [
-  {
-    id: "1",
-    email: "admin@tradejournalpro.com",
-    name: "Admin User",
-    role: "admin",
-    password: "admin123", // In real app, this would be hashed
-    createdAt: new Date("2024-01-01"),
-    isActive: true,
-    subscription: "premium",
-  },
-  {
-    id: "2",
-    email: "user@example.com",
-    name: "Regular User",
-    role: "user",
-    password: "user123",
-    createdAt: new Date("2024-01-15"),
-    isActive: true,
-    subscription: "basic",
-  },
-];
-
-// Provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Initialize auth state and users
-  useEffect(() => {
-    const initializeAuth = async () => {
+  // Resolve a session object into app state — shared by getSession() bootstrap
+  // and onAuthStateChange subsequent events.
+  const resolveSession = useCallback(async (session) => {
+    if (session?.user) {
       try {
-        // Initialize users first (in real app, fetch from backend)
-        const storedUsers = localStorage.getItem("all_users");
-        if (storedUsers) {
-          dispatch({
-            type: ActionTypes.SET_USERS,
-            payload: JSON.parse(storedUsers),
-          });
-        } else {
-          localStorage.setItem("all_users", JSON.stringify(mockUsers));
-          dispatch({ type: ActionTypes.SET_USERS, payload: mockUsers });
-        }
-
-        // Check for stored user session
-        const token = Cookies.get("auth_token");
-        const userData = localStorage.getItem("user_data");
-
-        if (token && userData) {
-          const user = JSON.parse(userData);
-          dispatch({ type: ActionTypes.SET_USER, payload: user });
-
-          // Mock access status for development
-          const mockAccessStatus = {
-            can_access: true,
-            requirements: {
-              email_verified: true,
-              payment_method_verified: true,
-              onboarding_completed: true,
-            },
-          };
-          dispatch({
-            type: ActionTypes.SET_ACCESS_STATUS,
-            payload: mockAccessStatus,
-          });
-        } else {
-          // FOR DEVELOPMENT: Auto-login with admin user
-          const adminUser = mockUsers[0]; // Admin user
-          const mockToken = `mock_token_${adminUser.id}`;
-          Cookies.set("auth_token", mockToken, { expires: 7 });
-          localStorage.setItem("user_data", JSON.stringify(adminUser));
-          dispatch({ type: ActionTypes.SET_USER, payload: adminUser });
-          
-          const mockAccessStatus = {
-            can_access: true,
-            requirements: {
-              email_verified: true,
-              payment_method_verified: true,
-              onboarding_completed: true,
-            },
-          };
-          dispatch({
-            type: ActionTypes.SET_ACCESS_STATUS,
-            payload: mockAccessStatus,
-          });
-          dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-        dispatch({ type: ActionTypes.SET_LOADING, payload: false });
+        const profile = await fetchUserProfile(session.user);
+        dispatch({ type: ActionTypes.SET_USER, payload: profile });
+      } catch (err) {
+        console.error("[Auth] fetchUserProfile threw:", err);
+        dispatch({
+          type: ActionTypes.SET_USER,
+          payload: {
+            id:            session.user.id,
+            email:         session.user.email,
+            emailVerified: !!session.user.email_confirmed_at,
+            role:          'user',
+            status:        'active',
+            firstName:     '',
+            lastName:      '',
+            displayName:   '',
+            avatarUrl:     '',
+            timezone:      'UTC',
+            currency:      'USD',
+            language:      'en',
+          },
+        });
       }
-    };
-
-    initializeAuth();
+    } else {
+      dispatch({ type: ActionTypes.LOGOUT });
+    }
   }, []);
 
-  // Check user access status - Mock implementation for development
-  const checkUserAccess = async (token) => {
-    try {
-      // Mock access status for development
-      const mockAccessStatus = {
-        can_access: true,
-        requirements: {
-          email_verified: true,
-          payment_method_verified: true,
-          onboarding_completed: true,
-        },
-      };
+  useEffect(() => {
+    // Read the stored session immediately from localStorage — no network call.
+    // This unblocks the loading screen right away instead of waiting for the
+    // JWT token refresh round-trip that onAuthStateChange requires first.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      resolveSession(session);
+    });
 
-      dispatch({
-        type: ActionTypes.SET_ACCESS_STATUS,
-        payload: mockAccessStatus,
-      });
-      return mockAccessStatus;
-    } catch (error) {
-      console.error("Error checking user access:", error);
-    }
-    return null;
-  };
-
-  // Login function - Mock implementation for development
-  const login = async (email, password) => {
-    try {
-      dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-
-      // Mock API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Check against mock users
-      const users = JSON.parse(localStorage.getItem("all_users") || "[]");
-      const user = users.find((u) => u.email === email);
-
-      if (!user) {
-        throw new Error("User not found");
+    // Handle all subsequent auth events (token refresh, sign-in, sign-out).
+    // INITIAL_SESSION is skipped — already handled by getSession() above.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'INITIAL_SESSION') return;
+        resolveSession(session);
       }
+    );
 
-      // For development, accept any password or check against stored mock password
-      if (user.password && user.password !== password) {
-        throw new Error("Invalid password");
-      }
+    return () => subscription.unsubscribe();
+  }, [resolveSession]);
 
-      // Mock access status for development
-      const accessStatus = {
-        can_access: true,
-        requirements: {
-          email_verified: true,
-          payment_method_verified: true,
-          onboarding_completed: true,
-        },
-      };
-
-      // Store session
-      const mockToken = `mock_token_${user.id}`;
-      Cookies.set("auth_token", mockToken, { expires: 7 });
-      localStorage.setItem("user_data", JSON.stringify(user));
-
-      dispatch({ type: ActionTypes.SET_USER, payload: user });
-      dispatch({ type: ActionTypes.SET_ACCESS_STATUS, payload: accessStatus });
+  // ── Login ────────────────────────────────────────────────────────────────
+  const login = useCallback(async (email, password) => {
+    dispatch({ type: ActionTypes.SET_LOADING, payload: true });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-
-      toast.success("Login successful!");
-      return user;
-    } catch (error) {
-      dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-      toast.error(error.message);
-      throw error;
+      const msg = friendlyError(error);
+      toast.error(msg);
+      throw new Error(msg);
     }
-  };
+    // onAuthStateChange fires and sets the user — no manual dispatch needed
+    toast.success("Welcome back!");
+  }, []);
 
-  // Register function - Mock implementation for development
-  const register = async (userData) => {
-    try {
-      dispatch({ type: ActionTypes.SET_LOADING, payload: true });
+  // ── Register ─────────────────────────────────────────────────────────────
+  const register = useCallback(async ({ firstName, lastName, email, password }) => {
+    dispatch({ type: ActionTypes.SET_LOADING, payload: true });
 
-      // Mock API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { first_name: firstName, last_name: lastName },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
 
-      // Create mock user data
-      const mockUser = {
-        id: Date.now().toString(),
-        email: userData.email,
-        name: `${userData.first_name} ${userData.last_name}`,
-        firstName: userData.first_name,
-        lastName: userData.last_name,
-        role: "user",
-        createdAt: new Date(),
-        isActive: true,
-        subscription: "trial",
-        emailVerified: false,
-      };
+    dispatch({ type: ActionTypes.SET_LOADING, payload: false });
 
-      // Store user in mock users list
-      const existingUsers = JSON.parse(
-        localStorage.getItem("all_users") || "[]"
-      );
-      const updatedUsers = [...existingUsers, mockUser];
-      localStorage.setItem("all_users", JSON.stringify(updatedUsers));
-      dispatch({ type: ActionTypes.SET_USERS, payload: updatedUsers });
-
-      const mockResponse = {
-        user_id: mockUser.id,
-        user: mockUser,
-        token: `mock_token_${mockUser.id}`,
-        message: "Account created successfully",
-      };
-
-      dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-      toast.success(
-        "Account created successfully! Please check your email for verification."
-      );
-      return mockResponse;
-    } catch (error) {
-      dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-      toast.error(error.message);
-      throw error;
+    if (error) {
+      const msg = friendlyError(error);
+      toast.error(msg);
+      throw new Error(msg);
     }
-  };
 
-  // Logout function
-  const logout = () => {
-    Cookies.remove("auth_token");
-    localStorage.removeItem("user_data");
+    // Create the user profile row immediately after signup
+    if (data.user) {
+      await supabase.from("user_profiles").upsert({
+        user_id:    data.user.id,
+        first_name: firstName,
+        last_name:  lastName,
+      }, { onConflict: "user_id" });
+    }
+
+    toast.success("Account created! Please check your email to verify your account.");
+    return data;
+  }, []);
+
+  // ── Logout ───────────────────────────────────────────────────────────────
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     dispatch({ type: ActionTypes.LOGOUT });
-    toast.success("Logged out successfully");
-  };
+    toast.success("Signed out successfully.");
+  }, []);
 
-  // Send email verification - Mock implementation for development
-  const sendEmailVerification = async (email) => {
-    try {
-      // Mock API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+  // ── Forgot password ──────────────────────────────────────────────────────
+  const sendPasswordReset = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    if (error) {
+      const msg = friendlyError(error);
+      toast.error(msg);
+      throw new Error(msg);
+    }
+    toast.success("Password reset email sent. Check your inbox.");
+  }, []);
 
-      // For development, just simulate success
-      toast.success("Verification email sent!");
-      return { success: true };
-    } catch (error) {
-      toast.error(error.message);
+  // ── Update profile ───────────────────────────────────────────────────────
+  const updateUserProfile = useCallback(async (profileData) => {
+    if (!state.user) throw new Error("Not authenticated.");
+
+    const { firstName, lastName, displayName, timezone, currency, language, avatarUrl } = profileData;
+
+    const { error } = await supabase.from("user_profiles").upsert({
+      user_id:      state.user.id,
+      first_name:   firstName   ?? state.user.firstName,
+      last_name:    lastName    ?? state.user.lastName,
+      display_name: displayName ?? state.user.displayName,
+      timezone:     timezone    ?? state.user.timezone,
+      currency:     currency    ?? state.user.currency,
+      language:     language    ?? state.user.language,
+      avatar_url:   avatarUrl   ?? state.user.avatarUrl,
+    }, { onConflict: "user_id" });
+
+    if (error) {
+      const msg = friendlyError(error);
+      toast.error(msg);
+      throw new Error(msg);
+    }
+
+    // Refresh user in state
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const updated = await fetchUserProfile(authUser);
+      dispatch({ type: ActionTypes.SET_USER, payload: updated });
+    }
+
+    toast.success("Profile updated.");
+  }, [state.user]);
+
+  // ── Admin: update another user's role/status ─────────────────────────────
+  // RLS allows this only for admins (is_admin() policy on public.users)
+  const updateUser = useCallback(async (userId, updates) => {
+    const { error } = await supabase.from("users").update(updates).eq("id", userId);
+    if (error) {
+      toast.error("Failed to update user.");
       throw error;
     }
-  };
+    toast.success("User updated.");
+  }, []);
 
-  // Verify email - Mock implementation for development
-  const verifyEmail = async (token) => {
-    try {
-      // Mock API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+  // ── Admin: fetch all users (paginated, admin only) ───────────────────────
+  const fetchAllUsers = useCallback(async ({ page = 0, pageSize = 50 } = {}) => {
+    const from = page * pageSize;
+    const { data, error, count } = await supabase
+      .from("users")
+      .select("id, role, status, created_at, user_profiles(first_name, last_name, display_name, avatar_url)", { count: "exact" })
+      .range(from, from + pageSize - 1)
+      .order("created_at", { ascending: false });
 
-      // For development, just simulate success
-      toast.success("Email verified successfully!");
-      return { success: true };
-    } catch (error) {
-      toast.error(error.message);
-      throw error;
-    }
-  };
-
-  // Add payment method
-  const addPaymentMethod = async (paymentMethodData) => {
-    try {
-      const token = Cookies.get("auth_token");
-      const response = await fetch("/api/user/payment-methods", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(paymentMethodData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success("Payment method added successfully!");
-        return data;
-      } else {
-        throw new Error(data.error || "Failed to add payment method");
-      }
-    } catch (error) {
-      toast.error(error.message);
-      throw error;
-    }
-  };
-
-  // Start trial
-  const startTrial = async () => {
-    try {
-      const token = Cookies.get("auth_token");
-      const response = await fetch("/api/user/start-trial", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success("Trial started successfully!");
-        return data;
-      } else {
-        throw new Error(data.error || "Failed to start trial");
-      }
-    } catch (error) {
-      toast.error(error.message);
-      throw error;
-    }
-  };
-
-  // Admin functions
-  const updateUser = (userId, updates) => {
-    try {
-      const users = JSON.parse(localStorage.getItem("all_users") || "[]");
-      const updatedUsers = users.map((user) =>
-        user.id === userId ? { ...user, ...updates } : user
-      );
-
-      localStorage.setItem("all_users", JSON.stringify(updatedUsers));
-      dispatch({ type: ActionTypes.SET_USERS, payload: updatedUsers });
-      toast.success("User updated successfully");
-    } catch (error) {
-      toast.error("Failed to update user");
-    }
-  };
-
-  const deleteUser = (userId) => {
-    try {
-      const users = JSON.parse(localStorage.getItem("all_users") || "[]");
-      const updatedUsers = users.filter((user) => user.id !== userId);
-
-      localStorage.setItem("all_users", JSON.stringify(updatedUsers));
-      dispatch({ type: ActionTypes.SET_USERS, payload: updatedUsers });
-      toast.success("User deleted successfully");
-    } catch (error) {
-      toast.error("Failed to delete user");
-    }
-  };
-
-  // Update user profile
-  const updateUserProfile = async (profileData) => {
-    try {
-      const updatedUser = {
-        ...state.user,
-        ...profileData,
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Update the current user in all_users list
-      const users = JSON.parse(localStorage.getItem("all_users") || "[]");
-      const userIndex = users.findIndex((u) => u.id === state.user.id);
-
-      if (userIndex !== -1) {
-        users[userIndex] = { ...users[userIndex], ...profileData };
-        localStorage.setItem("all_users", JSON.stringify(users));
-        dispatch({ type: ActionTypes.SET_USERS, payload: users });
-      }
-
-      // Update current user session data
-      localStorage.setItem("user_data", JSON.stringify(updatedUser));
-
-      dispatch({ type: ActionTypes.SET_USER, payload: updatedUser });
-
-      return updatedUser;
-    } catch (error) {
-      throw new Error("Failed to update profile");
-    }
-  };
+    if (error) throw error;
+    return { users: data, total: count };
+  }, []);
 
   const value = {
     ...state,
     login,
     register,
     logout,
-    updateUser,
-    deleteUser,
+    sendPasswordReset,
     updateUserProfile,
-    checkUserAccess,
-    sendEmailVerification,
-    verifyEmail,
-    addPaymentMethod,
-    startTrial,
+    updateUser,
+    fetchAllUsers,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };
 
