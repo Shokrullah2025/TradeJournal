@@ -23,7 +23,7 @@ const getUserOptions = (type) => {
 };
 
 const saveUserOption = (type, value) => {
-  if (!value.trim()) return;
+  if (!value || !value.trim()) return;
   const existing = getUserOptions(type);
   if (!existing.includes(value)) {
     const updated = [...existing, value];
