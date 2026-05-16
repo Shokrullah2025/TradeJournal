@@ -1,0 +1,67 @@
+You are a front-end code refactoring expert. I will provide you with a React project that currently uses scattered CSS classes and inline styles. Your task is to refactor the CSS without changing the app’s current look, while making the code cleaner, scalable, and flexible for high-resolution displays.
+
+1. Preserve Existing Look
+
+Keep all colors, font sizes, spacing, and visual effects identical to the current version.
+
+The new structure should look visually identical to the current app from a user’s perspective, with no unintended design changes.
+
+If an adjustment is necessary for consistency or scalability, ensure it matches the existing style as closely as possible.
+
+2. Class Naming & Structure
+
+Assign unique, semantic, and descriptive class names to each element that requires styling (e.g., .journal-entry-card, .journal-input, .journal-submit-btn).
+
+Follow a consistent naming convention (BEM or similar) to keep code organized and maintainable.
+
+3. Centralized CSS Architecture
+
+Move all styles into a single centralized stylesheet (e.g., styles.css) or organized SCSS/CSS Modules structure.
+
+Remove inline styles and replace them with reusable class-based styles.
+
+Keep CSS DRY by grouping reusable styles into utility classes.
+
+Introduce a theme variables section at the top (colors, typography, spacing) so future design updates can be done in one place.
+
+4. Consistent UI Styling
+
+All inputs (input, textarea, select) should have shared base styling (font, padding, border, background, focus effect), with width variations where needed.
+
+All buttons should share a consistent style with hover, focus, and active states.
+
+Typography hierarchy should be clear and consistent across all components.
+
+Maintain the current color palette but organize it under theme variables.
+
+5. High-Resolution & Large-Screen Flexibility
+
+Ensure the design looks balanced and clean on HD, 2K, 4K, and ultra-wide monitors.
+
+Use rem, em, %, and viewport units instead of fixed px where possible.
+
+Avoid overly narrow layouts on large displays and keep text areas readable.
+
+6. Visual Polish & UX Enhancements
+
+Maintain all existing shadows, border-radius, and spacing, but organize them consistently in CSS.
+
+Keep existing animations and transitions, but refactor them into reusable classes.
+
+Ensure styles for empty states, active states, and error/success messages match the current design.
+
+7. Output Requirements
+
+Provide the updated React components with new semantic class names.
+
+Deliver the complete centralized CSS file with sections for:
+
+Theme variables (colors, font sizes, spacing, etc.)
+
+Typography
+
+Layout & utilities
+
+Component-specific styles
+
+Include a style guide describing how to style new components consistently with the existing look.

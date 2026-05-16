@@ -1,0 +1,107 @@
+/* Input Component System */
+.input__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+.input__label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-gray-800);
+  margin-bottom: 0.25rem;
+}
+.input__field {
+  border: 1px solid var(--color-gray-300);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--color-gray-900);
+  background: #fff;
+  transition: border-color 0.2s;
+}
+.input__field:focus {
+  border-color: var(--color-primary-500);
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+.input__helper-text {
+  font-size: 0.85rem;
+  color: var(--color-gray-500);
+}
+.input__search-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 0.5rem;
+  background: #fff;
+  padding: 0.25rem 0.5rem;
+}
+.input__search-field {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 1rem;
+  background: transparent;
+  color: var(--color-gray-900);
+  padding: 0.5rem 0.75rem;
+}
+.input__search-icon {
+  background: none;
+  border: none;
+  color: var(--color-gray-500);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+}
+.input__search-icon:focus {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+.input__rich-editor {
+  border: 1px solid var(--color-gray-300);
+  border-radius: 0.5rem;
+  background: #fff;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+.input__toolbar {
+  border-bottom: 1px solid var(--color-gray-200);
+  padding: 0.5rem 1rem;
+  background: var(--color-gray-50);
+  font-size: 0.95rem;
+  color: var(--color-gray-600);
+}
+.input__content-area {
+  flex: 1;
+  padding: 1rem;
+  font-size: 1rem;
+  color: var(--color-gray-900);
+  background: transparent;
+  outline: none;
+  min-height: 80px;
+}
+@media (min-width: 768px) {
+  .input__field, .input__search-field {
+    min-height: 44px;
+  }
+}
+@media (min-width: 1024px) {
+  .input__field, .input__search-field {
+    font-size: 1.05rem;
+  }
+}
+@media (min-width: 1920px) {
+  .input__field, .input__search-field {
+    font-size: 1.15rem;
+    padding: 1rem 1.25rem;
+  }
+}
+@media (min-width: 2560px) {
+  .input__field, .input__search-field {
+    font-size: 1.25rem;
+    padding: 1.25rem 1.5rem;
+  }
+}

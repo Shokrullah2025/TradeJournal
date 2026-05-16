@@ -42,11 +42,13 @@ const PnLChart = ({ trades }) => {
     const dailyPnL = {};
     
     completedTrades.forEach((trade) => {
-      const date = new Date(trade.exitDate || trade.createdAt).toISOString().split('T')[0];
-      if (!dailyPnL[date]) {
-        dailyPnL[date] = 0;
-      }
-      dailyPnL[date] += trade.pnl;
+      const raw = trade.exitDate || trade.exit_date || trade.createdAt || trade.created_at;
+      if (!raw) return;
+      const parsed = new Date(raw);
+      if (isNaN(parsed.getTime())) return;
+      const date = parsed.toISOString().split('T')[0];
+      if (!dailyPnL[date]) dailyPnL[date] = 0;
+      dailyPnL[date] += trade.pnl || 0;
     });
 
     // Only return days with actual trading activity (non-zero P&L)
