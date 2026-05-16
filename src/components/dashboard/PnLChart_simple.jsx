@@ -168,7 +168,9 @@ const PnLChart = ({ trades = [] }) => {
 
   return (
     // flex-1 min-h-0 lets this div fill whatever vertical space the card gives it.
-    // The SVG is then sized exactly to this div via ResizeObserver → no bottom gap.
+    // The SVG is absolutely positioned to cover the div exactly — this way the
+    // div's size is driven purely by flexbox (w-full), not by the SVG content,
+    // so ResizeObserver always measures the true card width.
     <div
       ref={ref}
       className="relative flex-1 min-h-0 w-full"
@@ -176,13 +178,19 @@ const PnLChart = ({ trades = [] }) => {
       data-testid="pnl-chart"
     >
       <svg
-        width="100%"
-        height={H}
-        style={{ display: "block" }}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          display: "block",
+          overflow: "visible",
+        }}
         role="img"
         aria-label={`Daily P&L for last ${showN} trading sessions`}
       >
-        {/* Y grid lines — span the full card width edge to edge */}
+        {/* Y grid lines — x2="100%" always spans the full SVG width */}
         {ticks.map((t, i) => {
           const y      = midY - (t / niceTop) * (chartH / 2);
           const isZero = t === 0;
@@ -190,7 +198,7 @@ const PnLChart = ({ trades = [] }) => {
             <line
               key={`g-${i}`}
               x1={PAD_LEFT}
-              x2={W}
+              x2="100%"
               y1={y}
               y2={y}
               stroke={isZero ? "#e5e7eb" : "#f3f4f6"}

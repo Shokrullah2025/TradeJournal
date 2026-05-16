@@ -1,28 +1,16 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 
-const HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
-const DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const PAD   = { l: 30, r: 4, t: 6, b: 18 };
+const HOURS  = [9, 10, 11, 12, 13, 14, 15, 16];
+const DAYS   = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const PAD    = { l: 30, r: 4, t: 6, b: 18 };
+const VB_W   = 800;
+const VB_H   = 260;
+const CHART_W = VB_W - PAD.l - PAD.r;
+const CHART_H = VB_H - PAD.t - PAD.b;
+const CELL_W  = CHART_W / HOURS.length;
+const CELL_H  = CHART_H / DAYS.length;
 
 const WhenYouWinChart = ({ trades = [] }) => {
-  const wrapRef = useRef(null);
-  const [svgW, setSvgW] = useState(400);
-  const [svgH, setSvgH] = useState(260);
-
-  useLayoutEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      setSvgW(Math.round(rect.width));
-      setSvgH(Math.max(180, Math.round(rect.height)));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   const { grid, maxAbs } = useMemo(() => {
     const g = {};
     (trades || [])
@@ -38,7 +26,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
         if (isNaN(d.getTime())) return;
         const dow = d.getDay();
         if (dow === 0 || dow === 6) return;
-        const dayIdx = dow - 1; // 0=Mon … 4=Fri
+        const dayIdx = dow - 1;
         const hour = d.getHours();
         if (hour < 9 || hour > 16) return;
         const key = `${dayIdx}-${hour}`;
@@ -52,11 +40,6 @@ const WhenYouWinChart = ({ trades = [] }) => {
   }, [trades]);
 
   const hasData = Object.keys(grid).length > 0;
-
-  const chartW = svgW - PAD.l - PAD.r;
-  const chartH = svgH - PAD.t - PAD.b;
-  const cellW  = chartW / HOURS.length;
-  const cellH  = chartH / DAYS.length;
 
   const cellFill = (dayIdx, hr) => {
     const cell = grid[`${dayIdx}-${hr}`];
@@ -84,26 +67,36 @@ const WhenYouWinChart = ({ trades = [] }) => {
   }
 
   return (
-    <div ref={wrapRef} className="flex-1 min-h-0" style={{ width: "100%" }} data-testid="when-you-win-chart">
+    // SVG is absolutely positioned so the div size is driven by flexbox, not SVG content.
+    // viewBox + preserveAspectRatio="none" makes the fixed coordinate space stretch to
+    // fill the container exactly — no JS measurement needed, correct on every refresh.
+    <div className="relative flex-1 min-h-0 w-full" data-testid="when-you-win-chart">
       <svg
-        width="100%"
-        height={svgH}
-        style={{ display: "block", overflow: "visible" }}
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        preserveAspectRatio="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          display: "block",
+        }}
         role="img"
         aria-label="Heatmap of average P&L by day of week and trading hour"
       >
         {DAYS.map((_, dayIdx) =>
           HOURS.map((hr, j) => {
-            const x    = PAD.l + j * cellW;
-            const y    = PAD.t + dayIdx * cellH;
+            const x    = PAD.l + j * CELL_W;
+            const y    = PAD.t + dayIdx * CELL_H;
             const fill = cellFill(dayIdx, hr);
             return (
               <rect
                 key={`${dayIdx}-${j}`}
                 x={x.toFixed(1)}
                 y={y.toFixed(1)}
-                width={Math.max(1, cellW - 1.5).toFixed(1)}
-                height={Math.max(1, cellH - 1.5).toFixed(1)}
+                width={Math.max(1, CELL_W - 1.5).toFixed(1)}
+                height={Math.max(1, CELL_H - 1.5).toFixed(1)}
                 rx="3"
                 fill={fill ?? undefined}
                 className={fill ? undefined : "fill-gray-100 dark:fill-gray-800"}
@@ -118,7 +111,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
           <text
             key={d}
             x={PAD.l - 4}
-            y={PAD.t + i * cellH + cellH / 2 + 3.5}
+            y={PAD.t + i * CELL_H + CELL_H / 2 + 3.5}
             textAnchor="end"
             fontSize="9"
             className="fill-gray-400 dark:fill-gray-500"
@@ -134,8 +127,8 @@ const WhenYouWinChart = ({ trades = [] }) => {
           return (
             <text
               key={hr}
-              x={(PAD.l + j * cellW + cellW / 2).toFixed(1)}
-              y={svgH - 2}
+              x={(PAD.l + j * CELL_W + CELL_W / 2).toFixed(1)}
+              y={VB_H - 2}
               textAnchor="middle"
               fontSize="8.5"
               className="fill-gray-400 dark:fill-gray-500"
