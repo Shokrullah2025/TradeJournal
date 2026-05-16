@@ -34,11 +34,11 @@ import { MiniLineChart, MiniBarChart, MiniDonutChart, MiniAreaChart, MiniRiskRew
 const Dashboard = () => {
   const { trades, stats } = useTrades();
   const { user } = useAuth();
-  const [cumulativeRange, setCumulativeRange] = useState(30);
+  const [cumulativeRange, setCumulativeRange] = useState(60);
 
   // Pre-aggregate cumulative data so CumulativePnLChart receives clean arrays
   // rather than raw trades — this keeps the chart component stateless and testable.
-  const { cumData, cumDates } = useMemo(() => {
+  const { cumData, cumDates, sessionCount } = useMemo(() => {
     const cutoff = new Date();
     cutoff.setHours(0, 0, 0, 0);
     cutoff.setDate(cutoff.getDate() - cumulativeRange);
@@ -62,6 +62,7 @@ const Dashboard = () => {
     const sorted = Object.entries(byDate).sort(([a], [b]) =>
       a.localeCompare(b)
     );
+    const sessionCount = sorted.length;
     let cum = 0;
     const cumData  = [];
     const cumDates = [];
@@ -71,7 +72,14 @@ const Dashboard = () => {
       // Noon UTC avoids timezone-boundary issues when constructing from date string
       cumDates.push(new Date(`${date}T12:00:00Z`));
     });
-    return { cumData, cumDates };
+    // Prepend a zero baseline so the line always starts at the zero axis
+    if (cumData.length > 0) {
+      const anchor = new Date(cumDates[0]);
+      anchor.setDate(anchor.getDate() - 1);
+      cumData.unshift(0);
+      cumDates.unshift(anchor);
+    }
+    return { cumData, cumDates, sessionCount };
   }, [trades, cumulativeRange]);
 
   const recentTrades = trades
@@ -276,7 +284,7 @@ const Dashboard = () => {
               className="text-xs text-gray-500 dark:text-gray-400"
               data-testid="cumulative-pnl-chart-caption-count"
             >
-              {cumDates.length} sessions
+              {sessionCount} sessions
             </span>
           </div>
           <CumulativePnLChart data={cumData} dates={cumDates} />
