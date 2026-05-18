@@ -182,9 +182,26 @@
 
 ## 8. Testing Requirements
 
-### When to Write Tests
-- **Tests are written when the user confirms they are happy with a feature or function** — not speculatively during development. When the user says "this is good" or "lock this in", immediately write the Jest test before moving to the next task.
-- **Never block feature development waiting for tests.** Build first, verify with the user, then test.
+### When to Write Tests — Test-Driven Development (TDD) is mandatory
+
+**Before writing any code, write the Jest tests first.** This is non-negotiable. The workflow is:
+
+1. **Write the tests** — define every expected behaviour, edge case, and error state in a `.test.js` / `.test.jsx` file before a single line of implementation exists.
+2. **Run the tests** — confirm they all fail (red). If a test passes before the code is written, the test is wrong.
+3. **Write the code** — implement only enough to make the tests pass.
+4. **Run the tests again** — confirm they all pass (green).
+5. **Refactor if needed** — clean up the code while keeping all tests green.
+
+This applies to **every** feature, function, component, and bug fix — no exceptions.
+
+**Why:** Writing tests first forces you to define exactly what the code must do before writing it. This catches design problems early, ensures every code path is covered, and prevents regressions as the codebase grows.
+
+**What the tests must cover before writing code:**
+- Happy path — the feature works correctly with valid input
+- Every edge case — empty arrays, zero values, null/undefined, boundary values, long strings
+- Every error state — what the user sees when something fails, network errors, validation failures
+- Every input variation — different trade directions, account types, date ranges, currencies
+
 - **Once a test is written, it must never be deleted** unless the feature itself is removed. Tests are a contract.
 
 ### Jest Setup & Convention
@@ -346,6 +363,7 @@ data-testid="trade-entry-form"
 
 Before implementing any feature or fix, confirm:
 
+- [ ] **Have the Jest tests been written first?** Write tests before writing any implementation code. Define the happy path, all edge cases, and all error states in the test file first — then write the code to make them pass. This is mandatory, not optional.
 - [ ] Does an existing utility, hook, or component already do this? (Check `src/utils/`, `src/hooks/`, `src/context/`)
 - [ ] Does this query have RLS to enforce user data isolation?
 - [ ] Does this input go through Zod validation before hitting the database?
@@ -355,6 +373,5 @@ Before implementing any feature or fix, confirm:
 - [ ] Is this query paginated or does it risk fetching thousands of rows?
 - [ ] Does the column selection avoid `SELECT *`?
 - [ ] Are user-facing error messages friendly and not exposing internals?
-- [ ] Has the user confirmed they are happy with this feature? If yes → write the Jest test now.
 - [ ] Do all interactive elements and data displays have a `data-testid`?
 - [ ] Are `data-testid` values unique, stable, and following the `[section]-[element]-[modifier]` naming convention?
