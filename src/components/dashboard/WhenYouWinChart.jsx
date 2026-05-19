@@ -1,16 +1,13 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-const HOURS  = [9, 10, 11, 12, 13, 14, 15, 16];
-const DAYS   = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const PAD    = { l: 30, r: 4, t: 6, b: 18 };
-const VB_W   = 800;
-const VB_H   = 260;
-const CHART_W = VB_W - PAD.l - PAD.r;
-const CHART_H = VB_H - PAD.t - PAD.b;
-const CELL_W  = CHART_W / HOURS.length;
-const CELL_H  = CHART_H / DAYS.length;
+const HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
+const DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const PAD   = { l: 30, r: 4, t: 6, b: 18 };
 
 const WhenYouWinChart = ({ trades = [] }) => {
+  const wrapRef = useRef(null);
+  const [dims,  setDims] = useState(null);
+
   const { grid, maxAbs } = useMemo(() => {
     const g = {};
     (trades || [])
@@ -41,7 +38,28 @@ const WhenYouWinChart = ({ trades = [] }) => {
 
   const hasData = Object.keys(grid).length > 0;
 
-  const cellFill = (dayIdx, hr) => {
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setDims({
+        w: Math.max(120, Math.round(r.width)),
+        h: Math.max(80,  Math.round(r.height)),
+      });
+    };
+    measure();
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  // Re-run when transitioning from empty state (no ref) to chart state (ref attached)
+  }, [hasData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cellFill = useCallback((dayIdx, hr) => {
     const cell = grid[`${dayIdx}-${hr}`];
     if (!cell) return null;
     const avg   = cell.sum / cell.count;
@@ -50,7 +68,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
     return avg >= 0
       ? `rgba(22,163,74,${op})`
       : `rgba(239,68,68,${op})`;
-  };
+  }, [grid, maxAbs]);
 
   if (!hasData) {
     return (
@@ -66,79 +84,88 @@ const WhenYouWinChart = ({ trades = [] }) => {
     );
   }
 
+  const chartW = (dims ? dims.w : 400) - PAD.l - PAD.r;
+  const chartH = (dims ? dims.h : 260) - PAD.t - PAD.b;
+  const cellW  = chartW / HOURS.length;
+  const cellH  = chartH / DAYS.length;
+
   return (
-    // SVG is absolutely positioned so the div size is driven by flexbox, not SVG content.
-    // viewBox + preserveAspectRatio="none" makes the fixed coordinate space stretch to
-    // fill the container exactly — no JS measurement needed, correct on every refresh.
-    <div className="relative flex-1 min-h-0 w-full" data-testid="when-you-win-chart">
-      <svg
-        viewBox={`0 0 ${VB_W} ${VB_H}`}
-        preserveAspectRatio="none"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          display: "block",
-        }}
-        role="img"
-        aria-label="Heatmap of average P&L by day of week and trading hour"
-      >
-        {DAYS.map((_, dayIdx) =>
-          HOURS.map((hr, j) => {
-            const x    = PAD.l + j * CELL_W;
-            const y    = PAD.t + dayIdx * CELL_H;
-            const fill = cellFill(dayIdx, hr);
-            return (
-              <rect
-                key={`${dayIdx}-${j}`}
-                x={x.toFixed(1)}
-                y={y.toFixed(1)}
-                width={Math.max(1, CELL_W - 1.5).toFixed(1)}
-                height={Math.max(1, CELL_H - 1.5).toFixed(1)}
-                rx="3"
-                fill={fill ?? undefined}
-                className={fill ? undefined : "fill-gray-100 dark:fill-gray-800"}
-                data-testid={`when-you-win-cell-${dayIdx}-${hr}`}
-              />
-            );
-          })
-        )}
+    <div
+      ref={wrapRef}
+      className="relative flex-1 min-h-0 w-full"
+      data-testid="when-you-win-chart"
+    >
+      {dims && (
+        <svg
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            display: "block",
+            overflow: "hidden",
+          }}
+          role="img"
+          aria-label="Heatmap of average P&L by day of week and trading hour"
+        >
+          {DAYS.map((_, dayIdx) =>
+            HOURS.map((hr, j) => {
+              const x    = PAD.l + j * cellW;
+              const y    = PAD.t + dayIdx * cellH;
+              const fill = cellFill(dayIdx, hr);
+              return (
+                <rect
+                  key={`${dayIdx}-${j}`}
+                  x={x.toFixed(1)}
+                  y={y.toFixed(1)}
+                  width={Math.max(1, cellW - 1.5).toFixed(1)}
+                  height={Math.max(1, cellH - 1.5).toFixed(1)}
+                  rx="3"
+                  fill={fill ?? undefined}
+                  className={fill ? undefined : "fill-gray-100 dark:fill-gray-800"}
+                  data-testid={`when-you-win-cell-${dayIdx}-${hr}`}
+                />
+              );
+            })
+          )}
 
-        {/* Day labels — left */}
-        {DAYS.map((d, i) => (
-          <text
-            key={d}
-            x={PAD.l - 4}
-            y={PAD.t + i * CELL_H + CELL_H / 2 + 3.5}
-            textAnchor="end"
-            fontSize="9"
-            className="fill-gray-400 dark:fill-gray-500"
-            fontFamily="inherit"
-          >
-            {d}
-          </text>
-        ))}
-
-        {/* Hour labels — bottom, every other */}
-        {HOURS.map((hr, j) => {
-          if (j % 2 !== 0) return null;
-          return (
+          {/* Day labels — left */}
+          {DAYS.map((d, i) => (
             <text
-              key={hr}
-              x={(PAD.l + j * CELL_W + CELL_W / 2).toFixed(1)}
-              y={VB_H - 2}
-              textAnchor="middle"
-              fontSize="8.5"
-              className="fill-gray-400 dark:fill-gray-500"
+              key={d}
+              x={PAD.l - 4}
+              y={PAD.t + i * cellH + cellH / 2}
+              textAnchor="end"
+              dominantBaseline="middle"
+              fontSize="9.5"
+              fill="#374151"
               fontFamily="inherit"
             >
-              {hr}
+              {d}
             </text>
-          );
-        })}
-      </svg>
+          ))}
+
+          {/* Hour labels — bottom, every other */}
+          {HOURS.map((hr, j) => {
+            if (j % 2 !== 0) return null;
+            return (
+              <text
+                key={hr}
+                x={(PAD.l + j * cellW + cellW / 2).toFixed(1)}
+                y={PAD.t + chartH + 13}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="9.5"
+                fill="#374151"
+                fontFamily="inherit"
+              >
+                {hr}
+              </text>
+            );
+          })}
+        </svg>
+      )}
     </div>
   );
 };

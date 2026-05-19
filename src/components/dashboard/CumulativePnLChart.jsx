@@ -1,10 +1,9 @@
-import React, { useCallback, useId, useMemo, useRef, useState } from "react";
+import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-const PAD     = { left: 28, right: 6, top: 8, bottom: 30 };
-const VB_W    = 800;
-const VB_H    = 260;
-const CHART_W = VB_W - PAD.left - PAD.right;  // 766
-const CHART_H = VB_H - PAD.top  - PAD.bottom; // 222
+const PAD_LEFT   = 38;
+const PAD_RIGHT  = 12;
+const PAD_TOP    = 10;
+const PAD_BOTTOM = 36;
 
 const fmtDate = (d) => {
   if (!d) return '';
@@ -13,7 +12,7 @@ const fmtDate = (d) => {
   return `${m}/${dy}`;
 };
 
-const fmtK   = (v) => {
+const fmtK = (v) => {
   const s = v >= 0 ? '+' : '';
   if (Math.abs(v) >= 1000)
     return `${s}${(v / 1000).toFixed(1).replace(/\.0$/, '')}K`;
@@ -39,20 +38,46 @@ const CumulativePnLChart = ({
   const uid     = useId().replace(/:/g, '_');
   const wrapRef = useRef(null);
   const [hover, setHover] = useState({ idx: null, x: 0, y: 0 });
+  const [dims,  setDims]  = useState(null);
 
   const n = data.length;
+
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setDims({
+        w: Math.max(120, Math.round(r.width)),
+        h: Math.max(80,  Math.round(r.height)),
+      });
+    };
+    measure();
+    // Double-rAF: catches stale measurement when dashboard grid settles after first paint (HD/4K fix)
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  // Re-run when transitioning from empty state (no ref) to chart state (ref attached)
+  }, [n > 1]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const chartW = (dims ? dims.w : 400) - PAD_LEFT - PAD_RIGHT;
+  const chartH = (dims ? dims.h : 260) - PAD_TOP  - PAD_BOTTOM;
 
   const domainMin = useMemo(() => Math.min(...data, 0), [data]);
   const domainMax = useMemo(() => Math.max(...data, 0), [data]);
   const range     = useMemo(() => domainMax - domainMin || 1, [domainMax, domainMin]);
 
   const px = useCallback(
-    (i) => PAD.left + (n > 1 ? i / (n - 1) : 0.5) * CHART_W,
-    [n]
+    (i) => PAD_LEFT + (n > 1 ? i / (n - 1) : 0.5) * chartW,
+    [n, chartW]
   );
   const py = useCallback(
-    (v) => PAD.top + (1 - (v - domainMin) / range) * CHART_H,
-    [domainMin, range]
+    (v) => PAD_TOP + (1 - (v - domainMin) / range) * chartH,
+    [domainMin, range, chartH]
   );
 
   const zeroY = useMemo(() => py(0), [py]);
@@ -67,34 +92,32 @@ const CumulativePnLChart = ({
   // Area closes at chart bottom — clipPaths handle the green/red colour split.
   const areaPath = useMemo(() => {
     if (n < 2) return '';
-    const bottom = (PAD.top + CHART_H).toFixed(1);
+    const bottom = (PAD_TOP + chartH).toFixed(1);
     const pts = data
       .map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`)
       .join(' ');
     return `${pts} L${px(n - 1).toFixed(1)},${bottom} L${px(0).toFixed(1)},${bottom} Z`;
-  }, [data, n, px, py]);
+  }, [data, n, px, py, chartH]);
 
   // Date-label indices: start from step (never index 0), always show last.
   const labelIndices = useMemo(() => {
     if (n < 2) return [];
-    const maxLabels = Math.max(2, Math.floor(CHART_W / minSpacing));
+    const maxLabels = Math.max(2, Math.floor(chartW / minSpacing));
     const step      = Math.max(2, Math.ceil((n - 1) / (maxLabels - 1)));
     const set       = new Set();
     for (let i = step; i < n; i += step) set.add(i);
     set.add(n - 1);
     return [...set].sort((a, b) => a - b);
-  }, [n, minSpacing]);
+  }, [n, minSpacing, chartW]);
 
-  // Map screen mouse x → data index, accounting for viewBox scaling.
   const handleMouseMove = useCallback((e) => {
     const el = wrapRef.current;
     if (!el || n < 2) return;
-    const rect          = el.getBoundingClientRect();
-    const relX          = e.clientX - rect.left;
-    const relY          = e.clientY - rect.top;
-    const scaleX        = rect.width / VB_W;
-    const chartStartPx  = PAD.left * scaleX;
-    const chartEndPx    = (PAD.left + CHART_W) * scaleX;
+    const rect         = el.getBoundingClientRect();
+    const relX         = e.clientX - rect.left;
+    const relY         = e.clientY - rect.top;
+    const chartStartPx = PAD_LEFT;
+    const chartEndPx   = PAD_LEFT + chartW;
     if (relX < chartStartPx - 4 || relX > chartEndPx + 4) {
       setHover((h) => (h.idx === null ? h : { idx: null, x: 0, y: 0 }));
       return;
@@ -102,7 +125,7 @@ const CumulativePnLChart = ({
     const t   = Math.max(0, Math.min(1, (relX - chartStartPx) / (chartEndPx - chartStartPx)));
     const idx = Math.round(t * (n - 1));
     setHover({ idx, x: relX, y: relY });
-  }, [n]);
+  }, [n, chartW]);
 
   const handleMouseLeave = useCallback(
     () => setHover((h) => (h.idx === null ? h : { idx: null, x: 0, y: 0 })),
@@ -125,14 +148,11 @@ const CumulativePnLChart = ({
     );
   }
 
-  const aboveH  = Math.max(0, zeroY - PAD.top);
-  const belowH  = Math.max(0, PAD.top + CHART_H - zeroY);
+  const aboveH  = Math.max(0, zeroY - PAD_TOP);
+  const belowH  = Math.max(0, PAD_TOP + chartH - zeroY);
   const hovered = hover.idx !== null ? { v: data[hover.idx], d: dates[hover.idx] } : null;
 
   return (
-    // SVG is absolutely positioned so the div size is driven by flexbox, not SVG content.
-    // viewBox + preserveAspectRatio="none" maps the fixed coordinate space to the full
-    // container on every render — no JS measurement needed, correct on every refresh.
     <div
       ref={wrapRef}
       className="relative flex-1 min-h-0 w-full"
@@ -140,9 +160,7 @@ const CumulativePnLChart = ({
       onMouseLeave={handleMouseLeave}
       data-testid="cumulative-pnl-chart"
     >
-      <svg
-        viewBox={`0 0 ${VB_W} ${VB_H}`}
-        preserveAspectRatio="none"
+      {dims && <svg
         style={{
           position: "absolute",
           top: 0,
@@ -150,7 +168,7 @@ const CumulativePnLChart = ({
           width: "100%",
           height: "100%",
           display: "block",
-          overflow: "visible",
+          overflow: "hidden",
         }}
         role="img"
         aria-label="Cumulative P&L over time"
@@ -168,28 +186,32 @@ const CumulativePnLChart = ({
           </linearGradient>
           {/* Clip above the zero line */}
           <clipPath id={`ca_${uid}`}>
-            <rect x={PAD.left} y={PAD.top} width={CHART_W} height={aboveH} />
+            <rect x={PAD_LEFT} y={PAD_TOP} width={chartW} height={aboveH} />
           </clipPath>
           {/* Clip below the zero line */}
           <clipPath id={`cb_${uid}`}>
             <rect
-              x={PAD.left}
+              x={PAD_LEFT}
               y={zeroY.toFixed(1)}
-              width={CHART_W}
+              width={chartW}
               height={belowH}
             />
           </clipPath>
+          {/* Master chart area clip — prevents right-edge overflow */}
+          <clipPath id={`cm_${uid}`}>
+            <rect x={PAD_LEFT} y={PAD_TOP} width={chartW} height={chartH} />
+          </clipPath>
         </defs>
 
-        {/* Y grid lines + labels — domainMax, 0, domainMin */}
+        {/* Y grid lines + labels — outside master clip so labels stay visible */}
         {[domainMax, 0, ...(domainMin < 0 ? [domainMin] : [])].map((v, i) => {
           const y      = py(v);
           const isZero = v === 0;
           return (
             <g key={i}>
               <line
-                x1={PAD.left}
-                x2={PAD.left + CHART_W}
+                x1={PAD_LEFT}
+                x2={PAD_LEFT + chartW}
                 y1={y.toFixed(1)}
                 y2={y.toFixed(1)}
                 stroke={isZero ? '#d1d5db' : '#f3f4f6'}
@@ -197,12 +219,12 @@ const CumulativePnLChart = ({
                 strokeDasharray={isZero ? '4,3' : undefined}
               />
               <text
-                x={PAD.left - 5}
+                x={Math.round(PAD_LEFT / 2)}
                 y={y}
-                textAnchor="end"
+                textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="9.5"
-                fill={v > 0 ? '#16a34a' : v < 0 ? '#ef4444' : '#aaa'}
+                fill="#374151"
                 fontFamily="inherit"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
                 data-testid={`cumulative-pnl-chart-ylabel-${i}`}
@@ -213,42 +235,68 @@ const CumulativePnLChart = ({
           );
         })}
 
-        {/* Area fills — green above zero, red below */}
-        <path
-          d={areaPath}
-          fill={`url(#cpg_${uid})`}
-          clipPath={`url(#ca_${uid})`}
-        />
-        <path
-          d={areaPath}
-          fill={`url(#crg_${uid})`}
-          clipPath={`url(#cb_${uid})`}
-        />
+        {/* Area fills + line strokes + hover inside master clip */}
+        <g clipPath={`url(#cm_${uid})`}>
+          <path
+            d={areaPath}
+            fill={`url(#cpg_${uid})`}
+            clipPath={`url(#ca_${uid})`}
+          />
+          <path
+            d={areaPath}
+            fill={`url(#crg_${uid})`}
+            clipPath={`url(#cb_${uid})`}
+          />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#16a34a"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            clipPath={`url(#ca_${uid})`}
+          />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#ef4444"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            clipPath={`url(#cb_${uid})`}
+          />
 
-        {/* Line strokes — green above zero, red below */}
-        <path
-          d={linePath}
-          fill="none"
-          stroke="#16a34a"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          clipPath={`url(#ca_${uid})`}
-        />
-        <path
-          d={linePath}
-          fill="none"
-          stroke="#ef4444"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          clipPath={`url(#cb_${uid})`}
-        />
+          {/* Hover indicator — vertical rule + dot */}
+          {hover.idx !== null && (() => {
+            const ix  = px(hover.idx);
+            const iy  = py(data[hover.idx]);
+            const pos = data[hover.idx] >= 0;
+            return (
+              <g>
+                <line
+                  x1={ix.toFixed(1)} x2={ix.toFixed(1)}
+                  y1={PAD_TOP} y2={PAD_TOP + chartH}
+                  stroke="#9ca3af"
+                  strokeWidth="1"
+                  strokeDasharray="3,2"
+                />
+                <circle
+                  cx={ix.toFixed(1)}
+                  cy={iy.toFixed(1)}
+                  r="3.5"
+                  fill={pos ? "#16a34a" : "#ef4444"}
+                  stroke="white"
+                  strokeWidth="1.5"
+                />
+              </g>
+            );
+          })()}
+        </g>
 
-        {/* Date labels — 45° rotated, never at index 0, always show last */}
+        {/* Date labels — 45° rotated, outside master clip */}
         {labelIndices.map((i) => {
           const x  = px(i);
-          const ly = PAD.top + CHART_H + 14;
+          const ly = PAD_TOP + chartH + 14;
           return (
             <g
               key={i}
@@ -260,7 +308,7 @@ const CumulativePnLChart = ({
                 textAnchor="end"
                 dominantBaseline="middle"
                 fontSize="9.5"
-                fill="#b0b8c4"
+                fill="#374151"
                 fontFamily="inherit"
               >
                 {fmtDate(dates[i])}
@@ -268,33 +316,7 @@ const CumulativePnLChart = ({
             </g>
           );
         })}
-
-        {/* Hover indicator — vertical rule + dot */}
-        {hover.idx !== null && (() => {
-          const ix = px(hover.idx);
-          const iy = py(data[hover.idx]);
-          const pos = data[hover.idx] >= 0;
-          return (
-            <g>
-              <line
-                x1={ix.toFixed(1)} x2={ix.toFixed(1)}
-                y1={PAD.top} y2={PAD.top + CHART_H}
-                stroke="#9ca3af"
-                strokeWidth="1"
-                strokeDasharray="3,2"
-              />
-              <circle
-                cx={ix.toFixed(1)}
-                cy={iy.toFixed(1)}
-                r="3.5"
-                fill={pos ? "#16a34a" : "#ef4444"}
-                stroke="white"
-                strokeWidth="1.5"
-              />
-            </g>
-          );
-        })()}
-      </svg>
+      </svg>}
 
       {/* Hover tooltip */}
       {hovered && (

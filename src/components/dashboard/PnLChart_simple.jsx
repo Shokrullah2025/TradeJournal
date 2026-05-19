@@ -213,12 +213,12 @@ const PnLChart = ({ trades = [] }) => {
           return (
             <text
               key={`yl-${i}`}
-              x={PAD_LEFT - 6}
+              x={Math.round(PAD_LEFT / 2)}
               y={y}
-              textAnchor="end"
+              textAnchor="middle"
               dominantBaseline="middle"
               fontSize="9.5"
-              fill="#c0c4cc"
+              fill="#374151"
               fontFamily="inherit"
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
@@ -277,7 +277,7 @@ const PnLChart = ({ trades = [] }) => {
                 textAnchor="end"
                 dominantBaseline="middle"
                 fontSize="9.5"
-                fill="#b0b8c4"
+                fill="#374151"
                 fontFamily="inherit"
               >
                 {fmtDate(visibleData[i].date)}
