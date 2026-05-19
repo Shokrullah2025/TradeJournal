@@ -3,10 +3,10 @@ import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState }
 // Pixel-based layout — matches Daily P&L's architecture exactly.
 // PAD_LEFT=52 keeps labels like "+18.6K" (≈34px) inside the SVG at x≈13,
 // so overflow:"hidden" on the SVG contains all content within the card.
-const PAD_LEFT   = 52;
+const PAD_LEFT   = 38;
 const PAD_RIGHT  = 12;
 const PAD_TOP    = 10;
-const PAD_BOTTOM = 48;  // room for 45° date labels
+const PAD_BOTTOM = 36;  // room for 45° date labels
 
 const fmtDate = (d) => {
   if (!d) return '';
@@ -218,9 +218,9 @@ const CumulativePnLChart = ({
                 strokeDasharray={isZero ? '4,3' : undefined}
               />
               <text
-                x={PAD_LEFT - 5}
+                x={Math.round(PAD_LEFT / 2)}
                 y={y}
-                textAnchor="end"
+                textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="9.5"
                 fill="#c0c4cc"
