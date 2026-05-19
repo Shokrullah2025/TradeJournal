@@ -234,12 +234,9 @@ const Dashboard = () => {
         <div className="card !pt-3 !px-3 !pb-2 flex flex-col h-[340px]">
           {/* Row 1: title + period tabs */}
           <div className="flex items-center justify-between mb-1 gap-2">
-            <span
-              className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap"
-              style={{ fontSize: 14 }}
-            >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
               Cumulative P&L
-            </span>
+            </h3>
             <div
               className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5"
               data-testid="cumulative-pnl-range-toggle"
