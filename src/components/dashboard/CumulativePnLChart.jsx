@@ -1,16 +1,12 @@
 import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-// Fixed viewBox coordinate space — SVG percentage-based layout.
-// preserveAspectRatio="none" stretches it to fill the container exactly.
-// overflow:"hidden" clips all chart content to the viewBox boundary (no card bleed).
-const VB_W       = 800;
-const VB_H       = 260;
-const PAD_LEFT   = 52;   // enough room for labels like "+18.6K" without going past x=0
+// Pixel-based layout — matches Daily P&L's architecture exactly.
+// PAD_LEFT=52 keeps labels like "+18.6K" (≈34px) inside the SVG at x≈13,
+// so overflow:"hidden" on the SVG contains all content within the card.
+const PAD_LEFT   = 52;
 const PAD_RIGHT  = 12;
 const PAD_TOP    = 10;
-const PAD_BOTTOM = 48;   // room for 45° date labels
-const CHART_W    = VB_W - PAD_LEFT - PAD_RIGHT;  // 736
-const CHART_H    = VB_H - PAD_TOP  - PAD_BOTTOM; // 202
+const PAD_BOTTOM = 48;  // room for 45° date labels
 
 const fmtDate = (d) => {
   if (!d) return '';
@@ -45,19 +41,20 @@ const CumulativePnLChart = ({
   const uid     = useId().replace(/:/g, '_');
   const wrapRef = useRef(null);
   const [hover, setHover] = useState({ idx: null, x: 0, y: 0 });
-  const [dims,  setDims]  = useState({ w: VB_W, h: VB_H });
+  const [dims,  setDims]  = useState({ w: 400, h: 260 });
 
   const n = data.length;
 
-  // Measure the actual rendered container to compute the corrected label angle
-  // and label spacing. viewBox + preserveAspectRatio="none" applies non-uniform
-  // scaling, so rotate(-45) in SVG space ≠ 45° on screen unless corrected.
+  // Measure the wrapper div immediately — same pattern as Daily P&L.
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      setDims({ w: Math.max(120, r.width), h: Math.max(80, r.height) });
+      setDims({
+        w: Math.max(120, Math.round(r.width)),
+        h: Math.max(80,  Math.round(r.height)),
+      });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -65,32 +62,20 @@ const CumulativePnLChart = ({
     return () => ro.disconnect();
   }, []);
 
-  // SVG rotation value that produces true –45° on screen.
-  // With preserveAspectRatio="none": scaleX = dims.w/VB_W, scaleY = dims.h/VB_H.
-  // To get screen angle –45°: θ_svg = –atan(scaleX / scaleY).
-  const labelAngle = useMemo(() => {
-    const scaleX = dims.w / VB_W;
-    const scaleY = dims.h / VB_H;
-    return -(Math.atan(scaleX / scaleY) * 180 / Math.PI);
-  }, [dims]);
-
-  // minSpacing is in screen px; convert to viewBox units for label count calculation.
-  const minSpacingVB = useMemo(
-    () => minSpacing * VB_W / Math.max(dims.w, 1),
-    [minSpacing, dims.w]
-  );
+  const chartW = dims.w - PAD_LEFT - PAD_RIGHT;
+  const chartH = dims.h - PAD_TOP  - PAD_BOTTOM;
 
   const domainMin = useMemo(() => Math.min(...data, 0), [data]);
   const domainMax = useMemo(() => Math.max(...data, 0), [data]);
   const range     = useMemo(() => domainMax - domainMin || 1, [domainMax, domainMin]);
 
   const px = useCallback(
-    (i) => PAD_LEFT + (n > 1 ? i / (n - 1) : 0.5) * CHART_W,
-    [n]
+    (i) => PAD_LEFT + (n > 1 ? i / (n - 1) : 0.5) * chartW,
+    [n, chartW]
   );
   const py = useCallback(
-    (v) => PAD_TOP + (1 - (v - domainMin) / range) * CHART_H,
-    [domainMin, range]
+    (v) => PAD_TOP + (1 - (v - domainMin) / range) * chartH,
+    [domainMin, range, chartH]
   );
 
   const zeroY = useMemo(() => py(0), [py]);
@@ -105,34 +90,33 @@ const CumulativePnLChart = ({
   // Area closes at chart bottom — clipPaths handle the green/red colour split.
   const areaPath = useMemo(() => {
     if (n < 2) return '';
-    const bottom = (PAD_TOP + CHART_H).toFixed(1);
+    const bottom = (PAD_TOP + chartH).toFixed(1);
     const pts = data
       .map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`)
       .join(' ');
     return `${pts} L${px(n - 1).toFixed(1)},${bottom} L${px(0).toFixed(1)},${bottom} Z`;
-  }, [data, n, px, py]);
+  }, [data, n, px, py, chartH]);
 
   // Date-label indices: start from step (never index 0), always show last.
   const labelIndices = useMemo(() => {
     if (n < 2) return [];
-    const maxLabels = Math.max(2, Math.floor(CHART_W / minSpacingVB));
+    const maxLabels = Math.max(2, Math.floor(chartW / minSpacing));
     const step      = Math.max(2, Math.ceil((n - 1) / (maxLabels - 1)));
     const set       = new Set();
     for (let i = step; i < n; i += step) set.add(i);
     set.add(n - 1);
     return [...set].sort((a, b) => a - b);
-  }, [n, minSpacingVB]);
+  }, [n, minSpacing, chartW]);
 
-  // Map screen mouse x → data index, accounting for viewBox scaling.
+  // Pixel-based coords — no viewBox scale factor needed.
   const handleMouseMove = useCallback((e) => {
     const el = wrapRef.current;
     if (!el || n < 2) return;
     const rect         = el.getBoundingClientRect();
     const relX         = e.clientX - rect.left;
     const relY         = e.clientY - rect.top;
-    const scaleX       = rect.width / VB_W;
-    const chartStartPx = PAD_LEFT * scaleX;
-    const chartEndPx   = (PAD_LEFT + CHART_W) * scaleX;
+    const chartStartPx = PAD_LEFT;
+    const chartEndPx   = PAD_LEFT + chartW;
     if (relX < chartStartPx - 4 || relX > chartEndPx + 4) {
       setHover((h) => (h.idx === null ? h : { idx: null, x: 0, y: 0 }));
       return;
@@ -140,7 +124,7 @@ const CumulativePnLChart = ({
     const t   = Math.max(0, Math.min(1, (relX - chartStartPx) / (chartEndPx - chartStartPx)));
     const idx = Math.round(t * (n - 1));
     setHover({ idx, x: relX, y: relY });
-  }, [n]);
+  }, [n, chartW]);
 
   const handleMouseLeave = useCallback(
     () => setHover((h) => (h.idx === null ? h : { idx: null, x: 0, y: 0 })),
@@ -164,13 +148,14 @@ const CumulativePnLChart = ({
   }
 
   const aboveH  = Math.max(0, zeroY - PAD_TOP);
-  const belowH  = Math.max(0, PAD_TOP + CHART_H - zeroY);
+  const belowH  = Math.max(0, PAD_TOP + chartH - zeroY);
   const hovered = hover.idx !== null ? { v: data[hover.idx], d: dates[hover.idx] } : null;
 
   return (
-    // SVG is absolutely positioned to fill the flex-1 div.
-    // viewBox maps the fixed coordinate space to whatever size the card gives us.
-    // overflow:"hidden" keeps all chart content inside the card boundary.
+    // SVG is absolutely positioned so the div size is driven by flexbox, not SVG content.
+    // overflow:"hidden" clips all drawing to the SVG viewport — no card bleed.
+    // PAD_LEFT=52 keeps Y-axis labels (≈34px wide) clear of x=0, so hidden overflow
+    // doesn't clip them.
     <div
       ref={wrapRef}
       className="relative flex-1 min-h-0 w-full"
@@ -179,8 +164,6 @@ const CumulativePnLChart = ({
       data-testid="cumulative-pnl-chart"
     >
       <svg
-        viewBox={`0 0 ${VB_W} ${VB_H}`}
-        preserveAspectRatio="none"
         style={{
           position: "absolute",
           top: 0,
@@ -206,14 +189,14 @@ const CumulativePnLChart = ({
           </linearGradient>
           {/* Clip above the zero line */}
           <clipPath id={`ca_${uid}`}>
-            <rect x={PAD_LEFT} y={PAD_TOP} width={CHART_W} height={aboveH} />
+            <rect x={PAD_LEFT} y={PAD_TOP} width={chartW} height={aboveH} />
           </clipPath>
           {/* Clip below the zero line */}
           <clipPath id={`cb_${uid}`}>
             <rect
               x={PAD_LEFT}
               y={zeroY.toFixed(1)}
-              width={CHART_W}
+              width={chartW}
               height={belowH}
             />
           </clipPath>
@@ -227,7 +210,7 @@ const CumulativePnLChart = ({
             <g key={i}>
               <line
                 x1={PAD_LEFT}
-                x2={PAD_LEFT + CHART_W}
+                x2={PAD_LEFT + chartW}
                 y1={y.toFixed(1)}
                 y2={y.toFixed(1)}
                 stroke={isZero ? '#d1d5db' : '#f3f4f6'}
@@ -283,14 +266,14 @@ const CumulativePnLChart = ({
           clipPath={`url(#cb_${uid})`}
         />
 
-        {/* Date labels — corrected angle so they appear at true 45° on screen */}
+        {/* Date labels — rotate(-45) is exact 45° in pixel SVG (no viewBox distortion) */}
         {labelIndices.map((i) => {
           const x  = px(i);
-          const ly = PAD_TOP + CHART_H + 14;
+          const ly = PAD_TOP + chartH + 14;
           return (
             <g
               key={i}
-              transform={`translate(${x.toFixed(1)},${ly.toFixed(1)}) rotate(${labelAngle.toFixed(2)})`}
+              transform={`translate(${x.toFixed(1)},${ly.toFixed(1)}) rotate(-45)`}
             >
               <text
                 x={0}
@@ -316,7 +299,7 @@ const CumulativePnLChart = ({
             <g>
               <line
                 x1={ix.toFixed(1)} x2={ix.toFixed(1)}
-                y1={PAD_TOP} y2={PAD_TOP + CHART_H}
+                y1={PAD_TOP} y2={PAD_TOP + chartH}
                 stroke="#9ca3af"
                 strokeWidth="1"
                 strokeDasharray="3,2"
