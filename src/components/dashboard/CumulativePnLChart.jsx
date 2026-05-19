@@ -46,6 +46,9 @@ const CumulativePnLChart = ({
   const n = data.length;
 
   // Measure the wrapper div immediately — same pattern as Daily P&L.
+  // Double-rAF deferred re-measure catches cases where the dashboard grid
+  // hasn't finished distributing column widths by the time useLayoutEffect fires
+  // (common on HD/4K screens where the flex/grid layout settles after first paint).
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -57,9 +60,13 @@ const CumulativePnLChart = ({
       });
     };
     measure();
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, []);
 
   const chartW = dims.w - PAD_LEFT - PAD_RIGHT;
