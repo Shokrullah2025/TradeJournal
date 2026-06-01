@@ -291,15 +291,29 @@ const Dashboard = () => {
         </div>
 
         {/* When You Win — heatmap of avg P&L by day of week × trading hour */}
-        <div className="card !pt-3 !pr-2 !pb-2 !pl-2 flex flex-col h-[340px]">
+        <div className="card !pt-3 !pr-2 !pb-0 !pl-2 flex flex-col h-[340px]">
           <div className="flex items-center justify-between mb-1 px-1">
-            <div>
+            <div className="flex items-center gap-1.5">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                 When You Win
               </h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                Avg P&amp;L by session hour &amp; day of week
-              </p>
+              <div className="relative group">
+                <svg
+                  className="w-3.5 h-3.5 text-gray-400 cursor-help flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-10">
+                  Avg P&amp;L by session hour &amp; day of week
+                </div>
+              </div>
             </div>
             <div
               className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0"

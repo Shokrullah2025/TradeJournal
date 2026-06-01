@@ -4,6 +4,7 @@ import {
   Plus,
   Filter,
   Download,
+  Upload,
   Search,
   List,
   Calendar as CalendarIcon,
@@ -18,6 +19,7 @@ import TradeFilters from "../components/trades/TradeFilters";
 import TradeCalendar from "../components/trades/TradeCalendar";
 import TradeList from "../components/trades/TradeList";
 import BrokerModal from "../components/trades/BrokerModal";
+import CsvImportModal from "../components/trades/CsvImportModal";
 import { exportToExcel } from "../utils/exportUtils";
 import toast from "react-hot-toast";
 
@@ -28,6 +30,7 @@ const Trades = () => {
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showBrokerModal, setShowBrokerModal] = useState(false);
+  const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingTrade, setEditingTrade] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
@@ -92,9 +95,6 @@ const Trades = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Trade Journal
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage and track all your trades in one place
-          </p>
         </div>
 
         <div className="mt-4 sm:mt-0 flex items-center space-x-3">
@@ -119,6 +119,15 @@ const Trades = () => {
           </button>
 
           <button
+            onClick={() => setShowCsvModal(true)}
+            className="btn btn-secondary flex items-center space-x-2"
+            data-testid="open-csv-import-btn"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Import CSV</span>
+          </button>
+
+          <button
             onClick={handleExport}
             disabled={trades.length === 0}
             className="btn btn-secondary flex items-center space-x-2"
@@ -137,78 +146,33 @@ const Trades = () => {
         </div>
       </div>
 
-      {/* Summary Stats - Horizontal Layout */}
-      <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-          <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {filteredTrades.length}
-          </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">
-            Total Trades
-          </div>
-        </div>
-
-        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-          <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-            {filteredTrades.filter((t) => t.status === "open").length}
-          </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">
-            Open Positions
-          </div>
-        </div>
-
-        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-          <div className="text-lg font-bold text-success-600 dark:text-success-400">
-            {filteredTrades.filter((t) => t.pnl > 0).length}
-          </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">
-            Winning Trades
-          </div>
-        </div>
-
-        <div className="col-span-2 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-          <div className="text-lg font-bold text-danger-600 dark:text-danger-400">
-            {filteredTrades.filter((t) => t.pnl < 0).length}
-          </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">
-            Losing Trades
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="card">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search trades..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-              />
-            </div>
-
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`btn ${
-                showFilters ? "btn-primary" : "btn-secondary"
-              } flex items-center space-x-2`}
-            >
-              <Filter className="w-4 h-4" />
-              <span>Filters</span>
-            </button>
+      {/* Search and Filters — compact inline row, no card wrapper */}
+      <div>
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search trades..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            />
           </div>
 
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Showing {filteredAndSearchedTrades.length} of {trades.length} trades
-          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`btn ${
+              showFilters ? "btn-primary" : "btn-secondary"
+            } flex items-center space-x-2`}
+          >
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+          </button>
         </div>
 
         {showFilters && (
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 card">
             <TradeFilters />
           </div>
         )}
@@ -248,7 +212,8 @@ const Trades = () => {
 
       {/* Content Area */}
       {activeView === "calendar" ? (
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Calendar Section - Takes 3/4 of the width */}
           <div className="xl:col-span-3">
             <TradeCalendar
@@ -458,6 +423,36 @@ const Trades = () => {
             </div>
           </div>
         </div>
+
+          {/* Summary Stats — below calendar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col gap-1">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Trades</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{filteredTrades.length}</div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-blue-100 dark:border-blue-900 shadow-sm flex flex-col gap-1">
+              <div className="text-xs font-medium text-blue-500 dark:text-blue-400 uppercase tracking-wide">Open Positions</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {filteredTrades.filter((t) => t.status === "open").length}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-green-100 dark:border-green-900 shadow-sm flex flex-col gap-1">
+              <div className="text-xs font-medium text-success-600 dark:text-success-400 uppercase tracking-wide">Winning Trades</div>
+              <div className="text-2xl font-bold text-success-600 dark:text-success-400">
+                {filteredTrades.filter((t) => t.pnl > 0).length}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-red-900 shadow-sm flex flex-col gap-1">
+              <div className="text-xs font-medium text-danger-600 dark:text-danger-400 uppercase tracking-wide">Losing Trades</div>
+              <div className="text-2xl font-bold text-danger-600 dark:text-danger-400">
+                {filteredTrades.filter((t) => t.pnl < 0).length}
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           {/* Enhanced List View with Better Layout */}
@@ -483,6 +478,13 @@ const Trades = () => {
         isOpen={showBrokerModal}
         onClose={() => setShowBrokerModal(false)}
         onTradesImported={handleTradesImported}
+      />
+
+      {/* CSV Import Modal */}
+      <CsvImportModal
+        isOpen={showCsvModal}
+        onClose={() => setShowCsvModal(false)}
+        onImported={handleTradesImported}
       />
     </div>
   );
