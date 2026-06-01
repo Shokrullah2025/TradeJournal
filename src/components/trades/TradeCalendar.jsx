@@ -74,9 +74,9 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className="trade-calendar bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="trade-calendar bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       {/* Calendar Header */}
-      <div className="trade-calendar__header bg-primary-600 dark:bg-primary-700 text-white p-4">
+      <div className="trade-calendar__header bg-primary-600 dark:bg-primary-700 text-white p-4 rounded-t-lg">
         <div className="trade-calendar__header-content flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <h3 className="text-xl font-semibold">
@@ -116,7 +116,7 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
         </div>
 
         {/* Calendar days */}
-        <div className="grid grid-cols-7 gap-1 relative">
+        <div className="grid grid-cols-7 gap-1 relative" style={{ isolation: "isolate" }}>
           {days.map((day, index) => {
             const dayTrades = tradesByDate[format(day, "yyyy-MM-dd")] || [];
             const isCurrentMonth = isSameMonth(day, currentDate);
@@ -167,8 +167,8 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
                   ${isToday(day) ? "ring-2 ring-blue-300 ring-opacity-50" : ""}
                   ${
                     isHovered
-                      ? "transform scale-110 shadow-2xl"
-                      : "hover:shadow-md"
+                      ? "transform scale-110 shadow-2xl z-10"
+                      : "hover:shadow-md z-0"
                   }
                 `}
                 style={{
@@ -243,7 +243,7 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
       </div>
 
       {/* Calendar Footer with Summary */}
-      <div className="trade-calendar__footer bg-gray-50 dark:bg-gray-900 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="trade-calendar__footer bg-gray-50 dark:bg-gray-900 px-4 py-3 border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <div>
             Total trades this month:{" "}

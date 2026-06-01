@@ -2,14 +2,13 @@ import React from "react";
 import { AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 
 const TradovateSetupStatus = () => {
-  // Check if environment variables are set
+  // Client IDs are safe to expose in the frontend (they are public OAuth identifiers).
+  // Client secrets are NOT checked here — they live in Supabase Edge Function env vars only.
   const demoClientId = import.meta.env.VITE_TRADOVATE_DEMO_CLIENT_ID;
   const liveClientId = import.meta.env.VITE_TRADOVATE_LIVE_CLIENT_ID;
-  const clientSecret = import.meta.env.VITE_TRADOVATE_CLIENT_SECRET;
 
   const isDemoConfigured = demoClientId && !demoClientId.includes("YOUR_") && !demoClientId.includes("your_");
   const isLiveConfigured = liveClientId && !liveClientId.includes("YOUR_") && !liveClientId.includes("your_");
-  const isSecretConfigured = clientSecret && !clientSecret.includes("YOUR_") && !clientSecret.includes("your_");
 
   const getStatusIcon = (isConfigured) => {
     return isConfigured ? (
@@ -29,7 +28,7 @@ const TradovateSetupStatus = () => {
       : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300";
   };
 
-  const allConfigured = isDemoConfigured && isLiveConfigured && isSecretConfigured;
+  const allConfigured = isDemoConfigured && isLiveConfigured;
 
   return (
     <div className="mb-6 p-4 border rounded-lg bg-white dark:bg-gray-800">
@@ -65,12 +64,12 @@ const TradovateSetupStatus = () => {
           <span className="text-sm">{getStatusText(isLiveConfigured)}</span>
         </div>
 
-        <div className={`flex items-center justify-between p-3 rounded-lg border ${getStatusColor(isSecretConfigured)}`}>
+        <div className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
           <div className="flex items-center space-x-2">
-            {getStatusIcon(isSecretConfigured)}
+            <CheckCircle className="w-5 h-5 text-blue-500" />
             <span className="font-medium">Client Secret</span>
           </div>
-          <span className="text-sm">{getStatusText(isSecretConfigured)}</span>
+          <span className="text-sm">Stored in Edge Function (secure)</span>
         </div>
       </div>
 
@@ -81,8 +80,8 @@ const TradovateSetupStatus = () => {
           </h4>
           <ol className="list-decimal list-inside space-y-1 text-sm text-blue-700 dark:text-blue-300">
             <li>Register your app at trader-test.tradovate.com (Demo) and trader.tradovate.com (Live)</li>
-            <li>Get your Client ID and Secret from Application Settings &gt; API Access</li>
-            <li>Update your .env file with the real credentials</li>
+            <li>Add your Client IDs to the .env file (VITE_TRADOVATE_DEMO_CLIENT_ID / LIVE)</li>
+            <li>Add your Client Secrets to Supabase Dashboard → Edge Functions → Environment Variables</li>
             <li>Restart the development server</li>
           </ol>
         </div>
