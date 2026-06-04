@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   X,
   TrendingUp,
@@ -9,8 +9,12 @@ import {
   BarChart3,
   Edit,
   Plus,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useTrades } from "../../context/TradeContext";
+import toast from "react-hot-toast";
 
 const DayDetailModal = ({
   isOpen,
@@ -20,6 +24,9 @@ const DayDetailModal = ({
   onEditTrade,
   onAddTrade,
 }) => {
+  const { deleteTrade } = useTrades();
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
   if (!isOpen || !date) return null;
 
   // Calculate day statistics
@@ -35,6 +42,17 @@ const DayDetailModal = ({
     closedTrades.length > 0
       ? (winningTrades.length / closedTrades.length) * 100
       : 0;
+
+  const handleDelete = async (tradeId) => {
+    try {
+      await deleteTrade(tradeId);
+      toast.success("Trade deleted");
+      setConfirmDeleteId(null);
+      if (trades.length === 1) onClose();
+    } catch {
+      toast.error("Failed to delete trade");
+    }
+  };
 
   const formatCurrency = (amount) => {
     return `${amount >= 0 ? "+" : ""}$${amount.toFixed(2)}`;
@@ -302,17 +320,43 @@ const DayDetailModal = ({
                         )}
                       </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log("Editing trade:", trade); // Debug log
-                          onEditTrade(trade);
-                        }}
-                        className="ml-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Edit trade"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      <div className="ml-4 flex items-center space-x-1 shrink-0">
+                        {confirmDeleteId === trade.id ? (
+                          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                            <AlertTriangle className="w-4 h-4 text-red-500" />
+                            <span className="text-xs text-red-700 font-medium">Delete?</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(trade.id); }}
+                              className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-2 py-0.5 rounded transition-colors"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                              className="text-xs font-semibold text-gray-600 hover:text-gray-800 px-2 py-0.5 rounded transition-colors"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onEditTrade(trade); }}
+                              className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                              title="Edit trade"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(trade.id); }}
+                              className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                              title="Delete trade"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

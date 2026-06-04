@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { RR_MODES, getDefaultModeForInstrument, getUserRRList, parseRRValue } from "../../utils/rrModes";
 import { useForm } from "react-hook-form";
 import {
   X,
@@ -12,9 +13,17 @@ import {
   Settings,
   Target,
   Clock,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { useTrades } from "../../context/TradeContext";
 import toast from "react-hot-toast";
+
+// Returns "YYYY-MM-DD" using LOCAL date, not UTC — prevents timezone off-by-one
+const toLocalDateStr = (d) => {
+  const date = d instanceof Date ? d : new Date(d);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 // Helper functions
 const getUserOptions = (type) => {
@@ -39,6 +48,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [lastAppliedTemplate, setLastAppliedTemplate] = useState(null);
   const [exitPriceMode, setExitPriceMode] = useState("stopLoss"); // "stopLoss", "takeProfit", "custom"
+  const [rrMode, setRrMode] = useState("ratio");
+  const [rrListsByMode, setRrListsByMode] = useState(() =>
+    Object.fromEntries(Object.keys(RR_MODES).map((m) => [m, getUserRRList(m)]))
+  );
 
   // Get settings from localStorage
   const [settingsTemplates, setSettingsTemplates] = useState(() => {
@@ -86,15 +99,16 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               ? trade.exitDate.split("T")[0]
               : trade.exitDate
             : "",
-          // Ensure tags are properly formatted
           tags: Array.isArray(trade.tags)
             ? trade.tags.join(", ")
             : trade.tags || "",
+          // Pre-populate the R:R dropdown from the stored ratio (e.g. 1.5 → "1:1.5")
+          riskReward: trade.riskRewardRatio ? `1:${trade.riskRewardRatio}` : "",
         }
       : {
           entryDate: selectedDate
-            ? new Date(selectedDate).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
+            ? toLocalDateStr(selectedDate)
+            : toLocalDateStr(new Date()),
           entryTime: new Date().toTimeString().slice(0, 5), // Set current time for new trades
           instrumentType: "stocks",
           status: "closed", // Default new manual trades to closed
@@ -103,17 +117,58 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
   const watchedStatus = watch("status");
   const selectedInstrumentType = watch("instrumentType");
+
+  // Auto-switch R:R mode when instrument type changes
+  useEffect(() => {
+    if (selectedInstrumentType) {
+      setRrMode(getDefaultModeForInstrument(selectedInstrumentType));
+    }
+  }, [selectedInstrumentType]);
   const watchedEntryDate = watch("entryDate");
   const watchedStopLoss = watch("stopLoss");
   const watchedTakeProfit = watch("takeProfit");
+  const watchedInstrument = watch("instrument");
+  const watchedEntryPrice = watch("entryPrice");
+  const watchedQuantity = watch("quantity");
+  const watchedTradeType = watch("tradeType");
+
+  // Instrument combobox state
+  const [instrumentOpen, setInstrumentOpen] = useState(false);
+  const [instrumentSearch, setInstrumentSearch] = useState("");
+  const [customInstruments, setCustomInstruments] = useState(() => {
+    const stored = localStorage.getItem("tradeForm_customInstruments");
+    return stored ? JSON.parse(stored) : {};
+  });
+  const instrumentRef = useRef(null);
 
   // Constants
   const instruments = {
     stocks: ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA", "META", "NVDA", "NFLX"],
     forex: ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD"],
     crypto: ["BTCUSD", "ETHUSD", "BNBUSD", "ADAUSD", "SOLUSD", "XRPUSD"],
-    futures: ["ES", "NQ", "YM", "RTY", "CL", "GC", "SI", "NG"],
+    futures: [
+      // E-mini (standard)
+      "ES", "NQ", "YM", "RTY",
+      // Micro E-mini
+      "MES", "MNQ", "MYM", "M2K",
+      // Commodities (standard)
+      "CL", "GC", "SI", "NG",
+      // Micro commodities
+      "MCL", "MGC",
+    ],
     options: ["SPY", "QQQ", "IWM", "AAPL", "TSLA", "AMC", "GME", "NVDA"],
+  };
+
+  // Dollar value per 1 point of price move per 1 contract
+  const FUTURES_POINT_VALUES = {
+    // E-mini (standard)
+    ES: 50, NQ: 20, YM: 5, RTY: 50,
+    // Micro E-mini (1/10th of standard)
+    MES: 5, MNQ: 2, MYM: 0.5, M2K: 5,
+    // Commodities (standard)
+    CL: 1000, GC: 100, SI: 5000, NG: 10000,
+    // Micro commodities
+    MCL: 100, MGC: 10,
   };
 
   // Use strategies and setups from settings by default, with fallback to localStorage and hardcoded defaults
@@ -741,6 +796,118 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     }
   }, [activeTab, lastAppliedTemplate, setValue, isApplyingTemplate]);
 
+  // Close instrument dropdown when clicking outside
+  useEffect(() => {
+    if (!instrumentOpen) return;
+    const handleClickOutside = (e) => {
+      if (instrumentRef.current && !instrumentRef.current.contains(e.target)) {
+        setInstrumentOpen(false);
+        setInstrumentSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [instrumentOpen]);
+
+  // Reset instrument search when type changes
+  useEffect(() => {
+    setInstrumentSearch("");
+    setInstrumentOpen(false);
+  }, [selectedInstrumentType]);
+
+  // Instrument combobox helpers
+  const baseInstrumentList = instruments[selectedInstrumentType] || [];
+  const savedInstrumentList = customInstruments[selectedInstrumentType] || [];
+  const allInstrumentOptions = [...new Set([...baseInstrumentList, ...savedInstrumentList])];
+  const filteredInstrumentOptions = allInstrumentOptions.filter((i) =>
+    i.toLowerCase().includes(instrumentSearch.toLowerCase())
+  );
+  const canAddInstrument =
+    instrumentSearch.trim().length > 0 &&
+    !allInstrumentOptions.some(
+      (i) => i.toLowerCase() === instrumentSearch.trim().toLowerCase()
+    );
+
+  const handleSelectInstrument = (value) => {
+    setValue("instrument", value);
+    trigger("instrument");
+    setInstrumentOpen(false);
+    setInstrumentSearch("");
+  };
+
+  const handleAddInstrument = (value) => {
+    const type = selectedInstrumentType;
+    const updated = {
+      ...customInstruments,
+      [type]: [...new Set([...(customInstruments[type] || []), value])],
+    };
+    setCustomInstruments(updated);
+    localStorage.setItem("tradeForm_customInstruments", JSON.stringify(updated));
+    handleSelectInstrument(value);
+  };
+
+  // Live stop-loss / take-profit metrics (distance + dollar value)
+  const slTpMetrics = (() => {
+    const entry = parseFloat(watchedEntryPrice);
+    const sl    = parseFloat(watchedStopLoss);
+    const tp    = parseFloat(watchedTakeProfit);
+    const qty   = parseFloat(watchedQuantity);
+    const inst  = (watchedInstrument || "").toUpperCase();
+    const type  = selectedInstrumentType;
+
+    if (!entry || isNaN(entry) || entry <= 0) return null;
+
+    const pipSize = inst.includes("JPY") ? 0.01 : 0.0001;
+
+    const toUnits = (price) => {
+      if (!price || isNaN(price)) return null;
+      const diff = Math.abs(entry - price);
+      if (type === "forex") return { value: diff / pipSize, label: "pips" };
+      return { value: diff, label: "pts" };
+    };
+
+    // Use qty=1 as fallback so dollar value shows even before quantity is filled
+    const effectiveQty = (!qty || isNaN(qty) || qty <= 0) ? 1 : qty;
+    const isQtyDefaulted = effectiveQty === 1 && (!qty || isNaN(qty) || qty <= 0);
+
+    const toDollar = (rawDiff) => {
+      if (isNaN(rawDiff)) return null;
+      const d = Math.abs(rawDiff);
+      switch (type) {
+        case "futures": return d * (FUTURES_POINT_VALUES[inst] ?? 1) * effectiveQty;
+        case "forex":   return (d / pipSize) * 10 * effectiveQty;
+        case "options": return d * effectiveQty * 100;
+        default:        return d * effectiveQty;
+      }
+    };
+
+    const hasSL = !isNaN(sl) && sl > 0;
+    const hasTP = !isNaN(tp) && tp > 0;
+
+    const slUnits  = hasSL ? toUnits(sl)  : null;
+    const tpUnits  = hasTP ? toUnits(tp)  : null;
+    const slDollar = hasSL ? toDollar(entry - sl) : null;
+    const tpDollar = hasTP ? toDollar(tp - entry) : null;
+
+    // Arrow direction based on price vs entry
+    const slArrow = hasSL ? (sl < entry ? "↓" : "↑") : null;
+    const tpArrow = hasTP ? (tp > entry ? "↑" : "↓") : null;
+
+    // Actual R:R from live values
+    const actualRR =
+      slUnits?.value && tpUnits?.value
+        ? (tpUnits.value / slUnits.value).toFixed(2)
+        : null;
+
+    // Point value label for futures tooltip
+    const futuresLabel =
+      type === "futures" && FUTURES_POINT_VALUES[inst]
+        ? `${inst} = $${FUTURES_POINT_VALUES[inst]}/pt`
+        : null;
+
+    return { slUnits, tpUnits, slDollar, tpDollar, slArrow, tpArrow, actualRR, futuresLabel, isQtyDefaulted };
+  })();
+
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
@@ -752,10 +919,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       const formattedData = {
         ...data,
         status: data.status || "closed", // Default to closed for manual entry
-        entryDate: data.entryDate
-          ? new Date(data.entryDate).toISOString()
-          : null,
-        exitDate: data.exitDate ? new Date(data.exitDate).toISOString() : null,
+        entryDate: data.entryDate ? `${data.entryDate}T00:00:00` : null,
+        exitDate: data.exitDate ? `${data.exitDate}T00:00:00` : null,
         entryPrice: parseFloat(data.entryPrice) || 0,
         quantity: parseFloat(data.quantity) || 0,
         stopLoss: parseFloat(data.stopLoss) || 0,
@@ -840,11 +1005,65 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {activeTab === "quick" && (
               <div className="space-y-6">
-                {/* Template Selection and Entry Date - Side by side */}
+                {/* Template / Trade Setup panel + Entry Date */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Left Side - Template Selection */}
+                  {/* Left: template picker (new trade) OR setup summary (editing) */}
                   <div>
-                    {settingsTemplates.length > 0 ? (
+                    {isEditing ? (
+                      /* ── Edit mode: show what the trade was set up with ── */
+                      <div className="bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-lg p-4 h-full">
+                        <div className="flex items-center text-gray-700 dark:text-gray-200 mb-3">
+                          <BarChart3 className="w-5 h-5 mr-2 text-blue-500" />
+                          <h4 className="font-semibold text-sm">Trade Setup</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                          <div>
+                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">Strategy</span>
+                            <div className={`mt-0.5 font-medium ${trade.strategy ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
+                              {trade.strategy || "No strategy set"}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">Setup</span>
+                            <div className={`mt-0.5 font-medium ${trade.setup ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
+                              {trade.setup || "No setup set"}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">Market</span>
+                            <div className={`mt-0.5 font-medium ${trade.marketCondition ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
+                              {trade.marketCondition || "Not recorded"}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">R:R</span>
+                            <div className={`mt-0.5 font-medium ${trade.riskRewardRatio ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
+                              {trade.riskRewardRatio ? `1:${trade.riskRewardRatio}` : (slTpMetrics?.actualRR ? `1:${slTpMetrics.actualRR} (derived)` : "Not recorded")}
+                            </div>
+                          </div>
+                        </div>
+                        {settingsTemplates.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <select
+                              className="input text-xs py-1"
+                              value={selectedTemplateId}
+                              onChange={(e) => {
+                                const templateId = e.target.value;
+                                setSelectedTemplateId(templateId);
+                                if (templateId === "clear") setSelectedTemplateId("");
+                                else if (templateId) applyTemplate(templateId);
+                              }}
+                            >
+                              <option value="">Re-apply a template…</option>
+                              {settingsTemplates.map((t) => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    ) : settingsTemplates.length > 0 ? (
+                      /* ── New trade: template picker ── */
                       <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-3">
                           <div className="flex items-center text-green-800 dark:text-green-200">
@@ -862,7 +1081,6 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                             const templateId = e.target.value;
                             setSelectedTemplateId(templateId);
                             if (templateId === "clear") {
-                              // Clear template selection but keep form values
                               setSelectedTemplateId("");
                             } else if (templateId) {
                               applyTemplate(templateId);
@@ -871,9 +1089,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         >
                           <option value="">Select a trading template...</option>
                           {selectedTemplateId && (
-                            <option value="clear">
-                              ✕ Clear Template Selection
-                            </option>
+                            <option value="clear">✕ Clear Template Selection</option>
                           )}
                           {settingsTemplates.map((template) => (
                             <option key={template.id} value={template.id}>
@@ -882,8 +1098,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                           ))}
                         </select>
                         <p className="text-xs text-green-600">
-                          Templates auto-fill strategy, risk settings, and trade
-                          parameters
+                          Templates auto-fill strategy, risk settings, and trade parameters
                         </p>
                       </div>
                     ) : (
@@ -893,8 +1108,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                           <h4 className="font-semibold">Templates</h4>
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          No templates available. Create templates in Settings
-                          for faster trade entry.
+                          No templates available. Create templates in Settings for faster trade entry.
                         </p>
                       </div>
                     )}
@@ -918,82 +1132,63 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   </div>
                 </div>
 
-                {/* Risk/Reward Ratio - Below Template and Entry Date */}
+                {/* Risk/Reward Ratio — mode-aware */}
                 <div>
                   <label className="label">Risk/Reward Ratio</label>
-                  {settingsRiskProfiles.length > 0 ? (
-                    <select
-                      {...register("riskReward")}
-                      value={watch("riskReward") || ""}
-                      className="input"
-                      onChange={(e) => {
-                        setValue("riskReward", e.target.value);
 
-                        if (e.target.value && !isApplyingTemplate) {
-                          const [riskRatio, rewardRatio] = e.target.value
-                            .split(":")
-                            .map((num) => parseFloat(num));
-                          const entryPrice = parseFloat(watch("entryPrice"));
-                          const tradeType = watch("tradeType");
+                  {/* Mode pills */}
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {Object.entries(RR_MODES).map(([key, mode]) => (
+                      <button key={key} type="button"
+                        onClick={() => setRrMode(key)}
+                        className={`px-2 py-0.5 text-xs rounded-full border font-medium transition-colors ${
+                          rrMode === key
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                        }`}
+                      >{mode.label}</button>
+                    ))}
+                  </div>
 
-                          if (
-                            entryPrice &&
-                            entryPrice > 0 &&
-                            riskRatio &&
-                            rewardRatio
-                          ) {
-                            const selectedProfile = settingsRiskProfiles.find(
-                              (profile) =>
-                                `${profile.riskRatio}:${profile.rewardRatio}` ===
-                                e.target.value
-                            );
-
-                            const defaultRiskPercent =
-                              selectedProfile?.riskPercent || 0.02;
-                            const riskAmount = entryPrice * defaultRiskPercent;
-
-                            let stopLoss, takeProfit;
-
-                            if (tradeType === "long") {
-                              stopLoss = entryPrice - riskAmount;
-                              takeProfit =
-                                entryPrice +
-                                riskAmount * (rewardRatio / riskRatio);
-                            } else {
-                              stopLoss = entryPrice + riskAmount;
-                              takeProfit =
-                                entryPrice -
-                                riskAmount * (rewardRatio / riskRatio);
-                            }
-
-                            setValue("stopLoss", stopLoss.toFixed(2));
-                            setValue("takeProfit", takeProfit.toFixed(2));
-
-                            toast.success(
-                              `Risk levels calculated for ${riskRatio}:${rewardRatio} ratio`
-                            );
+                  <select
+                    {...register("riskReward")}
+                    value={watch("riskReward") || ""}
+                    className="input"
+                    onChange={(e) => {
+                      setValue("riskReward", e.target.value);
+                      if (e.target.value && !isApplyingTemplate) {
+                        const parsed = parseRRValue(e.target.value);
+                        const entryPrice = parseFloat(watch("entryPrice"));
+                        const tradeType = watch("tradeType");
+                        if (parsed && entryPrice > 0) {
+                          const { risk: riskRatio, reward: rewardRatio } = parsed;
+                          const riskAmount = entryPrice * 0.02;
+                          let stopLoss, takeProfit;
+                          if (tradeType === "long") {
+                            stopLoss = entryPrice - riskAmount;
+                            takeProfit = entryPrice + riskAmount * (rewardRatio / riskRatio);
+                          } else {
+                            stopLoss = entryPrice + riskAmount;
+                            takeProfit = entryPrice - riskAmount * (rewardRatio / riskRatio);
                           }
+                          setValue("stopLoss", stopLoss.toFixed(2));
+                          setValue("takeProfit", takeProfit.toFixed(2));
+                          toast.success(`Risk levels set: ${e.target.value}`);
                         }
-                      }}
-                    >
-                      <option value="">Select risk/reward ratio</option>
-                      {settingsRiskProfiles.map((profile) => (
-                        <option
-                          key={profile.id}
-                          value={`${profile.riskRatio}:${profile.rewardRatio}`}
-                        >
-                          {profile.name} ({profile.riskRatio}:
-                          {profile.rewardRatio})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="input bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center text-sm border border-gray-300 dark:border-gray-600">
-                      No risk profiles available - Create them in Settings
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    Auto-calculates stop loss and take profit levels
+                      }
+                    }}
+                  >
+                    <option value="">Select {RR_MODES[rrMode].label} ratio</option>
+                    {/* Keep any existing stored value selectable */}
+                    {watch("riskReward") && !(rrListsByMode[rrMode] || []).includes(watch("riskReward")) && (
+                      <option value={watch("riskReward")}>{watch("riskReward")}</option>
+                    )}
+                    {(rrListsByMode[rrMode] || []).map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {RR_MODES[rrMode].hint} · Auto-calculates stop &amp; target
                   </p>
                 </div>
 
@@ -1017,21 +1212,85 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
                   <div>
                     <label className="label">Instrument *</label>
+                    {/* Hidden input registers the field with react-hook-form for validation */}
                     <input
-                      type="text"
-                      {...register("instrument", {
-                        required: "Instrument is required",
-                      })}
-                      className="input"
-                      placeholder="e.g., AAPL, EURUSD"
+                      type="hidden"
+                      {...register("instrument", { required: "Instrument is required" })}
                     />
-                    <datalist id="instruments">
-                      {instruments[selectedInstrumentType]?.map(
-                        (instrument) => (
-                          <option key={instrument} value={instrument} />
-                        )
+                    <div ref={instrumentRef} className="relative">
+                      <button
+                        type="button"
+                        data-testid="trade-form-instrument-btn"
+                        onClick={() => setInstrumentOpen((o) => !o)}
+                        className={`input w-full flex items-center justify-between text-left ${
+                          !watchedInstrument ? "text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"
+                        }`}
+                      >
+                        <span>{watchedInstrument || "Select instrument…"}</span>
+                        <ChevronDown className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${instrumentOpen ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {instrumentOpen && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-hidden">
+                          {/* Search */}
+                          <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+                            <input
+                              autoFocus
+                              type="text"
+                              data-testid="trade-form-instrument-search"
+                              value={instrumentSearch}
+                              onChange={(e) => setInstrumentSearch(e.target.value)}
+                              placeholder="Search or type instrument…"
+                              className="w-full text-sm px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") { setInstrumentOpen(false); setInstrumentSearch(""); }
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  if (filteredInstrumentOptions.length > 0) {
+                                    handleSelectInstrument(filteredInstrumentOptions[0]);
+                                  } else if (canAddInstrument) {
+                                    handleAddInstrument(instrumentSearch.trim().toUpperCase());
+                                  }
+                                }
+                              }}
+                            />
+                          </div>
+                          {/* Options */}
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredInstrumentOptions.map((inst) => (
+                              <button
+                                key={inst}
+                                type="button"
+                                data-testid={`trade-form-instrument-option-${inst}`}
+                                onClick={() => handleSelectInstrument(inst)}
+                                className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
+                                  watchedInstrument === inst
+                                    ? "bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-medium"
+                                    : "text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                }`}
+                              >
+                                {inst}
+                                {watchedInstrument === inst && <Check className="w-3.5 h-3.5" />}
+                              </button>
+                            ))}
+                            {canAddInstrument && (
+                              <button
+                                type="button"
+                                data-testid="trade-form-instrument-add-btn"
+                                onClick={() => handleAddInstrument(instrumentSearch.trim().toUpperCase())}
+                                className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 border-t border-gray-100 dark:border-gray-700 transition-colors"
+                              >
+                                <Plus className="w-4 h-4" />
+                                <span>Add "{instrumentSearch.trim().toUpperCase()}"</span>
+                              </button>
+                            )}
+                            {filteredInstrumentOptions.length === 0 && !canAddInstrument && (
+                              <p className="px-3 py-4 text-sm text-center text-gray-400">No instruments found</p>
+                            )}
+                          </div>
+                        </div>
                       )}
-                    </datalist>
+                    </div>
                     {errors.instrument && (
                       <p className="text-danger-600 text-xs mt-1">
                         {errors.instrument.message}
@@ -1118,7 +1377,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   </div>
                 </div>
 
-                {/* Stop Loss and Take Profit - Moved below Entry Price/Quantity */}
+                {/* Stop Loss and Take Profit */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label">Stop Loss</label>
@@ -1129,6 +1388,25 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       className="input"
                       placeholder="0.00"
                     />
+                    {slTpMetrics?.slUnits && (
+                      <div className="mt-1 flex items-center flex-wrap gap-x-1 text-xs text-red-600 dark:text-red-400">
+                        <span className="font-medium">
+                          {slTpMetrics.slArrow} {slTpMetrics.slUnits.value.toFixed(1)} {slTpMetrics.slUnits.label}
+                        </span>
+                        {slTpMetrics.futuresLabel && (
+                          <span className="text-gray-400 dark:text-gray-500">({slTpMetrics.futuresLabel})</span>
+                        )}
+                        {slTpMetrics.slDollar !== null && (
+                          <>
+                            <span className="text-gray-300 dark:text-gray-600">·</span>
+                            <span className="font-semibold">
+                              −${slTpMetrics.slDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                              {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500"> /contract</span>}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1140,8 +1418,52 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       className="input"
                       placeholder="0.00"
                     />
+                    {slTpMetrics?.tpUnits && (
+                      <div className="mt-1 flex items-center flex-wrap gap-x-1 text-xs text-green-600 dark:text-green-400">
+                        <span className="font-medium">
+                          {slTpMetrics.tpArrow} {slTpMetrics.tpUnits.value.toFixed(1)} {slTpMetrics.tpUnits.label}
+                        </span>
+                        {slTpMetrics.tpDollar !== null && (
+                          <>
+                            <span className="text-gray-300 dark:text-gray-600">·</span>
+                            <span className="font-semibold">
+                              +${slTpMetrics.tpDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                              {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500"> /contract</span>}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* R:R summary bar — shown only when both SL and TP are filled */}
+                {slTpMetrics?.actualRR && (
+                  <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-2 text-xs">
+                    <div className="flex items-center space-x-1.5">
+                      <span className="text-gray-500 dark:text-gray-400">Actual R:R</span>
+                      <span className="font-bold text-gray-800 dark:text-gray-100">1:{slTpMetrics.actualRR}</span>
+                      {slTpMetrics.isQtyDefaulted && (
+                        <span className="text-gray-400 dark:text-gray-500">(per contract)</span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      {slTpMetrics.slDollar !== null && (
+                        <span className="text-red-600 dark:text-red-400 font-medium">
+                          −${slTpMetrics.slDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                        </span>
+                      )}
+                      {slTpMetrics.slDollar !== null && slTpMetrics.tpDollar !== null && (
+                        <span className="text-gray-300 dark:text-gray-600">/</span>
+                      )}
+                      {slTpMetrics.tpDollar !== null && (
+                        <span className="text-green-600 dark:text-green-400 font-medium">
+                          +${slTpMetrics.tpDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Exit Info - Only if trade is being edited as closed */}
                 {watchedStatus === "closed" && (
