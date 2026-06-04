@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { RR_MODES, SUGGESTED_MODES, getDefaultModeForInstrument, getUserRRList, saveUserRRList } from "../utils/rrModes";
 import {
   Settings as SettingsIcon,
   Download,
@@ -22,6 +23,7 @@ import {
   Check,
   Shield,
   Target,
+  Info,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
 import { exportToExcel, importFromFile } from "../utils/exportUtils";
@@ -43,18 +45,6 @@ const Settings = () => {
       name: "Trade Templates",
       icon: Layout,
       description: "Manage your trade entry templates",
-    },
-    {
-      id: "strategy-setup",
-      name: "Strategy and Setup",
-      icon: Target,
-      description: "Define trading strategies and setups",
-    },
-    {
-      id: "risk-management",
-      name: "Risk Management Profile",
-      icon: Shield,
-      description: "Configure risk parameters and limits",
     },
     {
       id: "data",
@@ -166,33 +156,51 @@ const Settings = () => {
     // Core Fields
     instrumentType: {
       label: "Instrument Type",
+      hint: "Asset class — Stocks, Forex, Futures, Crypto, etc.",
       type: "select",
       category: "core",
       required: false,
     },
     tradeType: {
       label: "Trade Type",
+      hint: "Long (buy) or Short (sell) direction.",
       type: "select",
       category: "core",
       required: false,
     },
     strategy: {
       label: "Strategy",
+      hint: "Your trading approach, e.g. Day Trading, Swing.",
       type: "select",
       category: "core",
       required: true,
     },
-    setup: { label: "Setup", type: "select", category: "core", required: true },
+    setup: {
+      label: "Setup",
+      hint: "Pattern or signal that triggered the trade.",
+      type: "select",
+      category: "core",
+      required: true,
+    },
 
     // Market Analysis
     marketCondition: {
       label: "Market Condition",
+      hint: "Overall market state — Trending, Volatile, etc.",
+      type: "select",
+      category: "market",
+      required: false,
+    },
+    marketDirection: {
+      label: "Market Direction",
+      hint: "Broad bias — Bullish, Bearish, or Sideways.",
       type: "select",
       category: "market",
       required: false,
     },
     timeframe: {
       label: "Timeframe",
+      hint: "Chart timeframe used for the trade decision.",
       type: "select",
       category: "market",
       required: false,
@@ -201,24 +209,28 @@ const Settings = () => {
     // Risk Management
     riskRewardRatio: {
       label: "Risk/Reward Ratio",
+      hint: "Target reward relative to risk, e.g. 1:2.",
       type: "text",
       category: "risk",
       required: false,
     },
     targetProfit: {
       label: "Target Profit ($)",
+      hint: "Profit goal in dollars for this trade.",
       type: "number",
       category: "risk",
       required: false,
     },
     maxLoss: {
       label: "Max Loss ($)",
+      hint: "Maximum dollar loss you are willing to accept.",
       type: "number",
       category: "risk",
       required: false,
     },
     stopLoss: {
       label: "Stop Loss ($)",
+      hint: "Price level where the position is closed to limit loss.",
       type: "number",
       category: "risk",
       required: false,
@@ -227,18 +239,21 @@ const Settings = () => {
     // Trade Execution
     entryPrice: {
       label: "Entry Price",
+      hint: "Default price at which the trade is entered.",
       type: "number",
       category: "execution",
       required: false,
     },
     exitPrice: {
       label: "Exit Price",
+      hint: "Default price at which the trade is closed.",
       type: "number",
       category: "execution",
       required: false,
     },
     position: {
       label: "Position Size",
+      hint: "Number of shares, contracts, or units.",
       type: "number",
       category: "execution",
       required: false,
@@ -247,6 +262,7 @@ const Settings = () => {
     // Additional
     notes: {
       label: "Notes",
+      hint: "Free-text notes or trade rationale.",
       type: "textarea",
       category: "additional",
       required: false,
@@ -303,6 +319,16 @@ const Settings = () => {
         ];
   };
 
+  // Helper: get user-managed list from localStorage with defaults
+  const getStoredList = (key, defaults) => {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaults;
+  };
+  const saveStoredList = (key, list, setter) => {
+    localStorage.setItem(key, JSON.stringify(list));
+    setter(list);
+  };
+
   // Strategy and Setup management
   const [showAddStrategyModal, setShowAddStrategyModal] = useState(false);
   const [showAddSetupModal, setShowAddSetupModal] = useState(false);
@@ -310,10 +336,52 @@ const Settings = () => {
   const [newStrategyDescription, setNewStrategyDescription] = useState("");
   const [newSetupName, setNewSetupName] = useState("");
   const [newSetupDescription, setNewSetupDescription] = useState("");
-  const [userStrategies, setUserStrategies] = useState(
-    getUserManagedStrategies()
-  );
+  const [userStrategies, setUserStrategies] = useState(getUserManagedStrategies());
   const [userSetups, setUserSetups] = useState(getUserManagedSetups());
+
+  // User-managed option lists for optional dropdowns
+  const [userInstrumentTypes, setUserInstrumentTypes] = useState(() =>
+    getStoredList("tradeJournalInstrumentTypes", ["Stocks", "Options", "Futures", "Forex", "Crypto"])
+  );
+  const [userTradeTypes, setUserTradeTypes] = useState(() =>
+    getStoredList("tradeJournalTradeTypes", ["Long", "Short"])
+  );
+  const [userMarketConditions, setUserMarketConditions] = useState(() =>
+    getStoredList("tradeJournalMarketConditions", ["Trending Up", "Trending Down", "Consolidating", "Volatile", "Low Volume"])
+  );
+  const [userMarketDirections, setUserMarketDirections] = useState(() =>
+    getStoredList("tradeJournalMarketDirections", ["Bullish", "Bearish", "Sideways", "Mixed"])
+  );
+
+  // Dropdown open state for all 5 custom selects
+  const [strategyDropdownOpen, setStrategyDropdownOpen] = useState(false);
+  const [setupDropdownOpen, setSetupDropdownOpen] = useState(false);
+  const [instrumentTypeDropdownOpen, setInstrumentTypeDropdownOpen] = useState(false);
+  const [tradeTypeDropdownOpen, setTradeTypeDropdownOpen] = useState(false);
+  const [marketConditionDropdownOpen, setMarketConditionDropdownOpen] = useState(false);
+  const [marketDirectionDropdownOpen, setMarketDirectionDropdownOpen] = useState(false);
+
+  // Custom add-input state for each dropdown
+  const [showCustomStrategyInput, setShowCustomStrategyInput] = useState(false);
+  const [customStrategyValue, setCustomStrategyValue] = useState("");
+  const [showCustomSetupInput, setShowCustomSetupInput] = useState(false);
+  const [customSetupValue, setCustomSetupValue] = useState("");
+  const [showCustomInstrumentTypeInput, setShowCustomInstrumentTypeInput] = useState(false);
+  const [customInstrumentTypeValue, setCustomInstrumentTypeValue] = useState("");
+  const [showCustomTradeTypeInput, setShowCustomTradeTypeInput] = useState(false);
+  const [customTradeTypeValue, setCustomTradeTypeValue] = useState("");
+  const [showCustomMarketConditionInput, setShowCustomMarketConditionInput] = useState(false);
+  const [customMarketConditionValue, setCustomMarketConditionValue] = useState("");
+  const [showCustomMarketDirectionInput, setShowCustomMarketDirectionInput] = useState(false);
+  const [customMarketDirectionValue, setCustomMarketDirectionValue] = useState("");
+
+  const [rrMode, setRrMode] = useState("ratio");
+  const [rrDropdownOpen, setRrDropdownOpen] = useState(false);
+  const [rrListsByMode, setRrListsByMode] = useState(() =>
+    Object.fromEntries(Object.keys(RR_MODES).map((m) => [m, getUserRRList(m)]))
+  );
+  const [showCustomRRInput, setShowCustomRRInput] = useState(false);
+  const [customRRValue, setCustomRRValue] = useState("");
 
   // Risk Management
   const [showAddRiskParamModal, setShowAddRiskParamModal] = useState(false);
@@ -326,18 +394,8 @@ const Settings = () => {
   );
   // Removed expandedCategories since we're showing all categories expanded now
 
-  const instrumentTypes = ["Stocks", "Options", "Futures", "Forex", "Crypto"];
-  const tradeTypes = ["Long", "Short"];
-
   const strategies = userStrategies;
   const setups = userSetups;
-  const marketConditions = [
-    "Trending Up",
-    "Trending Down",
-    "Consolidating",
-    "Volatile",
-    "Low Volume",
-  ];
 
   const handleExportData = async () => {
     try {
@@ -388,6 +446,28 @@ const Settings = () => {
     setActiveTemplateTab("basic");
     setIsCreatingTemplate(true);
     setEditingTemplate(null);
+    setStrategyDropdownOpen(false);
+    setSetupDropdownOpen(false);
+    setInstrumentTypeDropdownOpen(false);
+    setTradeTypeDropdownOpen(false);
+    setMarketConditionDropdownOpen(false);
+    setMarketDirectionDropdownOpen(false);
+    setRrMode("ratio");
+    setRrDropdownOpen(false);
+    setShowCustomStrategyInput(false);
+    setShowCustomSetupInput(false);
+    setShowCustomInstrumentTypeInput(false);
+    setShowCustomTradeTypeInput(false);
+    setShowCustomMarketConditionInput(false);
+    setShowCustomMarketDirectionInput(false);
+    setShowCustomRRInput(false);
+    setCustomStrategyValue("");
+    setCustomSetupValue("");
+    setCustomInstrumentTypeValue("");
+    setCustomTradeTypeValue("");
+    setCustomMarketConditionValue("");
+    setCustomMarketDirectionValue("");
+    setCustomRRValue("");
     setTemplateFormData({
       name: "",
       description: "",
@@ -397,6 +477,7 @@ const Settings = () => {
         strategy: "",
         setup: "",
         marketCondition: "",
+        marketDirection: "",
         riskRewardRatio: "",
         targetProfit: "",
         maxLoss: "",
@@ -407,6 +488,7 @@ const Settings = () => {
         strategy: true,
         setup: true,
         marketCondition: true,
+        marketDirection: false,
         riskRewardRatio: true,
         targetProfit: false,
         maxLoss: false,
@@ -468,6 +550,13 @@ const Settings = () => {
     }));
   };
 
+  // Auto-switch R:R mode when instrument type changes
+  useEffect(() => {
+    if (showTemplateModal && templateFormData.fields.instrumentType) {
+      setRrMode(getDefaultModeForInstrument(templateFormData.fields.instrumentType));
+    }
+  }, [templateFormData.fields.instrumentType, showTemplateModal]);
+
   const getVisibleFieldsCount = () => {
     return (
       Object.values(templateFormData.visibleFields).filter(Boolean).length +
@@ -477,7 +566,30 @@ const Settings = () => {
 
   const handleEditTemplate = (template) => {
     setEditingTemplate(template);
-    setIsCreatingTemplate(true);
+    setShowTemplateModal(true);
+    setActiveTemplateTab("basic");
+    setStrategyDropdownOpen(false);
+    setSetupDropdownOpen(false);
+    setInstrumentTypeDropdownOpen(false);
+    setTradeTypeDropdownOpen(false);
+    setMarketConditionDropdownOpen(false);
+    setMarketDirectionDropdownOpen(false);
+    setRrMode("ratio");
+    setRrDropdownOpen(false);
+    setShowCustomStrategyInput(false);
+    setShowCustomSetupInput(false);
+    setShowCustomInstrumentTypeInput(false);
+    setShowCustomTradeTypeInput(false);
+    setShowCustomMarketConditionInput(false);
+    setShowCustomMarketDirectionInput(false);
+    setShowCustomRRInput(false);
+    setCustomStrategyValue("");
+    setCustomSetupValue("");
+    setCustomInstrumentTypeValue("");
+    setCustomTradeTypeValue("");
+    setCustomMarketConditionValue("");
+    setCustomMarketDirectionValue("");
+    setCustomRRValue("");
     setTemplateFormData({
       name: template.name,
       description: template.description,
@@ -488,6 +600,7 @@ const Settings = () => {
         strategy: true,
         setup: true,
         marketCondition: true,
+        marketDirection: false,
         riskRewardRatio: true,
         targetProfit: false,
         maxLoss: false,
@@ -648,6 +761,141 @@ const Settings = () => {
       setUserSetups(updatedSetups);
       localStorage.setItem("tradeJournalSetups", JSON.stringify(updatedSetups));
       toast.success("Setup deleted successfully!");
+    }
+  };
+
+  const handleAddCustomStrategy = () => {
+    const val = customStrategyValue.trim();
+    if (!val) return;
+    if (!userStrategies.includes(val)) {
+      const updated = [...userStrategies, val];
+      setUserStrategies(updated);
+      localStorage.setItem("tradeJournalStrategies", JSON.stringify(updated));
+    }
+    handleTemplateFieldChange("strategy", val);
+    setCustomStrategyValue("");
+    setShowCustomStrategyInput(false);
+    setStrategyDropdownOpen(false);
+    toast.success("Strategy added");
+  };
+
+  const handleAddCustomSetup = () => {
+    const val = customSetupValue.trim();
+    if (!val) return;
+    if (!userSetups.includes(val)) {
+      const updated = [...userSetups, val];
+      setUserSetups(updated);
+      localStorage.setItem("tradeJournalSetups", JSON.stringify(updated));
+    }
+    handleTemplateFieldChange("setup", val);
+    setCustomSetupValue("");
+    setShowCustomSetupInput(false);
+    setSetupDropdownOpen(false);
+    toast.success("Setup added");
+  };
+
+  const handleAddCustomInstrumentType = () => {
+    const val = customInstrumentTypeValue.trim();
+    if (!val) return;
+    if (!userInstrumentTypes.includes(val)) {
+      saveStoredList("tradeJournalInstrumentTypes", [...userInstrumentTypes, val], setUserInstrumentTypes);
+    }
+    handleTemplateFieldChange("instrumentType", val);
+    setCustomInstrumentTypeValue("");
+    setShowCustomInstrumentTypeInput(false);
+    setInstrumentTypeDropdownOpen(false);
+    toast.success("Instrument type added");
+  };
+
+  const handleDeleteInstrumentType = (item) => {
+    if (window.confirm(`Delete "${item}"?`)) {
+      saveStoredList("tradeJournalInstrumentTypes", userInstrumentTypes.filter((x) => x !== item), setUserInstrumentTypes);
+      if (templateFormData.fields.instrumentType === item) handleTemplateFieldChange("instrumentType", "");
+    }
+  };
+
+  const handleAddCustomTradeType = () => {
+    const val = customTradeTypeValue.trim();
+    if (!val) return;
+    if (!userTradeTypes.includes(val)) {
+      saveStoredList("tradeJournalTradeTypes", [...userTradeTypes, val], setUserTradeTypes);
+    }
+    handleTemplateFieldChange("tradeType", val);
+    setCustomTradeTypeValue("");
+    setShowCustomTradeTypeInput(false);
+    setTradeTypeDropdownOpen(false);
+    toast.success("Trade type added");
+  };
+
+  const handleDeleteTradeType = (item) => {
+    if (window.confirm(`Delete "${item}"?`)) {
+      saveStoredList("tradeJournalTradeTypes", userTradeTypes.filter((x) => x !== item), setUserTradeTypes);
+      if (templateFormData.fields.tradeType === item) handleTemplateFieldChange("tradeType", "");
+    }
+  };
+
+  const handleAddCustomMarketCondition = () => {
+    const val = customMarketConditionValue.trim();
+    if (!val) return;
+    if (!userMarketConditions.includes(val)) {
+      saveStoredList("tradeJournalMarketConditions", [...userMarketConditions, val], setUserMarketConditions);
+    }
+    handleTemplateFieldChange("marketCondition", val);
+    setCustomMarketConditionValue("");
+    setShowCustomMarketConditionInput(false);
+    setMarketConditionDropdownOpen(false);
+    toast.success("Market condition added");
+  };
+
+  const handleDeleteMarketCondition = (item) => {
+    if (window.confirm(`Delete "${item}"?`)) {
+      saveStoredList("tradeJournalMarketConditions", userMarketConditions.filter((x) => x !== item), setUserMarketConditions);
+      if (templateFormData.fields.marketCondition === item) handleTemplateFieldChange("marketCondition", "");
+    }
+  };
+
+  const handleAddCustomMarketDirection = () => {
+    const val = customMarketDirectionValue.trim();
+    if (!val) return;
+    if (!userMarketDirections.includes(val)) {
+      saveStoredList("tradeJournalMarketDirections", [...userMarketDirections, val], setUserMarketDirections);
+    }
+    handleTemplateFieldChange("marketDirection", val);
+    setCustomMarketDirectionValue("");
+    setShowCustomMarketDirectionInput(false);
+    setMarketDirectionDropdownOpen(false);
+    toast.success("Market direction added");
+  };
+
+  const handleDeleteMarketDirection = (item) => {
+    if (window.confirm(`Delete "${item}"?`)) {
+      saveStoredList("tradeJournalMarketDirections", userMarketDirections.filter((x) => x !== item), setUserMarketDirections);
+      if (templateFormData.fields.marketDirection === item) handleTemplateFieldChange("marketDirection", "");
+    }
+  };
+
+  const handleAddCustomRR = () => {
+    const val = customRRValue.trim();
+    if (!val) return;
+    const current = rrListsByMode[rrMode] || [];
+    if (!current.includes(val)) {
+      const updated = [...current, val];
+      saveUserRRList(rrMode, updated);
+      setRrListsByMode((prev) => ({ ...prev, [rrMode]: updated }));
+    }
+    handleTemplateFieldChange("riskRewardRatio", val);
+    setCustomRRValue("");
+    setShowCustomRRInput(false);
+    setRrDropdownOpen(false);
+    toast.success("Ratio added");
+  };
+
+  const handleDeleteRRRatio = (item) => {
+    if (window.confirm(`Delete "${item}"?`)) {
+      const updated = (rrListsByMode[rrMode] || []).filter((x) => x !== item);
+      saveUserRRList(rrMode, updated);
+      setRrListsByMode((prev) => ({ ...prev, [rrMode]: updated }));
+      if (templateFormData.fields.riskRewardRatio === item) handleTemplateFieldChange("riskRewardRatio", "");
     }
   };
 
@@ -1839,7 +2087,7 @@ const Settings = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Create New Template
+                    {editingTemplate ? "Edit Template" : "Create New Template"}
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     Customize which fields appear during trade entry and set
@@ -1907,40 +2155,70 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  {/* Pre-fill Field Values */}
+                  {/* Default Field Values */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">
-                      Pre-fill Field Values
-                    </h4>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Set default values for selected fields to speed up trade
-                      entry
-                    </p>
+                    <div className="flex items-center space-x-1.5 mb-4">
+                      <h4 className="text-sm font-medium text-gray-900">
+                        Default Values
+                      </h4>
+                      <div className="relative group">
+                        <Info className="w-3.5 h-3.5 text-gray-400 cursor-pointer" />
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:block w-56 px-3 py-2 bg-gray-800 text-white text-xs rounded-md shadow-lg z-30 pointer-events-none">
+                          Choose values to auto-fill when this template is applied to a new trade. All fields are optional.
+                          <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-gray-800" />
+                        </div>
+                      </div>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {/* Instrument Type */}
                       {templateFormData.visibleFields.instrumentType && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Instrument Type
+                            Instrument Type{" "}
+                            <span className="text-xs font-normal text-gray-400">(optional)</span>
                           </label>
-                          <select
-                            value={templateFormData.fields.instrumentType}
-                            onChange={(e) =>
-                              handleTemplateFieldChange(
-                                "instrumentType",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select type</option>
-                            <option value="Stocks">Stocks</option>
-                            <option value="Options">Options</option>
-                            <option value="Futures">Futures</option>
-                            <option value="Forex">Forex</option>
-                            <option value="Crypto">Crypto</option>
-                          </select>
+                          <div className="relative">
+                            <div
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              onClick={() => { setInstrumentTypeDropdownOpen((p) => !p); setTradeTypeDropdownOpen(false); setMarketConditionDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); }}
+                            >
+                              <span className={`flex-1 text-sm ${templateFormData.fields.instrumentType ? "text-gray-900" : "text-gray-400"}`}>
+                                {templateFormData.fields.instrumentType || "Select type"}
+                              </span>
+                              {templateFormData.fields.instrumentType && (
+                                <button type="button" onClick={(e) => { e.stopPropagation(); handleTemplateFieldChange("instrumentType", ""); }} className="mr-1 p-0.5 text-gray-400 hover:text-red-500 rounded" title="Clear"><X className="w-3.5 h-3.5" /></button>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${instrumentTypeDropdownOpen ? "rotate-180" : ""}`} />
+                            </div>
+                            {instrumentTypeDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => { setInstrumentTypeDropdownOpen(false); setShowCustomInstrumentTypeInput(false); setCustomInstrumentTypeValue(""); }} />
+                                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                  <div className="max-h-44 overflow-y-auto">
+                                    <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("instrumentType", ""); setInstrumentTypeDropdownOpen(false); }}>— None —</div>
+                                    {userInstrumentTypes.map((item) => (
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.instrumentType === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                        <span className="flex-1" onClick={() => { handleTemplateFieldChange("instrumentType", item); setInstrumentTypeDropdownOpen(false); }}>{item}</span>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteInstrumentType(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-gray-100 p-2">
+                                    {!showCustomInstrumentTypeInput ? (
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomInstrumentTypeInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom type</span></button>
+                                    ) : (
+                                      <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                        <input type="text" value={customInstrumentTypeValue} onChange={(e) => setCustomInstrumentTypeValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomInstrumentType(); if (e.key === "Escape") { setShowCustomInstrumentTypeInput(false); setCustomInstrumentTypeValue(""); } }} placeholder="Type name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomInstrumentType} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <button type="button" onClick={() => { setShowCustomInstrumentTypeInput(false); setCustomInstrumentTypeValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -1948,71 +2226,350 @@ const Settings = () => {
                       {templateFormData.visibleFields.tradeType && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Trade Type
+                            Trade Type{" "}
+                            <span className="text-xs font-normal text-gray-400">(optional)</span>
                           </label>
-                          <select
-                            value={templateFormData.fields.tradeType}
-                            onChange={(e) =>
-                              handleTemplateFieldChange(
-                                "tradeType",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select type</option>
-                            <option value="Long">Long</option>
-                            <option value="Short">Short</option>
-                          </select>
+                          <div className="relative">
+                            <div
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              onClick={() => { setTradeTypeDropdownOpen((p) => !p); setInstrumentTypeDropdownOpen(false); setMarketConditionDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); }}
+                            >
+                              <span className={`flex-1 text-sm ${templateFormData.fields.tradeType ? "text-gray-900" : "text-gray-400"}`}>
+                                {templateFormData.fields.tradeType || "Select type"}
+                              </span>
+                              {templateFormData.fields.tradeType && (
+                                <button type="button" onClick={(e) => { e.stopPropagation(); handleTemplateFieldChange("tradeType", ""); }} className="mr-1 p-0.5 text-gray-400 hover:text-red-500 rounded" title="Clear"><X className="w-3.5 h-3.5" /></button>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${tradeTypeDropdownOpen ? "rotate-180" : ""}`} />
+                            </div>
+                            {tradeTypeDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => { setTradeTypeDropdownOpen(false); setShowCustomTradeTypeInput(false); setCustomTradeTypeValue(""); }} />
+                                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                  <div className="max-h-44 overflow-y-auto">
+                                    <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("tradeType", ""); setTradeTypeDropdownOpen(false); }}>— None —</div>
+                                    {userTradeTypes.map((item) => (
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.tradeType === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                        <span className="flex-1" onClick={() => { handleTemplateFieldChange("tradeType", item); setTradeTypeDropdownOpen(false); }}>{item}</span>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteTradeType(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-gray-100 p-2">
+                                    {!showCustomTradeTypeInput ? (
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomTradeTypeInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom type</span></button>
+                                    ) : (
+                                      <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                        <input type="text" value={customTradeTypeValue} onChange={(e) => setCustomTradeTypeValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomTradeType(); if (e.key === "Escape") { setShowCustomTradeTypeInput(false); setCustomTradeTypeValue(""); } }} placeholder="Type name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomTradeType} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <button type="button" onClick={() => { setShowCustomTradeTypeInput(false); setCustomTradeTypeValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
 
-                      {/* Strategy */}
+                      {/* Strategy — custom dropdown with delete + add */}
                       {templateFormData.visibleFields.strategy && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Strategy
                           </label>
-                          <select
-                            value={templateFormData.fields.strategy}
-                            onChange={(e) =>
-                              handleTemplateFieldChange(
-                                "strategy",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select strategy</option>
-                            {strategies.map((strategy) => (
-                              <option key={strategy} value={strategy}>
-                                {strategy}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <div
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              onClick={() => {
+                                setStrategyDropdownOpen((p) => !p);
+                                setSetupDropdownOpen(false);
+                              }}
+                            >
+                              <span
+                                className={`flex-1 text-sm ${templateFormData.fields.strategy ? "text-gray-900" : "text-gray-400"}`}
+                              >
+                                {templateFormData.fields.strategy || "Select strategy"}
+                              </span>
+                              {templateFormData.fields.strategy && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTemplateFieldChange("strategy", "");
+                                  }}
+                                  className="mr-1 p-0.5 text-gray-400 hover:text-red-500 rounded"
+                                  title="Clear selection"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              <ChevronDown
+                                className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${strategyDropdownOpen ? "rotate-180" : ""}`}
+                              />
+                            </div>
+
+                            {strategyDropdownOpen && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => {
+                                    setStrategyDropdownOpen(false);
+                                    setShowCustomStrategyInput(false);
+                                    setCustomStrategyValue("");
+                                  }}
+                                />
+                                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                  <div className="max-h-44 overflow-y-auto">
+                                    <div
+                                      className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer"
+                                      onClick={() => {
+                                        handleTemplateFieldChange("strategy", "");
+                                        setStrategyDropdownOpen(false);
+                                      }}
+                                    >
+                                      — None —
+                                    </div>
+                                    {userStrategies.map((strategy) => (
+                                      <div
+                                        key={strategy}
+                                        className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${
+                                          templateFormData.fields.strategy === strategy
+                                            ? "bg-blue-50 text-blue-700"
+                                            : "hover:bg-gray-50 text-gray-700"
+                                        }`}
+                                      >
+                                        <span
+                                          className="flex-1"
+                                          onClick={() => {
+                                            handleTemplateFieldChange("strategy", strategy);
+                                            setStrategyDropdownOpen(false);
+                                          }}
+                                        >
+                                          {strategy}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteStrategy(strategy);
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded"
+                                          title="Delete option"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-gray-100 p-2">
+                                    {!showCustomStrategyInput ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setShowCustomStrategyInput(true);
+                                        }}
+                                        className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Add custom strategy</span>
+                                      </button>
+                                    ) : (
+                                      <div
+                                        className="flex space-x-1"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <input
+                                          type="text"
+                                          value={customStrategyValue}
+                                          onChange={(e) => setCustomStrategyValue(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") handleAddCustomStrategy();
+                                            if (e.key === "Escape") {
+                                              setShowCustomStrategyInput(false);
+                                              setCustomStrategyValue("");
+                                            }
+                                          }}
+                                          placeholder="Strategy name"
+                                          className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          autoFocus
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={handleAddCustomStrategy}
+                                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                        >
+                                          Add
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setShowCustomStrategyInput(false);
+                                            setCustomStrategyValue("");
+                                          }}
+                                          className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
 
-                      {/* Setup */}
+                      {/* Setup — custom dropdown with delete + add */}
                       {templateFormData.visibleFields.setup && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Setup
                           </label>
-                          <select
-                            value={templateFormData.fields.setup}
-                            onChange={(e) =>
-                              handleTemplateFieldChange("setup", e.target.value)
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select setup</option>
-                            {setups.map((setup) => (
-                              <option key={setup} value={setup}>
-                                {setup}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <div
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              onClick={() => {
+                                setSetupDropdownOpen((p) => !p);
+                                setStrategyDropdownOpen(false);
+                              }}
+                            >
+                              <span
+                                className={`flex-1 text-sm ${templateFormData.fields.setup ? "text-gray-900" : "text-gray-400"}`}
+                              >
+                                {templateFormData.fields.setup || "Select setup"}
+                              </span>
+                              {templateFormData.fields.setup && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTemplateFieldChange("setup", "");
+                                  }}
+                                  className="mr-1 p-0.5 text-gray-400 hover:text-red-500 rounded"
+                                  title="Clear selection"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              <ChevronDown
+                                className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${setupDropdownOpen ? "rotate-180" : ""}`}
+                              />
+                            </div>
+
+                            {setupDropdownOpen && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => {
+                                    setSetupDropdownOpen(false);
+                                    setShowCustomSetupInput(false);
+                                    setCustomSetupValue("");
+                                  }}
+                                />
+                                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                  <div className="max-h-44 overflow-y-auto">
+                                    <div
+                                      className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer"
+                                      onClick={() => {
+                                        handleTemplateFieldChange("setup", "");
+                                        setSetupDropdownOpen(false);
+                                      }}
+                                    >
+                                      — None —
+                                    </div>
+                                    {userSetups.map((setup) => (
+                                      <div
+                                        key={setup}
+                                        className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${
+                                          templateFormData.fields.setup === setup
+                                            ? "bg-blue-50 text-blue-700"
+                                            : "hover:bg-gray-50 text-gray-700"
+                                        }`}
+                                      >
+                                        <span
+                                          className="flex-1"
+                                          onClick={() => {
+                                            handleTemplateFieldChange("setup", setup);
+                                            setSetupDropdownOpen(false);
+                                          }}
+                                        >
+                                          {setup}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteSetup(setup);
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded"
+                                          title="Delete option"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-gray-100 p-2">
+                                    {!showCustomSetupInput ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setShowCustomSetupInput(true);
+                                        }}
+                                        className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Add custom setup</span>
+                                      </button>
+                                    ) : (
+                                      <div
+                                        className="flex space-x-1"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <input
+                                          type="text"
+                                          value={customSetupValue}
+                                          onChange={(e) => setCustomSetupValue(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") handleAddCustomSetup();
+                                            if (e.key === "Escape") {
+                                              setShowCustomSetupInput(false);
+                                              setCustomSetupValue("");
+                                            }
+                                          }}
+                                          placeholder="Setup name"
+                                          className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          autoFocus
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={handleAddCustomSetup}
+                                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                        >
+                                          Add
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setShowCustomSetupInput(false);
+                                            setCustomSetupValue("");
+                                          }}
+                                          className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -2020,46 +2577,166 @@ const Settings = () => {
                       {templateFormData.visibleFields.marketCondition && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Market Condition
+                            Market Condition{" "}
+                            <span className="text-xs font-normal text-gray-400">(optional)</span>
                           </label>
-                          <select
-                            value={templateFormData.fields.marketCondition}
-                            onChange={(e) =>
-                              handleTemplateFieldChange(
-                                "marketCondition",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select condition</option>
-                            <option value="Trending Up">Trending Up</option>
-                            <option value="Trending Down">Trending Down</option>
-                            <option value="Consolidating">Consolidating</option>
-                            <option value="Volatile">Volatile</option>
-                            <option value="Low Volume">Low Volume</option>
-                          </select>
+                          <div className="relative">
+                            <div
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              onClick={() => { setMarketConditionDropdownOpen((p) => !p); setInstrumentTypeDropdownOpen(false); setTradeTypeDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); }}
+                            >
+                              <span className={`flex-1 text-sm ${templateFormData.fields.marketCondition ? "text-gray-900" : "text-gray-400"}`}>
+                                {templateFormData.fields.marketCondition || "Select condition"}
+                              </span>
+                              {templateFormData.fields.marketCondition && (
+                                <button type="button" onClick={(e) => { e.stopPropagation(); handleTemplateFieldChange("marketCondition", ""); }} className="mr-1 p-0.5 text-gray-400 hover:text-red-500 rounded" title="Clear"><X className="w-3.5 h-3.5" /></button>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${marketConditionDropdownOpen ? "rotate-180" : ""}`} />
+                            </div>
+                            {marketConditionDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => { setMarketConditionDropdownOpen(false); setShowCustomMarketConditionInput(false); setCustomMarketConditionValue(""); }} />
+                                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                  <div className="max-h-44 overflow-y-auto">
+                                    <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("marketCondition", ""); setMarketConditionDropdownOpen(false); }}>— None —</div>
+                                    {userMarketConditions.map((item) => (
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.marketCondition === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                        <span className="flex-1" onClick={() => { handleTemplateFieldChange("marketCondition", item); setMarketConditionDropdownOpen(false); }}>{item}</span>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteMarketCondition(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-gray-100 p-2">
+                                    {!showCustomMarketConditionInput ? (
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomMarketConditionInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom</span></button>
+                                    ) : (
+                                      <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                        <input type="text" value={customMarketConditionValue} onChange={(e) => setCustomMarketConditionValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomMarketCondition(); if (e.key === "Escape") { setShowCustomMarketConditionInput(false); setCustomMarketConditionValue(""); } }} placeholder="Condition name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomMarketCondition} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <button type="button" onClick={() => { setShowCustomMarketConditionInput(false); setCustomMarketConditionValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
 
-                      {/* Risk/Reward Ratio */}
-                      {templateFormData.visibleFields.riskRewardRatio && (
+                      {/* Market Direction */}
+                      {templateFormData.visibleFields.marketDirection && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Market Direction{" "}
+                            <span className="text-xs font-normal text-gray-400">(optional)</span>
+                          </label>
+                          <div className="relative">
+                            <div
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              onClick={() => { setMarketDirectionDropdownOpen((p) => !p); setMarketConditionDropdownOpen(false); setInstrumentTypeDropdownOpen(false); setTradeTypeDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); setRrDropdownOpen(false); }}
+                            >
+                              <span className={`flex-1 text-sm ${templateFormData.fields.marketDirection ? "text-gray-900" : "text-gray-400"}`}>
+                                {templateFormData.fields.marketDirection || "Select direction"}
+                              </span>
+                              {templateFormData.fields.marketDirection && (
+                                <button type="button" onClick={(e) => { e.stopPropagation(); handleTemplateFieldChange("marketDirection", ""); }} className="mr-1 p-0.5 text-gray-400 hover:text-red-500 rounded" title="Clear"><X className="w-3.5 h-3.5" /></button>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${marketDirectionDropdownOpen ? "rotate-180" : ""}`} />
+                            </div>
+                            {marketDirectionDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => { setMarketDirectionDropdownOpen(false); setShowCustomMarketDirectionInput(false); setCustomMarketDirectionValue(""); }} />
+                                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                  <div className="max-h-44 overflow-y-auto">
+                                    <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("marketDirection", ""); setMarketDirectionDropdownOpen(false); }}>— None —</div>
+                                    {userMarketDirections.map((item) => (
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.marketDirection === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                        <span className="flex-1" onClick={() => { handleTemplateFieldChange("marketDirection", item); setMarketDirectionDropdownOpen(false); }}>{item}</span>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteMarketDirection(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-gray-100 p-2">
+                                    {!showCustomMarketDirectionInput ? (
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomMarketDirectionInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom direction</span></button>
+                                    ) : (
+                                      <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                        <input type="text" value={customMarketDirectionValue} onChange={(e) => setCustomMarketDirectionValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomMarketDirection(); if (e.key === "Escape") { setShowCustomMarketDirectionInput(false); setCustomMarketDirectionValue(""); } }} placeholder="Direction name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomMarketDirection} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <button type="button" onClick={() => { setShowCustomMarketDirectionInput(false); setCustomMarketDirectionValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Risk/Reward Ratio — mode-aware */}
+                      {templateFormData.visibleFields.riskRewardRatio && (
+                        <div className="md:col-span-2 lg:col-span-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Risk/Reward Ratio
                           </label>
-                          <input
-                            type="text"
-                            value={templateFormData.fields.riskRewardRatio}
-                            onChange={(e) =>
-                              handleTemplateFieldChange(
-                                "riskRewardRatio",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Enter risk/reward ratio"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
+                          {/* Mode pills */}
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {Object.entries(RR_MODES).map(([key, mode]) => (
+                              <button key={key} type="button"
+                                onClick={() => { setRrMode(key); setRrDropdownOpen(false); setShowCustomRRInput(false); setCustomRRValue(""); }}
+                                className={`px-2.5 py-1 text-xs rounded-full border font-medium transition-colors ${
+                                  rrMode === key
+                                    ? "bg-blue-600 text-white border-blue-600"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                                }`}
+                              >{mode.label}</button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-400 mb-2">{RR_MODES[rrMode].hint}</p>
+                          {/* Value dropdown */}
+                          <div className="relative">
+                            <div
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              onClick={() => { setRrDropdownOpen((p) => !p); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); setInstrumentTypeDropdownOpen(false); setTradeTypeDropdownOpen(false); setMarketConditionDropdownOpen(false); setMarketDirectionDropdownOpen(false); }}
+                            >
+                              <span className={`flex-1 text-sm ${templateFormData.fields.riskRewardRatio ? "text-gray-900" : "text-gray-400"}`}>
+                                {templateFormData.fields.riskRewardRatio || `Select ${RR_MODES[rrMode].label} value`}
+                              </span>
+                              {templateFormData.fields.riskRewardRatio && (
+                                <button type="button" onClick={(e) => { e.stopPropagation(); handleTemplateFieldChange("riskRewardRatio", ""); }} className="mr-1 p-0.5 text-gray-400 hover:text-red-500 rounded" title="Clear"><X className="w-3.5 h-3.5" /></button>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${rrDropdownOpen ? "rotate-180" : ""}`} />
+                            </div>
+                            {rrDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => { setRrDropdownOpen(false); setShowCustomRRInput(false); setCustomRRValue(""); }} />
+                                <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                  <div className="max-h-44 overflow-y-auto">
+                                    <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("riskRewardRatio", ""); setRrDropdownOpen(false); }}>— None —</div>
+                                    {(rrListsByMode[rrMode] || []).map((item) => (
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.riskRewardRatio === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                        <span className="flex-1" onClick={() => { handleTemplateFieldChange("riskRewardRatio", item); setRrDropdownOpen(false); }}>{item}</span>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteRRRatio(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-gray-100 p-2">
+                                    {!showCustomRRInput ? (
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomRRInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom</span></button>
+                                    ) : (
+                                      <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                        <input type="text" value={customRRValue} onChange={(e) => setCustomRRValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomRR(); if (e.key === "Escape") { setShowCustomRRInput(false); setCustomRRValue(""); } }} placeholder={RR_MODES[rrMode].placeholder} className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomRR} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <button type="button" onClick={() => { setShowCustomRRInput(false); setCustomRRValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2150,43 +2827,48 @@ const Settings = () => {
                               .filter(
                                 ([key, field]) => field.category === categoryKey
                               )
-                              .map(([fieldKey, field]) => (
+                              .map(([fieldKey, field]) => {
+                                const isEnabled = templateFormData.visibleFields[fieldKey] || false;
+                                const prefilledValue = templateFormData.fields?.[fieldKey];
+                                return (
                                 <label
                                   key={fieldKey}
-                                  className={`flex items-center justify-between space-x-2 text-sm cursor-pointer hover:bg-gray-50 p-2 rounded border transition-all duration-200 ${
-                                    templateFormData.visibleFields[fieldKey]
-                                      ? "border-blue-200 bg-blue-50"
-                                      : "border-gray-200"
+                                  className={`flex items-center justify-between gap-3 text-sm cursor-pointer p-3 rounded-lg border transition-all duration-200 ${
+                                    isEnabled
+                                      ? "border-blue-200 bg-blue-50 hover:bg-blue-100"
+                                      : "border-gray-200 hover:bg-gray-50"
                                   }`}
                                 >
-                                  <div className="flex items-center space-x-2">
+                                  <div className="flex items-start space-x-2 flex-1 min-w-0">
                                     <input
                                       type="checkbox"
-                                      checked={
-                                        templateFormData.visibleFields[
-                                          fieldKey
-                                        ] || false
-                                      }
-                                      onChange={() =>
-                                        toggleFieldVisibility(fieldKey)
-                                      }
-                                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      checked={isEnabled}
+                                      onChange={() => toggleFieldVisibility(fieldKey)}
+                                      className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
                                     />
-                                    <span
-                                      className={
-                                        templateFormData.visibleFields[fieldKey]
-                                          ? "text-gray-900 font-medium"
-                                          : "text-gray-500"
-                                      }
-                                    >
-                                      {field.label}
-                                    </span>
+                                    <div className="min-w-0">
+                                      <p className={`font-medium truncate ${isEnabled ? "text-gray-900" : "text-gray-500"}`}>
+                                        {field.label}
+                                      </p>
+                                      {field.hint && (
+                                        <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                                          {field.hint}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                  {templateFormData.visibleFields[fieldKey] && (
-                                    <Check className="w-4 h-4 text-green-600" />
+                                  {isEnabled && (
+                                    <span className={`shrink-0 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${
+                                      prefilledValue
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-200 text-gray-500"
+                                    }`}>
+                                      {prefilledValue || "No default"}
+                                    </span>
                                   )}
                                 </label>
-                              ))}
+                                );
+                              })}
                           </div>
                         </div>
                       )

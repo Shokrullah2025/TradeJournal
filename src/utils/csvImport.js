@@ -219,7 +219,7 @@ function normalizeGeneric(rows, warnings) {
     const instrument = colAny(row, ["Instrument", "Symbol", "Ticker", "Contract", "instrument", "symbol"]);
     const entryPrice = safeFloat(colAny(row, ["Entry Price", "EntryPrice", "entry_price", "Buy Price", "Open Price"]));
     const quantity   = safeFloat(colAny(row, ["Quantity", "Qty", "Size", "quantity", "qty"]));
-    const entryDate  = colAny(row, ["Entry Date", "EntryDate", "Date", "entry_date", "Open Date", "DateTime"]);
+    const entryDate  = colAny(row, ["Entry Date", "EntryDate", "Date", "entry_date", "Open Date", "DateTime", "Trade Date", "TradeDate", "Timestamp", "Time", "Open Time", "Close Date", "Fill Date", "Execution Date"]);
 
     if (!instrument || !entryPrice || !quantity || !entryDate) {
       warnings.push(`Row ${i + 2}: skipped — missing instrument, entry price, quantity, or date`);
@@ -346,10 +346,13 @@ function pairFills(fills, source, warnings) {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Case-insensitive column getter
+// Case-insensitive column getter — preserves XLSX Date objects as ISO strings
 function col(row, name) {
   const key = Object.keys(row).find((k) => k.trim().toLowerCase() === name.toLowerCase());
-  return key ? String(row[key] ?? "").trim() : "";
+  if (!key) return "";
+  const val = row[key];
+  if (val instanceof Date) return val.toISOString();
+  return String(val ?? "").trim();
 }
 
 // Try multiple column name variations
@@ -369,8 +372,54 @@ function safeFloat(val) {
 
 function parseDateTime(raw) {
   if (!raw || raw === "") return new Date().toISOString();
-  const d = new Date(raw);
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+
+  // Already a proper ISO string (from XLSX Date object via col())
+  if (typeof raw === "string" && /^\d{4}-\d{2}-\d{2}T/.test(raw)) {
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  }
+
+  const str = String(raw).trim();
+
+  // Try native parse first (handles ISO, RFC 2822, many locale strings)
+  let d = new Date(str);
+  if (!isNaN(d.getTime())) return d.toISOString();
+
+  // MM/DD/YYYY or M/D/YYYY with optional HH:MM:SS or HH:MM:SS AM/PM
+  const mdy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[\s,]+(.+))?$/);
+  if (mdy) {
+    const [, m, day, y, time] = mdy;
+    d = new Date(`${y}-${m.padStart(2, "0")}-${day.padStart(2, "0")}${time ? " " + time : ""}`);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+
+  // DD/MM/YYYY (European) — only when day > 12 so it can't be MM/DD
+  const dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[\s,]+(.+))?$/);
+  if (dmy) {
+    const [, day, m, y, time] = dmy;
+    if (parseInt(day, 10) > 12) {
+      d = new Date(`${y}-${m.padStart(2, "0")}-${day.padStart(2, "0")}${time ? " " + time : ""}`);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+  }
+
+  // DD-MM-YYYY or YYYY-MM-DD without T
+  const dashDate = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(.+))?$/);
+  if (dashDate) {
+    const [, y, m, day, time] = dashDate;
+    d = new Date(`${y}-${m}-${day}${time ? "T" + time : "T00:00:00"}`);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+
+  // YYYYMMDD compact
+  const compact = str.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (compact) {
+    const [, y, m, day] = compact;
+    d = new Date(`${y}-${m}-${day}T00:00:00`);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+
+  return new Date().toISOString();
 }
 
 function sanitizeId(str) {

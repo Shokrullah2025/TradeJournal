@@ -20,7 +20,6 @@ import {
   isSameMonth,
   isSameDay,
   isToday,
-  parseISO,
 } from "date-fns";
 import DayDetailModal from "./DayDetailModal";
 
@@ -48,12 +47,12 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
     return daysArray;
   }, [currentDate]);
 
-  // Group trades by date
+  // Group trades by date — use substring(0,10) to avoid timezone shifting
   const tradesByDate = useMemo(() => {
     const groups = {};
     trades.forEach((trade) => {
       if (trade.entryDate) {
-        const dateKey = format(parseISO(trade.entryDate), "yyyy-MM-dd");
+        const dateKey = trade.entryDate.substring(0, 10);
         if (!groups[dateKey]) {
           groups[dateKey] = [];
         }
@@ -247,13 +246,12 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <div>
             Total trades this month:{" "}
-            {Object.values(tradesByDate)
-              .filter((dayTrades) =>
-                dayTrades.some((trade) =>
-                  isSameMonth(parseISO(trade.entryDate), currentDate)
-                )
-              )
-              .reduce((sum, dayTrades) => sum + dayTrades.length, 0)}
+            {(() => {
+              const monthPrefix = format(currentDate, "yyyy-MM");
+              return Object.entries(tradesByDate)
+                .filter(([key]) => key.startsWith(monthPrefix))
+                .reduce((sum, [, dayTrades]) => sum + dayTrades.length, 0);
+            })()}
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
