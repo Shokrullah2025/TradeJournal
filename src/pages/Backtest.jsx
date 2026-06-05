@@ -130,6 +130,19 @@ const MARKET_CONFIG = {
 const Backtest = () => {
   const { sessions, createSession, getSession } = useBacktest();
 
+  // ── Dark mode detection ──
+  const [isDark, setIsDark] = useState(
+    () => document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
   // Session and Setup States
   const [currentView, setCurrentView] = useState("sessions");
   const [currentSession, setCurrentSession] = useState(null);
@@ -142,6 +155,11 @@ const Backtest = () => {
   });
   const [endDate, setEndDate] = useState(""); // Start empty so user can select
   const [initialBalance, setInitialBalance] = useState(100000);
+
+  // Session history (localStorage)
+  const [sessionHistory, setSessionHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("backtestHistory") || "[]"); } catch { return []; }
+  });
 
   // Template states
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -331,6 +349,9 @@ const Backtest = () => {
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [orderSide, setOrderSide] = useState("buy");
   const [orderSize, setOrderSize] = useState(1);
+  const [orderType, setOrderType] = useState("market"); // market | limit | stop | stopLimit
+  const [useTakeProfit, setUseTakeProfit] = useState(false);
+  const [useStopLoss, setUseStopLoss] = useState(false);
   const [balance, setBalance] = useState(10000);
   const [positions, setPositions] = useState([]);
   const [trades, setTrades] = useState([]);
@@ -338,6 +359,58 @@ const Backtest = () => {
   const [takeProfit, setTakeProfit] = useState("");
   const [isLoadingData, setIsLoadingData] = useState(false);
   const intervalRef = useRef(null);
+
+  // Helper: process SL/TP for a single candle — returns the still-open positions
+  const processPositionsForCandle = (candle, openPositions, setBalanceFn, setTradesFn) => {
+    const stillOpen = [];
+
+    openPositions.forEach((pos) => {
+      let closed = false;
+      let exitPrice = candle.close;
+      let exitReason = "";
+
+      if (pos.side === "buy") {
+        if (pos.stopLoss !== null && candle.low <= pos.stopLoss) {
+          exitPrice = pos.stopLoss;
+          exitReason = "SL";
+          closed = true;
+        } else if (pos.takeProfit !== null && candle.high >= pos.takeProfit) {
+          exitPrice = pos.takeProfit;
+          exitReason = "TP";
+          closed = true;
+        }
+      } else {
+        if (pos.stopLoss !== null && candle.high >= pos.stopLoss) {
+          exitPrice = pos.stopLoss;
+          exitReason = "SL";
+          closed = true;
+        } else if (pos.takeProfit !== null && candle.low <= pos.takeProfit) {
+          exitPrice = pos.takeProfit;
+          exitReason = "TP";
+          closed = true;
+        }
+      }
+
+      if (closed) {
+        const pnl =
+          pos.side === "buy"
+            ? (exitPrice - pos.entryPrice) * pos.size * pos.tickRatio
+            : (pos.entryPrice - exitPrice) * pos.size * pos.tickRatio;
+        setBalanceFn((b) => b + pnl);
+        setTradesFn((t) => [...t, { ...pos, exitPrice, pnl, exitReason }]);
+        if (pnl > 0) toast.success(`${exitReason}: +$${pnl.toFixed(2)}`);
+        else toast.error(`${exitReason}: $${pnl.toFixed(2)}`);
+      } else {
+        const currentPnL =
+          pos.side === "buy"
+            ? (candle.close - pos.entryPrice) * pos.size * pos.tickRatio
+            : (pos.entryPrice - candle.close) * pos.size * pos.tickRatio;
+        stillOpen.push({ ...pos, currentPnL });
+      }
+    });
+
+    return stillOpen;
+  };
 
   const handleCreateSession = async () => {
     if (
@@ -377,6 +450,24 @@ const Backtest = () => {
     setCurrentSession(newSession);
     setCurrentView("backtest");
 
+    // Save session to history in localStorage
+    const savedSessions = JSON.parse(localStorage.getItem("backtestHistory") || "[]");
+    savedSessions.unshift({
+      id: newSession.id,
+      name: newSession.name,
+      market: newSession.market,
+      symbol: instrument.symbol,
+      instrumentName: instrument.name,
+      timeframe,
+      strategy,
+      setup,
+      createdAt: newSession.createdAt,
+      initialBalance: sessionBalance,
+    });
+    // Keep last 20 sessions
+    localStorage.setItem("backtestHistory", JSON.stringify(savedSessions.slice(0, 20)));
+    setSessionHistory(savedSessions.slice(0, 20));
+
     try {
       const candles = await fetchMarketCandles(
         selectedMarket,
@@ -405,9 +496,16 @@ const Backtest = () => {
             setIsPlaying(false);
             return prev;
           }
-          const nextCandle = prev + 1;
-          setCurrentPrice(chartData[nextCandle].close);
-          return nextCandle;
+          const nextIdx = prev + 1;
+          const candle = chartData[nextIdx];
+          setCurrentPrice(candle.close);
+
+          // Update positions P&L and check SL/TP
+          setPositions((openPositions) =>
+            processPositionsForCandle(candle, openPositions, setBalance, setTrades)
+          );
+
+          return nextIdx;
         });
       }, 1000 / speed);
     } else {
@@ -433,8 +531,13 @@ const Backtest = () => {
   const handleStepForward = () => {
     if (currentCandle >= chartData.length - 1) return;
     const next = currentCandle + 1;
+    const candle = chartData[next];
     setCurrentCandle(next);
-    setCurrentPrice(chartData[next].close);
+    setCurrentPrice(candle.close);
+    // Apply SL/TP check on manual step
+    setPositions((openPositions) =>
+      processPositionsForCandle(candle, openPositions, setBalance, setTrades)
+    );
   };
 
   const handleReset = () => {
@@ -519,28 +622,32 @@ const Backtest = () => {
 
   const executeOrder = () => {
     if (!currentSession) return;
+    const instrument = currentSession.instrument;
+    const tickRatio = instrument.tickValue / instrument.tickSize;
+    const entryPrice = currentPrice;
 
     const position = {
       id: Date.now(),
       side: orderSide,
       size: orderSize,
-      entryPrice: currentPrice,
-      stopLoss: stopLoss ? parseFloat(stopLoss) : null,
-      takeProfit: takeProfit ? parseFloat(takeProfit) : null,
+      entryPrice,
+      stopLoss: useStopLoss && stopLoss ? parseFloat(stopLoss) : null,
+      takeProfit: useTakeProfit && takeProfit ? parseFloat(takeProfit) : null,
+      orderType,
       timestamp: chartData[currentCandle]?.time,
       currentPnL: 0,
+      tickRatio,
     };
 
     setPositions((prev) => [...prev, position]);
     setShowOrderPanel(false);
-
     setOrderSize(1);
     setStopLoss("");
     setTakeProfit("");
+    setUseTakeProfit(false);
+    setUseStopLoss(false);
 
-    toast.success(
-      `${orderSide.toUpperCase()} order executed at $${currentPrice.toFixed(2)}`
-    );
+    toast.success(`${orderSide.toUpperCase()} ${orderSize} ${instrument.symbol} at $${entryPrice.toFixed(2)}`);
   };
 
   // Render views
@@ -566,6 +673,43 @@ const Backtest = () => {
               Create New Session
             </button>
           </div>
+
+          {/* Session History */}
+          {sessionHistory.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Recent Sessions
+              </h2>
+              <div className="space-y-3">
+                {sessionHistory.map((s) => (
+                  <div
+                    key={s.id}
+                    className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">{s.symbol}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{s.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {s.instrumentName} · {s.timeframe.toUpperCase()} · {s.strategy}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {new Date(s.createdAt).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        ${s.initialBalance?.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -887,32 +1031,44 @@ const Backtest = () => {
     const pnl = balance - (currentSession.initialBalance || 10000);
     const pnlPositive = pnl >= 0;
 
+    // ── Theme color helpers ──
+    const theme = {
+      bg:        isDark ? "#131722" : "#f0f3fa",
+      surface:   isDark ? "#1e222d" : "#ffffff",
+      border:    isDark ? "#2a2e39" : "#e1ecf2",
+      text:      isDark ? "#d1d4dc" : "#131722",
+      textMuted: isDark ? "#787b86" : "#787b86",
+      textFaint: isDark ? "#363c4e" : "#b2b5be",
+      up:        "#089981",
+      down:      "#f23645",
+    };
+
     return (
       <div
         className="-mx-6 -my-6 flex-1 flex flex-col overflow-hidden"
-        style={{ background: "#f0f3fa", color: "#131722" }}
+        style={{ background: theme.bg, color: theme.text }}
       >
         {/* ── Top bar — TradingView light toolbar style ── */}
         <div
           className="flex items-center justify-between px-4 py-1.5 flex-shrink-0 border-b"
-          style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
+          style={{ background: theme.surface, borderColor: theme.border }}
         >
           <div className="flex items-center space-x-4 min-w-0">
             <button
               onClick={() => setCurrentView("sessions")}
               className="text-xs transition-colors flex-shrink-0"
-              style={{ color: "#787b86" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#131722")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#787b86")}
+              style={{ color: theme.textMuted }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = theme.text)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = theme.textMuted)}
             >
               ← Sessions
             </button>
-            <div className="h-4 w-px flex-shrink-0" style={{ background: "#e1ecf2" }} />
+            <div className="h-4 w-px flex-shrink-0" style={{ background: theme.border }} />
             <div className="flex items-baseline space-x-2 min-w-0">
-              <span className="font-bold text-sm" style={{ color: "#131722" }}>
+              <span className="font-bold text-sm" style={{ color: theme.text }}>
                 {currentSession.instrument?.symbol}
               </span>
-              <span className="text-xs hidden sm:block truncate" style={{ color: "#787b86" }}>
+              <span className="text-xs hidden sm:block truncate" style={{ color: theme.textMuted }}>
                 {currentSession.instrument?.name}
               </span>
               <span className="text-xs hidden md:block" style={{ color: "#b2b5be" }}>
@@ -922,7 +1078,7 @@ const Backtest = () => {
             {currentPrice > 0 && (
               <span
                 className="font-mono font-semibold text-base flex-shrink-0"
-                style={{ color: "#131722" }}
+                style={{ color: theme.text }}
               >
                 ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
@@ -931,13 +1087,13 @@ const Backtest = () => {
 
           <div className="flex items-center space-x-5 text-xs flex-shrink-0">
             <div>
-              <span style={{ color: "#787b86" }}>Balance </span>
-              <span className="font-semibold" style={{ color: "#131722" }}>
+              <span style={{ color: theme.textMuted }}>Balance </span>
+              <span className="font-semibold" style={{ color: theme.text }}>
                 ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div>
-              <span style={{ color: "#787b86" }}>P&amp;L </span>
+              <span style={{ color: theme.textMuted }}>P&amp;L </span>
               <span
                 className="font-semibold"
                 style={{ color: pnlPositive ? "#089981" : "#f23645" }}
@@ -951,7 +1107,7 @@ const Backtest = () => {
         {/* ── Chart toolbar — TradingView-style light toolbar ── */}
         <div
           className="flex items-center px-3 py-1 flex-shrink-0 border-b flex-wrap"
-          style={{ background: "#ffffff", borderColor: "#e1ecf2", gap: "2px" }}
+          style={{ background: theme.surface, borderColor: theme.border, gap: "2px" }}
         >
           {/* Timeframe buttons */}
           {["1m", "5m", "15m", "30m", "1h", "4h", "1d"].map((tf) => (
@@ -963,17 +1119,17 @@ const Backtest = () => {
               style={
                 timeframe === tf
                   ? { background: "#e8f0fe", color: "#1E53E5", borderRadius: 3 }
-                  : { color: "#787b86" }
+                  : { color: theme.textMuted }
               }
               onMouseEnter={(e) => {
                 if (timeframe !== tf) {
-                  e.currentTarget.style.color = "#131722";
-                  e.currentTarget.style.background = "#f0f3fa";
+                  e.currentTarget.style.color = theme.text;
+                  e.currentTarget.style.background = theme.bg;
                 }
               }}
               onMouseLeave={(e) => {
                 if (timeframe !== tf) {
-                  e.currentTarget.style.color = "#787b86";
+                  e.currentTarget.style.color = theme.textMuted;
                   e.currentTarget.style.background = "transparent";
                 }
               }}
@@ -982,7 +1138,7 @@ const Backtest = () => {
             </button>
           ))}
 
-          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: "#e1ecf2" }} />
+          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
 
           {/* ── Replay controls ── */}
 
@@ -1003,13 +1159,13 @@ const Backtest = () => {
             disabled={isLoadingData || !chartData.length || currentCandle <= 0}
             title="Previous candle"
             className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
-            style={{ color: "#787b86" }}
+            style={{ color: theme.textMuted }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#131722";
-              e.currentTarget.style.background = "#f0f3fa";
+              e.currentTarget.style.color = theme.text;
+              e.currentTarget.style.background = theme.bg;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#787b86";
+              e.currentTarget.style.color = theme.textMuted;
               e.currentTarget.style.background = "transparent";
             }}
           >
@@ -1023,13 +1179,13 @@ const Backtest = () => {
             disabled={isLoadingData || !chartData.length || currentCandle >= chartData.length - 1}
             title="Next candle"
             className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
-            style={{ color: "#787b86" }}
+            style={{ color: theme.textMuted }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#131722";
-              e.currentTarget.style.background = "#f0f3fa";
+              e.currentTarget.style.color = theme.text;
+              e.currentTarget.style.background = theme.bg;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#787b86";
+              e.currentTarget.style.color = theme.textMuted;
               e.currentTarget.style.background = "transparent";
             }}
           >
@@ -1043,20 +1199,20 @@ const Backtest = () => {
             disabled={isLoadingData}
             title="Reset to start"
             className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0"
-            style={{ color: "#787b86" }}
+            style={{ color: theme.textMuted }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#131722";
-              e.currentTarget.style.background = "#f0f3fa";
+              e.currentTarget.style.color = theme.text;
+              e.currentTarget.style.background = theme.bg;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#787b86";
+              e.currentTarget.style.color = theme.textMuted;
               e.currentTarget.style.background = "transparent";
             }}
           >
             <RotateCcw className="w-3 h-3" />
           </button>
 
-          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: "#e1ecf2" }} />
+          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
 
           {/* ── Cut by date ── */}
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -1067,8 +1223,8 @@ const Backtest = () => {
               onChange={(e) => setSeekDate(e.target.value)}
               className="text-xs rounded px-1.5 py-0.5 border outline-none"
               style={{
-                background: "#ffffff",
-                color: "#131722",
+                background: theme.surface,
+                color: theme.text,
                 borderColor: "#d1d4dc",
                 width: 120,
               }}
@@ -1091,14 +1247,14 @@ const Backtest = () => {
             </button>
           </div>
 
-          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: "#e1ecf2" }} />
+          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
 
-          {/* Speed + candle counter */}
+          {/* Speed */}
           <select
             value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
             className="text-xs rounded px-2 py-1 border flex-shrink-0"
-            style={{ background: "#ffffff", color: "#131722", borderColor: "#d1d4dc" }}
+            style={{ background: theme.surface, color: theme.text, borderColor: "#d1d4dc" }}
           >
             <option value={0.5}>0.5×</option>
             <option value={1}>1×</option>
@@ -1107,7 +1263,7 @@ const Backtest = () => {
             <option value={8}>8×</option>
           </select>
 
-          <div className="h-4 w-px flex-shrink-0" style={{ background: "#e1ecf2" }} />
+          <div className="h-4 w-px flex-shrink-0" style={{ background: theme.border }} />
 
           {/* Indicators button + dropdown */}
           <div className="relative flex-shrink-0 ml-1" ref={indicatorPanelRef}>
@@ -1117,17 +1273,17 @@ const Backtest = () => {
               style={
                 showIndicatorPanel
                   ? { background: "#e8f0fe", color: "#1E53E5", borderRadius: 3 }
-                  : { color: "#787b86" }
+                  : { color: theme.textMuted }
               }
               onMouseEnter={(e) => {
                 if (!showIndicatorPanel) {
-                  e.currentTarget.style.color = "#131722";
-                  e.currentTarget.style.background = "#f0f3fa";
+                  e.currentTarget.style.color = theme.text;
+                  e.currentTarget.style.background = theme.bg;
                 }
               }}
               onMouseLeave={(e) => {
                 if (!showIndicatorPanel) {
-                  e.currentTarget.style.color = "#787b86";
+                  e.currentTarget.style.color = theme.textMuted;
                   e.currentTarget.style.background = "transparent";
                 }
               }}
@@ -1141,11 +1297,11 @@ const Backtest = () => {
             {showIndicatorPanel && (
               <div
                 className="absolute left-0 top-full mt-1 rounded-lg shadow-xl border z-50 py-2 min-w-[200px]"
-                style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
+                style={{ background: theme.surface, borderColor: theme.border }}
               >
                 <p
                   className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider border-b"
-                  style={{ color: "#b2b5be", borderColor: "#e1ecf2" }}
+                  style={{ color: "#b2b5be", borderColor: theme.border }}
                 >
                   Add Indicator
                 </p>
@@ -1160,14 +1316,14 @@ const Backtest = () => {
                     onClick={() => toggleIndicator(key)}
                     className="w-full flex items-center px-3 py-2.5 text-left transition-colors"
                     style={{ background: "transparent" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f3fa")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = theme.bg)}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     {/* Color swatch / checkmark */}
                     <span
                       className="flex items-center justify-center w-5 h-5 rounded mr-3 flex-shrink-0 text-xs font-bold"
                       style={{
-                        background: indicators[key] ? color : "#f0f3fa",
+                        background: indicators[key] ? color : theme.bg,
                         color: indicators[key] ? "#fff" : "#b2b5be",
                       }}
                     >
@@ -1176,7 +1332,7 @@ const Backtest = () => {
                     <span className="flex-1 min-w-0">
                       <span
                         className="block text-xs font-semibold"
-                        style={{ color: indicators[key] ? color : "#131722" }}
+                        style={{ color: indicators[key] ? color : theme.text }}
                       >
                         {label}
                       </span>
@@ -1200,13 +1356,13 @@ const Backtest = () => {
               {isLoadingData ? (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center"
-                  style={{ background: "#f0f3fa" }}
+                  style={{ background: theme.bg }}
                 >
                   <Loader2
                     className="w-8 h-8 animate-spin mb-3"
                     style={{ color: "#1E53E5" }}
                   />
-                  <p className="text-sm" style={{ color: "#787b86" }}>
+                  <p className="text-sm" style={{ color: theme.textMuted }}>
                     Loading real market data…
                   </p>
                   <p className="text-xs mt-1" style={{ color: "#b2b5be" }}>
@@ -1216,7 +1372,7 @@ const Backtest = () => {
               ) : chartData.length === 0 ? (
                 <div
                   className="absolute inset-0 flex items-center justify-center text-sm"
-                  style={{ color: "#b2b5be", background: "#f0f3fa" }}
+                  style={{ color: "#b2b5be", background: theme.bg }}
                 >
                   No data loaded yet
                 </div>
@@ -1228,52 +1384,242 @@ const Backtest = () => {
                     indicators={indicators}
                     onCandleSeek={handleCandleSeek}
                     isPlaying={isPlaying}
+                    isDark={isDark}
                   />
                 </ChartErrorBoundary>
               )}
-            </div>
 
-            {/* Buy / Sell bar */}
-            <div
-              className="flex flex-shrink-0 border-t"
-              style={{ borderColor: "#e1ecf2" }}
-            >
-              <button
-                onClick={() => { setOrderSide("buy"); setShowOrderPanel(true); }}
-                className="flex-1 flex items-center justify-center py-2.5 text-sm font-bold transition-colors"
-                style={{
-                  background: "#ffffff",
-                  color: "#089981",
-                  borderRight: "1px solid #e1ecf2",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(8,153,129,0.07)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
-              >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                BUY / LONG
-              </button>
-              <button
-                onClick={() => { setOrderSide("sell"); setShowOrderPanel(true); }}
-                className="flex-1 flex items-center justify-center py-2.5 text-sm font-bold transition-colors"
-                style={{ background: "#ffffff", color: "#f23645" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(242,54,69,0.07)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
-              >
-                <TrendingDown className="w-4 h-4 mr-2" />
-                SELL / SHORT
-              </button>
+              {/* Floating Buy / Sell buttons — bottom-left of chart */}
+              {!isLoadingData && chartData.length > 0 && (
+                <div className="absolute bottom-4 left-3 z-20 flex flex-col gap-2">
+                  <button
+                    onClick={() => { setOrderSide("buy"); setShowOrderPanel(true); }}
+                    className="px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-colors"
+                    style={{ background: "#089981", color: "#fff", minWidth: 64 }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#067a68")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#089981")}
+                  >
+                    <TrendingUp className="w-3.5 h-3.5 inline mr-1" />
+                    BUY
+                  </button>
+                  <button
+                    onClick={() => { setOrderSide("sell"); setShowOrderPanel(true); }}
+                    className="px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-colors"
+                    style={{ background: "#f23645", color: "#fff", minWidth: 64 }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#c42c3a")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#f23645")}
+                  >
+                    <TrendingDown className="w-3.5 h-3.5 inline mr-1" />
+                    SELL
+                  </button>
+                </div>
+              )}
+
+              {/* ── Order panel — floats over chart left side ── */}
+              {showOrderPanel && (
+                <div
+                  className="absolute left-0 top-0 bottom-0 z-30 flex flex-col shadow-2xl border-r overflow-y-auto"
+                  style={{
+                    width: 280,
+                    background: theme.surface,
+                    borderColor: theme.border,
+                  }}
+                >
+                  {/* Header: Sell | spread | Buy */}
+                  <div className="flex flex-shrink-0" style={{ borderBottom: `1px solid ${theme.border}` }}>
+                    <button
+                      onClick={() => setOrderSide("sell")}
+                      className="flex-1 p-3 text-left transition-colors"
+                      style={{
+                        background: orderSide === "sell" ? "#f23645" : theme.bg,
+                        color: orderSide === "sell" ? "#fff" : theme.text,
+                      }}
+                    >
+                      <div className="text-xs font-medium mb-0.5">Sell</div>
+                      <div className="text-lg font-bold font-mono">{currentPrice > 0 ? (currentPrice - (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
+                    </button>
+                    <div className="flex flex-col items-center justify-center px-2" style={{ background: isDark ? "#131722" : "#e8e8e8", minWidth: 40 }}>
+                      <span className="text-xs font-medium" style={{ color: theme.textMuted }}>
+                        {((currentSession?.instrument?.tickSize || 0.25) * 2).toFixed(3)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setOrderSide("buy")}
+                      className="flex-1 p-3 text-right transition-colors"
+                      style={{
+                        background: orderSide === "buy" ? "#1E53E5" : theme.bg,
+                        color: orderSide === "buy" ? "#fff" : "#1E53E5",
+                      }}
+                    >
+                      <div className="text-xs font-medium mb-0.5">Buy</div>
+                      <div className="text-lg font-bold font-mono">{currentPrice > 0 ? (currentPrice + (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
+                    </button>
+                  </div>
+
+                  {/* Order type tabs */}
+                  <div className="flex flex-shrink-0 border-b" style={{ borderColor: theme.border }}>
+                    {["market", "limit", "stop", "stopLimit"].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setOrderType(type)}
+                        className="flex-1 py-2 text-xs font-medium transition-colors border-b-2"
+                        style={{
+                          color: orderType === type ? theme.text : "#787b86",
+                          borderBottomColor: orderType === type ? "#1E53E5" : "transparent",
+                          background: "transparent",
+                        }}
+                      >
+                        {type === "stopLimit" ? "Stop Limit" : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex-1 p-3 space-y-4 overflow-y-auto">
+                    {/* Size input */}
+                    <div>
+                      <label className="block text-xs mb-1.5 font-medium" style={{ color: theme.textMuted }}>Units</label>
+                      <div className="flex rounded border" style={{ borderColor: "#1E53E5", background: theme.bg }}>
+                        <input
+                          type="number"
+                          value={orderSize}
+                          onChange={(e) => setOrderSize(Math.max(1, Number(e.target.value)))}
+                          min="1"
+                          className="flex-1 px-3 py-2 text-sm bg-transparent outline-none"
+                          style={{ color: theme.text }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Exits section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold" style={{ color: theme.text }}>Exits</span>
+                      </div>
+
+                      {/* Take Profit */}
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs" style={{ color: "#787b86" }}>Take profit, price</span>
+                          <button
+                            onClick={() => setUseTakeProfit((v) => !v)}
+                            className="w-10 h-5 rounded-full transition-colors relative flex-shrink-0"
+                            style={{ background: useTakeProfit ? "#089981" : (isDark ? "#363c4e" : "#d1d4dc") }}
+                          >
+                            <span
+                              className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                              style={{ left: useTakeProfit ? "calc(100% - 18px)" : 2 }}
+                            />
+                          </button>
+                        </div>
+                        {useTakeProfit && (
+                          <input
+                            type="number"
+                            value={takeProfit}
+                            onChange={(e) => setTakeProfit(e.target.value)}
+                            placeholder="Take profit price"
+                            step={currentSession?.instrument?.tickSize || 0.25}
+                            className="w-full px-3 py-2 rounded text-sm border outline-none"
+                            style={{
+                              background: theme.bg,
+                              borderColor: theme.border,
+                              color: theme.text,
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Stop Loss */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs" style={{ color: "#787b86" }}>Stop loss, price</span>
+                          <button
+                            onClick={() => setUseStopLoss((v) => !v)}
+                            className="w-10 h-5 rounded-full transition-colors relative flex-shrink-0"
+                            style={{ background: useStopLoss ? "#f23645" : (isDark ? "#363c4e" : "#d1d4dc") }}
+                          >
+                            <span
+                              className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                              style={{ left: useStopLoss ? "calc(100% - 18px)" : 2 }}
+                            />
+                          </button>
+                        </div>
+                        {useStopLoss && (
+                          <input
+                            type="number"
+                            value={stopLoss}
+                            onChange={(e) => setStopLoss(e.target.value)}
+                            placeholder="Stop loss price"
+                            step={currentSession?.instrument?.tickSize || 0.25}
+                            className="w-full px-3 py-2 rounded text-sm border outline-none"
+                            style={{
+                              background: theme.bg,
+                              borderColor: theme.border,
+                              color: theme.text,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Order info */}
+                    <div className="pt-2 border-t" style={{ borderColor: theme.border }}>
+                      <p className="text-sm font-semibold mb-2" style={{ color: theme.text }}>Order info</p>
+                      <div className="flex justify-between text-xs" style={{ color: "#787b86" }}>
+                        <span>Tick value</span>
+                        <span className="font-semibold" style={{ color: theme.text }}>
+                          {currentSession?.instrument?.tickValue?.toFixed(2) || "—"} USD
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
+                        <span>Est. value</span>
+                        <span className="font-semibold" style={{ color: theme.text }}>
+                          ${(currentPrice * orderSize).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submit + Close */}
+                  <div className="p-3 flex-shrink-0 space-y-2" style={{ borderTop: `1px solid ${theme.border}` }}>
+                    <button
+                      onClick={executeOrder}
+                      className="w-full py-3 rounded-lg text-sm font-bold transition-colors"
+                      style={{
+                        background: orderSide === "buy" ? "#1E53E5" : "#f23645",
+                        color: "#ffffff",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      {orderSide === "buy" ? "Buy" : "Sell"}<br />
+                      <span className="text-xs font-normal opacity-90">
+                        {orderSize} {currentSession?.instrument?.symbol} {orderType.toUpperCase()}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setShowOrderPanel(false)}
+                      className="w-full py-2 rounded text-xs transition-colors"
+                      style={{ color: "#787b86", background: theme.bg }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Side panel: positions + trade history */}
           <div
             className="w-60 flex flex-col flex-shrink-0 border-l overflow-hidden"
-            style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
+            style={{ background: theme.surface, borderColor: theme.border }}
           >
             {/* Open positions */}
             <div
               className="p-3 border-b flex-shrink-0"
-              style={{ borderColor: "#e1ecf2" }}
+              style={{ borderColor: theme.border }}
             >
               <p
                 className="text-xs font-semibold uppercase tracking-wider mb-2"
@@ -1291,7 +1637,7 @@ const Backtest = () => {
                     <div
                       key={pos.id}
                       className="rounded p-2 text-xs border"
-                      style={{ background: "#f0f3fa", borderColor: "#e1ecf2" }}
+                      style={{ background: theme.bg, borderColor: theme.border }}
                     >
                       <div className="flex justify-between mb-0.5">
                         <span
@@ -1306,9 +1652,25 @@ const Backtest = () => {
                           {pos.currentPnL >= 0 ? "+" : ""}${pos.currentPnL.toFixed(2)}
                         </span>
                       </div>
-                      <div style={{ color: "#787b86" }}>
+                      <div style={{ color: theme.textMuted }}>
                         Entry ${pos.entryPrice.toFixed(2)}
                       </div>
+                      <button
+                        onClick={() => {
+                          const candle = chartData[currentCandle];
+                          const exitPrice = candle?.close || currentPrice;
+                          const pnl = pos.side === "buy"
+                            ? (exitPrice - pos.entryPrice) * pos.size * pos.tickRatio
+                            : (pos.entryPrice - exitPrice) * pos.size * pos.tickRatio;
+                          setPositions((prev) => prev.filter((p) => p.id !== pos.id));
+                          setBalance((b) => b + pnl);
+                          setTrades((t) => [...t, { ...pos, exitPrice, pnl, exitReason: "Manual" }]);
+                        }}
+                        className="text-xs mt-1 w-full text-center py-0.5 rounded"
+                        style={{ background: theme.border, color: "#787b86" }}
+                      >
+                        Close
+                      </button>
                     </div>
                   ))
                 )}
@@ -1336,7 +1698,7 @@ const Backtest = () => {
                       <div
                         key={t.id}
                         className="rounded p-2 text-xs border"
-                        style={{ background: "#f0f3fa", borderColor: "#e1ecf2" }}
+                        style={{ background: theme.bg, borderColor: theme.border }}
                       >
                         <div className="flex justify-between mb-0.5">
                           <span
@@ -1349,7 +1711,7 @@ const Backtest = () => {
                             {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
                           </span>
                         </div>
-                        <div style={{ color: "#787b86" }}>
+                        <div style={{ color: theme.textMuted }}>
                           {t.entryPrice.toFixed(2)} → {t.exitPrice.toFixed(2)}
                         </div>
                       </div>
@@ -1359,108 +1721,6 @@ const Backtest = () => {
             </div>
           </div>
         </div>
-
-        {/* ── Order entry modal ── */}
-        {showOrderPanel && (
-          <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(19,23,34,0.6)" }}>
-            <div
-              className="rounded-lg p-6 w-80 border shadow-xl"
-              style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
-            >
-              <h3
-                className="text-base font-semibold mb-4"
-                style={{
-                  color: orderSide === "buy" ? "#089981" : "#f23645",
-                }}
-              >
-                {orderSide === "buy" ? "▲ Buy / Long" : "▼ Sell / Short"}
-              </h3>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: "#787b86" }}>
-                    Position Size
-                  </label>
-                  <input
-                    type="number"
-                    value={orderSize}
-                    onChange={(e) => setOrderSize(Number(e.target.value))}
-                    min="1"
-                    className="w-full px-3 py-2 rounded text-sm border focus:outline-none"
-                    style={{
-                      background: "#f0f3fa",
-                      borderColor: "#d1d4dc",
-                      color: "#131722",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: "#787b86" }}>
-                    Stop Loss
-                  </label>
-                  <input
-                    type="number"
-                    value={stopLoss}
-                    onChange={(e) => setStopLoss(e.target.value)}
-                    step="0.01"
-                    placeholder="Optional"
-                    className="w-full px-3 py-2 rounded text-sm border focus:outline-none"
-                    style={{
-                      background: "#f0f3fa",
-                      borderColor: "#d1d4dc",
-                      color: "#131722",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: "#787b86" }}>
-                    Take Profit
-                  </label>
-                  <input
-                    type="number"
-                    value={takeProfit}
-                    onChange={(e) => setTakeProfit(e.target.value)}
-                    step="0.01"
-                    placeholder="Optional"
-                    className="w-full px-3 py-2 rounded text-sm border focus:outline-none"
-                    style={{
-                      background: "#f0f3fa",
-                      borderColor: "#d1d4dc",
-                      color: "#131722",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-2 mt-5">
-                <button
-                  onClick={executeOrder}
-                  className="flex-1 py-2 px-4 rounded text-sm font-bold transition-opacity hover:opacity-80"
-                  style={{
-                    background: orderSide === "buy"
-                      ? "rgba(38,166,154,0.2)"
-                      : "rgba(239,83,80,0.2)",
-                    color: orderSide === "buy" ? "#26a69a" : "#ef5350",
-                    border: `1px solid ${orderSide === "buy" ? "#26a69a" : "#ef5350"}`,
-                  }}
-                >
-                  Execute {orderSide.toUpperCase()}
-                </button>
-                <button
-                  onClick={() => setShowOrderPanel(false)}
-                  className="flex-1 py-2 px-4 rounded text-sm transition-opacity hover:opacity-80"
-                  style={{
-                    background: "#f0f3fa",
-                    color: "#787b86",
-                    border: "1px solid #d1d4dc",
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

@@ -9,7 +9,7 @@ import {
 } from "lightweight-charts";
 
 // TradingView light theme — exact values from TradingView's default "White" theme
-const TV = {
+const TV_LIGHT = {
   bg: "#ffffff",
   bgAlt: "#f0f3fa",
   text: "#131722",
@@ -22,6 +22,23 @@ const TV = {
   downBorder: "#f23645",
   ema20: "#f7a600",
   ema50: "#1E53E5",
+  volUp: "rgba(8,153,129,0.3)",
+  volDown: "rgba(242,54,69,0.3)",
+};
+
+const TV_DARK = {
+  bg: "#131722",
+  bgAlt: "#1e222d",
+  text: "#d1d4dc",
+  textMuted: "#787b86",
+  grid: "#2a2e39",
+  border: "#363c4e",
+  up: "#089981",
+  down: "#f23645",
+  upBorder: "#089981",
+  downBorder: "#f23645",
+  ema20: "#f7a600",
+  ema50: "#2962ff",
   volUp: "rgba(8,153,129,0.3)",
   volDown: "rgba(242,54,69,0.3)",
 };
@@ -56,9 +73,10 @@ const BacktestChart = ({
   candleData,
   visibleCount,
   trades = [],
-  indicators = { ema20: false, ema50: false, volume: true },
+  indicators = { ema20: false, ema50: false, volume: false },
   onCandleSeek,
   isPlaying = false,
+  isDark = false,
 }) => {
   const wrapperRef = useRef();
   const chartRef = useRef(null);
@@ -69,6 +87,7 @@ const BacktestChart = ({
   const windowRef = useRef(50); // candles visible in the default viewport
   const indicatorsRef = useRef(indicators);
   const onCandleSeekRef = useRef(onCandleSeek);
+  const isDarkRef = useRef(isDark);
 
   // OHLCV bar — direct DOM writes for 60fps crosshair, no React re-render
   const ohlcBarRef = useRef();
@@ -81,6 +100,7 @@ const BacktestChart = ({
   // Keep refs current without adding to chart creation deps
   useEffect(() => { indicatorsRef.current = indicators; });
   useEffect(() => { onCandleSeekRef.current = onCandleSeek; });
+  useEffect(() => { isDarkRef.current = isDark; });
 
   // ── Indicator visibility — runs when indicator toggles change ──
   useEffect(() => {
@@ -90,9 +110,28 @@ const BacktestChart = ({
     if (vol)   vol.applyOptions({ visible: indicators.volume });
   }, [indicators.ema20, indicators.ema50, indicators.volume]);
 
+  // ── Theme change — update chart colors when dark/light mode switches ──
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const T = isDark ? TV_DARK : TV_LIGHT;
+    chart.applyOptions({
+      layout: { background: { color: T.bg }, textColor: T.text },
+      grid: { vertLines: { color: T.grid }, horzLines: { color: T.grid } },
+      rightPriceScale: { borderColor: T.border, textColor: T.textMuted },
+      timeScale: { borderColor: T.border, textColor: T.textMuted },
+      crosshair: {
+        vertLine: { color: T.border },
+        horzLine: { color: T.border },
+      },
+    });
+  }, [isDark]);
+
   // ── Chart creation — runs only when candleData changes (new session / new timeframe) ──
   useEffect(() => {
     if (!wrapperRef.current || !candleData?.length) return;
+
+    const T = isDarkRef.current ? TV_DARK : TV_LIGHT;
 
     ema20Ref.current = calcEMAIndexed(candleData, 20);
     ema50Ref.current = calcEMAIndexed(candleData, 50);
@@ -100,14 +139,14 @@ const BacktestChart = ({
     const chart = createChart(wrapperRef.current, {
       autoSize: true,
       layout: {
-        background: { color: TV.bg },
-        textColor: TV.text,
+        background: { color: T.bg },
+        textColor: T.text,
         fontSize: 11,
         fontFamily: "'Trebuchet MS', Roboto, sans-serif",
       },
       grid: {
-        vertLines: { color: TV.grid, style: 0 },
-        horzLines: { color: TV.grid, style: 0 },
+        vertLines: { color: T.grid, style: 0 },
+        horzLines: { color: T.grid, style: 0 },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
@@ -115,18 +154,18 @@ const BacktestChart = ({
         horzLine: { color: "#758696", width: 1, style: 1, labelBackgroundColor: "#2962ff" },
       },
       rightPriceScale: {
-        borderColor: TV.border,
+        borderColor: T.border,
         scaleMargins: { top: 0.08, bottom: 0.25 },
-        textColor: TV.textMuted,
+        textColor: T.textMuted,
       },
       timeScale: {
-        borderColor: TV.border,
+        borderColor: T.border,
         timeVisible: true,
         secondsVisible: false,
         barSpacing: 10,
         minBarSpacing: 3,
         rightOffset: 5,
-        textColor: TV.textMuted,
+        textColor: T.textMuted,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -135,12 +174,12 @@ const BacktestChart = ({
 
     // v5 API: chart.addSeries(SeriesType, options)
     const main = chart.addSeries(CandlestickSeries, {
-      upColor: TV.up,
-      downColor: TV.down,
-      borderUpColor: TV.upBorder,
-      borderDownColor: TV.downBorder,
-      wickUpColor: TV.up,
-      wickDownColor: TV.down,
+      upColor: T.up,
+      downColor: T.down,
+      borderUpColor: T.upBorder,
+      borderDownColor: T.downBorder,
+      wickUpColor: T.up,
+      wickDownColor: T.down,
     });
 
     const vol = chart.addSeries(HistogramSeries, {
@@ -152,7 +191,7 @@ const BacktestChart = ({
     });
 
     const ema20s = chart.addSeries(LineSeries, {
-      color: TV.ema20,
+      color: T.ema20,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -161,7 +200,7 @@ const BacktestChart = ({
     });
 
     const ema50s = chart.addSeries(LineSeries, {
-      color: TV.ema50,
+      color: T.ema50,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -171,6 +210,12 @@ const BacktestChart = ({
 
     seriesRef.current = { main, vol, ema20s, ema50s };
 
+    // Apply initial visibility so series never flash visible then disappear
+    const initT = indicatorsRef.current;
+    ema20s.applyOptions({ visible: initT.ema20 });
+    ema50s.applyOptions({ visible: initT.ema50 });
+    vol.applyOptions({ visible: initT.volume });
+
     const count = Math.min(visibleCount || 1, candleData.length);
     const slice = candleData.slice(0, count);
 
@@ -179,7 +224,7 @@ const BacktestChart = ({
       slice.map((d) => ({
         time: d.time,
         value: d.volume || 0,
-        color: d.close >= d.open ? TV.volUp : TV.volDown,
+        color: d.close >= d.open ? T.volUp : T.volDown,
       }))
     );
     ema20s.setData(ema20Ref.current.slice(0, count).filter(Boolean));
@@ -208,7 +253,7 @@ const BacktestChart = ({
             {
               time: nearest(eT).time,
               position: trade.direction === "long" ? "belowBar" : "aboveBar",
-              color: trade.direction === "long" ? TV.up : TV.down,
+              color: trade.direction === "long" ? T.up : T.down,
               shape: trade.direction === "long" ? "arrowUp" : "arrowDown",
               text: `${trade.direction === "long" ? "B" : "S"} ${trade.instrument}`,
               size: 1,
@@ -216,7 +261,7 @@ const BacktestChart = ({
             {
               time: nearest(xT).time,
               position: trade.direction === "long" ? "aboveBar" : "belowBar",
-              color: trade.pnl > 0 ? TV.up : TV.down,
+              color: trade.pnl > 0 ? T.up : T.down,
               shape: trade.direction === "long" ? "arrowDown" : "arrowUp",
               text: `${trade.pnl > 0 ? "+" : ""}$${trade.pnl.toFixed(2)}`,
               size: 1,
@@ -249,7 +294,8 @@ const BacktestChart = ({
       const d = param.seriesData?.get(main);
       if (!d) return;
       const isUp = d.close >= d.open;
-      const color = isUp ? TV.up : TV.down;
+      const TT = isDarkRef.current ? TV_DARK : TV_LIGHT;
+      const color = isUp ? TT.up : TT.down;
       const changePct = (((d.close - d.open) / d.open) * 100).toFixed(2);
       ohlcBarRef.current.style.opacity = "1";
       const fmt = (v) =>
@@ -280,6 +326,7 @@ const BacktestChart = ({
     const { main, vol, ema20s, ema50s } = seriesRef.current;
     if (!main || !candleData?.length) return;
 
+    const T = isDarkRef.current ? TV_DARK : TV_LIGHT;
     const target = Math.min(visibleCount || 1, candleData.length);
     const last = lastRef.current;
 
@@ -290,7 +337,7 @@ const BacktestChart = ({
         slice.map((d) => ({
           time: d.time,
           value: d.volume || 0,
-          color: d.close >= d.open ? TV.volUp : TV.volDown,
+          color: d.close >= d.open ? T.volUp : T.volDown,
         }))
       );
       ema20s.setData(ema20Ref.current.slice(0, target).filter(Boolean));
@@ -310,7 +357,7 @@ const BacktestChart = ({
       vol.update({
         time: d.time,
         value: d.volume || 0,
-        color: d.close >= d.open ? TV.volUp : TV.volDown,
+        color: d.close >= d.open ? T.volUp : T.volDown,
       });
       const e20 = ema20Ref.current[i];
       if (e20) ema20s.update(e20);
@@ -324,12 +371,12 @@ const BacktestChart = ({
   }, [visibleCount, candleData, isPlaying]);
 
   return (
-    <div className="relative w-full h-full" style={{ background: TV.bg }}>
+    <div className="relative w-full h-full" style={{ background: isDark ? TV_DARK.bg : TV_LIGHT.bg }}>
       {/* OHLCV info bar — top-left, TradingView style */}
       <div
         ref={ohlcBarRef}
         className="absolute top-2 left-3 z-10 flex items-center gap-3 text-xs pointer-events-none select-none"
-        style={{ opacity: 0, color: TV.textMuted, fontFamily: "'Trebuchet MS', Roboto, sans-serif" }}
+        style={{ opacity: 0, color: isDark ? TV_DARK.textMuted : TV_LIGHT.textMuted, fontFamily: "'Trebuchet MS', Roboto, sans-serif" }}
       >
         <span>O&thinsp;<span ref={ohlcOpenRef} style={{ fontWeight: 600 }} /></span>
         <span>H&thinsp;<span ref={ohlcHighRef} style={{ fontWeight: 600 }} /></span>
@@ -341,7 +388,7 @@ const BacktestChart = ({
       {/* Click-to-seek hint — bottom right, fades on hover */}
       <div
         className="absolute bottom-8 right-3 z-10 text-xs pointer-events-none select-none"
-        style={{ color: TV.border, fontFamily: "'Trebuchet MS', Roboto, sans-serif" }}
+        style={{ color: isDark ? TV_DARK.border : TV_LIGHT.border, fontFamily: "'Trebuchet MS', Roboto, sans-serif" }}
       >
         Click candle to set replay point
       </div>
