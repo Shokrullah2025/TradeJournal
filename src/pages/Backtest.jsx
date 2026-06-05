@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Component } from "react";
 import {
   Play,
   Pause,
@@ -18,9 +18,44 @@ import {
   Save,
   AlertTriangle,
   Info,
+  Loader2,
+  Scissors,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
 import { useBacktest } from "../context/BacktestContext";
+import BacktestChart from "../components/trades/BacktestChart";
+import { fetchMarketCandles } from "../utils/marketData";
 import toast from "react-hot-toast";
+
+class ChartErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-sm" style={{ background: "#f0f3fa", color: "#787b86" }}>
+          <p className="mb-1" style={{ color: "#f23645" }}>Chart error</p>
+          <p className="text-xs">{this.state.error.message}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// How many candles to pre-load so the viewport is full on first render
+function defaultWindowCandles(candles) {
+  if (!candles || candles.length < 2) return 44;
+  const sec = candles[1].time - candles[0].time;
+  if (sec <=    60) return 120; // 1m  → 2 h
+  if (sec <=   300) return  48; // 5m  → 4 h
+  if (sec <=   900) return  32; // 15m → 8 h
+  if (sec <=  1800) return  24; // 30m → 12 h
+  if (sec <=  3600) return  72; // 1h  → 3 d
+  if (sec <= 14400) return  42; // 4h  → 1 wk
+  return 44;                    // 1d  → 2 mo
+}
 
 // Market and instrument configurations
 const MARKET_CONFIG = {
@@ -61,32 +96,6 @@ const MARKET_CONFIG = {
         exchange: "NYMEX",
         tickSize: 0.01,
         tickValue: 10.0,
-      },
-    ],
-  },
-  crypto: {
-    name: "Cryptocurrency",
-    instruments: [
-      {
-        symbol: "BTCUSDT",
-        name: "Bitcoin / USDT",
-        exchange: "Binance",
-        tickSize: 0.01,
-        tickValue: 0.01,
-      },
-      {
-        symbol: "ETHUSDT",
-        name: "Ethereum / USDT",
-        exchange: "Binance",
-        tickSize: 0.01,
-        tickValue: 0.01,
-      },
-      {
-        symbol: "ADAUSDT",
-        name: "Cardano / USDT",
-        exchange: "Binance",
-        tickSize: 0.0001,
-        tickValue: 0.0001,
       },
     ],
   },
@@ -294,6 +303,26 @@ const Backtest = () => {
     }
   };
 
+  // Indicator visibility state — off by default, user opts in
+  const [indicators, setIndicators] = useState({ ema20: false, ema50: false, volume: false });
+  const [showIndicatorPanel, setShowIndicatorPanel] = useState(false);
+  const indicatorPanelRef = useRef(null);
+
+  const toggleIndicator = (key) =>
+    setIndicators((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  // Close indicator dropdown on outside click
+  useEffect(() => {
+    if (!showIndicatorPanel) return;
+    const handleClick = (e) => {
+      if (indicatorPanelRef.current && !indicatorPanelRef.current.contains(e.target)) {
+        setShowIndicatorPanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showIndicatorPanel]);
+
   // Chart and Trading States
   const [chartData, setChartData] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -306,78 +335,23 @@ const Backtest = () => {
   const [positions, setPositions] = useState([]);
   const [trades, setTrades] = useState([]);
   const [currentPrice, setCurrentPrice] = useState(0);
+  const [takeProfit, setTakeProfit] = useState("");
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const intervalRef = useRef(null);
 
-  // Generate sample OHLCV data based on selected instrument
-  const generateSampleData = (instrument, days = 30) => {
-    const data = [];
-    const now = new Date();
-    let basePrice;
-
-    // Set realistic base prices for different instruments
-    switch (instrument.symbol) {
-      case "NQ":
-        basePrice = 23400;
-        break;
-      case "ES":
-        basePrice = 5800;
-        break;
-      case "BTCUSDT":
-        basePrice = 95000;
-        break;
-      case "ETHUSDT":
-        basePrice = 3500;
-        break;
-      case "AAPL":
-        basePrice = 220;
-        break;
-      default:
-        basePrice = 100;
-    }
-
-    for (let i = days * 96; i >= 0; i--) {
-      const time = new Date(now - i * 15 * 60 * 1000);
-      const volatility = basePrice * 0.002;
-
-      const prevClose =
-        i === days * 96 ? basePrice : data[data.length - 1].close;
-      const open = prevClose + (Math.random() - 0.5) * volatility;
-      const change = (Math.random() - 0.5) * volatility;
-      const high = open + Math.abs(change) + Math.random() * volatility;
-      const low = open - Math.abs(change) - Math.random() * volatility;
-      const close = open + change;
-      const volume = Math.floor(Math.random() * 2000) + 500;
-
-      data.push({
-        time: time.toISOString(),
-        open: Number(open.toFixed(instrument.tickSize < 1 ? 2 : 0)),
-        high: Number(high.toFixed(instrument.tickSize < 1 ? 2 : 0)),
-        low: Number(low.toFixed(instrument.tickSize < 1 ? 2 : 0)),
-        close: Number(close.toFixed(instrument.tickSize < 1 ? 2 : 0)),
-        volume,
-      });
-    }
-
-    return data;
-  };
-
-  const handleCreateSession = () => {
-    // Validation with required fields
+  const handleCreateSession = async () => {
     if (
       !sessionName ||
       !selectedMarket ||
       !selectedInstrument ||
       !strategy ||
-      !setup ||
-      !riskRewardRatio
+      !setup
     ) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    // Use default balance if not provided
-    const balance = initialBalance || 100000;
-
+    const sessionBalance = initialBalance || 100000;
     const instrument = MARKET_CONFIG[selectedMarket].instruments.find(
       (inst) => inst.symbol === selectedInstrument
     );
@@ -386,12 +360,11 @@ const Backtest = () => {
       id: Date.now().toString(),
       name: sessionName,
       market: selectedMarket,
-      instrument: instrument,
-      initialBalance: balance,
-      // Trading details from individual states
-      strategy: strategy,
-      setup: setup,
-      riskRewardRatio: riskRewardRatio,
+      instrument,
+      initialBalance: sessionBalance,
+      strategy,
+      setup,
+      riskRewardRatio,
       timeframe,
       marketCondition,
       notes: notes || "",
@@ -400,150 +373,27 @@ const Backtest = () => {
       status: "active",
     };
 
-    // Generate chart data for the session
-    const data = generateSampleData(instrument);
-    setChartData(data);
-    setCurrentPrice(data[0]?.close || 0);
-    setBalance(balance);
+    setIsLoadingData(true);
     setCurrentSession(newSession);
     setCurrentView("backtest");
 
-    toast.success("Backtest session created successfully!");
-  };
-
-  // Chart rendering component
-  const renderCandlestickChart = () => {
-    if (!chartData.length)
-      return (
-        <div className="text-gray-400 text-center py-20">
-          No chart data available
-        </div>
+    try {
+      const candles = await fetchMarketCandles(
+        selectedMarket,
+        selectedInstrument,
+        timeframe,
       );
-
-    const visibleCandles = chartData.slice(0, currentCandle + 1);
-    const chartWidth = Math.max(visibleCandles.length * 8, 800);
-    const chartHeight = 400;
-    const padding = { top: 20, right: 50, bottom: 40, left: 50 };
-
-    // Calculate price range
-    const prices = visibleCandles.flatMap((d) => [d.high, d.low]);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice;
-    const priceBuffer = priceRange * 0.1;
-
-    const yScale = (price) => {
-      return (
-        chartHeight -
-        padding.bottom -
-        ((price - (minPrice - priceBuffer)) / (priceRange + 2 * priceBuffer)) *
-          (chartHeight - padding.top - padding.bottom)
-      );
-    };
-
-    return (
-      <div className="bg-gray-900 rounded-lg overflow-hidden">
-        <svg width="100%" height={chartHeight} className="bg-gray-900">
-          {/* Price Grid Lines */}
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-            const price =
-              minPrice - priceBuffer + (priceRange + 2 * priceBuffer) * ratio;
-            const y = yScale(price);
-            return (
-              <g key={ratio}>
-                <line
-                  x1={padding.left}
-                  y1={y}
-                  x2={chartWidth - padding.right}
-                  y2={y}
-                  stroke="#374151"
-                  strokeDasharray="2,2"
-                />
-                <text
-                  x={chartWidth - padding.right + 5}
-                  y={y + 4}
-                  fill="#9CA3AF"
-                  fontSize="12"
-                >
-                  {price.toFixed(2)}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Candlesticks */}
-          {visibleCandles.map((candle, index) => {
-            const candleWidth = 0.6; // 1/10 of original width (was 6)
-            const candleSpacing = 8; // Maintain consistent spacing
-            const x = padding.left + index * candleSpacing;
-            const isGreen = candle.close > candle.open;
-            const color = isGreen ? "#10B981" : "#EF4444";
-
-            const highY = yScale(candle.high);
-            const lowY = yScale(candle.low);
-            const openY = yScale(candle.open);
-            const closeY = yScale(candle.close);
-
-            const bodyTop = Math.min(openY, closeY);
-            const bodyHeight = Math.abs(closeY - openY);
-
-            // Center the wick and candle body
-            const wickX = x + candleSpacing / 2;
-            const bodyX = wickX - candleWidth / 2;
-
-            return (
-              <g key={index}>
-                {/* High-Low Wick */}
-                <line
-                  x1={wickX}
-                  y1={highY}
-                  x2={wickX}
-                  y2={lowY}
-                  stroke={color}
-                  strokeWidth="0.5"
-                />
-                {/* Candle Body */}
-                <rect
-                  x={bodyX}
-                  y={bodyTop}
-                  width={candleWidth}
-                  height={Math.max(bodyHeight, 1)}
-                  fill={color}
-                  stroke={color}
-                  strokeWidth="0.2"
-                >
-                  <title>{`Candle ${index + 1}\nOpen: $${candle.open.toFixed(
-                    2
-                  )}\nHigh: $${candle.high.toFixed(
-                    2
-                  )}\nLow: $${candle.low.toFixed(
-                    2
-                  )}\nClose: $${candle.close.toFixed(2)}\nChange: ${
-                    isGreen ? "+" : ""
-                  }${(
-                    ((candle.close - candle.open) / candle.open) *
-                    100
-                  ).toFixed(2)}%`}</title>
-                </rect>
-              </g>
-            );
-          })}
-
-          {/* Current Price Line */}
-          {currentPrice > 0 && (
-            <line
-              x1={padding.left}
-              y1={yScale(currentPrice)}
-              x2={chartWidth - padding.right}
-              y2={yScale(currentPrice)}
-              stroke="#F59E0B"
-              strokeWidth="2"
-              strokeDasharray="5,5"
-            />
-          )}
-        </svg>
-      </div>
-    );
+      const latest = candles.length - 1;
+      setChartData(candles);
+      setCurrentCandle(latest);
+      setCurrentPrice(candles[latest]?.close || 0);
+      setBalance(sessionBalance);
+      toast.success("Chart loaded with real market data!");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsLoadingData(false);
+    }
   };
 
   // Trading logic
@@ -569,19 +419,102 @@ const Backtest = () => {
 
   const handlePlay = () => {
     if (currentCandle >= chartData.length - 1) {
-      setCurrentCandle(0);
-      setCurrentPrice(chartData[0].close);
+      // Start replay from the beginning with a window of context
+      const win = defaultWindowCandles(chartData);
+      const start = Math.min(win, chartData.length - 1);
+      setCurrentCandle(start);
+      setCurrentPrice(chartData[start]?.close || 0);
+      setIsPlaying(true);
+      return;
     }
-    setIsPlaying(!isPlaying);
+    setIsPlaying((p) => !p);
+  };
+
+  const handleStepForward = () => {
+    if (currentCandle >= chartData.length - 1) return;
+    const next = currentCandle + 1;
+    setCurrentCandle(next);
+    setCurrentPrice(chartData[next].close);
   };
 
   const handleReset = () => {
     setIsPlaying(false);
-    setCurrentCandle(0);
-    setCurrentPrice(chartData[0]?.close || 0);
+    const win = defaultWindowCandles(chartData);
+    const start = Math.min(win, chartData.length - 1);
+    setCurrentCandle(start);
+    setCurrentPrice(chartData[start]?.close || 0);
     setPositions([]);
     setTrades([]);
     setBalance(currentSession?.initialBalance || 10000);
+  };
+
+  const handleCandleSeek = (idx) => {
+    setIsPlaying(false);
+    setCurrentCandle(idx);
+    setCurrentPrice(chartData[idx]?.close || 0);
+  };
+
+  const handleStepBack = () => {
+    if (currentCandle <= 0) return;
+    const prev = currentCandle - 1;
+    setCurrentCandle(prev);
+    setCurrentPrice(chartData[prev]?.close || 0);
+    setIsPlaying(false);
+  };
+
+  // seekDate: the date the user has typed into the date picker
+  const [seekDate, setSeekDate] = useState("");
+
+  const handleCut = () => {
+    if (!chartData.length) return;
+    setIsPlaying(false);
+    if (!seekDate) return;
+    // Yahoo Finance timestamps are UTC seconds; date input gives "YYYY-MM-DD" in local tz.
+    // We compare against the candle's UTC date string to match correctly.
+    const idx = chartData.findIndex((c) => {
+      const d = new Date(c.time * 1000).toISOString().slice(0, 10);
+      return d >= seekDate;
+    });
+    const target = idx === -1 ? chartData.length - 1 : idx;
+    setCurrentCandle(target);
+    setCurrentPrice(chartData[target]?.close || 0);
+  };
+
+  const handleTimeframeChange = async (newTf) => {
+    if (newTf === timeframe || isLoadingData || !currentSession) return;
+    // Preserve the timestamp of the current cut position
+    const currentTs = chartData[currentCandle]?.time ?? null;
+    setIsPlaying(false);
+    setCurrentCandle(0);
+    setChartData([]);
+    setTimeframe(newTf);
+    setIsLoadingData(true);
+    // Clear cache so we re-fetch with new timeframe
+    const cacheKey = `chart_${currentSession.market}_${currentSession.instrument.symbol}_${newTf}`;
+    sessionStorage.removeItem(cacheKey);
+    try {
+      const candles = await fetchMarketCandles(
+        currentSession.market,
+        currentSession.instrument.symbol,
+        newTf,
+      );
+      // Find the closest candle to the saved timestamp
+      let newIdx = candles.length - 1;
+      if (currentTs !== null) {
+        const matchIdx = candles.findIndex((c) => c.time >= currentTs);
+        if (matchIdx !== -1) newIdx = matchIdx;
+      }
+      setChartData(candles);
+      setCurrentCandle(newIdx);
+      setCurrentPrice(candles[newIdx]?.close || 0);
+      setBalance(currentSession.initialBalance);
+      setPositions([]);
+      setTrades([]);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsLoadingData(false);
+    }
   };
 
   const executeOrder = () => {
@@ -698,7 +631,7 @@ const Backtest = () => {
                       </label>
                       <div className="group relative">
                         <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
-                        <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                           The starting capital for your backtest. Default is
                           $100,000. You can adjust this based on your actual
                           account size.
@@ -838,7 +771,7 @@ const Backtest = () => {
                     Trading Strategy
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <div className="flex items-center space-x-2 mb-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -846,7 +779,7 @@ const Backtest = () => {
                       </label>
                       <div className="group relative">
                         <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
-                        <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                           Select your trading strategy. This helps categorize
                           and analyze your backtest results based on the trading
                           approach you're testing.
@@ -882,99 +815,6 @@ const Backtest = () => {
                           {setupItem}
                         </option>
                       ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center space-x-2 mb-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Timeframe
-                      </label>
-                      <div className="group relative">
-                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
-                        <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                          The chart timeframe for your analysis. Lower
-                          timeframes (1m, 5m) are good for scalping, while
-                          higher timeframes (1h, 4h, 1d) suit swing trading.
-                        </div>
-                      </div>
-                    </div>
-                    <select
-                      value={timeframe}
-                      onChange={(e) => setTimeframe(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
-                    >
-                      <option value="1m">1 Minute</option>
-                      <option value="5m">5 Minutes</option>
-                      <option value="15m">15 Minutes</option>
-                      <option value="30m">30 Minutes</option>
-                      <option value="1h">1 Hour</option>
-                      <option value="4h">4 Hours</option>
-                      <option value="1d">Daily</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Risk Management */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-8">
-                <div className="flex items-center space-x-2 mb-6">
-                  <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Risk Management
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="flex items-center space-x-2 mb-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Risk/Reward Ratio *
-                      </label>
-                      <div className="group relative">
-                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
-                        <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                          The ratio of potential loss to potential profit. For
-                          example, "1:2" means you risk $1 to potentially gain
-                          $2. Higher ratios generally indicate better risk
-                          management.
-                        </div>
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={riskRewardRatio}
-                      onChange={(e) => setRiskRewardRatio(e.target.value)}
-                      placeholder="e.g., 1:2, 1:3"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center space-x-2 mb-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Market Condition
-                      </label>
-                      <div className="group relative">
-                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
-                        <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                          The overall market environment during your backtest
-                          period. This helps analyze how your strategy performs
-                          in different market conditions.
-                        </div>
-                      </div>
-                    </div>
-                    <select
-                      value={marketCondition}
-                      onChange={(e) => setMarketCondition(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
-                    >
-                      <option value="">Select condition</option>
-                      <option value="Trending Up">Trending Up</option>
-                      <option value="Trending Down">Trending Down</option>
-                      <option value="Sideways/Range">Sideways/Range</option>
-                      <option value="Volatile">Volatile</option>
-                      <option value="Low Volume">Low Volume</option>
-                      <option value="High Volume">High Volume</option>
                     </select>
                   </div>
                 </div>
@@ -1014,18 +854,6 @@ const Backtest = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Session Notes
-                    </label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows="4"
-                      placeholder="Add notes about your trading plan, market outlook, or strategy expectations..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors resize-none"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -1039,8 +867,7 @@ const Backtest = () => {
                       !selectedMarket ||
                       !selectedInstrument ||
                       !strategy ||
-                      !setup ||
-                      !riskRewardRatio
+                      !setup
                     }
                     className="flex items-center justify-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-lg shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
                   >
@@ -1057,219 +884,430 @@ const Backtest = () => {
   }
 
   if (currentView === "backtest" && currentSession) {
-    return (
-      <div className="h-screen bg-gray-900 text-white flex flex-col">
-        {/* Header */}
-        <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setCurrentView("sessions")}
-                className="text-gray-400 hover:text-white"
-              >
-                ← Back to Sessions
-              </button>
-              <div>
-                <h1 className="text-xl font-semibold">
-                  {currentSession?.name || "Backtest Session"}
-                </h1>
-                <p className="text-sm text-gray-400">
-                  {currentSession?.instrument?.symbol} -{" "}
-                  {currentSession?.instrument?.name}
-                </p>
-              </div>
-            </div>
+    const pnl = balance - (currentSession.initialBalance || 10000);
+    const pnlPositive = pnl >= 0;
 
-            <div className="flex items-center space-x-4">
-              <div className="text-sm">
-                <span className="text-gray-400">Balance: </span>
-                <span
-                  className={`font-semibold ${
-                    balance >= (currentSession?.initialBalance || 10000)
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }`}
-                >
-                  ${balance.toFixed(2)}
-                </span>
-              </div>
-              <div className="text-sm">
-                <span className="text-gray-400">P&L: </span>
-                <span
-                  className={`font-semibold ${
-                    balance >= (currentSession?.initialBalance || 10000)
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }`}
-                >
-                  {balance >= (currentSession?.initialBalance || 10000)
-                    ? "+"
-                    : ""}
-                  $
-                  {(
-                    balance - (currentSession?.initialBalance || 10000)
-                  ).toFixed(2)}
-                </span>
-              </div>
+    return (
+      <div
+        className="-mx-6 -my-6 flex-1 flex flex-col overflow-hidden"
+        style={{ background: "#f0f3fa", color: "#131722" }}
+      >
+        {/* ── Top bar — TradingView light toolbar style ── */}
+        <div
+          className="flex items-center justify-between px-4 py-1.5 flex-shrink-0 border-b"
+          style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
+        >
+          <div className="flex items-center space-x-4 min-w-0">
+            <button
+              onClick={() => setCurrentView("sessions")}
+              className="text-xs transition-colors flex-shrink-0"
+              style={{ color: "#787b86" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#131722")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#787b86")}
+            >
+              ← Sessions
+            </button>
+            <div className="h-4 w-px flex-shrink-0" style={{ background: "#e1ecf2" }} />
+            <div className="flex items-baseline space-x-2 min-w-0">
+              <span className="font-bold text-sm" style={{ color: "#131722" }}>
+                {currentSession.instrument?.symbol}
+              </span>
+              <span className="text-xs hidden sm:block truncate" style={{ color: "#787b86" }}>
+                {currentSession.instrument?.name}
+              </span>
+              <span className="text-xs hidden md:block" style={{ color: "#b2b5be" }}>
+                · {currentSession.instrument?.exchange}
+              </span>
+            </div>
+            {currentPrice > 0 && (
+              <span
+                className="font-mono font-semibold text-base flex-shrink-0"
+                style={{ color: "#131722" }}
+              >
+                ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-5 text-xs flex-shrink-0">
+            <div>
+              <span style={{ color: "#787b86" }}>Balance </span>
+              <span className="font-semibold" style={{ color: "#131722" }}>
+                ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div>
+              <span style={{ color: "#787b86" }}>P&amp;L </span>
+              <span
+                className="font-semibold"
+                style={{ color: pnlPositive ? "#089981" : "#f23645" }}
+              >
+                {pnlPositive ? "+" : ""}${pnl.toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex">
-          {/* Chart Area */}
-          <div className="flex-1 p-4">
-            {/* Chart Controls */}
-            <div className="bg-gray-800 rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={handlePlay}
-                    className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-4 h-4 mr-2" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-2" />
-                    )}
-                    {isPlaying ? "Pause" : "Play"}
-                  </button>
+        {/* ── Chart toolbar — TradingView-style light toolbar ── */}
+        <div
+          className="flex items-center px-3 py-1 flex-shrink-0 border-b flex-wrap"
+          style={{ background: "#ffffff", borderColor: "#e1ecf2", gap: "2px" }}
+        >
+          {/* Timeframe buttons */}
+          {["1m", "5m", "15m", "30m", "1h", "4h", "1d"].map((tf) => (
+            <button
+              key={tf}
+              onClick={() => handleTimeframeChange(tf)}
+              disabled={isLoadingData}
+              className="px-2 py-1 text-xs rounded-sm transition-colors disabled:opacity-40 font-medium flex-shrink-0"
+              style={
+                timeframe === tf
+                  ? { background: "#e8f0fe", color: "#1E53E5", borderRadius: 3 }
+                  : { color: "#787b86" }
+              }
+              onMouseEnter={(e) => {
+                if (timeframe !== tf) {
+                  e.currentTarget.style.color = "#131722";
+                  e.currentTarget.style.background = "#f0f3fa";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (timeframe !== tf) {
+                  e.currentTarget.style.color = "#787b86";
+                  e.currentTarget.style.background = "transparent";
+                }
+              }}
+            >
+              {tf === "1d" ? "D" : tf.toUpperCase()}
+            </button>
+          ))}
 
-                  <button
-                    onClick={handleReset}
-                    className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reset
-                  </button>
+          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: "#e1ecf2" }} />
 
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-400">Speed:</span>
-                    <select
-                      value={speed}
-                      onChange={(e) => setSpeed(Number(e.target.value))}
-                      className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
+          {/* ── Replay controls ── */}
+
+          {/* Play / Pause */}
+          <button
+            onClick={handlePlay}
+            disabled={isLoadingData || !chartData.length}
+            title={isPlaying ? "Pause" : "Play forward"}
+            className="flex items-center px-3 py-1 text-xs rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+            style={{ background: "#1E53E5", color: "#ffffff" }}
+          >
+            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+          </button>
+
+          {/* Previous candle */}
+          <button
+            onClick={handleStepBack}
+            disabled={isLoadingData || !chartData.length || currentCandle <= 0}
+            title="Previous candle"
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
+            style={{ color: "#787b86" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#131722";
+              e.currentTarget.style.background = "#f0f3fa";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#787b86";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <SkipBack className="w-3.5 h-3.5" />
+            Prev
+          </button>
+
+          {/* Next candle */}
+          <button
+            onClick={handleStepForward}
+            disabled={isLoadingData || !chartData.length || currentCandle >= chartData.length - 1}
+            title="Next candle"
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
+            style={{ color: "#787b86" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#131722";
+              e.currentTarget.style.background = "#f0f3fa";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#787b86";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            Next
+            <SkipForward className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Reset */}
+          <button
+            onClick={handleReset}
+            disabled={isLoadingData}
+            title="Reset to start"
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0"
+            style={{ color: "#787b86" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#131722";
+              e.currentTarget.style.background = "#f0f3fa";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#787b86";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+
+          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: "#e1ecf2" }} />
+
+          {/* ── Cut by date ── */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Calendar className="w-3 h-3 flex-shrink-0" style={{ color: "#b2b5be" }} />
+            <input
+              type="date"
+              value={seekDate}
+              onChange={(e) => setSeekDate(e.target.value)}
+              className="text-xs rounded px-1.5 py-0.5 border outline-none"
+              style={{
+                background: "#ffffff",
+                color: "#131722",
+                borderColor: "#d1d4dc",
+                width: 120,
+              }}
+            />
+            <button
+              onClick={handleCut}
+              disabled={isLoadingData || !chartData.length || !seekDate}
+              title="Cut chart at selected date — hides future candles for replay"
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+              style={{ background: "#f23645", color: "#ffffff" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#d42c3a";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#f23645";
+              }}
+            >
+              <Scissors className="w-3 h-3" />
+              Cut
+            </button>
+          </div>
+
+          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: "#e1ecf2" }} />
+
+          {/* Speed + candle counter */}
+          <select
+            value={speed}
+            onChange={(e) => setSpeed(Number(e.target.value))}
+            className="text-xs rounded px-2 py-1 border flex-shrink-0"
+            style={{ background: "#ffffff", color: "#131722", borderColor: "#d1d4dc" }}
+          >
+            <option value={0.5}>0.5×</option>
+            <option value={1}>1×</option>
+            <option value={2}>2×</option>
+            <option value={4}>4×</option>
+            <option value={8}>8×</option>
+          </select>
+
+          <div className="h-4 w-px flex-shrink-0" style={{ background: "#e1ecf2" }} />
+
+          {/* Indicators button + dropdown */}
+          <div className="relative flex-shrink-0 ml-1" ref={indicatorPanelRef}>
+            <button
+              onClick={() => setShowIndicatorPanel((v) => !v)}
+              className="flex items-center px-2 py-1 text-xs rounded-sm transition-colors font-medium"
+              style={
+                showIndicatorPanel
+                  ? { background: "#e8f0fe", color: "#1E53E5", borderRadius: 3 }
+                  : { color: "#787b86" }
+              }
+              onMouseEnter={(e) => {
+                if (!showIndicatorPanel) {
+                  e.currentTarget.style.color = "#131722";
+                  e.currentTarget.style.background = "#f0f3fa";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showIndicatorPanel) {
+                  e.currentTarget.style.color = "#787b86";
+                  e.currentTarget.style.background = "transparent";
+                }
+              }}
+            >
+              Indicators
+              <svg className="ml-1 w-3 h-3" viewBox="0 0 10 6" fill="currentColor">
+                <path d="M0 0l5 6 5-6z" />
+              </svg>
+            </button>
+
+            {showIndicatorPanel && (
+              <div
+                className="absolute left-0 top-full mt-1 rounded-lg shadow-xl border z-50 py-2 min-w-[200px]"
+                style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
+              >
+                <p
+                  className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider border-b"
+                  style={{ color: "#b2b5be", borderColor: "#e1ecf2" }}
+                >
+                  Add Indicator
+                </p>
+
+                {[
+                  { key: "ema20",  label: "EMA 20",  desc: "Exponential MA · 20 period", color: "#f7a600" },
+                  { key: "ema50",  label: "EMA 50",  desc: "Exponential MA · 50 period", color: "#1E53E5" },
+                  { key: "volume", label: "Volume",  desc: "Bar volume histogram",        color: "#089981" },
+                ].map(({ key, label, desc, color }) => (
+                  <button
+                    key={key}
+                    onClick={() => toggleIndicator(key)}
+                    className="w-full flex items-center px-3 py-2.5 text-left transition-colors"
+                    style={{ background: "transparent" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f3fa")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    {/* Color swatch / checkmark */}
+                    <span
+                      className="flex items-center justify-center w-5 h-5 rounded mr-3 flex-shrink-0 text-xs font-bold"
+                      style={{
+                        background: indicators[key] ? color : "#f0f3fa",
+                        color: indicators[key] ? "#fff" : "#b2b5be",
+                      }}
                     >
-                      <option value={0.25}>0.25x</option>
-                      <option value={0.5}>0.5x</option>
-                      <option value={1}>1x</option>
-                      <option value={2}>2x</option>
-                      <option value={4}>4x</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm text-gray-400">
-                    Candle: {currentCandle + 1} / {chartData.length}
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-400">Price: </span>
-                    <span className="font-semibold text-yellow-400">
-                      ${currentPrice.toFixed(2)}
+                      {indicators[key] ? "✓" : ""}
                     </span>
-                  </div>
-                </div>
+                    <span className="flex-1 min-w-0">
+                      <span
+                        className="block text-xs font-semibold"
+                        style={{ color: indicators[key] ? color : "#131722" }}
+                      >
+                        {label}
+                      </span>
+                      <span className="block text-xs" style={{ color: "#b2b5be" }}>
+                        {desc}
+                      </span>
+                    </span>
+                  </button>
+                ))}
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Main content: chart + side panel ── */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Chart column */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Chart — fills remaining space */}
+            <div className="flex-1 relative overflow-hidden">
+              {isLoadingData ? (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                  style={{ background: "#f0f3fa" }}
+                >
+                  <Loader2
+                    className="w-8 h-8 animate-spin mb-3"
+                    style={{ color: "#1E53E5" }}
+                  />
+                  <p className="text-sm" style={{ color: "#787b86" }}>
+                    Loading real market data…
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "#b2b5be" }}>
+                    Yahoo Finance via Edge Function
+                  </p>
+                </div>
+              ) : chartData.length === 0 ? (
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-sm"
+                  style={{ color: "#b2b5be", background: "#f0f3fa" }}
+                >
+                  No data loaded yet
+                </div>
+              ) : (
+                <ChartErrorBoundary>
+                  <BacktestChart
+                    candleData={chartData}
+                    visibleCount={currentCandle + 1}
+                    indicators={indicators}
+                    onCandleSeek={handleCandleSeek}
+                    isPlaying={isPlaying}
+                  />
+                </ChartErrorBoundary>
+              )}
             </div>
 
-            {/* Chart */}
-            <div className="bg-gray-800 rounded-lg p-4 flex-1">
-              {/* Chart Legend */}
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-700">
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
-                    <span className="text-xs text-gray-300">
-                      Bullish Candle
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
-                    <span className="text-xs text-gray-300">
-                      Bearish Candle
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div
-                      className="w-6 h-0.5 bg-yellow-500"
-                      style={{ borderStyle: "dashed", borderWidth: "1px 0" }}
-                    ></div>
-                    <span className="text-xs text-gray-300">Current Price</span>
-                  </div>
-                </div>
-                <div className="text-xs text-gray-400">
-                  Hover over candles for details
-                </div>
-              </div>
-
-              <div className="h-96 overflow-x-auto">
-                {renderCandlestickChart()}
-              </div>
-            </div>
-
-            {/* Trading Controls */}
-            <div className="bg-gray-800 rounded-lg p-4 mt-4">
-              <div className="flex items-center justify-center space-x-4">
-                <button
-                  onClick={() => {
-                    setOrderSide("buy");
-                    setShowOrderPanel(true);
-                  }}
-                  className="flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                >
-                  <TrendingUp className="w-5 h-5 mr-2" />
-                  BUY
-                </button>
-
-                <button
-                  onClick={() => {
-                    setOrderSide("sell");
-                    setShowOrderPanel(true);
-                  }}
-                  className="flex items-center px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                >
-                  <TrendingDown className="w-5 h-5 mr-2" />
-                  SELL
-                </button>
-              </div>
+            {/* Buy / Sell bar */}
+            <div
+              className="flex flex-shrink-0 border-t"
+              style={{ borderColor: "#e1ecf2" }}
+            >
+              <button
+                onClick={() => { setOrderSide("buy"); setShowOrderPanel(true); }}
+                className="flex-1 flex items-center justify-center py-2.5 text-sm font-bold transition-colors"
+                style={{
+                  background: "#ffffff",
+                  color: "#089981",
+                  borderRight: "1px solid #e1ecf2",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(8,153,129,0.07)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                BUY / LONG
+              </button>
+              <button
+                onClick={() => { setOrderSide("sell"); setShowOrderPanel(true); }}
+                className="flex-1 flex items-center justify-center py-2.5 text-sm font-bold transition-colors"
+                style={{ background: "#ffffff", color: "#f23645" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(242,54,69,0.07)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+              >
+                <TrendingDown className="w-4 h-4 mr-2" />
+                SELL / SHORT
+              </button>
             </div>
           </div>
 
-          {/* Side Panel */}
-          <div className="w-80 bg-gray-800 border-l border-gray-700">
-            {/* Positions */}
-            <div className="p-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold mb-3">Open Positions</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+          {/* Side panel: positions + trade history */}
+          <div
+            className="w-60 flex flex-col flex-shrink-0 border-l overflow-hidden"
+            style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
+          >
+            {/* Open positions */}
+            <div
+              className="p-3 border-b flex-shrink-0"
+              style={{ borderColor: "#e1ecf2" }}
+            >
+              <p
+                className="text-xs font-semibold uppercase tracking-wider mb-2"
+                style={{ color: "#b2b5be" }}
+              >
+                Open Positions
+              </p>
+              <div className="space-y-1.5 max-h-36 overflow-y-auto">
                 {positions.length === 0 ? (
-                  <p className="text-gray-400 text-sm">No open positions</p>
+                  <p className="text-xs py-2" style={{ color: "#b2b5be" }}>
+                    No open positions
+                  </p>
                 ) : (
-                  positions.map((position) => (
-                    <div key={position.id} className="bg-gray-700 p-3 rounded">
-                      <div className="flex justify-between items-start mb-2">
+                  positions.map((pos) => (
+                    <div
+                      key={pos.id}
+                      className="rounded p-2 text-xs border"
+                      style={{ background: "#f0f3fa", borderColor: "#e1ecf2" }}
+                    >
+                      <div className="flex justify-between mb-0.5">
                         <span
-                          className={`text-sm font-medium ${
-                            position.side === "buy"
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
+                          className="font-semibold"
+                          style={{ color: pos.side === "buy" ? "#089981" : "#f23645" }}
                         >
-                          {position.side.toUpperCase()} {position.size}
+                          {pos.side.toUpperCase()} ×{pos.size}
                         </span>
                         <span
-                          className={`text-sm ${
-                            position.currentPnL >= 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
+                          style={{ color: pos.currentPnL >= 0 ? "#089981" : "#f23645" }}
                         >
-                          {position.currentPnL >= 0 ? "+" : ""}$
-                          {position.currentPnL.toFixed(2)}
+                          {pos.currentPnL >= 0 ? "+" : ""}${pos.currentPnL.toFixed(2)}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-400">
-                        Entry: ${position.entryPrice.toFixed(2)}
+                      <div style={{ color: "#787b86" }}>
+                        Entry ${pos.entryPrice.toFixed(2)}
                       </div>
                     </div>
                   ))
@@ -1277,42 +1315,42 @@ const Backtest = () => {
               </div>
             </div>
 
-            {/* Trade History */}
-            <div className="p-4">
-              <h3 className="text-lg font-semibold mb-3">Trade History</h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+            {/* Trade history */}
+            <div className="flex-1 p-3 flex flex-col overflow-hidden">
+              <p
+                className="text-xs font-semibold uppercase tracking-wider mb-2 flex-shrink-0"
+                style={{ color: "#b2b5be" }}
+              >
+                Trade History
+              </p>
+              <div className="flex-1 space-y-1.5 overflow-y-auto">
                 {trades.length === 0 ? (
-                  <p className="text-gray-400 text-sm">No trades yet</p>
+                  <p className="text-xs py-2" style={{ color: "#b2b5be" }}>
+                    No trades yet
+                  </p>
                 ) : (
                   trades
-                    .slice(-10)
+                    .slice(-20)
                     .reverse()
-                    .map((trade) => (
-                      <div key={trade.id} className="bg-gray-700 p-3 rounded">
-                        <div className="flex justify-between items-start mb-1">
+                    .map((t) => (
+                      <div
+                        key={t.id}
+                        className="rounded p-2 text-xs border"
+                        style={{ background: "#f0f3fa", borderColor: "#e1ecf2" }}
+                      >
+                        <div className="flex justify-between mb-0.5">
                           <span
-                            className={`text-sm font-medium ${
-                              trade.side === "buy"
-                                ? "text-green-400"
-                                : "text-red-400"
-                            }`}
+                            className="font-semibold"
+                            style={{ color: t.side === "buy" ? "#089981" : "#f23645" }}
                           >
-                            {trade.side.toUpperCase()} {trade.size}
+                            {t.side.toUpperCase()} ×{t.size}
                           </span>
-                          <span
-                            className={`text-sm ${
-                              trade.pnl >= 0 ? "text-green-400" : "text-red-400"
-                            }`}
-                          >
-                            {trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}
+                          <span style={{ color: t.pnl >= 0 ? "#089981" : "#f23645" }}>
+                            {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
                           </span>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {trade.entryPrice.toFixed(2)} →{" "}
-                          {trade.exitPrice.toFixed(2)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {trade.reason}
+                        <div style={{ color: "#787b86" }}>
+                          {t.entryPrice.toFixed(2)} → {t.exitPrice.toFixed(2)}
                         </div>
                       </div>
                     ))
@@ -1322,17 +1360,25 @@ const Backtest = () => {
           </div>
         </div>
 
-        {/* Order Panel Modal */}
+        {/* ── Order entry modal ── */}
         {showOrderPanel && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-96">
-              <h3 className="text-xl font-semibold mb-4">
-                {orderSide.toUpperCase()} Order
+          <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(19,23,34,0.6)" }}>
+            <div
+              className="rounded-lg p-6 w-80 border shadow-xl"
+              style={{ background: "#ffffff", borderColor: "#e1ecf2" }}
+            >
+              <h3
+                className="text-base font-semibold mb-4"
+                style={{
+                  color: orderSide === "buy" ? "#089981" : "#f23645",
+                }}
+              >
+                {orderSide === "buy" ? "▲ Buy / Long" : "▼ Sell / Short"}
               </h3>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-xs mb-1" style={{ color: "#787b86" }}>
                     Position Size
                   </label>
                   <input
@@ -1340,53 +1386,74 @@ const Backtest = () => {
                     value={orderSize}
                     onChange={(e) => setOrderSize(Number(e.target.value))}
                     min="1"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded text-sm border focus:outline-none"
+                    style={{
+                      background: "#f0f3fa",
+                      borderColor: "#d1d4dc",
+                      color: "#131722",
+                    }}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Stop Loss (Optional)
+                  <label className="block text-xs mb-1" style={{ color: "#787b86" }}>
+                    Stop Loss
                   </label>
                   <input
                     type="number"
                     value={stopLoss}
                     onChange={(e) => setStopLoss(e.target.value)}
                     step="0.01"
-                    placeholder="Stop loss price"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                    placeholder="Optional"
+                    className="w-full px-3 py-2 rounded text-sm border focus:outline-none"
+                    style={{
+                      background: "#f0f3fa",
+                      borderColor: "#d1d4dc",
+                      color: "#131722",
+                    }}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Take Profit (Optional)
+                  <label className="block text-xs mb-1" style={{ color: "#787b86" }}>
+                    Take Profit
                   </label>
                   <input
                     type="number"
                     value={takeProfit}
                     onChange={(e) => setTakeProfit(e.target.value)}
                     step="0.01"
-                    placeholder="Take profit price"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                    placeholder="Optional"
+                    className="w-full px-3 py-2 rounded text-sm border focus:outline-none"
+                    style={{
+                      background: "#f0f3fa",
+                      borderColor: "#d1d4dc",
+                      color: "#131722",
+                    }}
                   />
                 </div>
               </div>
 
-              <div className="flex space-x-3 mt-6">
+              <div className="flex space-x-2 mt-5">
                 <button
                   onClick={executeOrder}
-                  className={`flex-1 py-2 px-4 rounded font-medium ${
-                    orderSide === "buy"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-red-600 hover:bg-red-700"
-                  }`}
+                  className="flex-1 py-2 px-4 rounded text-sm font-bold transition-opacity hover:opacity-80"
+                  style={{
+                    background: orderSide === "buy"
+                      ? "rgba(38,166,154,0.2)"
+                      : "rgba(239,83,80,0.2)",
+                    color: orderSide === "buy" ? "#26a69a" : "#ef5350",
+                    border: `1px solid ${orderSide === "buy" ? "#26a69a" : "#ef5350"}`,
+                  }}
                 >
                   Execute {orderSide.toUpperCase()}
                 </button>
                 <button
                   onClick={() => setShowOrderPanel(false)}
-                  className="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 rounded font-medium"
+                  className="flex-1 py-2 px-4 rounded text-sm transition-opacity hover:opacity-80"
+                  style={{
+                    background: "#f0f3fa",
+                    color: "#787b86",
+                    border: "1px solid #d1d4dc",
+                  }}
                 >
                   Cancel
                 </button>
