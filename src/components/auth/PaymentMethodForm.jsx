@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CreditCard, Lock, Shield, CheckCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { supabase } from "../../lib/supabase";
 
 const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -197,11 +198,12 @@ const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
       const mockPaymentMethodId =
         "pm_" + Math.random().toString(36).substring(7);
 
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch("/api/user/payment-methods", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          Authorization: `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({
           payment_method_id: mockPaymentMethodId,

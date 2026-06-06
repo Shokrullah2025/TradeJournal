@@ -157,7 +157,7 @@ class BrokerService {
       redirect_uri: redirectUri,
       response_type: "code",
       scope: scopes.join(" "),
-      state: JSON.stringify({ broker: brokerKey, accountType, timestamp: Date.now() }),
+      state: JSON.stringify({ broker: brokerKey, accountType, nonce: crypto.randomUUID() }),
     });
 
     const oauthUrl = `${authUrl}?${params.toString()}`;
