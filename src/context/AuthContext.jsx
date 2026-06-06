@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
+import { logActivity } from "../utils/logActivity";
 
 // ── State ──────────────────────────────────────────────────────────────────
 const initialState = {
@@ -141,13 +142,14 @@ export const AuthProvider = ({ children }) => {
   // ── Login ────────────────────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       const msg = friendlyError(error);
       toast.error(msg);
       throw new Error(msg);
     }
+    if (data.user) logActivity(data.user.id, "login", {});
     // onAuthStateChange fires and sets the user — no manual dispatch needed
     toast.success("Welcome back!");
   }, []);
@@ -180,6 +182,7 @@ export const AuthProvider = ({ children }) => {
         first_name: firstName,
         last_name:  lastName,
       }, { onConflict: "user_id" });
+      logActivity(data.user.id, "register", {});
     }
 
     toast.success("Account created! Please check your email to verify your account.");
@@ -188,6 +191,8 @@ export const AuthProvider = ({ children }) => {
 
   // ── Logout ───────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) logActivity(session.user.id, "logout", {});
     await supabase.auth.signOut();
     dispatch({ type: ActionTypes.LOGOUT });
     toast.success("Signed out successfully.");

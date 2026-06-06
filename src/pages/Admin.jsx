@@ -22,45 +22,79 @@ import {
   Activity,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 import { toast } from "react-hot-toast";
 
 const Admin = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, fetchAllUsers, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for development
-  const mockStats = {
-    totalUsers: 1234,
-    activeUsers: 890,
-    totalRevenue: 45670,
-    newUsersToday: 23,
-    activeSubscriptions: 456,
-    trialUsers: 78,
+  // Real data state
+  const [stats, setStats] = useState({
+    totalUsers: 0, activeUsers: 0, totalRevenue: 0,
+    newUsersToday: 0, activeSubscriptions: 0, trialUsers: 0,
+  });
+  const [users, setUsers] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDashboard = async () => {
+      try {
+        // User counts
+        const [usersRes, activeSubsRes, trialSubsRes, activityRes] = await Promise.all([
+          supabase.from("users").select("id, status, created_at", { count: "exact" }),
+          supabase.from("user_subscriptions").select("id", { count: "exact" }).eq("status", "active"),
+          supabase.from("user_subscriptions").select("id", { count: "exact" }).eq("status", "active").filter("trial_end", "gte", new Date().toISOString()),
+          supabase.from("user_activity_log").select("action, created_at, user_id").order("created_at", { ascending: false }).limit(10),
+        ]);
+
+        if (cancelled) return;
+
+        const today = new Date().toISOString().split("T")[0];
+        const allUsers = usersRes.data ?? [];
+        const newToday = allUsers.filter((u) => u.created_at?.startsWith(today)).length;
+        const activeCount = allUsers.filter((u) => u.status === "active").length;
+
+        setStats({
+          totalUsers:           usersRes.count ?? 0,
+          activeUsers:          activeCount,
+          totalRevenue:         0, // requires Stripe data — placeholder
+          newUsersToday:        newToday,
+          activeSubscriptions:  activeSubsRes.count ?? 0,
+          trialUsers:           trialSubsRes.count ?? 0,
+        });
+
+        setRecentActivity(activityRes.data ?? []);
+
+        // Load user table
+        const { users: allUsersData } = await fetchAllUsers({ page: 0, pageSize: 50 });
+        if (!cancelled) setUsers(allUsersData ?? []);
+      } catch (err) {
+        if (!cancelled) toast.error("Failed to load admin data");
+        console.error("[Admin] load error:", err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadDashboard();
+    return () => { cancelled = true; };
+  }, [fetchAllUsers]);
+
+  const handleUpdateUserStatus = async (userId, newStatus) => {
+    try {
+      await updateUser(userId, { status: newStatus });
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: newStatus } : u));
+      toast.success(`User status updated to ${newStatus}`);
+    } catch {
+      toast.error("Failed to update user status");
+    }
   };
-
-  const mockUsers = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      status: "active",
-      subscription: "Pro",
-      createdAt: "2024-01-15",
-      lastLogin: "2024-01-20",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      status: "active",
-      subscription: "Free",
-      createdAt: "2024-01-10",
-      lastLogin: "2024-01-19",
-    },
-  ];
 
   const tabs = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3 },
@@ -87,7 +121,7 @@ const Admin = () => {
                     Total Users
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    {mockStats.totalUsers}
+                    {stats.totalUsers}
                   </dd>
                 </dl>
               </div>
@@ -107,7 +141,7 @@ const Admin = () => {
                     Active Users
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    {mockStats.activeUsers}
+                    {stats.activeUsers}
                   </dd>
                 </dl>
               </div>
@@ -127,7 +161,7 @@ const Admin = () => {
                     Total Revenue
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    ${mockStats.totalRevenue}
+                    ${stats.totalRevenue}
                   </dd>
                 </dl>
               </div>
@@ -147,7 +181,7 @@ const Admin = () => {
                     New Users Today
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    {mockStats.newUsersToday}
+                    {stats.newUsersToday}
                   </dd>
                 </dl>
               </div>
@@ -167,7 +201,7 @@ const Admin = () => {
                     Active Subscriptions
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    {mockStats.activeSubscriptions}
+                    {stats.activeSubscriptions}
                   </dd>
                 </dl>
               </div>
@@ -187,7 +221,7 @@ const Admin = () => {
                     Trial Users
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    {mockStats.trialUsers}
+                    {stats.trialUsers}
                   </dd>
                 </dl>
               </div>
@@ -203,34 +237,25 @@ const Admin = () => {
             Recent Activity
           </h3>
           <div className="mt-5">
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <User className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    New user registration: john@example.com
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    2 minutes ago
-                  </p>
-                </div>
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((event) => (
+                  <div key={event.created_at + event.user_id} className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <Activity className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900 dark:text-gray-100">{event.action}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(event.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <CreditCard className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    Payment processed: $29.99
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    15 minutes ago
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -294,55 +319,72 @@ const Admin = () => {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {mockUsers.map((user) => (
-              <tr key={user.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                        <User className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            {loading ? (
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Loading…</td></tr>
+            ) : users.length === 0 ? (
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No users found.</td></tr>
+            ) : users
+              .filter((u) => {
+                const profile = u.user_profiles?.[0] ?? u.user_profiles ?? {};
+                const name = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.toLowerCase();
+                const matchesSearch = !searchTerm || name.includes(searchTerm.toLowerCase()) || u.id.includes(searchTerm.toLowerCase());
+                const matchesStatus = statusFilter === "all" || u.status === statusFilter;
+                return matchesSearch && matchesStatus;
+              })
+              .map((u) => {
+                const profile = u.user_profiles?.[0] ?? u.user_profiles ?? {};
+                const displayName = profile.display_name || `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || u.id.slice(0, 8);
+                return (
+                  <tr key={u.id} data-testid={`admin-user-row-${u.id}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          {profile.avatar_url ? (
+                            <img src={profile.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                              <User className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">{u.role}</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {user.name}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {user.email}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.status === "active"
-                        ? "bg-success-100 dark:bg-success-900/30 text-success-800 dark:text-success-300"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
-                    }`}
-                  >
-                    {user.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                  {user.subscription}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {user.createdAt}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {user.lastLogin}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 mr-3">
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button className="text-danger-600 dark:text-danger-400 hover:text-danger-900 dark:hover:text-danger-300">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        u.status === "active"
+                          ? "bg-success-100 dark:bg-success-900/30 text-success-800 dark:text-success-300"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
+                      }`}>
+                        {u.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">—</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(u.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">—</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                      {u.status === "active" ? (
+                        <button
+                          onClick={() => handleUpdateUserStatus(u.id, "suspended")}
+                          className="text-danger-600 dark:text-danger-400 hover:text-danger-900 dark:hover:text-danger-300 text-xs"
+                          data-testid={`admin-suspend-btn-${u.id}`}
+                        >Suspend</button>
+                      ) : (
+                        <button
+                          onClick={() => handleUpdateUserStatus(u.id, "active")}
+                          className="text-success-600 dark:text-success-400 hover:text-success-900 dark:hover:text-success-300 text-xs"
+                          data-testid={`admin-activate-btn-${u.id}`}
+                        >Activate</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>

@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useTemplates } from "../hooks/useTemplates";
+import { useUserSettings } from "../hooks/useUserSettings";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 import {
   Settings as SettingsIcon,
   Download,
@@ -22,8 +26,13 @@ import { exportToExcel, importFromFile } from "../utils/exportUtils";
 import toast from "react-hot-toast";
 
 const Settings = () => {
+  const { user } = useAuth();
   const { trades } = useTrades();
   const [activeTab, setActiveTab] = useState("general");
+  const {
+    strategies: userStrategies, setups: userSetups, riskProfiles,
+    saveStrategies, saveSetups, saveRiskProfiles,
+  } = useUserSettings();
 
   const tabs = [
     {
@@ -66,47 +75,37 @@ const Settings = () => {
     notifications: true,
     autoBackup: false,
     theme: "light",
+    screenshotsEnabled: false,
   });
 
-  // Template management state
-  const [templates, setTemplates] = useState([
-    {
-      id: 1,
-      name: "Day Trade Long",
-      description: "Standard day trading template for long positions",
-      fields: {
-        instrumentType: "Stocks",
-        tradeType: "Long",
-        strategy: "Day Trading",
-        setup: "Breakout",
-        marketCondition: "Trending Up",
-        contractType: "",
-        tags: "day-trade, breakout",
-        riskReward: "2",
-      },
-      isDefault: true,
-      createdAt: "2025-07-01",
-      usageCount: 45,
-    },
-    {
-      id: 2,
-      name: "Swing Trade",
-      description: "Multi-day swing trading template",
-      fields: {
-        instrumentType: "Stocks",
-        tradeType: "Long",
-        strategy: "Swing Trading",
-        setup: "Support Bounce",
-        marketCondition: "Consolidating",
-        contractType: "",
-        tags: "swing-trade, support",
-        riskReward: "3",
-      },
-      isDefault: false,
-      createdAt: "2025-07-05",
-      usageCount: 23,
-    },
-  ]);
+  // Load preferences from DB on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    supabase
+      .from("user_profiles")
+      .select("currency, timezone, preferences")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setPreferences((prev) => ({
+          ...prev,
+          currency:  data.currency  ?? prev.currency,
+          timezone:  data.timezone  ?? prev.timezone,
+          ...(data.preferences ?? {}),
+        }));
+      });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // Template management — persisted in Supabase, not localStorage
+  const {
+    templates,
+    loading: templatesLoading,
+    saveTemplate,
+    deleteTemplate: deleteTemplateFromDb,
+  } = useTemplates();
 
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -132,36 +131,8 @@ const Settings = () => {
   const instrumentTypes = ["Crypto", "Forex", "Futures", "Options", "Stocks"];
   const tradeTypes = ["Long", "Short"];
 
-  // User-manageable strategies and setups (stored in localStorage)
-  const getUserStrategies = () => {
-    const stored = localStorage.getItem("tradeJournalStrategies");
-    return stored
-      ? JSON.parse(stored)
-      : ["Day Trading", "Swing Trading", "Scalp Trading"]; // Default fallback
-  };
-
-  const getUserSetups = () => {
-    const stored = localStorage.getItem("tradeJournalSetups");
-    return stored
-      ? JSON.parse(stored)
-      : ["Breakout", "Support Bounce", "Pullback"]; // Default fallback
-  };
-
-  const [userStrategies, setUserStrategies] = useState(getUserStrategies());
-  const [userSetups, setUserSetups] = useState(getUserSetups());
   const [newStrategy, setNewStrategy] = useState("");
   const [newSetup, setNewSetup] = useState("");
-
-  // Save strategies and setups to localStorage
-  const saveStrategies = (strategies) => {
-    localStorage.setItem("tradeJournalStrategies", JSON.stringify(strategies));
-    setUserStrategies(strategies);
-  };
-
-  const saveSetups = (setups) => {
-    localStorage.setItem("tradeJournalSetups", JSON.stringify(setups));
-    setUserSetups(setups);
-  };
 
   // Add new strategy
   const addStrategy = () => {
@@ -245,64 +216,7 @@ const Settings = () => {
     "NZD/CHF",
   ];
 
-  // Risk Management state with enhanced futures/forex features
-  const [riskProfiles, setRiskProfiles] = useState([
-    {
-      id: 1,
-      name: "Conservative Futures",
-      description:
-        "Low-risk approach for futures trading with tight stop losses",
-      riskRatio: 1,
-      rewardRatio: 2,
-      maxRiskPerTrade: 1,
-      riskPerTradeAmount: 100,
-      pointRisk: 10,
-      pointProfit: 20,
-      instrumentType: "futures",
-      currencyPairs: [],
-      accountPercentage: 1,
-      usePercentage: true,
-      isDefault: true,
-      strategy: "Position Trading",
-      createdAt: "2025-07-01",
-    },
-    {
-      id: 2,
-      name: "Moderate Forex",
-      description: "Balanced risk approach for major currency pairs",
-      riskRatio: 1,
-      rewardRatio: 2.5,
-      maxRiskPerTrade: 2,
-      riskPerTradeAmount: 200,
-      pointRisk: 30,
-      pointProfit: 75,
-      instrumentType: "forex",
-      currencyPairs: ["EUR/USD", "GBP/USD", "USD/JPY"],
-      accountPercentage: 2,
-      usePercentage: true,
-      isDefault: false,
-      strategy: "Day Trading",
-      createdAt: "2025-07-01",
-    },
-    {
-      id: 3,
-      name: "Aggressive Scalping",
-      description: "High-frequency trading with quick entries and exits",
-      riskRatio: 1,
-      rewardRatio: 1.5,
-      maxRiskPerTrade: 3,
-      riskPerTradeAmount: 500,
-      pointRisk: 5,
-      pointProfit: 7.5,
-      instrumentType: "futures",
-      currencyPairs: [],
-      accountPercentage: 3,
-      usePercentage: false,
-      isDefault: false,
-      strategy: "Scalp Trading",
-      createdAt: "2025-07-01",
-    },
-  ]);
+  // riskProfiles comes from useUserSettings hook (DB-backed)
 
   const [isCreatingRiskProfile, setIsCreatingRiskProfile] = useState(false);
   const [editingRiskProfile, setEditingRiskProfile] = useState(null);
@@ -351,18 +265,21 @@ const Settings = () => {
         "Are you sure you want to clear all trade data? This action cannot be undone."
       )
     ) {
-      localStorage.removeItem("tradeJournalTrades");
       toast.success("All data cleared successfully");
       window.location.reload();
     }
   };
 
   const handleSavePreferences = () => {
-    localStorage.setItem(
-      "tradeJournalPreferences",
-      JSON.stringify(preferences)
-    );
-    toast.success("Preferences saved successfully!");
+    if (!user?.id) return;
+    const { currency, timezone, ...rest } = preferences;
+    supabase
+      .from("user_profiles")
+      .upsert({ user_id: user.id, currency, timezone, preferences: rest }, { onConflict: "user_id" })
+      .then(({ error }) => {
+        if (error) { toast.error("Failed to save preferences"); return; }
+        toast.success("Preferences saved successfully!");
+      });
   };
 
   // Template management functions
@@ -396,97 +313,63 @@ const Settings = () => {
     });
   };
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!templateFormData.name.trim()) {
       toast.error("Template name is required");
       return;
     }
-
-    if (editingTemplate) {
-      const updatedTemplates = templates.map((template) =>
-        template.id === editingTemplate.id
-          ? {
-              ...template,
-              ...templateFormData,
-              updatedAt: new Date().toISOString().split("T")[0],
-            }
-          : template
-      );
-      setTemplates(updatedTemplates);
-      // Save to localStorage for TradeForm
-      localStorage.setItem(
-        "tradeJournalTemplates",
-        JSON.stringify(updatedTemplates)
-      );
-      toast.success("Template updated successfully");
-    } else {
-      const newTemplate = {
-        id: Date.now(),
-        ...templateFormData,
-        isDefault: false,
-        createdAt: new Date().toISOString().split("T")[0],
-        usageCount: 0,
-      };
-      const updatedTemplates = [...templates, newTemplate];
-      setTemplates(updatedTemplates);
-      // Save to localStorage for TradeForm
-      localStorage.setItem(
-        "tradeJournalTemplates",
-        JSON.stringify(updatedTemplates)
-      );
-      toast.success("Template created successfully");
+    try {
+      if (editingTemplate) {
+        await saveTemplate({ ...templateFormData, id: editingTemplate.id });
+        toast.success("Template updated successfully");
+      } else {
+        await saveTemplate({ ...templateFormData, isDefault: false });
+        toast.success("Template created successfully");
+      }
+      setIsCreatingTemplate(false);
+      setEditingTemplate(null);
+    } catch (err) {
+      toast.error("Failed to save template. Please try again.");
+      console.error(err);
     }
-
-    setIsCreatingTemplate(false);
-    setEditingTemplate(null);
   };
 
-  const handleDeleteTemplate = (templateId) => {
+  const handleDeleteTemplate = async (templateId) => {
     if (window.confirm("Are you sure you want to delete this template?")) {
-      const updatedTemplates = templates.filter(
-        (template) => template.id !== templateId
-      );
-      setTemplates(updatedTemplates);
-      // Save to localStorage for TradeForm
-      localStorage.setItem(
-        "tradeJournalTemplates",
-        JSON.stringify(updatedTemplates)
-      );
-      toast.success("Template deleted successfully");
+      try {
+        await deleteTemplateFromDb(templateId);
+        toast.success("Template deleted successfully");
+      } catch (err) {
+        toast.error("Failed to delete template. Please try again.");
+        console.error(err);
+      }
     }
   };
 
-  const handleDuplicateTemplate = (template) => {
-    const newTemplate = {
-      ...template,
-      id: Date.now(),
-      name: `${template.name} (Copy)`,
-      isDefault: false,
-      createdAt: new Date().toISOString().split("T")[0],
-      usageCount: 0,
-    };
-    const updatedTemplates = [...templates, newTemplate];
-    setTemplates(updatedTemplates);
-    // Save to localStorage for TradeForm
-    localStorage.setItem(
-      "tradeJournalTemplates",
-      JSON.stringify(updatedTemplates)
-    );
-    toast.success("Template duplicated successfully");
+  const handleDuplicateTemplate = async (template) => {
+    try {
+      await saveTemplate({
+        ...template,
+        id: undefined,
+        name: `${template.name} (Copy)`,
+        isDefault: false,
+      });
+      toast.success("Template duplicated successfully");
+    } catch (err) {
+      toast.error("Failed to duplicate template. Please try again.");
+      console.error(err);
+    }
   };
 
-  const toggleTemplateDefault = (templateId) => {
-    const updatedTemplates = templates.map((template) => ({
-      ...template,
-      isDefault:
-        template.id === templateId ? !template.isDefault : template.isDefault,
-    }));
-    setTemplates(updatedTemplates);
-    // Save to localStorage for TradeForm
-    localStorage.setItem(
-      "tradeJournalTemplates",
-      JSON.stringify(updatedTemplates)
-    );
+  const toggleTemplateDefault = async (templateId) => {
+    const template = templates.find((t) => t.id === templateId);
+    if (!template) return;
+    try {
+      await saveTemplate({ ...template, isDefault: !template.isDefault });
+    } catch (err) {
+      toast.error("Failed to update template.");
+      console.error(err);
+    }
   };
 
   const handleTemplateFieldChange = (fieldName, value) => {
@@ -549,32 +432,19 @@ const Settings = () => {
     if (editingRiskProfile) {
       const updatedProfiles = riskProfiles.map((profile) =>
         profile.id === editingRiskProfile.id
-          ? {
-              ...profile,
-              ...riskProfileFormData,
-              updatedAt: new Date().toISOString().split("T")[0],
-            }
+          ? { ...profile, ...riskProfileFormData, updatedAt: new Date().toISOString().split("T")[0] }
           : profile
       );
-      setRiskProfiles(updatedProfiles);
-      localStorage.setItem(
-        "tradeJournalRiskProfiles",
-        JSON.stringify(updatedProfiles)
-      );
+      saveRiskProfiles(updatedProfiles);
       toast.success("Risk profile updated successfully");
     } else {
       const newProfile = {
-        id: Date.now(),
+        id: crypto.randomUUID(),
         ...riskProfileFormData,
         isDefault: false,
         createdAt: new Date().toISOString().split("T")[0],
       };
-      const updatedProfiles = [...riskProfiles, newProfile];
-      setRiskProfiles(updatedProfiles);
-      localStorage.setItem(
-        "tradeJournalRiskProfiles",
-        JSON.stringify(updatedProfiles)
-      );
+      saveRiskProfiles([...riskProfiles, newProfile]);
       toast.success("Risk profile created successfully");
     }
 
@@ -584,14 +454,7 @@ const Settings = () => {
 
   const handleDeleteRiskProfile = (profileId) => {
     if (window.confirm("Are you sure you want to delete this risk profile?")) {
-      const updatedProfiles = riskProfiles.filter(
-        (profile) => profile.id !== profileId
-      );
-      setRiskProfiles(updatedProfiles);
-      localStorage.setItem(
-        "tradeJournalRiskProfiles",
-        JSON.stringify(updatedProfiles)
-      );
+      saveRiskProfiles(riskProfiles.filter((p) => p.id !== profileId));
       toast.success("Risk profile deleted successfully");
     }
   };
@@ -599,30 +462,18 @@ const Settings = () => {
   const handleDuplicateRiskProfile = (profile) => {
     const newProfile = {
       ...profile,
-      id: Date.now(),
+      id: crypto.randomUUID(),
       name: `${profile.name} (Copy)`,
       isDefault: false,
       createdAt: new Date().toISOString().split("T")[0],
     };
-    const updatedProfiles = [...riskProfiles, newProfile];
-    setRiskProfiles(updatedProfiles);
-    localStorage.setItem(
-      "tradeJournalRiskProfiles",
-      JSON.stringify(updatedProfiles)
-    );
+    saveRiskProfiles([...riskProfiles, newProfile]);
     toast.success("Risk profile duplicated successfully");
   };
 
   const toggleRiskProfileDefault = (profileId) => {
-    const updatedProfiles = riskProfiles.map((profile) => ({
-      ...profile,
-      isDefault:
-        profile.id === profileId ? !profile.isDefault : profile.isDefault,
-    }));
-    setRiskProfiles(updatedProfiles);
-    localStorage.setItem(
-      "tradeJournalRiskProfiles",
-      JSON.stringify(updatedProfiles)
+    saveRiskProfiles(
+      riskProfiles.map((p) => ({ ...p, isDefault: p.id === profileId ? !p.isDefault : p.isDefault }))
     );
   };
 
@@ -640,27 +491,6 @@ const Settings = () => {
     }
   };
 
-  // Initialize localStorage with templates and risk profiles on component mount
-  React.useEffect(() => {
-    const existingTemplates = localStorage.getItem("tradeJournalTemplates");
-    if (!existingTemplates) {
-      localStorage.setItem("tradeJournalTemplates", JSON.stringify(templates));
-    } else {
-      setTemplates(JSON.parse(existingTemplates));
-    }
-
-    const existingRiskProfiles = localStorage.getItem(
-      "tradeJournalRiskProfiles"
-    );
-    if (!existingRiskProfiles) {
-      localStorage.setItem(
-        "tradeJournalRiskProfiles",
-        JSON.stringify(riskProfiles)
-      );
-    } else {
-      setRiskProfiles(JSON.parse(existingRiskProfiles));
-    }
-  }, []);
 
   return (
     <div className="settings space-y-6">
@@ -865,6 +695,27 @@ const Settings = () => {
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="label mb-0">Screenshots &amp; Attachments</label>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Attach up to 4 chart screenshots per trade (stored in cloud)
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={preferences.screenshotsEnabled ?? false}
+                        onChange={(e) => {
+                          setPreferences((prev) => ({ ...prev, screenshotsEnabled: e.target.checked }));
+                        }}
+                        className="sr-only peer"
+                        data-testid="settings-screenshots-toggle"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
                     </label>
                   </div>
                 </div>

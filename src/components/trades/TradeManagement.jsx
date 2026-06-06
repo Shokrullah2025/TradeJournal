@@ -1,4 +1,5 @@
 import React, { useState, useContext } from "react";
+import { useUserSettings } from "../../hooks/useUserSettings";
 import {
   Plus,
   Edit3,
@@ -119,23 +120,7 @@ const TradeManagement = () => {
 
   const instrumentTypes = ["Stocks", "Options", "Futures", "Forex", "Crypto"];
   const tradeTypes = ["Long", "Short"];
-  // Get user-managed strategies and setups from localStorage
-  const getUserManagedStrategies = () => {
-    const stored = localStorage.getItem("tradeJournalStrategies");
-    return stored
-      ? JSON.parse(stored)
-      : ["Day Trading", "Swing Trading", "Scalp Trading"];
-  };
-
-  const getUserManagedSetups = () => {
-    const stored = localStorage.getItem("tradeJournalSetups");
-    return stored
-      ? JSON.parse(stored)
-      : ["Breakout", "Support Bounce", "Pullback"];
-  };
-
-  const strategies = getUserManagedStrategies();
-  const setups = getUserManagedSetups();
+  const { strategies, setups } = useUserSettings();
   const statuses = ["Open", "Closed", "Partial"];
 
   const filteredTrades = displayTrades.filter((trade) => {
