@@ -9,6 +9,7 @@ import React, {
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import toast from "react-hot-toast";
+import { logActivity } from "../utils/logActivity";
 
 const TradeContext = createContext();
 
@@ -358,6 +359,7 @@ export const TradeProvider = ({ children }) => {
 
     const trade = fromDbRow(data);
     dispatch({ type: ACTIONS.ADD_TRADE, payload: trade });
+    logActivity(user.id, "trade_created", { trade_id: trade.id, instrument: trade.instrument, direction: trade.direction });
     return trade;
   }, [user, state.defaultAccountId]);
 
@@ -381,6 +383,7 @@ export const TradeProvider = ({ children }) => {
 
     const trade = fromDbRow(data);
     dispatch({ type: ACTIONS.UPDATE_TRADE, payload: trade });
+    logActivity(user.id, "trade_updated", { trade_id: tradeId, instrument: trade.instrument });
     return trade;
   }, [user, state.defaultAccountId]);
 
@@ -399,6 +402,7 @@ export const TradeProvider = ({ children }) => {
     }
 
     dispatch({ type: ACTIONS.DELETE_TRADE, payload: tradeId });
+    logActivity(user.id, "trade_deleted", { trade_id: tradeId });
   }, [user]);
 
   const setFilters = useCallback((filters) => {
@@ -428,6 +432,7 @@ export const TradeProvider = ({ children }) => {
     const imported = (data || []).map(fromDbRow);
     const trades2 = [...state.trades, ...imported];
     dispatch({ type: ACTIONS.SET_TRADES, payload: trades2 });
+    logActivity(user.id, "trades_imported", { count: imported.length });
     return imported.length;
   }, [user, state.defaultAccountId, state.trades]);
 

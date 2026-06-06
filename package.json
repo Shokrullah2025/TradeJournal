@@ -17,6 +17,8 @@
   "dependencies": {
     "@headlessui/react": "^1.7.13",
     "@hookform/resolvers": "^5.1.1",
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.7.0",
     "@supabase/supabase-js": "^2.105.4",
     "bcryptjs": "^2.4.3",
     "clsx": "^1.2.1",

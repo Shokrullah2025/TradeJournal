@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CreditCard,
   Check,
@@ -18,46 +16,82 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
-import { billingSchema } from "../utils/validation";
 import { toast } from "react-hot-toast";
+import StripePaymentForm from "../components/billing/StripePaymentForm";
 
 const Billing = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const {
-    processPayment,
-    getPaymentsByUser,
     payments,
+    getPaymentsByUser,
     getSubscriptionAnalytics,
+    subscription,
+    paymentMethods,
+    userInvoices,
+    isLoading,
+    createCheckoutSession,
+    openPortal,
   } = useBilling();
   const [selectedPlan, setSelectedPlan] = useState("premium");
   const [billingCycle, setBillingCycle] = useState("monthly");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [clientSecret, setClientSecret] = useState(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [userPayments, setUserPayments] = useState([]);
   const [billingAnalytics, setBillingAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState("payment");
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(billingSchema),
-    defaultValues: {
-      plan: selectedPlan,
-      billingCycle: billingCycle,
-    },
-  });
-
-  // Load user payments on component mount
   useEffect(() => {
     if (user) {
       setUserPayments(getPaymentsByUser(user.id));
-      // Load billing analytics for admin users
       if (user.role === "admin") {
         setBillingAnalytics(getSubscriptionAnalytics());
       }
     }
   }, [user, getPaymentsByUser, getSubscriptionAnalytics]);
+
+  // Keep invoice display in sync with real Supabase data when available
+  useEffect(() => {
+    if (userInvoices.length > 0) {
+      setUserPayments(
+        userInvoices.map((inv) => ({
+          id: inv.stripe_invoice_id || inv.id,
+          createdAt: new Date(inv.created_at),
+          plan: subscription?.subscription_plans?.slug || "premium",
+          billingCycle: "monthly",
+          amount: parseFloat(inv.total_amount) || 0,
+          status: inv.status === "paid" ? "completed" : inv.status,
+          nextBillingDate: subscription?.current_period_end
+            ? new Date(subscription.current_period_end)
+            : null,
+        }))
+      );
+    }
+  }, [userInvoices, subscription]);
+
+  const handleUpgrade = async (planSlug, cycle) => {
+    setSelectedPlan(planSlug);
+    setCheckoutLoading(true);
+    try {
+      const cs = await createCheckoutSession(planSlug, cycle);
+      setClientSecret(cs);
+      setShowPaymentForm(true);
+    } catch (err) {
+      toast.error(err.message || "Failed to initialize checkout. Please try again.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentForm(false);
+    setClientSecret(null);
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentForm(false);
+    setClientSecret(null);
+  };
 
   const plans = [
     {
@@ -114,46 +148,6 @@ const Billing = () => {
       popular: false,
     },
   ];
-
-  const onSubmit = async (data) => {
-    try {
-      const selectedPlanData = plans.find((p) => p.id === selectedPlan);
-      const amount = getPlanPrice(selectedPlanData);
-
-      // Process payment through billing context
-      const paymentData = {
-        userId: user.id,
-        userEmail: user.email,
-        userName: user.name,
-        amount: amount,
-        currency: "USD",
-        plan: selectedPlan,
-        billingCycle: billingCycle,
-        paymentMethod: "card",
-        cardLast4: data.cardNumber.slice(-4),
-        cardBrand: "visa", // In real app, detect from card number
-      };
-
-      await processPayment(paymentData);
-
-      // Update user subscription
-      updateUser(user.id, {
-        ...user,
-        subscription: selectedPlan,
-        billingCycle: billingCycle,
-      });
-
-      // Refresh user payments
-      setUserPayments(getPaymentsByUser(user.id));
-
-      toast.success(
-        "Payment processed successfully! Your subscription has been updated."
-      );
-      setShowPaymentForm(false);
-    } catch (error) {
-      toast.error("Payment failed. Please try again.");
-    }
-  };
 
   const getPlanPrice = (plan) => {
     return billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
@@ -477,8 +471,9 @@ const Billing = () => {
 
                     <div className="mt-6 flex space-x-4">
                       <button
-                        onClick={() => setShowPaymentForm(true)}
+                        onClick={() => openPortal().catch((err) => toast.error(err.message || "Failed to open billing portal"))}
                         className="bg-blue-600 dark:bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                        data-testid="billing-update-payment-btn"
                       >
                         Update Payment Method
                       </button>
@@ -652,25 +647,36 @@ const Billing = () => {
                           <div className="mt-8">
                             <button
                               onClick={() => {
-                                setSelectedPlan(plan.id);
-                                if (plan.id !== user?.subscription) {
-                                  setShowPaymentForm(true);
+                                if (plan.id !== user?.subscription && plan.id !== "basic") {
+                                  handleUpgrade(plan.id, billingCycle);
                                 }
                               }}
-                              disabled={plan.id === user?.subscription}
+                              disabled={
+                                plan.id === user?.subscription ||
+                                plan.id === "basic" ||
+                                checkoutLoading
+                              }
                               className={`w-full py-3 px-4 rounded-md text-sm font-medium transition-colors ${
-                                plan.id === user?.subscription
+                                plan.id === user?.subscription || plan.id === "basic"
                                   ? "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                                   : selectedPlan === plan.id
                                   ? `bg-${plan.color}-600 dark:bg-${plan.color}-700 text-white hover:bg-${plan.color}-700 dark:hover:bg-${plan.color}-600`
                                   : `border border-${plan.color}-600 dark:border-${plan.color}-400 text-${plan.color}-600 dark:text-${plan.color}-400 hover:bg-${plan.color}-50 dark:hover:bg-${plan.color}-900/20`
                               }`}
+                              data-testid={`billing-plan-select-${plan.id}-btn`}
                             >
-                              {plan.id === user?.subscription
-                                ? "Current Plan"
-                                : plan.id === "basic"
-                                ? "Downgrade to Basic"
-                                : "Upgrade to " + plan.name}
+                              {checkoutLoading && selectedPlan === plan.id ? (
+                                <span className="flex items-center justify-center gap-2">
+                                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                                  Loading...
+                                </span>
+                              ) : plan.id === user?.subscription ? (
+                                "Current Plan"
+                              ) : plan.id === "basic" ? (
+                                "Downgrade to Basic"
+                              ) : (
+                                "Upgrade to " + plan.name
+                              )}
                             </button>
                           </div>
                         </div>
@@ -1057,134 +1063,39 @@ const Billing = () => {
             </div>
           )}
 
-          {/* Payment Form Modal */}
-          {showPaymentForm && (
-            <div className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-50">
+          {/* Stripe Payment Modal */}
+          {showPaymentForm && clientSecret && (
+            <div
+              className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-50"
+              data-testid="billing-payment-modal"
+            >
               <div className="relative top-20 mx-auto p-5 border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
                 <div className="mt-3">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Payment Details
+                      Complete Subscription
                     </h3>
                     <button
-                      onClick={() => setShowPaymentForm(false)}
+                      onClick={handlePaymentCancel}
                       className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                      data-testid="billing-payment-modal-close-btn"
                     >
-                      x
+                      ✕
                     </button>
                   </div>
 
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <input
-                      type="hidden"
-                      {...register("plan")}
-                      value={selectedPlan}
-                    />
-                    <input
-                      type="hidden"
-                      {...register("billingCycle")}
-                      value={billingCycle}
-                    />
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Subscribing to the{" "}
+                    <span className="font-semibold capitalize">{selectedPlan}</span> plan
+                    ({billingCycle}).
+                  </p>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Card Number
-                      </label>
-                      <input
-                        {...register("cardNumber")}
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                      />
-                      {errors.cardNumber && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                          {errors.cardNumber.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Expiry Date
-                        </label>
-                        <input
-                          {...register("expiryDate")}
-                          type="text"
-                          placeholder="MM/YY"
-                          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                        />
-                        {errors.expiryDate && (
-                          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                            {errors.expiryDate.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          CVV
-                        </label>
-                        <input
-                          {...register("cvv")}
-                          type="text"
-                          placeholder="123"
-                          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                        />
-                        {errors.cvv && (
-                          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                            {errors.cvv.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Cardholder Name
-                      </label>
-                      <input
-                        {...register("cardholderName")}
-                        type="text"
-                        placeholder="John Doe"
-                        className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                      />
-                      {errors.cardholderName && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                          {errors.cardholderName.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Shield className="w-4 h-4" />
-                      <span>
-                        Your payment information is secure and encrypted
-                      </span>
-                    </div>
-
-                    <div className="flex space-x-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowPaymentForm(false)}
-                        className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="flex-1 py-2 px-4 bg-blue-600 dark:bg-blue-700 text-white rounded-md text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
-                      >
-                        {isSubmitting ? (
-                          <div className="flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          </div>
-                        ) : (
-                          "Complete Payment"
-                        )}
-                      </button>
-                    </div>
-                  </form>
+                  <StripePaymentForm
+                    clientSecret={clientSecret}
+                    amount={getPlanPrice(plans.find((p) => p.id === selectedPlan))}
+                    onSuccess={handlePaymentSuccess}
+                    onCancel={handlePaymentCancel}
+                  />
                 </div>
               </div>
             </div>

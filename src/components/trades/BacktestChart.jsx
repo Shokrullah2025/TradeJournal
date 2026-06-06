@@ -77,6 +77,14 @@ const BacktestChart = ({
   onCandleSeek,
   isPlaying = false,
   isDark = false,
+  positions = [],
+  onPositionUpdate,
+  orderPreview = null,
+  onOrderPreviewUpdate,
+  drawingMode = null,
+  userDrawings = [],
+  onDrawingAdd,
+  onDrawingDelete,
 }) => {
   const wrapperRef = useRef();
   const chartRef = useRef(null);
@@ -88,6 +96,24 @@ const BacktestChart = ({
   const indicatorsRef = useRef(indicators);
   const onCandleSeekRef = useRef(onCandleSeek);
   const isDarkRef = useRef(isDark);
+  const onPositionUpdateRef = useRef(onPositionUpdate);
+  const onOrderPreviewUpdateRef = useRef(onOrderPreviewUpdate);
+  const onDrawingAddRef = useRef(onDrawingAdd);
+  const onDrawingDeleteRef = useRef(onDrawingDelete);
+  // { line, posId, field } — tracks each drawn position price line
+  const positionLineRefs = useRef([]);
+  // { line, field } — tracks order-panel preview price lines (shown before order is placed)
+  const previewLineRefs = useRef([]);
+  // { line, id } — user-drawn horizontal price lines
+  const userHLineRefs = useRef([]);
+  // SVG overlay for trend lines
+  const svgRef = useRef(null);
+  // Drawing mode / state
+  const drawingModeRef = useRef(null);
+  const drawingStateRef = useRef(null);   // first point when drawing a trendline
+  const previewPointRef = useRef(null);   // current mouse position for trendline preview
+  const userDrawingsRef = useRef([]);
+  const updateSvgDrawingsRef = useRef(() => {});
 
   // OHLCV bar — direct DOM writes for 60fps crosshair, no React re-render
   const ohlcBarRef = useRef();
@@ -101,6 +127,35 @@ const BacktestChart = ({
   useEffect(() => { indicatorsRef.current = indicators; });
   useEffect(() => { onCandleSeekRef.current = onCandleSeek; });
   useEffect(() => { isDarkRef.current = isDark; });
+  useEffect(() => { onPositionUpdateRef.current = onPositionUpdate; });
+  useEffect(() => { onOrderPreviewUpdateRef.current = onOrderPreviewUpdate; });
+  useEffect(() => { onDrawingAddRef.current = onDrawingAdd; });
+  useEffect(() => { onDrawingDeleteRef.current = onDrawingDelete; });
+  useEffect(() => { drawingModeRef.current = drawingMode; drawingStateRef.current = null; }, [drawingMode]);
+
+  // ── Drawing cursor ──
+  useEffect(() => {
+    if (wrapperRef.current) wrapperRef.current.style.cursor = drawingMode ? "crosshair" : "";
+  }, [drawingMode]);
+
+  // ── Sync user drawings — hlines via price lines, trendlines via SVG ──
+  useEffect(() => {
+    const { main } = seriesRef.current;
+    userDrawingsRef.current = userDrawings;
+    if (!main) return;
+    userHLineRefs.current.forEach(({ line }) => { try { main.removePriceLine(line); } catch {} });
+    userHLineRefs.current = [];
+    userDrawings.filter((d) => d.type === "hline").forEach((d) => {
+      try {
+        const line = main.createPriceLine({
+          price: d.price, color: d.color || "#1E53E5",
+          lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "", draggable: false,
+        });
+        userHLineRefs.current.push({ line, id: d.id });
+      } catch {}
+    });
+    updateSvgDrawingsRef.current();
+  }, [userDrawings]);
 
   // ── Indicator visibility — runs when indicator toggles change ──
   useEffect(() => {
@@ -126,6 +181,109 @@ const BacktestChart = ({
       },
     });
   }, [isDark]);
+
+  // ── Position price lines — entry, TP, SL drawn on the candlestick series ──
+  useEffect(() => {
+    const { main } = seriesRef.current;
+    if (!main) return;
+    positionLineRefs.current.forEach(({ line }) => {
+      try { main.removePriceLine(line); } catch {}
+    });
+    positionLineRefs.current = [];
+    const T = isDarkRef.current ? TV_DARK : TV_LIGHT;
+    positions.forEach((pos) => {
+      const sideColor = pos.side === "buy" ? T.up : T.down;
+      const addLine = (price, color, title, lineStyle, posId, field) => {
+        try {
+          const line = main.createPriceLine({
+            price, color, lineWidth: 1, lineStyle, axisLabelVisible: true, title,
+            draggable: field !== "entry", // TP and SL are draggable; entry is not
+          });
+          positionLineRefs.current.push({ line, posId, field });
+        } catch {}
+      };
+      addLine(pos.entryPrice, sideColor, `${pos.side.toUpperCase()} ×${pos.size}`, 2, pos.id, "entry");
+      if (pos.takeProfit !== null) addLine(pos.takeProfit, "#089981", "TP", 1, pos.id, "takeProfit");
+      if (pos.stopLoss   !== null) addLine(pos.stopLoss,   "#f23645", "SL", 1, pos.id, "stopLoss");
+    });
+  }, [positions]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Order panel preview lines — entry/TP/SL shown before placing an order ──
+  useEffect(() => {
+    const { main } = seriesRef.current;
+    if (!main) return;
+    previewLineRefs.current.forEach(({ line }) => {
+      try { main.removePriceLine(line); } catch {}
+    });
+    previewLineRefs.current = [];
+    if (!orderPreview) return;
+    const T = isDarkRef.current ? TV_DARK : TV_LIGHT;
+    const sideColor = orderPreview.side === "buy" ? T.up : T.down;
+    const addLine = (price, color, title, lineStyle, field) => {
+      try {
+        const line = main.createPriceLine({
+          price, color, lineWidth: 1, lineStyle, axisLabelVisible: true, title,
+          draggable: field !== "entry",
+        });
+        previewLineRefs.current.push({ line, field });
+      } catch {}
+    };
+    // Only show TP/SL dashed lines (no entry line — avoids clutter while order panel is open)
+    if (orderPreview.takeProfit !== null) addLine(orderPreview.takeProfit, "#089981", "TP", 1, "takeProfit");
+    if (orderPreview.stopLoss !== null) addLine(orderPreview.stopLoss, "#f23645", "SL", 1, "stopLoss");
+  }, [orderPreview, candleData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Mouseup sync — reads dragged price line positions back to state ──
+  // subscribeClick is unreliable after a drag; mouseup on the container always fires
+  useEffect(() => {
+    const container = wrapperRef.current;
+    if (!container) return;
+    const onMouseUp = () => {
+      if (onPositionUpdateRef.current) {
+        positionLineRefs.current.forEach(({ line, posId, field }) => {
+          if (field === "entry") return;
+          try {
+            const newPrice = line.options().price;
+            if (typeof newPrice === "number" && isFinite(newPrice)) {
+              onPositionUpdateRef.current(posId, field, String(newPrice));
+            }
+          } catch {}
+        });
+      }
+      if (onOrderPreviewUpdateRef.current) {
+        previewLineRefs.current.forEach(({ line, field }) => {
+          if (field === "entry") return;
+          try {
+            const newPrice = line.options().price;
+            if (typeof newPrice === "number" && isFinite(newPrice)) {
+              onOrderPreviewUpdateRef.current(field, newPrice);
+            }
+          } catch {}
+        });
+      }
+    };
+    container.addEventListener("mouseup", onMouseUp);
+    return () => container.removeEventListener("mouseup", onMouseUp);
+  }, []); // stable — uses refs so always sees current handlers
+
+  // ── Keyboard shortcut: Ctrl+R or Alt+R resets chart zoom to default ──
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (!chartRef.current) return;
+      if ((e.ctrlKey || e.altKey) && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        const last = lastRef.current;
+        const win = windowRef.current;
+        chartRef.current.applyOptions({ timeScale: { barSpacing: 4 } });
+        chartRef.current.timeScale().setVisibleLogicalRange({
+          from: last - 1 - win,
+          to:   last - 1 + Math.round(win * 0.1),
+        });
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   // ── Chart creation — runs only when candleData changes (new session / new timeframe) ──
   useEffect(() => {
@@ -162,8 +320,8 @@ const BacktestChart = ({
         borderColor: T.border,
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 10,
-        minBarSpacing: 3,
+        barSpacing: 4,
+        minBarSpacing: 2,
         rightOffset: 5,
         textColor: T.textMuted,
       },
@@ -272,8 +430,136 @@ const BacktestChart = ({
       createSeriesMarkers(main, markers);
     }
 
-    // Click-to-seek: clicking a candle sets the replay cut point
+    // ── SVG drawing layer — recomputed on every scroll/zoom ──
+    const updateSvgDrawings = () => {
+      const svg = svgRef.current;
+      if (!svg) return;
+      while (svg.lastChild) svg.removeChild(svg.lastChild);
+      const ts = chart.timeScale();
+      const mn = seriesRef.current.main;
+      if (!mn) return;
+      const svgW = svg.clientWidth;
+      const svgH = svg.clientHeight;
+
+      userDrawingsRef.current.forEach((drawing) => {
+        // Vertical line
+        if (drawing.type === "vline") {
+          const x = ts.logicalToCoordinate(drawing.logicalIndex);
+          if (x == null) return;
+          const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          el.setAttribute("x1", x); el.setAttribute("y1", 0);
+          el.setAttribute("x2", x); el.setAttribute("y2", svgH);
+          el.setAttribute("stroke", drawing.color || "#f7a600");
+          el.setAttribute("stroke-width", "1.5");
+          el.setAttribute("stroke-dasharray", "4,3");
+          el.style.cursor = "pointer";
+          el.style.pointerEvents = "stroke";
+          el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (!drawingModeRef.current || drawingModeRef.current === "eraser")
+              onDrawingDeleteRef.current?.(drawing.id);
+          });
+          svg.appendChild(el);
+          return;
+        }
+
+        if (drawing.type !== "trendline") return;
+        const x1 = ts.logicalToCoordinate(drawing.p1.logicalIndex);
+        const y1 = mn.priceToCoordinate(drawing.p1.price);
+        const x2 = ts.logicalToCoordinate(drawing.p2.logicalIndex);
+        const y2 = mn.priceToCoordinate(drawing.p2.price);
+        if (x1 == null || y1 == null || x2 == null || y2 == null) return;
+
+        // Extend line to full chart width
+        const dx = x2 - x1, dy = y2 - y1;
+        let lx1 = x1, ly1 = y1, lx2 = x2, ly2 = y2;
+        if (Math.abs(dx) > 0.5) {
+          const slope = dy / dx;
+          lx1 = 0;    ly1 = y1 + slope * (0 - x1);
+          lx2 = svgW; ly2 = y1 + slope * (svgW - x1);
+        }
+
+        const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        el.setAttribute("x1", lx1); el.setAttribute("y1", ly1);
+        el.setAttribute("x2", lx2); el.setAttribute("y2", ly2);
+        el.setAttribute("stroke", drawing.color || "#1E53E5");
+        el.setAttribute("stroke-width", "1.5");
+        el.style.cursor = "pointer";
+        el.style.pointerEvents = "stroke";
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!drawingModeRef.current || drawingModeRef.current === "eraser")
+            onDrawingDeleteRef.current?.(drawing.id);
+        });
+        svg.appendChild(el);
+
+        // Anchor dots at the two clicked points
+        [[x1, y1], [x2, y2]].forEach(([cx, cy]) => {
+          const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          dot.setAttribute("cx", cx); dot.setAttribute("cy", cy); dot.setAttribute("r", "3");
+          dot.setAttribute("fill", drawing.color || "#1E53E5");
+          dot.style.pointerEvents = "none";
+          svg.appendChild(dot);
+        });
+      });
+
+      // Dashed preview while placing second trendline point
+      if (drawingModeRef.current === "trendline" && drawingStateRef.current && previewPointRef.current) {
+        const p1 = drawingStateRef.current;
+        const ax = ts.logicalToCoordinate(p1.logicalIndex);
+        const ay = mn.priceToCoordinate(p1.price);
+        if (ax != null && ay != null) {
+          const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          el.setAttribute("x1", ax); el.setAttribute("y1", ay);
+          el.setAttribute("x2", previewPointRef.current.x);
+          el.setAttribute("y2", previewPointRef.current.y);
+          el.setAttribute("stroke", "#1E53E5");
+          el.setAttribute("stroke-width", "1.5");
+          el.setAttribute("stroke-dasharray", "5,4");
+          el.style.pointerEvents = "none";
+          svg.appendChild(el);
+          const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          dot.setAttribute("cx", ax); dot.setAttribute("cy", ay); dot.setAttribute("r", "3");
+          dot.setAttribute("fill", "#1E53E5"); dot.style.pointerEvents = "none";
+          svg.appendChild(dot);
+        }
+      }
+    };
+    updateSvgDrawingsRef.current = updateSvgDrawings;
+    chart.timeScale().subscribeVisibleLogicalRangeChange(updateSvgDrawings);
+
+    // Click-to-seek, or record drawing points when a tool is active
     chart.subscribeClick((param) => {
+      if (drawingModeRef.current) {
+        if (!param.point || !param.time) return;
+        const price = main?.coordinateToPrice(param.point.y);
+        if (price == null) return;
+        const t = typeof param.time === "number" ? param.time : Number(param.time);
+        let logicalIndex = candleData.findIndex((c) => c.time === t);
+        if (logicalIndex === -1) {
+          let minDiff = Infinity;
+          candleData.forEach((c, i) => { const d = Math.abs(c.time - t); if (d < minDiff) { minDiff = d; logicalIndex = i; } });
+        }
+        if (drawingModeRef.current === "hline") {
+          onDrawingAddRef.current?.({ type: "hline", price, color: "#1E53E5" });
+        } else if (drawingModeRef.current === "vline") {
+          onDrawingAddRef.current?.({ type: "vline", logicalIndex, color: "#f7a600" });
+        } else if (drawingModeRef.current === "trendline") {
+          if (!drawingStateRef.current) {
+            drawingStateRef.current = { price, logicalIndex };
+          } else {
+            const p1 = drawingStateRef.current;
+            onDrawingAddRef.current?.({
+              type: "trendline",
+              p1: { price: p1.price, logicalIndex: p1.logicalIndex },
+              p2: { price, logicalIndex },
+              color: "#1E53E5",
+            });
+            drawingStateRef.current = null;
+          }
+        }
+        return; // don't seek when drawing
+      }
       if (!param.time || !onCandleSeekRef.current) return;
       const t = typeof param.time === "number" ? param.time : Number(param.time);
       let idx = candleData.findIndex((c) => c.time === t);
@@ -289,6 +575,14 @@ const BacktestChart = ({
 
     // OHLCV crosshair tooltip — direct DOM for 60fps
     chart.subscribeCrosshairMove((param) => {
+      // Update trendline drawing preview
+      if (param.point) {
+        previewPointRef.current = { x: param.point.x, y: param.point.y };
+        if (drawingModeRef.current === "trendline" && drawingStateRef.current) {
+          updateSvgDrawings();
+        }
+      }
+
       if (!ohlcBarRef.current) return;
       if (!param.time) { ohlcBarRef.current.style.opacity = "0"; return; }
       const d = param.seriesData?.get(main);
@@ -314,6 +608,10 @@ const BacktestChart = ({
     });
 
     return () => {
+      positionLineRefs.current = [];
+      previewLineRefs.current = [];
+      userHLineRefs.current = [];
+      updateSvgDrawingsRef.current = () => {};
       chart.remove();
       chartRef.current = null;
       seriesRef.current = {};
@@ -343,11 +641,7 @@ const BacktestChart = ({
       ema20s.setData(ema20Ref.current.slice(0, target).filter(Boolean));
       ema50s.setData(ema50Ref.current.slice(0, target).filter(Boolean));
       lastRef.current = target;
-      const win = windowRef.current;
-      chartRef.current?.timeScale().setVisibleLogicalRange({
-        from: target - 1 - win,
-        to:   target - 1 + Math.round(win * 0.1),
-      });
+      // Do NOT reset the viewport on backward seek — preserve the user's current scroll/zoom
       return;
     }
 
@@ -385,12 +679,18 @@ const BacktestChart = ({
         <span ref={ohlcChangeRef} style={{ fontWeight: 600 }} />
       </div>
 
+      {/* SVG overlay — user drawings. Must have pointer-events:none so it doesn't block
+           chart scroll/drag/click. Child elements override this with pointer-events:stroke. */}
+      <svg ref={svgRef} className="absolute inset-0" style={{ zIndex: 6, width: "100%", height: "100%", pointerEvents: "none" }} />
+
       {/* Click-to-seek hint — bottom right, fades on hover */}
       <div
         className="absolute bottom-8 right-3 z-10 text-xs pointer-events-none select-none"
         style={{ color: isDark ? TV_DARK.border : TV_LIGHT.border, fontFamily: "'Trebuchet MS', Roboto, sans-serif" }}
       >
-        Click candle to set replay point
+        {drawingMode === "trendline" ? (drawingMode && !drawingModeRef.current ? "" : "Click to place first point") :
+         drawingMode === "hline" ? "Click to draw horizontal line" :
+         "Click candle to set replay point"}
       </div>
 
       {/* Chart mount point — fills parent */}

@@ -55,40 +55,8 @@ export const emailVerificationSchema = z.object({
   token: z.string().min(1, "Verification token is required"),
 });
 
-// Payment method schema
-export const paymentMethodSchema = z.object({
-  cardNumber: z
-    .string()
-    .min(1, "Card number is required")
-    .regex(/^[0-9\s]{13,19}$/, "Please enter a valid card number"),
-  expiryDate: z
-    .string()
-    .min(1, "Expiry date is required")
-    .regex(
-      /^(0[1-9]|1[0-2])\/\d{2}$/,
-      "Please enter a valid expiry date (MM/YY)"
-    ),
-  cvc: z
-    .string()
-    .min(1, "CVC is required")
-    .regex(/^[0-9]{3,4}$/, "Please enter a valid CVC"),
-  cardholderName: z
-    .string()
-    .min(1, "Cardholder name is required")
-    .min(2, "Cardholder name must be at least 2 characters"),
-  billingEmail: z
-    .string()
-    .min(1, "Billing email is required")
-    .email("Please enter a valid email address"),
-  billingAddress: z.object({
-    line1: z.string().min(1, "Address line 1 is required"),
-    line2: z.string().optional(),
-    city: z.string().min(1, "City is required"),
-    state: z.string().min(1, "State is required"),
-    postalCode: z.string().min(1, "ZIP code is required"),
-    country: z.string().min(1, "Country is required").default("US"),
-  }),
-});
+// Card data is never handled in the app — Stripe Elements collects it directly.
+// Do not add card number, CVV, or expiry fields to any schema here.
 
 // User profile update schema
 export const profileUpdateSchema = z.object({
@@ -122,7 +90,7 @@ export const adminUserSchema = z.object({
   isActive: z.boolean(),
 });
 
-// Billing schema
+// Billing schema — plan selection only. Card data is handled by Stripe Elements.
 export const billingSchema = z.object({
   plan: z.enum(["basic", "premium", "enterprise"], {
     required_error: "Please select a plan",
@@ -130,22 +98,6 @@ export const billingSchema = z.object({
   billingCycle: z.enum(["monthly", "yearly"], {
     required_error: "Please select a billing cycle",
   }),
-  cardNumber: z
-    .string()
-    .min(1, "Card number is required")
-    .regex(/^\d{16}$/, "Card number must be 16 digits"),
-  expiryDate: z
-    .string()
-    .min(1, "Expiry date is required")
-    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Expiry date must be in MM/YY format"),
-  cvv: z
-    .string()
-    .min(1, "CVV is required")
-    .regex(/^\d{3,4}$/, "CVV must be 3 or 4 digits"),
-  cardholderName: z
-    .string()
-    .min(1, "Cardholder name is required")
-    .min(2, "Cardholder name must be at least 2 characters"),
 });
 
 // Change password schema

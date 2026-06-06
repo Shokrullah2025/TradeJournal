@@ -9,6 +9,7 @@ import {
   DollarSign,
   Eye,
   MoreHorizontal,
+  Camera,
 } from "lucide-react";
 import { useTrades } from "../../context/TradeContext";
 import toast from "react-hot-toast";
@@ -226,13 +227,18 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {trade.instrument}
-                      </div>
-                      {trade.strategy && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                          {trade.strategy}
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
+                          {trade.instrument}
                         </div>
+                        {trade.strategy && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {trade.strategy}
+                          </div>
+                        )}
+                      </div>
+                      {trade.images?.length > 0 && (
+                        <TradeImageThumbs images={trade.images} />
                       )}
                     </div>
                   </td>
@@ -357,6 +363,57 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
           trade={selectedTrade}
           onClose={() => setSelectedTrade(null)}
         />
+      )}
+    </div>
+  );
+};
+
+// Inline thumbnail strip with hover zoom for trade rows
+const TradeImageThumbs = ({ images }) => {
+  const [zoomedIdx, setZoomedIdx] = useState(null);
+  const sorted = [...images].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const shown = sorted.slice(0, 3);
+
+  return (
+    <div className="flex items-center ml-3 space-x-1" data-testid="trade-row-images">
+      {shown.map((img, i) => (
+        <div
+          key={img.id}
+          className="relative"
+          onMouseEnter={() => setZoomedIdx(i)}
+          onMouseLeave={() => setZoomedIdx(null)}
+          data-testid={`trade-row-image-thumb-${i}`}
+        >
+          {img.previewUrl ? (
+            <img
+              src={img.previewUrl}
+              alt={`Screenshot ${i + 1}`}
+              className="w-7 h-7 rounded object-cover border border-gray-200 dark:border-gray-600 cursor-zoom-in"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+              <Camera className="w-3.5 h-3.5 text-gray-400" />
+            </div>
+          )}
+
+          {/* Hover zoom popover */}
+          {zoomedIdx === i && img.previewUrl && (
+            <div className="absolute left-0 bottom-full mb-2 z-50 pointer-events-none">
+              <div className="rounded-lg overflow-hidden shadow-2xl border-2 border-white dark:border-gray-700" style={{ width: 240 }}>
+                <img
+                  src={img.previewUrl}
+                  alt={`Screenshot ${i + 1} zoom`}
+                  className="w-full object-contain"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+      {images.length > 3 && (
+        <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+          +{images.length - 3}
+        </span>
       )}
     </div>
   );

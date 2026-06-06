@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { RR_MODES, getDefaultModeForInstrument, getUserRRList, parseRRValue } from "../../utils/rrModes";
+import { RR_MODES, QUICK_MODES, ADVANCED_RR_MODES, getDefaultModeForInstrument, getUserRRList, parseRRValue } from "../../utils/rrModes";
+import { useTemplates } from "../../hooks/useTemplates";
+import { useUserSettings } from "../../hooks/useUserSettings";
+import TradeImageUploader from "./TradeImageUploader";
 import { useForm } from "react-hook-form";
 import {
   X,
@@ -15,6 +18,8 @@ import {
   Clock,
   ChevronDown,
   Check,
+  Camera,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useTrades } from "../../context/TradeContext";
 import toast from "react-hot-toast";
@@ -41,38 +46,21 @@ const saveUserOption = (type, value) => {
 };
 
 const TradeForm = ({ trade, onClose, selectedDate }) => {
-  const { addTrade, updateTrade } = useTrades();
+  const { addTrade, updateTrade, saveTradeImage, deleteTradeImage, updateTradeImageOrder, refreshTrades } = useTrades();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
   const [activeTab, setActiveTab] = useState("quick");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [lastAppliedTemplate, setLastAppliedTemplate] = useState(null);
   const [exitPriceMode, setExitPriceMode] = useState("stopLoss"); // "stopLoss", "takeProfit", "custom"
-  const [rrMode, setRrMode] = useState("ratio");
+  const [rrMode, setRrMode] = useState(() => getDefaultModeForInstrument("stocks"));
   const [rrListsByMode, setRrListsByMode] = useState(() =>
     Object.fromEntries(Object.keys(RR_MODES).map((m) => [m, getUserRRList(m)]))
   );
 
-  // Get settings from localStorage
-  const [settingsTemplates, setSettingsTemplates] = useState(() => {
-    const stored = localStorage.getItem("tradeJournalTemplates");
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const [settingsRiskProfiles, setSettingsRiskProfiles] = useState(() => {
-    const stored = localStorage.getItem("tradeJournalRiskProfiles");
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const [settingsStrategies, setSettingsStrategies] = useState(() => {
-    const stored = localStorage.getItem("tradeJournalStrategies");
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const [settingsSetups, setSettingsSetups] = useState(() => {
-    const stored = localStorage.getItem("tradeJournalSetups");
-    return stored ? JSON.parse(stored) : [];
-  });
+  // Templates fetched from Supabase — persisted across devices and cache clears
+  const { templates: settingsTemplates } = useTemplates();
+  const { strategies: settingsStrategies, setups: settingsSetups, riskProfiles: settingsRiskProfiles } = useUserSettings();
 
   const isEditing = !!trade;
 
@@ -118,12 +106,22 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   const watchedStatus = watch("status");
   const selectedInstrumentType = watch("instrumentType");
 
-  // Auto-switch R:R mode when instrument type changes
+  // Auto-switch R:R mode when instrument type changes (Quick Entry context)
   useEffect(() => {
-    if (selectedInstrumentType) {
+    if (selectedInstrumentType && activeTab === "quick") {
       setRrMode(getDefaultModeForInstrument(selectedInstrumentType));
     }
-  }, [selectedInstrumentType]);
+  }, [selectedInstrumentType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When switching tabs, keep the mode valid for that tab
+  useEffect(() => {
+    const quickModes = QUICK_MODES[selectedInstrumentType] || ["dollar"];
+    if (activeTab === "quick" && !quickModes.includes(rrMode)) {
+      setRrMode(quickModes[0]);
+    } else if (activeTab === "advanced" && !ADVANCED_RR_MODES.includes(rrMode)) {
+      setRrMode("account_pct");
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
   const watchedEntryDate = watch("entryDate");
   const watchedStopLoss = watch("stopLoss");
   const watchedTakeProfit = watch("takeProfit");
@@ -140,6 +138,34 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     return stored ? JSON.parse(stored) : {};
   });
   const instrumentRef = useRef(null);
+
+  const SLOT_LABELS = ["Chart", "Entry", "Exit", "Notes"];
+
+  // Screenshots feature — always available in the form
+  const [tradeImages, setTradeImages] = useState(() =>
+    isEditing && trade?.images ? trade.images : []
+  );
+  const [showImageUploader, setShowImageUploader] = useState(false);
+  const [activeSlotIndex, setActiveSlotIndex] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const [dragOverSlot, setDragOverSlot] = useState(null);
+  const [brokenSlots, setBrokenSlots] = useState(new Set());
+  const slotFileInputRef = useRef(null);
+  const draggedSlotRef = useRef(null);
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      tradeImages.forEach((img) => {
+        if (img.isNew && img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+      });
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset broken-image tracking whenever the image list changes
+  useEffect(() => {
+    setBrokenSlots(new Set());
+  }, [tradeImages.length]);
 
   // Constants
   const instruments = {
@@ -205,89 +231,23 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     "High Volume",
   ]);
 
-  // Listen for localStorage changes to update templates in real-time
+
+  // Auto-detect the template that was applied to this trade when editing
   useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = localStorage.getItem("tradeJournalTemplates");
-      const templates = stored ? JSON.parse(stored) : [];
-      setSettingsTemplates(templates);
-    };
+    if (!isEditing || !trade || settingsTemplates.length === 0 || selectedTemplateId) return;
+    const match = settingsTemplates.find((t) => {
+      const f = t.fields || {};
+      const strategyMatch = f.strategy ? f.strategy === trade.strategy : true;
+      const setupMatch    = f.setup    ? f.setup    === trade.setup    : true;
+      return strategyMatch && setupMatch && (f.strategy || f.setup);
+    });
+    if (match) setSelectedTemplateId(String(match.id));
+  }, [isEditing, trade, settingsTemplates]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Listen for storage events (when localStorage is updated in another tab/component)
-    window.addEventListener("storage", handleStorageChange);
-
-    // Also check for updates periodically (in case updates happen in same tab)
-    const interval = setInterval(() => {
-      const stored = localStorage.getItem("tradeJournalTemplates");
-      const templates = stored ? JSON.parse(stored) : [];
-      if (JSON.stringify(templates) !== JSON.stringify(settingsTemplates)) {
-        setSettingsTemplates(templates);
-      }
-    }, 1000);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [settingsTemplates]);
-
-  // Listen for localStorage changes to update strategies in real-time
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = localStorage.getItem("tradeJournalStrategies");
-      const strategies = stored ? JSON.parse(stored) : [];
-      setSettingsStrategies(strategies);
-    };
-
-    // Listen for storage events
-    window.addEventListener("storage", handleStorageChange);
-
-    // Also check for updates periodically
-    const interval = setInterval(() => {
-      const stored = localStorage.getItem("tradeJournalStrategies");
-      const strategies = stored ? JSON.parse(stored) : [];
-      if (JSON.stringify(strategies) !== JSON.stringify(settingsStrategies)) {
-        setSettingsStrategies(strategies);
-      }
-    }, 1000);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [settingsStrategies]);
-
-  // Listen for localStorage changes to update setups in real-time
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = localStorage.getItem("tradeJournalSetups");
-      const setups = stored ? JSON.parse(stored) : [];
-      setSettingsSetups(setups);
-    };
-
-    // Listen for storage events
-    window.addEventListener("storage", handleStorageChange);
-
-    // Also check for updates periodically
-    const interval = setInterval(() => {
-      const stored = localStorage.getItem("tradeJournalSetups");
-      const setups = stored ? JSON.parse(stored) : [];
-      if (JSON.stringify(setups) !== JSON.stringify(settingsSetups)) {
-        setSettingsSetups(setups);
-      }
-    }, 1000);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [settingsSetups]);
 
   // Template application function
   const applyTemplate = (templateId) => {
-    // Convert templateId to number since template IDs are created with Date.now()
-    const numericTemplateId = parseInt(templateId);
-    const template = settingsTemplates.find((t) => t.id === numericTemplateId);
+    const template = settingsTemplates.find((t) => t.id === templateId);
 
     console.log("Applying template:", template);
     console.log("Template fields:", template?.fields);
@@ -940,12 +900,42 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
         formattedData.pnl = pnlCalculation;
       }
 
+      let savedTradeId;
       if (isEditing) {
         await updateTrade(trade.id, formattedData);
+        savedTradeId = trade.id;
         toast.success("Trade updated successfully!");
       } else {
-        await addTrade(formattedData);
+        const saved = await addTrade(formattedData);
+        savedTradeId = saved?.id;
         toast.success("Trade added successfully!");
+      }
+
+      // Handle image changes, then await the full context refresh before closing
+      // so the trade list has fresh data the moment the user reopens this trade.
+      const newImages      = tradeImages.filter((img) => img.isNew && !img.toDelete);
+      const deletedImages  = tradeImages.filter((img) => !img.isNew && img.toDelete);
+      const changedImages  = tradeImages.filter((img) => !img.isNew && !img.toDelete);
+
+      const hasImageWork = newImages.length > 0 || deletedImages.length > 0;
+      // Always persist sort-order for existing images so drag-and-drop reorders survive saves.
+      const hasSortWork  = changedImages.length > 0;
+
+      if (savedTradeId && (hasImageWork || hasSortWork)) {
+        await Promise.all([
+          ...newImages.map((img, i) =>
+            saveTradeImage(savedTradeId, img.file, img.sortOrder ?? i)
+          ),
+          ...deletedImages.map((img) =>
+            deleteTradeImage(img.id)
+          ),
+          ...changedImages.map((img) =>
+            updateTradeImageOrder(img.id, img.sortOrder)
+          ),
+        ]);
+
+        // Await the refresh so context is up-to-date before the modal closes
+        await refreshTrades();
       }
 
       onClose();
@@ -957,9 +947,176 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     }
   };
 
+  const visibleImages = tradeImages.filter((i) => !i.toDelete).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const handleSlotClick = (slotIndex, img) => {
+    if (img?.previewUrl) {
+      setLightboxImage({ previewUrl: img.previewUrl, label: SLOT_LABELS[slotIndex] });
+    } else {
+      setActiveSlotIndex(slotIndex);
+      slotFileInputRef.current?.click();
+    }
+  };
+
+  const handleSlotDeleteClick = (e, img) => {
+    e.stopPropagation();
+    setTradeImages((prev) => {
+      const updated = img.isNew
+        ? prev.filter((i) => i.id !== img.id)
+        : prev.map((i) => i.id === img.id ? { ...i, toDelete: true } : i);
+      // Compact sortOrders so remaining images fill from slot 0 with no gaps
+      const remaining = updated
+        .filter((i) => !i.toDelete)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      const orderMap = Object.fromEntries(remaining.map((i, idx) => [i.id, idx]));
+      return updated.map((i) =>
+        !i.toDelete && orderMap[i.id] !== undefined
+          ? { ...i, sortOrder: orderMap[i.id] }
+          : i
+      );
+    });
+  };
+
+  const handleSlotDragStart = (e, slotIndex, img) => {
+    if (!img?.previewUrl) { e.preventDefault(); return; }
+    draggedSlotRef.current = slotIndex;
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleSlotDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleSlotDropEvent = (e, slotIndex) => {
+    e.preventDefault();
+    const fromIndex = draggedSlotRef.current;
+    draggedSlotRef.current = null;
+    // Internal slot-to-slot drag — swap sortOrders, ignore dataTransfer.files
+    if (fromIndex !== null) {
+      if (fromIndex === slotIndex) return;
+      setTradeImages((prev) => {
+        const fromImg = prev.find((i) => !i.toDelete && (i.sortOrder ?? 0) === fromIndex);
+        const toImg = prev.find((i) => !i.toDelete && (i.sortOrder ?? 0) === slotIndex);
+        return prev.map((i) => {
+          if (fromImg && i.id === fromImg.id) return { ...i, sortOrder: slotIndex };
+          if (toImg && i.id === toImg.id) return { ...i, sortOrder: fromIndex };
+          return i;
+        });
+      });
+      return;
+    }
+    // External file drop
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleSlotDrop(slotIndex, e.dataTransfer.files);
+    }
+  };
+
+  const handleSlotFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || activeSlotIndex === null) return;
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Only JPEG, PNG, WebP, or GIF allowed");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("File must be under 4MB");
+      return;
+    }
+    // Compress via canvas → WebP
+    const compressed = await new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, 1200 / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" }));
+        }, "image/webp", 0.8);
+      };
+      img.src = url;
+    });
+    const previewUrl = URL.createObjectURL(compressed);
+    setTradeImages((prev) => {
+      const next = prev.filter((i) => !i.toDelete);
+      // Replace slot if something already occupies that sort order
+      const withoutSlot = next.filter((i) => (i.sortOrder ?? 0) !== activeSlotIndex);
+      return [
+        ...withoutSlot,
+        {
+          id: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file: compressed,
+          previewUrl,
+          storagePath: null,
+          sortOrder: activeSlotIndex,
+          isNew: true,
+          toDelete: false,
+        },
+      ];
+    });
+    setActiveSlotIndex(null);
+  };
+
+  const handleSlotDrop = async (slotIndex, files) => {
+    const file = files?.[0];
+    if (!file) return;
+    setActiveSlotIndex(slotIndex);
+    // Reuse the file-change handler by temporarily triggering it
+    // Directly process to avoid ref tricks
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Only JPEG, PNG, WebP, or GIF allowed");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("File must be under 4MB");
+      return;
+    }
+    const compressed = await new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, 1200 / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" }));
+        }, "image/webp", 0.8);
+      };
+      img.src = url;
+    });
+    const previewUrl = URL.createObjectURL(compressed);
+    setTradeImages((prev) => {
+      const next = prev.filter((i) => !i.toDelete);
+      const withoutSlot = next.filter((i) => (i.sortOrder ?? 0) !== slotIndex);
+      return [
+        ...withoutSlot,
+        {
+          id: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file: compressed,
+          previewUrl,
+          storagePath: null,
+          sortOrder: slotIndex,
+          isNew: true,
+          toDelete: false,
+        },
+      ];
+    });
+    setActiveSlotIndex(null);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* Left: scrollable form */}
+        <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center">
             <Calendar className="w-6 h-6 mr-2 text-blue-600" />
@@ -1010,56 +1167,32 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   {/* Left: template picker (new trade) OR setup summary (editing) */}
                   <div>
                     {isEditing ? (
-                      /* ── Edit mode: show what the trade was set up with ── */
+                      /* ── Edit mode: simple template re-selector ── */
                       <div className="bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-lg p-4 h-full">
                         <div className="flex items-center text-gray-700 dark:text-gray-200 mb-3">
-                          <BarChart3 className="w-5 h-5 mr-2 text-blue-500" />
-                          <h4 className="font-semibold text-sm">Trade Setup</h4>
+                          <Target className="w-5 h-5 mr-2 text-blue-500" />
+                          <h4 className="font-semibold text-sm">Template</h4>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                          <div>
-                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">Strategy</span>
-                            <div className={`mt-0.5 font-medium ${trade.strategy ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
-                              {trade.strategy || "No strategy set"}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">Setup</span>
-                            <div className={`mt-0.5 font-medium ${trade.setup ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
-                              {trade.setup || "No setup set"}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">Market</span>
-                            <div className={`mt-0.5 font-medium ${trade.marketCondition ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
-                              {trade.marketCondition || "Not recorded"}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">R:R</span>
-                            <div className={`mt-0.5 font-medium ${trade.riskRewardRatio ? "text-gray-800 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 italic"}`}>
-                              {trade.riskRewardRatio ? `1:${trade.riskRewardRatio}` : (slTpMetrics?.actualRR ? `1:${slTpMetrics.actualRR} (derived)` : "Not recorded")}
-                            </div>
-                          </div>
-                        </div>
-                        {settingsTemplates.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                            <select
-                              className="input text-xs py-1"
-                              value={selectedTemplateId}
-                              onChange={(e) => {
-                                const templateId = e.target.value;
-                                setSelectedTemplateId(templateId);
-                                if (templateId === "clear") setSelectedTemplateId("");
-                                else if (templateId) applyTemplate(templateId);
-                              }}
-                            >
-                              <option value="">Re-apply a template…</option>
-                              {settingsTemplates.map((t) => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                              ))}
-                            </select>
-                          </div>
+                        {settingsTemplates.length > 0 ? (
+                          <select
+                            className="input text-sm"
+                            value={selectedTemplateId}
+                            onChange={(e) => {
+                              const templateId = e.target.value;
+                              setSelectedTemplateId(templateId);
+                              if (templateId) applyTemplate(templateId);
+                              else setSelectedTemplateId("");
+                            }}
+                          >
+                            <option value="">No template</option>
+                            {settingsTemplates.map((t) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            No templates yet. Create one in Settings.
+                          </p>
                         )}
                       </div>
                     ) : settingsTemplates.length > 0 ? (
@@ -1132,22 +1265,26 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   </div>
                 </div>
 
-                {/* Risk/Reward Ratio — mode-aware */}
+                {/* Risk Unit — instrument-specific options only */}
                 <div>
-                  <label className="label">Risk/Reward Ratio</label>
+                  <label className="label">Risk / Reward Unit</label>
 
-                  {/* Mode pills */}
+                  {/* Mode pills — only modes valid for this instrument in Quick Entry */}
                   <div className="flex flex-wrap gap-1 mb-2">
-                    {Object.entries(RR_MODES).map(([key, mode]) => (
-                      <button key={key} type="button"
-                        onClick={() => setRrMode(key)}
-                        className={`px-2 py-0.5 text-xs rounded-full border font-medium transition-colors ${
-                          rrMode === key
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
-                        }`}
-                      >{mode.label}</button>
-                    ))}
+                    {(QUICK_MODES[selectedInstrumentType] || ["dollar"]).map((key) => {
+                      const mode = RR_MODES[key];
+                      if (!mode) return null;
+                      return (
+                        <button key={key} type="button"
+                          onClick={() => setRrMode(key)}
+                          className={`px-2 py-0.5 text-xs rounded-full border font-medium transition-colors ${
+                            rrMode === key
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                          }`}
+                        >{mode.label}</button>
+                      );
+                    })}
                   </div>
 
                   <select
@@ -1377,93 +1514,6 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   </div>
                 </div>
 
-                {/* Stop Loss and Take Profit */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Stop Loss</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register("stopLoss")}
-                      className="input"
-                      placeholder="0.00"
-                    />
-                    {slTpMetrics?.slUnits && (
-                      <div className="mt-1 flex items-center flex-wrap gap-x-1 text-xs text-red-600 dark:text-red-400">
-                        <span className="font-medium">
-                          {slTpMetrics.slArrow} {slTpMetrics.slUnits.value.toFixed(1)} {slTpMetrics.slUnits.label}
-                        </span>
-                        {slTpMetrics.futuresLabel && (
-                          <span className="text-gray-400 dark:text-gray-500">({slTpMetrics.futuresLabel})</span>
-                        )}
-                        {slTpMetrics.slDollar !== null && (
-                          <>
-                            <span className="text-gray-300 dark:text-gray-600">·</span>
-                            <span className="font-semibold">
-                              −${slTpMetrics.slDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                              {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500"> /contract</span>}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="label">Take Profit</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register("takeProfit")}
-                      className="input"
-                      placeholder="0.00"
-                    />
-                    {slTpMetrics?.tpUnits && (
-                      <div className="mt-1 flex items-center flex-wrap gap-x-1 text-xs text-green-600 dark:text-green-400">
-                        <span className="font-medium">
-                          {slTpMetrics.tpArrow} {slTpMetrics.tpUnits.value.toFixed(1)} {slTpMetrics.tpUnits.label}
-                        </span>
-                        {slTpMetrics.tpDollar !== null && (
-                          <>
-                            <span className="text-gray-300 dark:text-gray-600">·</span>
-                            <span className="font-semibold">
-                              +${slTpMetrics.tpDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                              {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500"> /contract</span>}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* R:R summary bar — shown only when both SL and TP are filled */}
-                {slTpMetrics?.actualRR && (
-                  <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-2 text-xs">
-                    <div className="flex items-center space-x-1.5">
-                      <span className="text-gray-500 dark:text-gray-400">Actual R:R</span>
-                      <span className="font-bold text-gray-800 dark:text-gray-100">1:{slTpMetrics.actualRR}</span>
-                      {slTpMetrics.isQtyDefaulted && (
-                        <span className="text-gray-400 dark:text-gray-500">(per contract)</span>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      {slTpMetrics.slDollar !== null && (
-                        <span className="text-red-600 dark:text-red-400 font-medium">
-                          −${slTpMetrics.slDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                        </span>
-                      )}
-                      {slTpMetrics.slDollar !== null && slTpMetrics.tpDollar !== null && (
-                        <span className="text-gray-300 dark:text-gray-600">/</span>
-                      )}
-                      {slTpMetrics.tpDollar !== null && (
-                        <span className="text-green-600 dark:text-green-400 font-medium">
-                          +${slTpMetrics.tpDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Exit Info - Only if trade is being edited as closed */}
                 {watchedStatus === "closed" && (
@@ -1548,6 +1598,50 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
             {activeTab === "advanced" && (
               <div className="space-y-6">
+
+                {/* Account-level risk unit — available in Advanced only */}
+                <div className="bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
+                  <div>
+                    <label className="label mb-1">Risk / Reward Unit</label>
+                    <div className="flex gap-2">
+                      {ADVANCED_RR_MODES.map((key) => {
+                        const mode = RR_MODES[key];
+                        if (!mode) return null;
+                        return (
+                          <button key={key} type="button"
+                            onClick={() => setRrMode(key)}
+                            className={`px-3 py-1 text-xs rounded-full border font-medium transition-colors ${
+                              rrMode === key
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                            }`}
+                          >{mode.label}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <select
+                    {...register("riskReward")}
+                    value={watch("riskReward") || ""}
+                    className="input"
+                    onChange={(e) => {
+                      setValue("riskReward", e.target.value);
+                    }}
+                  >
+                    <option value="">Select {RR_MODES[rrMode]?.label} amount</option>
+                    {watch("riskReward") && !(rrListsByMode[rrMode] || []).includes(watch("riskReward")) && (
+                      <option value={watch("riskReward")}>{watch("riskReward")}</option>
+                    )}
+                    {(rrListsByMode[rrMode] || []).map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {RR_MODES[rrMode]?.hint}
+                  </p>
+                </div>
+
                 {/* All the detailed fields */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Strategy & Setup */}
@@ -1728,11 +1822,9 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
             {/* Form Actions */}
             <div className="flex justify-between items-center pt-6 border-t">
-              <div className="text-sm text-gray-500">
-                <p>
-                  💡 <strong>Tip:</strong> Use templates for faster entry •
-                  Switch to Advanced for detailed settings
-                </p>
+              <div className="flex items-center space-x-2 text-xs text-gray-400 dark:text-gray-500">
+                <Camera className="w-4 h-4" />
+                <span data-testid="trade-form-photo-count">Photos {visibleImages.length}/4</span>
               </div>
               <div className="flex space-x-3">
                 <button
@@ -1745,20 +1837,216 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary text-sm px-4 py-1.5"
+                  className="btn btn-primary text-sm px-4 py-1.5 flex items-center space-x-1.5"
                   disabled={isSubmitting}
+                  data-testid="trade-form-submit-btn"
                 >
-                  {isSubmitting
-                    ? "Saving..."
-                    : isEditing
-                    ? "Update Trade"
-                    : "Add Trade"}
+                  {isSubmitting ? (
+                    "Saving..."
+                  ) : isEditing ? (
+                    <><BarChart3 className="w-4 h-4" /><span>Update Trade</span></>
+                  ) : (
+                    "Add Trade"
+                  )}
                 </button>
               </div>
             </div>
           </form>
         </div>
+        </div>
+
+        {/* Right: always-visible named screenshot slots */}
+        <div
+          className="w-52 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col"
+          data-testid="trade-form-images-panel"
+        >
+          {/* Header */}
+          <div className="px-3 pt-3 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <ImageIcon className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Screenshots
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowImageUploader(true)}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              data-testid="screenshot-manage-btn"
+            >
+              Manage
+            </button>
+          </div>
+
+          {/* Stop Loss + Take Profit in sidebar */}
+          <div className="px-3 pt-3 pb-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1">Stop Loss</label>
+              <input
+                type="number"
+                step="0.01"
+                value={watchedStopLoss || ""}
+                onChange={(e) => setValue("stopLoss", e.target.value, { shouldValidate: true })}
+                className="input text-sm py-1.5"
+                placeholder="0.00"
+                data-testid="sidebar-stop-loss-input"
+              />
+              {slTpMetrics?.slUnits && (
+                <div className="mt-0.5 flex items-center flex-wrap gap-x-1 text-xs text-red-600 dark:text-red-400">
+                  <span className="font-medium">
+                    {slTpMetrics.slArrow} {slTpMetrics.slUnits.value.toFixed(1)} {slTpMetrics.slUnits.label}
+                  </span>
+                  {slTpMetrics.futuresLabel && (
+                    <span className="text-gray-400 dark:text-gray-500">({slTpMetrics.futuresLabel})</span>
+                  )}
+                  {slTpMetrics.slDollar !== null && (
+                    <span className="font-semibold">
+                      · −${slTpMetrics.slDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                      {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500">/ct</span>}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1">Take Profit</label>
+              <input
+                type="number"
+                step="0.01"
+                value={watchedTakeProfit || ""}
+                onChange={(e) => setValue("takeProfit", e.target.value, { shouldValidate: true })}
+                className="input text-sm py-1.5"
+                placeholder="0.00"
+                data-testid="sidebar-take-profit-input"
+              />
+              {slTpMetrics?.tpUnits && (
+                <div className="mt-0.5 flex items-center flex-wrap gap-x-1 text-xs text-green-600 dark:text-green-400">
+                  <span className="font-medium">
+                    {slTpMetrics.tpArrow} {slTpMetrics.tpUnits.value.toFixed(1)} {slTpMetrics.tpUnits.label}
+                  </span>
+                  {slTpMetrics.tpDollar !== null && (
+                    <span className="font-semibold">
+                      · +${slTpMetrics.tpDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                      {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500">/ct</span>}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Spacer — pushes image grid to the bottom */}
+          <div className="flex-1" />
+
+          {/* 2×2 named slots — pinned to bottom */}
+          <div className="grid grid-cols-2 gap-2 p-3 border-t border-gray-200 dark:border-gray-700">
+            {SLOT_LABELS.map((label, slotIndex) => {
+              const img = visibleImages.find((i) => (i.sortOrder ?? slotIndex) === slotIndex);
+              const isDragOver = dragOverSlot === slotIndex;
+              return (
+                <div
+                  key={label}
+                  className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg overflow-hidden relative cursor-pointer group transition-colors ${isDragOver ? "border-blue-400 ring-2 ring-blue-400 dark:border-blue-400" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"}`}
+                  style={{ aspectRatio: "1" }}
+                  draggable={!!img?.previewUrl}
+                  onClick={() => handleSlotClick(slotIndex, img)}
+                  onDragStart={(e) => handleSlotDragStart(e, slotIndex, img)}
+                  onDragOver={(e) => { handleSlotDragOver(e); setDragOverSlot(slotIndex); }}
+                  onDragLeave={() => setDragOverSlot(null)}
+                  onDrop={(e) => { setDragOverSlot(null); handleSlotDropEvent(e, slotIndex); }}
+                  data-testid={`screenshot-slot-${slotIndex}`}
+                >
+                  {img?.previewUrl && !brokenSlots.has(slotIndex) ? (
+                    <>
+                      <img
+                        src={img.previewUrl}
+                        alt={label}
+                        draggable={false}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={() => setBrokenSlots((prev) => { const s = new Set(prev); s.add(slotIndex); return s; })}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex flex-col items-end justify-start p-1">
+                        <span className="text-white text-xs font-semibold bg-black/50 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          {label}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleSlotDeleteClick(e, img)}
+                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        data-testid={`screenshot-slot-delete-${slotIndex}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-5 h-5 text-gray-300 dark:text-gray-600 mb-1" />
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</span>
+                      <span className="text-xs text-blue-500 dark:text-blue-400 underline mt-0.5">or browse files</span>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Hidden file input for per-slot upload */}
+          <input
+            ref={slotFileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleSlotFileChange}
+          />
+
+          {/* Footer */}
+          <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-start space-x-1.5">
+              <Camera className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              <span>Drag chart screenshots onto a slot — up to 4 per trade.</span>
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Image uploader modal */}
+      {showImageUploader && (
+        <TradeImageUploader
+          images={tradeImages}
+          onSave={(images) => setTradeImages(images)}
+          onClose={() => setShowImageUploader(false)}
+        />
+      )}
+
+      {/* Lightbox */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/80 flex flex-col items-center justify-center"
+          onClick={() => setLightboxImage(null)}
+          data-testid="screenshot-lightbox"
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors"
+            data-testid="screenshot-lightbox-close-btn"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={lightboxImage.previewUrl}
+            alt={lightboxImage.label}
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="screenshot-lightbox-image"
+          />
+          <span className="mt-3 text-white/80 text-sm font-semibold tracking-wide">
+            {lightboxImage.label}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

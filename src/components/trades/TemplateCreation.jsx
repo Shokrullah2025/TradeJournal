@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useUserSettings } from "../../hooks/useUserSettings";
 import {
   Plus,
   Save,
@@ -22,31 +23,6 @@ const TemplateCreation = () => {
     // Start with empty templates - user creates their own
   ]);
 
-  // Load risk profiles from settings
-  const [riskProfiles, setRiskProfiles] = useState(() => {
-    const stored = localStorage.getItem("tradeJournalRiskProfiles");
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  // Load risk profiles on component mount and update when localStorage changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = localStorage.getItem("tradeJournalRiskProfiles");
-      const profiles = stored ? JSON.parse(stored) : [];
-      setRiskProfiles(profiles);
-    };
-
-    // Listen for storage events
-    window.addEventListener("storage", handleStorageChange);
-
-    // Also check periodically for updates in same tab
-    const interval = setInterval(handleStorageChange, 1000);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -105,23 +81,7 @@ const TemplateCreation = () => {
 
   const instrumentTypes = ["Stocks", "Options", "Futures", "Forex", "Crypto"];
   const tradeTypes = ["Long", "Short"];
-  // Get user-managed strategies and setups from localStorage
-  const getUserManagedStrategies = () => {
-    const stored = localStorage.getItem("tradeJournalStrategies");
-    return stored
-      ? JSON.parse(stored)
-      : ["Day Trading", "Swing Trading", "Scalp Trading"];
-  };
-
-  const getUserManagedSetups = () => {
-    const stored = localStorage.getItem("tradeJournalSetups");
-    return stored
-      ? JSON.parse(stored)
-      : ["Breakout", "Support Bounce", "Pullback"];
-  };
-
-  const strategies = getUserManagedStrategies();
-  const setups = getUserManagedSetups();
+  const { strategies, setups, riskProfiles } = useUserSettings();
   const marketConditions = [
     "Trending Up",
     "Trending Down",
