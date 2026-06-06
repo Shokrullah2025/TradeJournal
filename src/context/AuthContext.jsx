@@ -48,26 +48,20 @@ const friendlyError = (error) => {
 
 // ── Fetch the full user profile from public.users + public.user_profiles ──
 const fetchUserProfile = async (authUser) => {
-  console.log("[Auth] fetchUserProfile start — id:", authUser.id);
-
-  console.log("[Auth] querying public.users...");
   const { data: userRow, error: userError } = await supabase
     .from("users")
     .select("role, status")
     .eq("id", authUser.id)
     .maybeSingle();
-  console.log("[Auth] public.users result:", { userRow, userError });
 
-  console.log("[Auth] querying public.user_profiles...");
   const { data: profileRow, error: profileError } = await supabase
     .from("user_profiles")
     .select("first_name, last_name, display_name, avatar_url, timezone, currency, language")
     .eq("user_id", authUser.id)
     .maybeSingle();
-  console.log("[Auth] public.user_profiles result:", { profileRow, profileError });
 
-  if (userError) console.error("[Auth] users table error:", userError);
-  if (profileError) console.error("[Auth] user_profiles table error:", profileError);
+  if (userError) console.error("[Auth] users table error:", userError.message);
+  if (profileError) console.error("[Auth] user_profiles table error:", profileError.message);
 
   const profile = {
     id:            authUser.id,
@@ -83,7 +77,6 @@ const fetchUserProfile = async (authUser) => {
     currency:      profileRow?.currency     ?? "USD",
     language:      profileRow?.language     ?? "en",
   };
-  console.log("[Auth] fetchUserProfile done:", profile);
   return profile;
 };
 

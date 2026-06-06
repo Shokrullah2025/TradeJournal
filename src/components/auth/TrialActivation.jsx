@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, CheckCircle, Star, ArrowRight } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { supabase } from "../../lib/supabase";
 
 const TrialActivation = ({ onTrialActivated }) => {
   const [isActivating, setIsActivating] = useState(false);
@@ -13,11 +14,12 @@ const TrialActivation = ({ onTrialActivated }) => {
     setTrialStatus("activating");
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch("/api/user/start-trial", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          Authorization: `Bearer ${session?.access_token}`,
         },
       });
 

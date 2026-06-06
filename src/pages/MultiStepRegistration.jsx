@@ -91,11 +91,7 @@ const MultiStepRegistration = () => {
       setRegistrationData({
         ...data,
         userId: result.user_id,
-        token: result.token,
       });
-
-      // Store token temporarily for the registration process
-      localStorage.setItem("temp_auth_token", result.token);
 
       toast.success("Account created successfully!");
       setCurrentStep("email");
@@ -110,13 +106,7 @@ const MultiStepRegistration = () => {
   const handleEmailVerified = (userId) => {
     setRegistrationData((prev) => ({ ...prev, emailVerified: true, userId }));
 
-    // Move temp token to permanent storage and complete registration
-    const tempToken = localStorage.getItem("temp_auth_token");
-    if (tempToken) {
-      localStorage.setItem("auth_token", tempToken);
-      localStorage.removeItem("temp_auth_token");
-    }
-
+    // Supabase Auth manages the session automatically — no token storage needed.
     toast.success("Registration completed successfully!");
     navigate("/dashboard");
   };

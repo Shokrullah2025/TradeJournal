@@ -62,7 +62,7 @@ const toDbRow = (data, userId, accountId) => ({
 });
 
 // snake_case DB row → camelCase UI object
-const fromDbRow = (row) => ({
+const fromDbRow = (row, images = []) => ({
   id:               row.id,
   userId:           row.user_id,
   accountId:        row.account_id,
@@ -91,6 +91,7 @@ const fromDbRow = (row) => ({
   brokerTradeId:    row.external_trade_id,
   createdAt:        row.created_at,
   updatedAt:        row.updated_at,
+  images,
 });
 
 // ── Stats ──────────────────────────────────────────────────────────────────
@@ -226,12 +227,12 @@ export const TradeProvider = ({ children }) => {
     return created.id;
   }, []);
 
-  // Fetch all trades for the current user
+  // Fetch all trades for the current user (with images)
   const fetchTrades = useCallback(async (userId) => {
     dispatch({ type: ACTIONS.SET_LOADING, payload: true });
     const { data, error } = await supabase
       .from("trades")
-      .select("*")
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at")
       .eq("user_id", userId)
       .order("entry_date", { ascending: false });
 
@@ -241,7 +242,51 @@ export const TradeProvider = ({ children }) => {
       return;
     }
 
-    dispatch({ type: ACTIONS.SET_TRADES, payload: (data || []).map(fromDbRow) });
+    const tradeRows = data || [];
+
+    // Fetch images for all trades in one query
+    let imagesByTradeId = {};
+    if (tradeRows.length > 0) {
+      const tradeIds = tradeRows.map((t) => t.id);
+      const { data: imgRows } = await supabase
+        .from("trade_images")
+        .select("id, trade_id, image_url, sort_order, mime_type, caption")
+        .in("trade_id", tradeIds)
+        .is("deleted_at", null)
+        .order("sort_order", { ascending: true });
+
+      if (imgRows && imgRows.length > 0) {
+        // Batch-generate signed URLs (single API call)
+        const paths = imgRows.map((r) => r.image_url);
+        const { data: signedUrls } = await supabase.storage
+          .from("trade-images")
+          .createSignedUrls(paths, 3600);
+
+        const urlMap = {};
+        (signedUrls || []).forEach((item) => {
+          if (item.signedUrl) urlMap[item.path] = item.signedUrl;
+        });
+
+        imgRows.forEach((row) => {
+          if (!imagesByTradeId[row.trade_id]) imagesByTradeId[row.trade_id] = [];
+          imagesByTradeId[row.trade_id].push({
+            id: row.id,
+            storagePath: row.image_url,
+            previewUrl: urlMap[row.image_url] || null,
+            sortOrder: row.sort_order,
+            mimeType: row.mime_type,
+            caption: row.caption,
+            isNew: false,
+            toDelete: false,
+          });
+        });
+      }
+    }
+
+    dispatch({
+      type: ACTIONS.SET_TRADES,
+      payload: tradeRows.map((row) => fromDbRow(row, imagesByTradeId[row.id] || [])),
+    });
   }, []);
 
   // One-time migration: push localStorage trades to Supabase
@@ -303,7 +348,7 @@ export const TradeProvider = ({ children }) => {
     const { data, error } = await supabase
       .from("trades")
       .insert(row)
-      .select()
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at")
       .single();
 
     if (error) {
@@ -311,7 +356,9 @@ export const TradeProvider = ({ children }) => {
       throw error;
     }
 
-    dispatch({ type: ACTIONS.ADD_TRADE, payload: fromDbRow(data) });
+    const trade = fromDbRow(data);
+    dispatch({ type: ACTIONS.ADD_TRADE, payload: trade });
+    return trade;
   }, [user, state.defaultAccountId]);
 
   const updateTrade = useCallback(async (tradeId, formData) => {
@@ -324,7 +371,7 @@ export const TradeProvider = ({ children }) => {
       .update(updateFields)
       .eq("id", tradeId)
       .eq("user_id", user.id)
-      .select()
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at")
       .single();
 
     if (error) {
@@ -332,7 +379,9 @@ export const TradeProvider = ({ children }) => {
       throw error;
     }
 
-    dispatch({ type: ACTIONS.UPDATE_TRADE, payload: fromDbRow(data) });
+    const trade = fromDbRow(data);
+    dispatch({ type: ACTIONS.UPDATE_TRADE, payload: trade });
+    return trade;
   }, [user, state.defaultAccountId]);
 
   const deleteTrade = useCallback(async (tradeId) => {
@@ -372,7 +421,7 @@ export const TradeProvider = ({ children }) => {
     const { data, error } = await supabase
       .from("trades")
       .insert(newRows)
-      .select();
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at");
 
     if (error) throw error;
 
@@ -412,6 +461,55 @@ export const TradeProvider = ({ children }) => {
     });
   };
 
+  // Upload an image file and insert a row into trade_images
+  const saveTradeImage = useCallback(async (tradeId, file, sortOrder) => {
+    if (!user) throw new Error("Not authenticated");
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${user.id}/${tradeId}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("trade-images")
+      .upload(path, file, { contentType: file.type, upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const { error: insertError } = await supabase.from("trade_images").insert({
+      trade_id:   tradeId,
+      user_id:    user.id,
+      image_url:  path,
+      sort_order: sortOrder,
+      mime_type:  file.type,
+      file_size:  file.size,
+      image_type: "chart",
+    });
+
+    if (insertError) throw insertError;
+    return path;
+  }, [user]);
+
+  // Soft-delete a trade image — sets deleted_at so it's hidden from normal queries
+  // but remains in storage and is recoverable by an admin via the deleted_at IS NOT NULL filter.
+  const deleteTradeImage = useCallback(async (imageId) => {
+    if (!user) throw new Error("Not authenticated");
+    const { error } = await supabase
+      .from("trade_images")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", imageId)
+      .eq("user_id", user.id);
+    if (error) throw new Error(error.message);
+  }, [user]);
+
+  // Update sort_order for an existing image row
+  const updateTradeImageOrder = useCallback(async (imageId, sortOrder) => {
+    if (!user) throw new Error("Not authenticated");
+    const { error } = await supabase
+      .from("trade_images")
+      .update({ sort_order: sortOrder })
+      .eq("id", imageId)
+      .eq("user_id", user.id);
+    if (error) throw new Error(error.message);
+  }, [user]);
+
   const value = {
     trades:          state.trades,
     filteredTrades:  getFilteredTrades(),
@@ -424,6 +522,9 @@ export const TradeProvider = ({ children }) => {
     deleteTrade,
     setFilters,
     importTrades,
+    saveTradeImage,
+    deleteTradeImage,
+    updateTradeImageOrder,
     refreshTrades:   () => user && fetchTrades(user.id),
   };
 
