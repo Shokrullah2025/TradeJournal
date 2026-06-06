@@ -57,19 +57,22 @@ export const RR_MODES = {
   },
 };
 
-// Auto-suggest mode order based on instrument type
-export const SUGGESTED_MODES = {
-  stocks:  ["ratio", "dollar", "shares",  "account_pct"],
-  options: ["ratio", "dollar",            "account_pct"],
-  forex:   ["pips",  "account_pct", "ratio", "dollar"],
-  futures: ["ticks", "points", "dollar",  "account_pct", "ratio"],
-  crypto:  ["ratio", "dollar",            "account_pct"],
+// Modes shown in Quick Entry, filtered by instrument type
+export const QUICK_MODES = {
+  stocks:    ["shares"],
+  options:   ["dollar"],
+  forex:     ["pips"],
+  futures:   ["ticks", "points"],
+  crypto:    ["dollar"],
+  commodity: ["dollar"],
 };
 
+// Modes available in the Advanced tab (account-level units)
+export const ADVANCED_RR_MODES = ["account_pct", "dollar"];
+
 export const getDefaultModeForInstrument = (instrumentType) => {
-  if (!instrumentType) return "ratio";
-  const key = instrumentType.toLowerCase();
-  return (SUGGESTED_MODES[key] || ["ratio"])[0];
+  const key = (instrumentType || "").toLowerCase();
+  return (QUICK_MODES[key] || ["dollar"])[0];
 };
 
 /**

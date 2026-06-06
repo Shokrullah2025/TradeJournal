@@ -11,10 +11,81 @@ import {
   Plus,
   Trash2,
   AlertTriangle,
+  Camera,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useTrades } from "../../context/TradeContext";
 import toast from "react-hot-toast";
+
+// Zoomable screenshot strip shown on each trade card when reviewing
+const TradeScreenshots = ({ images }) => {
+  const [zoomedImg, setZoomedImg] = useState(null);
+  if (!images || images.length === 0) return null;
+  const sorted = [...images].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  return (
+    <>
+      <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()} data-testid="trade-screenshots-strip">
+        {sorted.map((img, i) => (
+          <button
+            key={img.id}
+            type="button"
+            onClick={() => setZoomedImg(img)}
+            data-testid={`trade-screenshot-thumb-${i}`}
+            className="relative w-16 h-12 rounded overflow-hidden border border-gray-300 dark:border-gray-600 hover:ring-2 hover:ring-blue-400 transition-all group"
+            title="Click to zoom"
+          >
+            {img.previewUrl ? (
+              <img src={img.previewUrl} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <Camera className="w-4 h-4 text-gray-400" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
+              <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium">zoom</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Lightbox */}
+      {zoomedImg && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 z-[70] flex items-center justify-center p-4"
+          onClick={() => setZoomedImg(null)}
+          data-testid="screenshot-lightbox"
+        >
+          <div className="relative max-w-4xl max-h-[85vh] w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={zoomedImg.previewUrl}
+              alt="Screenshot zoom"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl mx-auto block"
+            />
+            <button
+              onClick={() => setZoomedImg(null)}
+              data-testid="lightbox-close-btn"
+              className="absolute top-2 right-2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-1.5 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            {sorted.length > 1 && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
+                {sorted.map((img, i) => (
+                  <button
+                    key={img.id}
+                    onClick={() => setZoomedImg(img)}
+                    className={`w-2 h-2 rounded-full transition-colors ${img.id === zoomedImg.id ? "bg-white" : "bg-white bg-opacity-40 hover:bg-opacity-70"}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 const DayDetailModal = ({
   isOpen,
@@ -318,6 +389,9 @@ const DayDetailModal = ({
                             )}
                           </div>
                         )}
+
+                        {/* Screenshots — click to zoom */}
+                        <TradeScreenshots images={trade.images} />
                       </div>
 
                       <div className="ml-4 flex items-center space-x-1 shrink-0">

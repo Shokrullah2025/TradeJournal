@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { RR_MODES, SUGGESTED_MODES, getDefaultModeForInstrument, getUserRRList, saveUserRRList } from "../utils/rrModes";
+import { useTemplates } from "../hooks/useTemplates";
+import { RR_MODES, getDefaultModeForInstrument, getUserRRList, saveUserRRList } from "../utils/rrModes";
 import {
   Settings as SettingsIcon,
   Download,
@@ -24,6 +25,10 @@ import {
   Shield,
   Target,
   Info,
+  TrendingUp,
+  Search,
+  Zap,
+  Paperclip,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
 import { exportToExcel, importFromFile } from "../utils/exportUtils";
@@ -64,58 +69,13 @@ const Settings = () => {
     theme: "light",
   });
 
-  // Template management state
-  const [templates, setTemplates] = useState(() => {
-    // Load templates from localStorage first, fall back to defaults
-    const stored = localStorage.getItem("tradeJournalTemplates");
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    // Default templates if none stored
-    return [
-      {
-        id: 1,
-        name: "Day Trade Long",
-        description: "Standard day trading template for long positions",
-        fields: {
-          instrumentType: "Stocks",
-          tradeType: "Long",
-          strategy: "Day Trading",
-          setup: "Breakout",
-          marketCondition: "Trending Up",
-          riskRewardRatio: "1:2",
-          targetProfit: "500",
-          maxLoss: "250",
-        },
-        isDefault: true,
-        createdAt: "2025-07-01",
-        usageCount: 45,
-      },
-      {
-        id: 2,
-        name: "Swing Trade",
-        description: "Multi-day swing trading template",
-        fields: {
-          instrumentType: "Stocks",
-          tradeType: "Long",
-          strategy: "Swing Trading",
-          setup: "Support Bounce",
-          marketCondition: "Consolidating",
-          riskRewardRatio: "1:3",
-          targetProfit: "1000",
-          maxLoss: "333",
-        },
-        isDefault: false,
-        createdAt: "2025-07-05",
-        usageCount: 23,
-      },
-    ];
-  });
-
-  // Save templates to localStorage whenever templates change
-  useEffect(() => {
-    localStorage.setItem("tradeJournalTemplates", JSON.stringify(templates));
-  }, [templates]);
+  // Template management — persisted in Supabase, not localStorage
+  const {
+    templates,
+    loading: templatesLoading,
+    saveTemplate,
+    deleteTemplate: deleteTemplateFromDb,
+  } = useTemplates();
 
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -260,6 +220,14 @@ const Settings = () => {
     },
 
     // Additional
+    screenshots: {
+      label: "Screenshots & Attachments",
+      hint: "Let traders attach chart images, screenshots or files to each trade.",
+      type: "file",
+      category: "additional",
+      required: false,
+      isNew: true,
+    },
     notes: {
       label: "Notes",
       hint: "Free-text notes or trade rationale.",
@@ -270,17 +238,18 @@ const Settings = () => {
   };
 
   const fieldCategories = {
-    core: { label: "Core Trading", icon: "📊" },
-    market: { label: "Market Analysis", icon: "📈" },
-    risk: { label: "Risk Management", icon: "🛡️" },
-    execution: { label: "Trade Execution", icon: "⚡" },
-    additional: { label: "Additional Info", icon: "📝" },
+    core:       { label: "Core Trading",    Icon: BarChart },
+    market:     { label: "Market Analysis", Icon: TrendingUp },
+    risk:       { label: "Risk Management", Icon: Shield },
+    execution:  { label: "Trade Execution", Icon: Zap },
+    additional: { label: "Additional Info", Icon: Paperclip },
   };
 
   const [showFieldCustomization, setShowFieldCustomization] = useState(false);
   const [showFieldModal, setShowFieldModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [activeTemplateTab, setActiveTemplateTab] = useState("basic");
+  const [fieldSearchQuery, setFieldSearchQuery] = useState("");
 
   // Get user-managed strategies and setups from localStorage
   const getUserManagedStrategies = () => {
@@ -444,6 +413,7 @@ const Settings = () => {
   const handleCreateNewTemplate = () => {
     setShowTemplateModal(true);
     setActiveTemplateTab("basic");
+    setFieldSearchQuery("");
     setIsCreatingTemplate(true);
     setEditingTemplate(null);
     setStrategyDropdownOpen(false);
@@ -568,6 +538,7 @@ const Settings = () => {
     setEditingTemplate(template);
     setShowTemplateModal(true);
     setActiveTemplateTab("basic");
+    setFieldSearchQuery("");
     setStrategyDropdownOpen(false);
     setSetupDropdownOpen(false);
     setInstrumentTypeDropdownOpen(false);
@@ -616,72 +587,64 @@ const Settings = () => {
     setShowFieldCustomization(false);
   };
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!templateFormData.name.trim()) {
       toast.error("Template name is required");
       return;
     }
-
-    if (editingTemplate) {
-      setTemplates((prev) =>
-        prev.map((template) =>
-          template.id === editingTemplate.id
-            ? {
-                ...template,
-                ...templateFormData,
-                updatedAt: new Date().toISOString().split("T")[0],
-              }
-            : template
-        )
-      );
-      toast.success("Template updated successfully");
-    } else {
-      const newTemplate = {
-        id: Date.now(),
-        ...templateFormData,
-        isDefault: false,
-        createdAt: new Date().toISOString().split("T")[0],
-        usageCount: 0,
-      };
-      setTemplates((prev) => [...prev, newTemplate]);
-      toast.success("Template created successfully");
+    try {
+      if (editingTemplate) {
+        await saveTemplate({ ...templateFormData, id: editingTemplate.id });
+        toast.success("Template updated successfully");
+      } else {
+        await saveTemplate({ ...templateFormData, isDefault: false });
+        toast.success("Template created successfully");
+      }
+      setIsCreatingTemplate(false);
+      setShowTemplateModal(false);
+      setEditingTemplate(null);
+    } catch (err) {
+      toast.error("Failed to save template. Please try again.");
+      console.error(err);
     }
-
-    setIsCreatingTemplate(false);
-    setShowTemplateModal(false);
-    setEditingTemplate(null);
   };
 
-  const handleDeleteTemplate = (templateId) => {
+  const handleDeleteTemplate = async (templateId) => {
     if (window.confirm("Are you sure you want to delete this template?")) {
-      setTemplates((prev) =>
-        prev.filter((template) => template.id !== templateId)
-      );
-      toast.success("Template deleted successfully");
+      try {
+        await deleteTemplateFromDb(templateId);
+        toast.success("Template deleted successfully");
+      } catch (err) {
+        toast.error("Failed to delete template. Please try again.");
+        console.error(err);
+      }
     }
   };
 
-  const handleDuplicateTemplate = (template) => {
-    const newTemplate = {
-      ...template,
-      id: Date.now(),
-      name: `${template.name} (Copy)`,
-      isDefault: false,
-      createdAt: new Date().toISOString().split("T")[0],
-      usageCount: 0,
-    };
-    setTemplates((prev) => [...prev, newTemplate]);
-    toast.success("Template duplicated successfully");
+  const handleDuplicateTemplate = async (template) => {
+    try {
+      await saveTemplate({
+        ...template,
+        id: undefined,
+        name: `${template.name} (Copy)`,
+        isDefault: false,
+      });
+      toast.success("Template duplicated successfully");
+    } catch (err) {
+      toast.error("Failed to duplicate template. Please try again.");
+      console.error(err);
+    }
   };
 
-  const toggleTemplateDefault = (templateId) => {
-    setTemplates((prev) =>
-      prev.map((template) => ({
-        ...template,
-        isDefault:
-          template.id === templateId ? !template.isDefault : template.isDefault,
-      }))
-    );
+  const toggleTemplateDefault = async (templateId) => {
+    const template = templates.find((t) => t.id === templateId);
+    if (!template) return;
+    try {
+      await saveTemplate({ ...template, isDefault: !template.isDefault });
+    } catch (err) {
+      toast.error("Failed to update template.");
+      console.error(err);
+    }
   };
 
   const handleTemplateFieldChange = (fieldName, value) => {
@@ -1362,7 +1325,7 @@ const Settings = () => {
                     </div>
                   ))}
 
-                  {templates.length === 0 && !isCreatingTemplate && (
+                  {templates.length === 0 && !isCreatingTemplate && !templatesLoading && (
                     <div className="text-center py-12">
                       <Layout className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -2765,136 +2728,161 @@ const Settings = () => {
 
               {/* Configure Fields Tab */}
               {activeTemplateTab === "fields" && (
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Field Configuration
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          Customize which fields appear during trade entry.
-                          Currently {getVisibleFieldsCount()} fields are
-                          selected.
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const allFields = Object.keys(availableFields);
-                            setTemplateFormData((prev) => ({
-                              ...prev,
-                              visibleFields: allFields.reduce(
-                                (acc, field) => ({
-                                  ...acc,
-                                  [field]: true,
-                                }),
-                                {}
-                              ),
-                            }));
-                          }}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          Select All
-                        </button>
-                        <span className="text-xs text-gray-400">|</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTemplateFormData((prev) => ({
-                              ...prev,
-                              visibleFields: {},
-                            }));
-                          }}
-                          className="text-xs text-gray-600 hover:text-gray-800 font-medium"
-                        >
-                          Deselect All
-                        </button>
-                      </div>
+                <div className="space-y-5">
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900">Field Configuration</h4>
+                      <p className="text-xs text-blue-600 mt-0.5">
+                        {getVisibleFieldsCount()} of {Object.keys(availableFields).length} fields enabled for trade entry
+                      </p>
                     </div>
-
-                    {/* Group fields by category */}
-                    {Object.entries(fieldCategories).map(
-                      ([categoryKey, category]) => (
-                        <div key={categoryKey} className="space-y-2 mb-4">
-                          <h5 className="text-sm font-medium text-gray-700 border-b border-gray-200 pb-1 flex items-center space-x-2">
-                            <span>{category.icon}</span>
-                            <span>{category.label}</span>
-                          </h5>
-                          <div className="grid grid-cols-1 gap-2 ml-2">
-                            {Object.entries(availableFields)
-                              .filter(
-                                ([key, field]) => field.category === categoryKey
-                              )
-                              .map(([fieldKey, field]) => {
-                                const isEnabled = templateFormData.visibleFields[fieldKey] || false;
-                                const prefilledValue = templateFormData.fields?.[fieldKey];
-                                return (
-                                <label
-                                  key={fieldKey}
-                                  className={`flex items-center justify-between gap-3 text-sm cursor-pointer p-3 rounded-lg border transition-all duration-200 ${
-                                    isEnabled
-                                      ? "border-blue-200 bg-blue-50 hover:bg-blue-100"
-                                      : "border-gray-200 hover:bg-gray-50"
-                                  }`}
-                                >
-                                  <div className="flex items-start space-x-2 flex-1 min-w-0">
-                                    <input
-                                      type="checkbox"
-                                      checked={isEnabled}
-                                      onChange={() => toggleFieldVisibility(fieldKey)}
-                                      className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
-                                    />
-                                    <div className="min-w-0">
-                                      <p className={`font-medium truncate ${isEnabled ? "text-gray-900" : "text-gray-500"}`}>
-                                        {field.label}
-                                      </p>
-                                      {field.hint && (
-                                        <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                                          {field.hint}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {isEnabled && (
-                                    <span className={`shrink-0 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${
-                                      prefilledValue
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-gray-200 text-gray-500"
-                                    }`}>
-                                      {prefilledValue || "No default"}
-                                    </span>
-                                  )}
-                                </label>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      )
-                    )}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={fieldSearchQuery}
+                          onChange={(e) => setFieldSearchQuery(e.target.value)}
+                          placeholder="Search fields..."
+                          className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-40"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allFields = Object.keys(availableFields);
+                          setTemplateFormData((prev) => ({
+                            ...prev,
+                            visibleFields: allFields.reduce((acc, f) => ({ ...acc, [f]: true }), {}),
+                          }));
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
+                      >
+                        Select all
+                      </button>
+                      <span className="text-xs text-gray-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setTemplateFormData((prev) => ({ ...prev, visibleFields: {} }))}
+                        className="text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap"
+                      >
+                        Deselect all
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Categories */}
+                  {Object.entries(fieldCategories).map(([categoryKey, category]) => {
+                    const categoryFields = Object.entries(availableFields).filter(([, f]) => f.category === categoryKey);
+                    const filtered = fieldSearchQuery.trim()
+                      ? categoryFields.filter(([, f]) => f.label.toLowerCase().includes(fieldSearchQuery.toLowerCase()) || (f.hint || "").toLowerCase().includes(fieldSearchQuery.toLowerCase()))
+                      : categoryFields;
+                    if (filtered.length === 0) return null;
+                    const enabledCount = filtered.filter(([k]) => templateFormData.visibleFields[k]).length;
+                    const { Icon } = category;
+                    return (
+                      <div key={categoryKey}>
+                        {/* Category header */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <Icon className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-semibold text-gray-800">{category.label}</span>
+                          </div>
+                          <span className="text-xs text-gray-400 font-medium">{enabledCount}/{filtered.length} on</span>
+                        </div>
+
+                        {/* 2-column field cards */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {filtered.map(([fieldKey, field]) => {
+                            const isEnabled = templateFormData.visibleFields[fieldKey] || false;
+                            const prefilledValue = templateFormData.fields?.[fieldKey] || "";
+                            return (
+                              <div
+                                key={fieldKey}
+                                className={`rounded-xl border p-4 transition-all duration-200 ${
+                                  isEnabled
+                                    ? "border-blue-200 bg-blue-50"
+                                    : "border-gray-200 bg-white"
+                                }`}
+                              >
+                                {/* Card top row: name + toggle */}
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                    <span className={`text-sm font-semibold leading-tight ${isEnabled ? "text-gray-900" : "text-gray-600"}`}>
+                                      {field.label}
+                                    </span>
+                                    {field.isNew && (
+                                      <span className="px-1.5 py-0.5 text-[10px] font-bold bg-green-500 text-white rounded">NEW</span>
+                                    )}
+                                  </div>
+                                  {/* Toggle switch */}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleFieldVisibility(fieldKey)}
+                                    className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
+                                      isEnabled ? "bg-blue-600" : "bg-gray-300"
+                                    }`}
+                                    aria-pressed={isEnabled}
+                                  >
+                                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${isEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                                  </button>
+                                </div>
+
+                                {/* Hint text */}
+                                {field.hint && (
+                                  <p className="text-xs text-gray-400 leading-relaxed mb-3">{field.hint}</p>
+                                )}
+
+                                {/* Default value row */}
+                                <div className="flex items-center gap-2 mt-auto">
+                                  <span className="text-xs font-medium text-blue-600 shrink-0">Default</span>
+                                  <input
+                                    type="text"
+                                    value={prefilledValue}
+                                    onChange={(e) =>
+                                      setTemplateFormData((prev) => ({
+                                        ...prev,
+                                        fields: { ...prev.fields, [fieldKey]: e.target.value },
+                                      }))
+                                    }
+                                    placeholder="—"
+                                    className="flex-1 min-w-0 px-2 py-1 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-300"
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-end space-x-3">
-                <button
-                  onClick={() => setShowTemplateModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveTemplate}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>
-                    {editingTemplate ? "Update Template" : "Create Template"}
-                  </span>
-                </button>
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                  <span className="font-medium text-gray-700">{getVisibleFieldsCount()} fields</span> will appear on the trade entry form
+                </p>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setShowTemplateModal(false)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveTemplate}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>
+                      {editingTemplate ? "Update Template" : "Create Template"}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

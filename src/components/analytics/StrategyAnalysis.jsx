@@ -200,40 +200,44 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
           )}
         </div>
 
-        <div className="h-64">
+        <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
+            <BarChart
               data={strategyData}
-              barCategoryGap="15%"
-              maxBarSize={8}
+              barCategoryGap="25%"
+              margin={{ top: 8, right: 16, left: 8, bottom: 60 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
               <XAxis
                 dataKey="name"
-                stroke="#6b7280"
-                fontSize={12}
+                stroke="#9ca3af"
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
-                angle={-45}
+                angle={-40}
                 textAnchor="end"
-                height={60}
+                interval={0}
+                tick={{ fill: "#6b7280" }}
               />
               <YAxis
-                stroke="#6b7280"
-                fontSize={12}
+                stroke="#9ca3af"
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(value) => `$${value.toLocaleString()}`}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                tick={{ fill: "#6b7280" }}
+                width={48}
               />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="totalPnL" 
-                fill="#0ea5e9" 
-                radius={[4, 4, 0, 0]}
-                stroke="#0284c7"
-                strokeWidth={1}
-                maxBarSize={8}
-              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.1)" }} />
+              <Bar dataKey="totalPnL" radius={[6, 6, 0, 0]} maxBarSize={56}>
+                {strategyData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.totalPnL >= 0 ? "#22c55e" : "#ef4444"}
+                    fillOpacity={0.85}
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

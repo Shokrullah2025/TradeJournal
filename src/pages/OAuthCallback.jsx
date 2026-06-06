@@ -53,6 +53,7 @@ const OAuthCallback = () => {
               type: "OAUTH_SUCCESS",
               broker: brokerInfo.broker,
               code: code,
+              accountType: brokerInfo.accountType ?? "demo",
             },
             window.location.origin
           );
