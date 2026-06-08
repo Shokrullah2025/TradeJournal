@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Play,
   Pause,
@@ -308,6 +308,15 @@ const Backtest = () => {
   const [currentPrice, setCurrentPrice] = useState(0);
   const intervalRef = useRef(null);
 
+  // Edge discovery state
+  const [takeProfit, setTakeProfit] = useState("");
+  const [setupTag, setSetupTag] = useState("breakout");
+  const [marketConditionTag, setMarketConditionTag] = useState("trending_up");
+  const [confidenceTag, setConfidenceTag] = useState("medium");
+  const [sessionPeak, setSessionPeak] = useState(10000);
+  const [lastFeedback, setLastFeedback] = useState(null);
+  const feedbackTimerRef = useRef(null);
+
   // Generate sample OHLCV data based on selected instrument
   const generateSampleData = (instrument, days = 30) => {
     const data = [];
@@ -405,6 +414,7 @@ const Backtest = () => {
     setChartData(data);
     setCurrentPrice(data[0]?.close || 0);
     setBalance(balance);
+    setSessionPeak(balance);
     setCurrentSession(newSession);
     setCurrentView("backtest");
 
@@ -567,6 +577,12 @@ const Backtest = () => {
     return () => clearInterval(intervalRef.current);
   }, [isPlaying, speed, currentCandle, chartData.length]);
 
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    };
+  }, []);
+
   const handlePlay = () => {
     if (currentCandle >= chartData.length - 1) {
       setCurrentCandle(0);
@@ -581,7 +597,13 @@ const Backtest = () => {
     setCurrentPrice(chartData[0]?.close || 0);
     setPositions([]);
     setTrades([]);
-    setBalance(currentSession?.initialBalance || 10000);
+    const initialBal = currentSession?.initialBalance || 10000;
+    setBalance(initialBal);
+    setSessionPeak(initialBal);
+    setLastFeedback(null);
+    setSetupTag("breakout");
+    setMarketConditionTag("trending_up");
+    setConfidenceTag("medium");
   };
 
   const executeOrder = () => {
@@ -596,6 +618,9 @@ const Backtest = () => {
       takeProfit: takeProfit ? parseFloat(takeProfit) : null,
       timestamp: chartData[currentCandle]?.time,
       currentPnL: 0,
+      setupTag,
+      marketConditionTag,
+      confidenceTag,
     };
 
     setPositions((prev) => [...prev, position]);
@@ -609,6 +634,122 @@ const Backtest = () => {
       `${orderSide.toUpperCase()} order executed at $${currentPrice.toFixed(2)}`
     );
   };
+
+  const closePosition = (positionId) => {
+    const position = positions.find((p) => p.id === positionId);
+    if (!position) return;
+
+    const exitPrice = currentPrice;
+    const priceDiff = exitPrice - position.entryPrice;
+    const pnl =
+      position.side === "buy"
+        ? priceDiff * position.size
+        : -priceDiff * position.size;
+
+    const rMultiple =
+      position.stopLoss
+        ? pnl / (Math.abs(position.entryPrice - position.stopLoss) * position.size)
+        : null;
+
+    const closedTrade = {
+      id: position.id,
+      side: position.side,
+      size: position.size,
+      entryPrice: position.entryPrice,
+      exitPrice,
+      pnl,
+      rMultiple,
+      setupTag: position.setupTag,
+      marketConditionTag: position.marketConditionTag,
+      confidenceTag: position.confidenceTag,
+      reason: "Manual close",
+    };
+
+    const newTrades = [...trades, closedTrade];
+    setTrades(newTrades);
+    setPositions((prev) => prev.filter((p) => p.id !== positionId));
+
+    const newBalance = balance + pnl;
+    setBalance(newBalance);
+    setSessionPeak((prev) => Math.max(prev, newBalance));
+
+    // Compute feedback
+    const wins = newTrades.filter((t) => t.pnl > 0);
+    const losses = newTrades.filter((t) => t.pnl < 0);
+    const wr = (wins.length / newTrades.length) * 100;
+    const gw = wins.reduce((s, t) => s + t.pnl, 0);
+    const gl = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+    const pf = gl === 0 ? gw : gw / gl;
+
+    let streak = 0;
+    let streakType = null;
+    for (let i = newTrades.length - 1; i >= 0; i--) {
+      const type = newTrades[i].pnl >= 0 ? "W" : "L";
+      if (streakType === null) { streakType = type; streak = 1; }
+      else if (type === streakType) streak++;
+      else break;
+    }
+
+    let msg = "";
+    if (streak >= 3 && streakType === "W")
+      msg = `${streak}-trade winning streak — your setup is working!`;
+    else if (streak >= 3 && streakType === "L")
+      msg = `${streak} losses in a row — consider pausing and reviewing entries.`;
+    else if (pf >= 1.5 && newTrades.length >= 5)
+      msg = "Profit factor hit 1.5 — your edge is statistically significant!";
+    else if (newTrades.length < 5)
+      msg = `${newTrades.length} trades completed — keep going for meaningful stats.`;
+    else
+      msg = `Win rate: ${wr.toFixed(1)}% | Profit factor: ${pf.toFixed(2)}`;
+
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    setLastFeedback({ pnl, rMultiple, message: msg, wins: wins.length, total: newTrades.length });
+    feedbackTimerRef.current = setTimeout(() => setLastFeedback(null), 5000);
+  };
+
+  const liveStats = useMemo(() => {
+    if (trades.length === 0) return null;
+    const wins = trades.filter((t) => t.pnl > 0);
+    const losses = trades.filter((t) => t.pnl < 0);
+    const winRate = (wins.length / trades.length) * 100;
+    const grossWin = wins.reduce((s, t) => s + t.pnl, 0);
+    const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+    const profitFactor = grossLoss === 0 ? grossWin : grossWin / grossLoss;
+    const avgWin = wins.length ? grossWin / wins.length : 0;
+    const avgLoss = losses.length ? grossLoss / losses.length : 0;
+    const expectancy = (winRate / 100) * avgWin - ((100 - winRate) / 100) * avgLoss;
+
+    let streak = 0;
+    let streakType = null;
+    for (let i = trades.length - 1; i >= 0; i--) {
+      const type = trades[i].pnl >= 0 ? "W" : "L";
+      if (streakType === null) { streakType = type; streak = 1; }
+      else if (type === streakType) streak++;
+      else break;
+    }
+
+    return { winRate, profitFactor, expectancy, streakType, streak, count: trades.length };
+  }, [trades]);
+
+  const setupStats = useMemo(() => {
+    if (trades.length < 3) return null;
+    const bySetup = {};
+    trades.forEach((t) => {
+      const key = t.setupTag || "untagged";
+      if (!bySetup[key]) bySetup[key] = { count: 0, wins: 0, totalPnl: 0 };
+      bySetup[key].count++;
+      if (t.pnl > 0) bySetup[key].wins++;
+      bySetup[key].totalPnl += t.pnl;
+    });
+    return Object.entries(bySetup).map(([setup, stats]) => ({
+      setup,
+      ...stats,
+      winRate: (stats.wins / stats.count) * 100,
+    }));
+  }, [trades]);
+
+  const currentDrawdown =
+    sessionPeak > 0 ? ((sessionPeak - balance) / sessionPeak) * 100 : 0;
 
   // Render views
   if (currentView === "sessions") {
@@ -1111,6 +1252,30 @@ const Backtest = () => {
                   ).toFixed(2)}
                 </span>
               </div>
+              <div
+                className="text-sm px-3 py-1 rounded-md"
+                style={{
+                  backgroundColor:
+                    currentDrawdown < 2
+                      ? "rgba(16,185,129,0.15)"
+                      : currentDrawdown < 5
+                      ? "rgba(245,158,11,0.15)"
+                      : "rgba(239,68,68,0.15)",
+                }}
+              >
+                <span className="text-gray-400">DD: </span>
+                <span
+                  className={`font-semibold ${
+                    currentDrawdown < 2
+                      ? "text-green-400"
+                      : currentDrawdown < 5
+                      ? "text-yellow-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {currentDrawdown.toFixed(1)}%
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1208,6 +1373,31 @@ const Backtest = () => {
               </div>
             </div>
 
+            {/* Win/Loss Timeline Strip */}
+            {trades.length > 0 && (
+              <div className="bg-gray-800 rounded-lg px-4 py-2 mt-4 flex items-center overflow-x-auto">
+                <span className="text-xs text-gray-400 mr-3 shrink-0">Timeline:</span>
+                <div className="flex items-center space-x-1">
+                  {trades.slice(-40).map((t, i) => (
+                    <div
+                      key={t.id}
+                      title={`Trade #${i + 1} | ${t.side.toUpperCase()} ${t.size} | ${
+                        t.pnl >= 0 ? "+" : ""
+                      }$${t.pnl.toFixed(0)}${t.rMultiple != null ? ` (${t.rMultiple >= 0 ? "+" : ""}${t.rMultiple.toFixed(1)}R)` : ""}${
+                        t.setupTag ? ` | ${t.setupTag}` : ""
+                      }`}
+                      className={`w-3 h-3 rounded-full shrink-0 cursor-default ${
+                        t.pnl >= 0 ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-gray-500 ml-3 shrink-0">
+                  {trades.filter((t) => t.pnl >= 0).length}W / {trades.filter((t) => t.pnl < 0).length}L
+                </span>
+              </div>
+            )}
+
             {/* Trading Controls */}
             <div className="bg-gray-800 rounded-lg p-4 mt-4">
               <div className="flex items-center justify-center space-x-4">
@@ -1237,7 +1427,77 @@ const Backtest = () => {
           </div>
 
           {/* Side Panel */}
-          <div className="w-80 bg-gray-800 border-l border-gray-700">
+          <div className="w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto">
+            {/* Live Edge Metrics */}
+            <div className="p-4 border-b border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Live Edge Metrics
+              </h3>
+              {!liveStats ? (
+                <p className="text-gray-500 text-xs">
+                  Execute and close trades to see your edge stats update in real time.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gray-700 rounded p-2">
+                      <div className="text-xs text-gray-400">Win Rate</div>
+                      <div
+                        className={`text-sm font-bold ${
+                          liveStats.winRate >= 55
+                            ? "text-green-400"
+                            : liveStats.winRate >= 45
+                            ? "text-yellow-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {liveStats.winRate.toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="bg-gray-700 rounded p-2">
+                      <div className="text-xs text-gray-400">Profit Factor</div>
+                      <div
+                        className={`text-sm font-bold ${
+                          liveStats.profitFactor >= 1.5
+                            ? "text-green-400"
+                            : liveStats.profitFactor >= 1.0
+                            ? "text-yellow-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {liveStats.profitFactor.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="bg-gray-700 rounded p-2">
+                      <div className="text-xs text-gray-400">Expectancy</div>
+                      <div
+                        className={`text-sm font-bold ${
+                          liveStats.expectancy >= 0 ? "text-green-400" : "text-red-400"
+                        }`}
+                      >
+                        {liveStats.expectancy >= 0 ? "+" : ""}$
+                        {liveStats.expectancy.toFixed(0)}
+                      </div>
+                    </div>
+                    <div className="bg-gray-700 rounded p-2">
+                      <div className="text-xs text-gray-400">Streak</div>
+                      <div
+                        className={`text-sm font-bold ${
+                          liveStats.streakType === "W" ? "text-green-400" : "text-red-400"
+                        }`}
+                      >
+                        {liveStats.streakType}{liveStats.streak}
+                        {" "}
+                        <span className="text-gray-400 font-normal text-xs">
+                          ({liveStats.count} trades)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Positions */}
             <div className="p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold mb-3">Open Positions</h3>
@@ -1268,9 +1528,18 @@ const Backtest = () => {
                           {position.currentPnL.toFixed(2)}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-gray-400 mb-2">
                         Entry: ${position.entryPrice.toFixed(2)}
+                        {position.setupTag && (
+                          <span className="ml-2 text-blue-400 capitalize">{position.setupTag}</span>
+                        )}
                       </div>
+                      <button
+                        onClick={() => closePosition(position.id)}
+                        className="w-full text-xs py-1 px-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
+                      >
+                        Close at ${currentPrice.toFixed(2)}
+                      </button>
                     </div>
                   ))
                 )}
@@ -1310,17 +1579,111 @@ const Backtest = () => {
                         <div className="text-xs text-gray-400">
                           {trade.entryPrice.toFixed(2)} →{" "}
                           {trade.exitPrice.toFixed(2)}
+                          {trade.rMultiple !== null && trade.rMultiple !== undefined && (
+                            <span
+                              className={`ml-2 font-medium ${
+                                trade.rMultiple >= 0 ? "text-green-400" : "text-red-400"
+                              }`}
+                            >
+                              {trade.rMultiple >= 0 ? "+" : ""}
+                              {trade.rMultiple.toFixed(1)}R
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {trade.reason}
-                        </div>
+                        {trade.setupTag && (
+                          <div className="text-xs text-blue-400 capitalize mt-0.5">
+                            {trade.setupTag}
+                          </div>
+                        )}
                       </div>
                     ))
                 )}
               </div>
             </div>
+
+            {/* Setup Performance Breakdown */}
+            {setupStats && (
+              <div className="p-4 border-t border-gray-700">
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Setup Breakdown
+                </h3>
+                <div className="space-y-2">
+                  {setupStats.map(({ setup, count, wins, totalPnl, winRate }) => (
+                    <div key={setup} className="bg-gray-700 rounded p-2">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-medium capitalize text-white">
+                          {setup}
+                        </span>
+                        <span
+                          className={`text-xs font-bold ${
+                            totalPnl >= 0 ? "text-green-400" : "text-red-400"
+                          }`}
+                        >
+                          {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-400">
+                        <span>{wins}/{count} wins</span>
+                        <span
+                          className={
+                            winRate >= 55
+                              ? "text-green-400"
+                              : winRate >= 45
+                              ? "text-yellow-400"
+                              : "text-red-400"
+                          }
+                        >
+                          {winRate.toFixed(0)}% WR
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Post-Trade Feedback Card */}
+        {lastFeedback && (
+          <div className="fixed bottom-6 right-6 z-50 w-72 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl p-4 animate-pulse-once">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-400 uppercase tracking-wider">Trade Closed</span>
+              <button
+                onClick={() => setLastFeedback(null)}
+                className="text-gray-500 hover:text-gray-300 text-xs"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              className={`text-2xl font-bold mb-1 ${
+                lastFeedback.pnl >= 0 ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {lastFeedback.pnl >= 0 ? "▲ WIN" : "▼ LOSS"}{" "}
+              {lastFeedback.pnl >= 0 ? "+" : ""}${Math.abs(lastFeedback.pnl).toFixed(2)}
+              {lastFeedback.rMultiple != null && (
+                <span className="text-base ml-2 font-medium">
+                  ({lastFeedback.rMultiple >= 0 ? "+" : ""}
+                  {lastFeedback.rMultiple.toFixed(1)}R)
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-gray-300 mb-2">
+              {lastFeedback.wins}W / {lastFeedback.total - lastFeedback.wins}L this session
+            </div>
+            <div
+              className={`text-xs rounded p-2 ${
+                lastFeedback.pnl >= 0
+                  ? "bg-green-900 bg-opacity-40 text-green-300"
+                  : "bg-red-900 bg-opacity-40 text-red-300"
+              }`}
+            >
+              {lastFeedback.message}
+            </div>
+          </div>
+        )}
 
         {/* Order Panel Modal */}
         {showOrderPanel && (
@@ -1373,7 +1736,74 @@ const Backtest = () => {
                 </div>
               </div>
 
-              <div className="flex space-x-3 mt-6">
+              {/* Setup Tagger */}
+              <div className="border-t border-gray-700 pt-4 mt-2">
+                <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider">
+                  Tag This Setup (helps find your edge)
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-300 mb-1">
+                      Setup Type
+                    </label>
+                    <select
+                      value={setupTag}
+                      onChange={(e) => setSetupTag(e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="breakout">Breakout</option>
+                      <option value="pullback">Pullback / Retracement</option>
+                      <option value="reversal">Reversal</option>
+                      <option value="continuation">Continuation</option>
+                      <option value="range_fade">Range Fade</option>
+                      <option value="vwap_reclaim">VWAP Reclaim</option>
+                      <option value="support_bounce">Support Bounce</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-300 mb-1">
+                      Market Condition
+                    </label>
+                    <select
+                      value={marketConditionTag}
+                      onChange={(e) => setMarketConditionTag(e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="trending_up">Trending Up</option>
+                      <option value="trending_down">Trending Down</option>
+                      <option value="ranging">Ranging / Choppy</option>
+                      <option value="volatile">Volatile / News</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-300 mb-2">
+                      Confidence
+                    </label>
+                    <div className="flex space-x-2">
+                      {["low", "medium", "high"].map((level) => (
+                        <button
+                          key={level}
+                          onClick={() => setConfidenceTag(level)}
+                          className={`flex-1 py-1 px-2 rounded text-xs capitalize transition-colors ${
+                            confidenceTag === level
+                              ? level === "high"
+                                ? "bg-green-600 text-white"
+                                : level === "medium"
+                                ? "bg-yellow-600 text-white"
+                                : "bg-gray-500 text-white"
+                              : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                          }`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-4">
                 <button
                   onClick={executeOrder}
                   className={`flex-1 py-2 px-4 rounded font-medium ${
