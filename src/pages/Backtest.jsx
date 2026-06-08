@@ -7,6 +7,7 @@ import {
   TrendingDown,
   Plus,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   Globe,
   Clock,
@@ -40,6 +41,12 @@ import {
   Minimize2,
   PanelRightClose,
   PanelRightOpen,
+  ArrowUpRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeftRight,
+  Check,
+  Slash,
 } from "lucide-react";
 import { useBacktest } from "../context/BacktestContext";
 import BacktestChart from "../components/trades/BacktestChart";
@@ -68,15 +75,15 @@ class ChartErrorBoundary extends Component {
 
 // How many candles to pre-load so the viewport is full on first render
 function defaultWindowCandles(candles) {
-  if (!candles || candles.length < 2) return 44;
+  if (!candles || candles.length < 2) return 150;
   const sec = candles[1].time - candles[0].time;
-  if (sec <=    60) return 120; // 1m  → 2 h
-  if (sec <=   300) return  48; // 5m  → 4 h
-  if (sec <=   900) return  32; // 15m → 8 h
-  if (sec <=  1800) return  24; // 30m → 12 h
-  if (sec <=  3600) return  72; // 1h  → 3 d
-  if (sec <= 14400) return  42; // 4h  → 1 wk
-  return 44;                    // 1d  → 2 mo
+  if (sec <=    60) return 300; // 1m  → ~5 h
+  if (sec <=   300) return 120; // 5m  → ~10 h
+  if (sec <=   900) return  80; // 15m → ~20 h
+  if (sec <=  1800) return  60; // 30m → ~30 h
+  if (sec <=  3600) return 120; // 1h  → ~5 d
+  if (sec <= 14400) return  84; // 4h  → ~2 wk
+  return 120;                   // 1d  → ~5 mo
 }
 
 // Market and instrument configurations
@@ -253,6 +260,307 @@ function HistoryModal({ session, onClose }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Chart settings: defaults + TradingView-style color palette ──────────────
+const DEFAULT_CHART_SETTINGS = {
+  bg: "", bgOpacity: 100,
+  upBody: "", upBodyOpacity: 100,
+  downBody: "", downBodyOpacity: 100,
+  upBorder: "", upBorderOpacity: 100,
+  downBorder: "", downBorderOpacity: 100,
+  upWick: "", upWickOpacity: 100,
+  downWick: "", downWickOpacity: 100,
+  plainBg: false,
+};
+
+const ALL_TIMEFRAMES = ["1m","2m","3m","5m","10m","15m","20m","30m","45m","1h","2h","3h","4h","6h","8h","12h","1d","3d","1w","1M"];
+const DEFAULT_FAV_TIMEFRAMES = ["1m","5m","15m","30m","1h","4h","1d"];
+
+const CHART_COLOR_PALETTE = [
+  ["#ffffff","#e0e0e0","#b0b3bb","#787b86","#555965","#363a45","#2a2e39","#1e2230","#131722","#000000"],
+  ["#f23645","#ff6d00","#ffd600","#00c853","#00bfa5","#00b8d4","#2979ff","#aa00ff","#d500f9","#ff1744"],
+  ["#ffcdd2","#ffe0cc","#fff9c4","#c8e6c9","#b2dfdb","#b3e5fc","#bbdefb","#e1bee7","#f8bbd0","#ffd1d1"],
+  ["#ef9a9a","#ffcc80","#fff176","#a5d6a7","#80cbc4","#81d4fa","#90caf9","#ce93d8","#f48fb1","#ff8a65"],
+  ["#e57373","#ffa726","#ffee58","#66bb6a","#26a69a","#29b6f6","#42a5f5","#ab47bc","#ec407a","#ff7043"],
+  ["#e53935","#fb8c00","#fdd835","#43a047","#00897b","#039be5","#1e88e5","#8e24aa","#d81b60","#f4511e"],
+  ["#b71c1c","#bf360c","#f57f17","#1b5e20","#004d40","#01579b","#0d47a1","#4a148c","#880e4f","#bf360c"],
+  ["#7f0000","#6d3100","#6d5000","#0d3300","#00251a","#002b5a","#0a1a50","#1a0038","#3c001c","#4e0000"],
+];
+
+function ColorPickerPopup({ value, opacity, onChange, onChangeOpacity, onClose }) {
+  const [hexInput, setHexInput] = useState(value || "");
+  useEffect(() => { setHexInput(value || ""); }, [value]);
+  return (
+    <div
+      className="absolute z-[400] rounded-xl shadow-2xl border p-3"
+      style={{ background: "#1e2230", borderColor: "#363a45", width: 244, top: "100%", right: 0, marginTop: 6 }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded transition-colors"
+        style={{ color: "#787b86" }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "#d1d4dc")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "#787b86")}
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+      {/* Color grid */}
+      <div className="mb-3 mt-4 space-y-0.5">
+        {CHART_COLOR_PALETTE.map((row, ri) => (
+          <div key={ri} className="flex gap-0.5">
+            {row.map((c) => (
+              <button
+                key={c}
+                onClick={() => onChange(c)}
+                className="rounded-sm flex-shrink-0 transition-transform hover:scale-110"
+                style={{
+                  width: 20, height: 20, background: c,
+                  outline: value === c ? "2px solid #60a5fa" : "1px solid rgba(255,255,255,0.08)",
+                  outlineOffset: value === c ? 1 : 0,
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="border-t mb-3" style={{ borderColor: "#363a45" }} />
+      {/* Hex input + native color picker */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-5 h-5 rounded-sm flex-shrink-0" style={{ background: value || "#ffffff", border: "1px solid rgba(255,255,255,0.15)" }} />
+        <input
+          type="text"
+          value={hexInput}
+          onChange={(e) => {
+            setHexInput(e.target.value);
+            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) onChange(e.target.value);
+          }}
+          placeholder="#ffffff"
+          className="flex-1 bg-transparent text-xs outline-none"
+          style={{ color: "#d1d4dc" }}
+        />
+        <input
+          type="color"
+          value={value || "#ffffff"}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-6 h-5 cursor-pointer rounded border-0"
+          style={{ padding: 1, background: "transparent" }}
+        />
+      </div>
+      {/* Opacity slider */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs" style={{ color: "#b2b5be" }}>Opacity</span>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => onChangeOpacity(Math.max(0, opacity - 1))}
+              className="w-4 h-4 flex items-center justify-center rounded transition-colors"
+              style={{ color: "#787b86" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#d1d4dc")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#787b86")}
+            >
+              <ChevronLeft className="w-3 h-3" />
+            </button>
+            <span className="text-xs font-medium tabular-nums w-8 text-center" style={{ color: "#d1d4dc" }}>{opacity}%</span>
+            <button
+              onClick={() => onChangeOpacity(Math.min(100, opacity + 1))}
+              className="w-4 h-4 flex items-center justify-center rounded transition-colors"
+              style={{ color: "#787b86" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#d1d4dc")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#787b86")}
+            >
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+        <input
+          type="range" min="0" max="100"
+          value={opacity}
+          onChange={(e) => onChangeOpacity(Number(e.target.value))}
+          className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+          style={{ accentColor: "#1E53E5" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ChartSettingsModal({ chartSettings, setChartSettings, onClose }) {
+  const [openPicker, setOpenPicker] = useState(null);
+  const update = (key, val) => setChartSettings((prev) => ({ ...prev, [key]: val }));
+
+  const candleRows = [
+    { label: "Body",    upKey: "upBody",   downKey: "downBody"   },
+    { label: "Borders", upKey: "upBorder", downKey: "downBorder" },
+    { label: "Wick",    upKey: "upWick",   downKey: "downWick"   },
+  ];
+
+  const Swatch = ({ colorKey, defaultColor }) => {
+    const opKey = colorKey + "Opacity";
+    const rawColor = chartSettings[colorKey] || defaultColor;
+    const opacity = chartSettings[opKey] ?? 100;
+    const isOpen = openPicker === colorKey;
+    // Build rgba so the swatch shows the true rendered color (no CSS opacity on the button itself)
+    const displayColor = (() => {
+      if (opacity >= 100 || !rawColor) return rawColor;
+      const r = parseInt(rawColor.slice(1, 3), 16);
+      const g = parseInt(rawColor.slice(3, 5), 16);
+      const b = parseInt(rawColor.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${(opacity / 100).toFixed(2)})`;
+    })();
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setOpenPicker(isOpen ? null : colorKey)}
+          className="rounded"
+          style={{
+            width: 34, height: 24, background: displayColor,
+            border: isOpen ? "2px solid #60a5fa" : "2px solid rgba(255,255,255,0.15)",
+          }}
+        />
+        {isOpen && (
+          <ColorPickerPopup
+            value={chartSettings[colorKey]}
+            opacity={opacity}
+            onChange={(c) => update(colorKey, c)}
+            onChangeOpacity={(op) => update(opKey, op)}
+            onClose={() => setOpenPicker(null)}
+          />
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {/* Click-outside backdrop — transparent so chart is visible while adjusting colors */}
+      <div className="fixed inset-0 z-[299]" onMouseDown={() => { setOpenPicker(null); onClose(); }} />
+      <div
+        className="fixed z-[300] rounded-xl shadow-2xl border flex flex-col"
+        style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 360, background: "#1a1f2e", borderColor: "#2a2e39", maxHeight: "80vh" }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b flex-shrink-0" style={{ borderColor: "#2a2e39" }}>
+          <h3 className="text-sm font-semibold" style={{ color: "#d1d4dc" }}>Chart Settings</h3>
+          <button
+            onClick={onClose}
+            className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+            style={{ color: "#787b86" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#d1d4dc")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#787b86")}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {/* CANDLES */}
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "#555965" }}>Candles</p>
+
+          {/* Column headers */}
+          <div className="flex items-center mb-2">
+            <div className="flex-1" />
+            <div className="flex gap-2 text-xs text-center mr-0.5" style={{ color: "#555965" }}>
+              <span className="w-[34px]">Bull</span>
+              <span className="w-[34px]">Bear</span>
+            </div>
+          </div>
+
+          {candleRows.map(({ label, upKey, downKey }) => (
+            <div key={label} className="flex items-center justify-between mb-3.5">
+              <span className="text-sm" style={{ color: "#d1d4dc" }}>{label}</span>
+              <div className="flex items-center gap-2">
+                <Swatch colorKey={upKey} defaultColor="#089981" />
+                <Swatch colorKey={downKey} defaultColor="#f23645" />
+              </div>
+            </div>
+          ))}
+
+          {/* BACKGROUND */}
+          <div className="border-t mt-4 pt-4" style={{ borderColor: "#2a2e39" }}>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "#555965" }}>Background</p>
+
+            <div className="flex items-center justify-between mb-3.5">
+              <span className="text-sm" style={{ color: "#d1d4dc" }}>Plain white background</span>
+              <button
+                onClick={() => update("plainBg", !chartSettings.plainBg)}
+                className="w-9 h-5 rounded-full relative transition-colors flex-shrink-0"
+                style={{ background: chartSettings.plainBg ? "#1E53E5" : "#363a45" }}
+              >
+                <span
+                  className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all"
+                  style={{ left: chartSettings.plainBg ? "calc(100% - 18px)" : 2 }}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "#d1d4dc" }}>Background color</span>
+              <Swatch colorKey="bg" defaultColor="#131722" />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-3 border-t flex-shrink-0" style={{ borderColor: "#2a2e39" }}>
+          <button
+            onClick={() => setChartSettings({ ...DEFAULT_CHART_SETTINGS })}
+            className="text-xs px-3 py-1.5 rounded transition-colors"
+            style={{ color: "#787b86", background: "rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#d1d4dc")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#787b86")}
+          >
+            Reset all
+          </button>
+          <button
+            onClick={onClose}
+            className="text-xs px-4 py-1.5 rounded font-semibold transition-colors"
+            style={{ background: "#1E53E5", color: "#ffffff" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#1a47cc")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#1E53E5")}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ChartContextMenu({ x, y, onSettings, onPlaceOrder, onClose }) {
+  const adjX = Math.min(x, window.innerWidth - 170);
+  const adjY = Math.min(y, window.innerHeight - 90);
+  return (
+    <>
+      {/* Transparent backdrop — clicking outside closes the menu */}
+      <div className="fixed inset-0 z-[249]" onMouseDown={onClose} />
+      <div
+        className="fixed z-[250] rounded-lg shadow-xl border py-1 overflow-hidden"
+        style={{ left: adjX, top: adjY, background: "#1a1f2e", borderColor: "#2a2e39", minWidth: 160 }}
+      >
+        {[
+          { label: "Place an order", icon: Plus, action: onPlaceOrder },
+          { label: "Settings", icon: Settings, action: onSettings },
+        ].map(({ label, icon: Icon, action }) => (
+          <button
+            key={label}
+            onClick={() => { action(); onClose(); }}
+            className="w-full text-left flex items-center gap-2.5 px-3.5 py-2 text-sm transition-colors"
+            style={{ color: "#d1d4dc" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#787b86" }} />
+            {label}
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -504,12 +812,15 @@ const Backtest = () => {
 
   // Drawing tools
   const [drawingMode, setDrawingMode] = useState(null);
-  // History stack for undo/redo — each entry is a snapshot of the drawings array
-  const [drawingsHistory, setDrawingsHistory] = useState([[]]);
-  const [historyIdx, setHistoryIdx] = useState(0);
-  const userDrawings = drawingsHistory[historyIdx] ?? [];
-  const canUndo = historyIdx > 0;
-  const canRedo = historyIdx < drawingsHistory.length - 1;
+  // History stack for undo/redo — single state object so pushDrawings is one atomic setState call
+  const [drawingHist, setDrawingHist] = useState({ history: [[]], idx: 0 });
+  const userDrawings = drawingHist.history[drawingHist.idx] ?? [];
+  const canUndo = drawingHist.idx > 0;
+  const canRedo = drawingHist.idx < drawingHist.history.length - 1;
+  const [selectedDrawingIds, setSelectedDrawingIds] = useState([]);
+
+  // Bar replay mode — when active, clicking the chart seeks to that candle
+  const [barReplayMode, setBarReplayMode] = useState(false);
 
   // Chart layout: "single" | "2col" | "3col"
   const [chartLayout, setChartLayout] = useState("single");
@@ -520,6 +831,9 @@ const Backtest = () => {
   // Symbols currently loaded in extra chart slots
   const [chart2Symbol, setChart2Symbol] = useState(null);
   const [chart3Symbol, setChart3Symbol] = useState(null);
+  // Independent timeframes for extra chart slots
+  const [chart2Timeframe, setChart2Timeframe] = useState("15m");
+  const [chart3Timeframe, setChart3Timeframe] = useState("15m");
   // Synced candle indices for extra charts
   const [currentCandle2, setCurrentCandle2] = useState(0);
   const [currentCandle3, setCurrentCandle3] = useState(0);
@@ -533,35 +847,71 @@ const Backtest = () => {
   const [showLayoutMenu, setShowLayoutMenu] = useState(false);
   const [syncCursor, setSyncCursor] = useState(false);
   const [syncTimeframe, setSyncTimeframe] = useState(false);
+  const [syncDrag, setSyncDrag] = useState(false);
   const layoutMenuRef = useRef(null);
 
-  // Asset search — chartSearchOpen = null | 1 | 2 | 3 (which chart's search is open)
+  // Favorite timeframes — persisted, shown in central TF bar
+  const [favTimeframes, setFavTimeframes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("backtestFavTimeframes")) || DEFAULT_FAV_TIMEFRAMES; }
+    catch { return DEFAULT_FAV_TIMEFRAMES; }
+  });
+  const [tfPickerOpen, setTfPickerOpen] = useState(false);
+  const tfPickerRef = useRef(null);
+
+  // Asset search — unified search dropdown (null = closed, truthy = open)
   const [chartSearchOpen, setChartSearchOpen] = useState(null);
   const [assetSearchQuery, setAssetSearchQuery] = useState("");
   const searchDropdownRef = useRef(null);
 
+  // Shared crosshair time for sync across chart windows
+  const [syncedCrosshairTime, setSyncedCrosshairTime] = useState(null);
+  // Imperative range setters/getters — each BacktestChart registers here for smooth sync
+  const rangeSettersRef = useRef({});
+  const rangeGettersRef = useRef({});
+
+  // Which chart window the mouse is currently in (1 | 2 | 3)
+  const [activeChart, setActiveChart] = useState(1);
+
+  // Column flex sizes for resizable chart panels [col1, col2, col3]
+  const [colSizes, setColSizes] = useState([1, 1, 1]);
+  const isResizingCol = useRef(null); // { startX, col, startSizes, visibleCols }
+  const innerRowRef = useRef(null);
+
+  // Chart appearance settings (candle colors, background) — persisted to localStorage
+  const [chartSettings, setChartSettings] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("backtestChartSettings")) || {};
+      return { ...DEFAULT_CHART_SETTINGS, ...saved };
+    } catch { return { ...DEFAULT_CHART_SETTINGS }; }
+  });
+  const [showChartSettings, setShowChartSettings] = useState(false);
+  const chartSettingsPanelRef = useRef(null);
+
+  // Right-click context menu position
+  const [contextMenuPos, setContextMenuPos] = useState(null); // { x, y } or null
+  const contextMenuRef = useRef(null);
+
   // Draggable order panel
-  const [panelPos, setPanelPos] = useState({ x: 10, y: 10 });
+  const [panelPos, setPanelPos] = useState({ x: 54, y: 10 });
   const isDraggingPanel = useRef(false);
   const dragOrigin = useRef({ mx: 0, my: 0, px: 0, py: 0 });
 
   // Push a new drawings snapshot onto the history stack
-  const pushDrawings = (next) => {
-    setDrawingsHistory((prev) => {
-      const trimmed = prev.slice(0, historyIdx + 1);
-      return [...trimmed, next];
-    });
-    setHistoryIdx((i) => i + 1);
-  };
-  const undo = () => { if (canUndo) setHistoryIdx((i) => i - 1); };
-  const redo = () => { if (canRedo) setHistoryIdx((i) => i + 1); };
+  const pushDrawings = (next) => setDrawingHist((prev) => ({
+    history: [...prev.history.slice(0, prev.idx + 1), next],
+    idx: prev.idx + 1,
+  }));
+  const undo = () => setDrawingHist((prev) => prev.idx > 0 ? { ...prev, idx: prev.idx - 1 } : prev);
+  const redo = () => setDrawingHist((prev) => prev.idx < prev.history.length - 1 ? { ...prev, idx: prev.idx + 1 } : prev);
 
   useEffect(() => {
     const onMove = (e) => {
       if (!isDraggingPanel.current) return;
+      const nx = dragOrigin.current.px + (e.clientX - dragOrigin.current.mx);
+      const ny = dragOrigin.current.py + (e.clientY - dragOrigin.current.my);
       setPanelPos({
-        x: dragOrigin.current.px + (e.clientX - dragOrigin.current.mx),
-        y: dragOrigin.current.py + (e.clientY - dragOrigin.current.my),
+        x: Math.max(0, Math.min(window.innerWidth - 284, nx)),
+        y: Math.max(0, Math.min(window.innerHeight - 80, ny)),
       });
     };
     const onUp = () => { isDraggingPanel.current = false; };
@@ -580,13 +930,12 @@ const Backtest = () => {
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // Sync cursor: when main chart candle changes, find matching timestamp in extra charts
+  // Sync cursor during PLAYBACK — only runs while playing so manual seeks don't loop
   useEffect(() => {
-    if (!syncCursor) return;
+    if (!syncCursor || !isPlaying) return;
     const ts = chartData[currentCandle]?.time;
     if (ts == null) return;
     if (chartData2.length > 0) {
-      // Find the last candle in chart2 whose time <= ts (so it mirrors the cut position)
       let idx = chartData2.length - 1;
       for (let i = 0; i < chartData2.length; i++) {
         if (chartData2[i].time > ts) { idx = Math.max(0, i - 1); break; }
@@ -600,7 +949,7 @@ const Backtest = () => {
       }
       setCurrentCandle3(idx);
     }
-  }, [syncCursor, currentCandle, chartData, chartData2, chartData3]);
+  }, [syncCursor, isPlaying, currentCandle, chartData, chartData2, chartData3]);
 
   // Close layout menu / search on outside click
   useEffect(() => {
@@ -613,6 +962,95 @@ const Backtest = () => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Backspace deletes selected drawings (when not focused on a text input)
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "Backspace" && e.key !== "Delete") return;
+      if (e.target.closest("input, textarea, select")) return;
+      if (selectedDrawingIds.length > 0) {
+        const toDelete = new Set(selectedDrawingIds);
+        pushDrawings(userDrawings.filter((d) => !toDelete.has(d.id)));
+        setSelectedDrawingIds([]);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [selectedDrawingIds, userDrawings]); // eslint-disable-line
+
+  // Column resize — global mouse move/up so dragging outside the panel still works
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizingCol.current) return;
+      const { startX, col, startSizes, visibleCols } = isResizingCol.current;
+      const delta = e.clientX - startX;
+      const parent = innerRowRef.current;
+      if (!parent) return;
+      const totalWidth = parent.offsetWidth - 34; // subtract drawing toolbar width
+      const totalFlex = startSizes.slice(0, visibleCols).reduce((a, b) => a + b, 0);
+      const flexDelta = (delta / totalWidth) * totalFlex;
+      const newSizes = [...startSizes];
+      newSizes[col] = Math.max(0.15, newSizes[col] + flexDelta);
+      newSizes[col + 1] = Math.max(0.15, newSizes[col + 1] - flexDelta);
+      setColSizes(newSizes);
+    };
+    const handleMouseUp = () => { isResizingCol.current = null; };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []); // eslint-disable-line
+
+  // Close chart settings panel on outside click
+  useEffect(() => {
+    if (!showChartSettings) return;
+    const handler = (e) => {
+      if (chartSettingsPanelRef.current && !chartSettingsPanelRef.current.contains(e.target)) {
+        setShowChartSettings(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showChartSettings]);
+
+  // Persist chart settings to localStorage whenever they change
+  useEffect(() => {
+    try { localStorage.setItem("backtestChartSettings", JSON.stringify(chartSettings)); } catch {}
+  }, [chartSettings]);
+
+  // Persist favorite timeframes
+  useEffect(() => {
+    try { localStorage.setItem("backtestFavTimeframes", JSON.stringify(favTimeframes)); } catch {}
+  }, [favTimeframes]);
+
+  // Close TF picker on outside click
+  useEffect(() => {
+    if (!tfPickerOpen) return;
+    const handler = (e) => {
+      if (tfPickerRef.current && !tfPickerRef.current.contains(e.target)) setTfPickerOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [tfPickerOpen]);
+
+  // Close right-click context menu on outside click or Escape
+  useEffect(() => {
+    if (!contextMenuPos) return;
+    const handler = (e) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target)) {
+        setContextMenuPos(null);
+      }
+    };
+    const escHandler = (e) => { if (e.key === "Escape") setContextMenuPos(null); };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", escHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", escHandler);
+    };
+  }, [contextMenuPos]);
 
   const handleFullscreen = async () => {
     if (!document.fullscreenElement) {
@@ -628,7 +1066,24 @@ const Backtest = () => {
     setAssetSearchQuery("");
 
     if (chartNum === 1) {
-      // Chart 1 search adds to the next available extra slot
+      if (selectedInstruments.length === 1) {
+        // Single-instrument session: change chart 1's asset directly
+        setIsLoadingData(true);
+        try {
+          const candles = await fetchMarketCandles(market, symbol, timeframe);
+          setChartData(candles);
+          setCurrentCandle(candles.length - 1);
+          setCurrentPrice(candles[candles.length - 1]?.close || 0);
+          setPositions([]);
+          setCurrentSession((prev) => ({
+            ...prev,
+            instrument: { ...prev.instrument, symbol, market },
+          }));
+        } catch (err) { toast.error(err.message); }
+        finally { setIsLoadingData(false); }
+        return;
+      }
+      // Multi-instrument session: add to next available extra slot
       const useSlot = chartData2.length === 0 ? 2 : 3;
       chartNum = useSlot;
     }
@@ -636,21 +1091,31 @@ const Backtest = () => {
     if (chartNum === 2) {
       setIsLoadingData2(true);
       try {
-        const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, timeframe);
+        const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, chart2Timeframe);
         setChartData2(candles);
         setChart2Symbol(symbol);
         setCurrentCandle2(candles.length - 1);
         if (chartLayout === "single") setChartLayout("2col");
+        // Match candle size to chart 1
+        setTimeout(() => {
+          const range = rangeGettersRef.current[1]?.();
+          if (range) rangeSettersRef.current[2]?.(range);
+        }, 200);
       } catch { toast.error(`Failed to load ${symbol}`); }
       finally { setIsLoadingData2(false); }
     } else {
       setIsLoadingData3(true);
       try {
-        const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, timeframe);
+        const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, chart3Timeframe);
         setChartData3(candles);
         setChart3Symbol(symbol);
         setCurrentCandle3(candles.length - 1);
         if (chartLayout !== "3col") setChartLayout("3col");
+        // Match candle size to chart 1
+        setTimeout(() => {
+          const range = rangeGettersRef.current[1]?.();
+          if (range) rangeSettersRef.current[3]?.(range);
+        }, 200);
       } catch { toast.error(`Failed to load ${symbol}`); }
       finally { setIsLoadingData3(false); }
     }
@@ -888,12 +1353,32 @@ const Backtest = () => {
     setIsPlaying((p) => !p);
   };
 
+  // Sync all other chart windows to a given timestamp (excludeChart won't be touched)
+  const syncToTimestamp = (ts, excludeChart) => {
+    if (ts == null) return;
+    const findIdx = (data) => {
+      let idx = data.length - 1;
+      for (let i = 0; i < data.length; i++) {
+        if (data[i].time > ts) { idx = Math.max(0, i - 1); break; }
+      }
+      return idx;
+    };
+    if (excludeChart !== 1 && chartData.length > 0) {
+      const i = findIdx(chartData);
+      setCurrentCandle(i);
+      setCurrentPrice(chartData[i]?.close ?? 0);
+    }
+    if (excludeChart !== 2 && chartData2.length > 0) setCurrentCandle2(findIdx(chartData2));
+    if (excludeChart !== 3 && chartData3.length > 0) setCurrentCandle3(findIdx(chartData3));
+  };
+
   const handleStepForward = () => {
     if (currentCandle >= chartData.length - 1) return;
     const next = currentCandle + 1;
     const candle = chartData[next];
     setCurrentCandle(next);
     setCurrentPrice(candle.close);
+    if (syncCursor) syncToTimestamp(candle.time, 1);
     const { stillOpen, closedTrades, balanceDelta } = processPositionsForCandle(candle, positionsRef.current);
     setPositions(stillOpen);
     applyClosedTrades(closedTrades, balanceDelta);
@@ -914,6 +1399,17 @@ const Backtest = () => {
     setIsPlaying(false);
     setCurrentCandle(idx);
     setCurrentPrice(chartData[idx]?.close || 0);
+    if (syncCursor) syncToTimestamp(chartData[idx]?.time, 1);
+  };
+
+  const handleCandleSeek2 = (idx) => {
+    setCurrentCandle2(idx);
+    if (syncCursor) syncToTimestamp(chartData2[idx]?.time, 2);
+  };
+
+  const handleCandleSeek3 = (idx) => {
+    setCurrentCandle3(idx);
+    if (syncCursor) syncToTimestamp(chartData3[idx]?.time, 3);
   };
 
   const handleStepBack = () => {
@@ -921,6 +1417,7 @@ const Backtest = () => {
     const prev = currentCandle - 1;
     setCurrentCandle(prev);
     setCurrentPrice(chartData[prev]?.close || 0);
+    if (syncCursor) syncToTimestamp(chartData[prev]?.time, 1);
     setIsPlaying(false);
   };
 
@@ -943,11 +1440,9 @@ const Backtest = () => {
     setCurrentCandle(target);
     setCurrentPrice(chartData[target]?.close || 0);
 
-    // Sync cut to extra charts when cursor sync is enabled
-    if (syncCursor) {
-      if (chartData2.length > 0) setCurrentCandle2(findIdx(chartData2));
-      if (chartData3.length > 0) setCurrentCandle3(findIdx(chartData3));
-    }
+    // Always sync cut to extra charts so all windows jump to the same date
+    if (chartData2.length > 0) setCurrentCandle2(findIdx(chartData2));
+    if (chartData3.length > 0) setCurrentCandle3(findIdx(chartData3));
   };
 
   const handleTimeframeChange = async (newTf) => {
@@ -981,38 +1476,95 @@ const Backtest = () => {
       setPositions([]);
       setTrades([]);
 
-      // Sync timeframe: reload extra charts with the new timeframe
-      if (syncTimeframe) {
-        const refTs = candles[newIdx]?.time ?? null;
-        if (chart2Symbol && (chartData2.length > 0 || chartLayout !== "single")) {
-          setIsLoadingData2(true);
-          try {
-            const c2 = await fetchMarketCandles(currentSession.market, chart2Symbol, newTf);
-            setChartData2(c2);
-            if (refTs !== null) {
-              let i2 = c2.length - 1;
-              for (let i = 0; i < c2.length; i++) { if (c2[i].time > refTs) { i2 = Math.max(0, i - 1); break; } }
-              setCurrentCandle2(i2);
-            } else { setCurrentCandle2(c2.length - 1); }
-          } catch { /* non-fatal */ } finally { setIsLoadingData2(false); }
-        }
-        if (chart3Symbol && (chartData3.length > 0 || chartLayout === "3col")) {
-          setIsLoadingData3(true);
-          try {
-            const c3 = await fetchMarketCandles(currentSession.market, chart3Symbol, newTf);
-            setChartData3(c3);
-            if (refTs !== null) {
-              let i3 = c3.length - 1;
-              for (let i = 0; i < c3.length; i++) { if (c3[i].time > refTs) { i3 = Math.max(0, i - 1); break; } }
-              setCurrentCandle3(i3);
-            } else { setCurrentCandle3(c3.length - 1); }
-          } catch { /* non-fatal */ } finally { setIsLoadingData3(false); }
-        }
+      // Sync timeframe: reload extra charts with their own timeframe (or the new one if syncTimeframe)
+      const refTs = candles[newIdx]?.time ?? null;
+      if (chart2Symbol && (chartData2.length > 0 || chartLayout !== "single")) {
+        setIsLoadingData2(true);
+        const tf2 = syncTimeframe ? newTf : chart2Timeframe;
+        if (syncTimeframe) setChart2Timeframe(newTf);
+        try {
+          const c2 = await fetchMarketCandles(currentSession.market, chart2Symbol, tf2);
+          setChartData2(c2);
+          if (refTs !== null) {
+            let i2 = c2.length - 1;
+            for (let i = 0; i < c2.length; i++) { if (c2[i].time > refTs) { i2 = Math.max(0, i - 1); break; } }
+            setCurrentCandle2(i2);
+          } else { setCurrentCandle2(c2.length - 1); }
+          // Sync candle size from chart 1 after new data renders
+          setTimeout(() => {
+            const range = rangeGettersRef.current[1]?.();
+            if (range) rangeSettersRef.current[2]?.(range);
+          }, 250);
+        } catch { /* non-fatal */ } finally { setIsLoadingData2(false); }
+      }
+      if (chart3Symbol && (chartData3.length > 0 || chartLayout === "3col")) {
+        setIsLoadingData3(true);
+        const tf3 = syncTimeframe ? newTf : chart3Timeframe;
+        if (syncTimeframe) setChart3Timeframe(newTf);
+        try {
+          const c3 = await fetchMarketCandles(currentSession.market, chart3Symbol, tf3);
+          setChartData3(c3);
+          if (refTs !== null) {
+            let i3 = c3.length - 1;
+            for (let i = 0; i < c3.length; i++) { if (c3[i].time > refTs) { i3 = Math.max(0, i - 1); break; } }
+            setCurrentCandle3(i3);
+          } else { setCurrentCandle3(c3.length - 1); }
+          // Sync candle size from chart 1 after new data renders
+          setTimeout(() => {
+            const range = rangeGettersRef.current[1]?.();
+            if (range) rangeSettersRef.current[3]?.(range);
+          }, 250);
+        } catch { /* non-fatal */ } finally { setIsLoadingData3(false); }
       }
     } catch (err) {
       toast.error(err.message);
     } finally {
       setIsLoadingData(false);
+    }
+  };
+
+  const handleChart2TimeframeChange = async (newTf) => {
+    if (!chart2Symbol || newTf === chart2Timeframe) return;
+    setChart2Timeframe(newTf);
+    setIsLoadingData2(true);
+    try {
+      const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, chart2Symbol, newTf);
+      setChartData2(candles);
+      setCurrentCandle2(candles.length - 1);
+      setTimeout(() => {
+        const range = rangeGettersRef.current[1]?.();
+        if (range) rangeSettersRef.current[2]?.(range);
+      }, 200);
+    } catch { toast.error(`Failed to load ${chart2Symbol} ${newTf}`); }
+    finally { setIsLoadingData2(false); }
+  };
+
+  const handleChart3TimeframeChange = async (newTf) => {
+    if (!chart3Symbol || newTf === chart3Timeframe) return;
+    setChart3Timeframe(newTf);
+    setIsLoadingData3(true);
+    try {
+      const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, chart3Symbol, newTf);
+      setChartData3(candles);
+      setCurrentCandle3(candles.length - 1);
+      setTimeout(() => {
+        const range = rangeGettersRef.current[1]?.();
+        if (range) rangeSettersRef.current[3]?.(range);
+      }, 200);
+    } catch { toast.error(`Failed to load ${chart3Symbol} ${newTf}`); }
+    finally { setIsLoadingData3(false); }
+  };
+
+  // Central TF bar handler — routes to the active window (or all if sync is on)
+  const handleActiveTfChange = (newTf) => {
+    if (syncTimeframe) {
+      handleTimeframeChange(newTf);
+    } else if (activeChart === 2) {
+      handleChart2TimeframeChange(newTf);
+    } else if (activeChart === 3) {
+      handleChart3TimeframeChange(newTf);
+    } else {
+      handleTimeframeChange(newTf);
     }
   };
 
@@ -1026,15 +1578,25 @@ const Backtest = () => {
 
   const openOrderPanel = (side) => {
     setOrderSide(side);
-    setPanelPos({ x: 10, y: 10 });
+    const rect = chartContainerRef.current?.getBoundingClientRect();
+    setPanelPos({
+      x: (rect?.left ?? 0) + 60,
+      y: (rect?.top ?? 0) + 80,
+    });
     setShowOrderPanel(true);
   };
+
+  // Price from whichever chart window the mouse is in
+  const activeChartPrice =
+    activeChart === 2 ? (chartData2[currentCandle2]?.close ?? 0)
+    : activeChart === 3 ? (chartData3[currentCandle3]?.close ?? 0)
+    : currentPrice;
 
   const executeOrder = () => {
     if (!currentSession) return;
     const instrument = currentSession.instrument;
     const tickRatio = instrument.tickValue / instrument.tickSize;
-    const entryPrice = currentPrice;
+    const entryPrice = activeChartPrice || currentPrice;
 
     const position = {
       id: Date.now(),
@@ -1062,130 +1624,245 @@ const Backtest = () => {
 
   // Render views
   if (currentView === "sessions") {
+    const completedSessions = sessionHistory.filter((s) => s.endingBalance != null);
+    const totalPnl = completedSessions.reduce((sum, s) => sum + (s.endingBalance - s.initialBalance), 0);
+    const winningSessions = completedSessions.filter((s) => s.endingBalance >= s.initialBalance).length;
+    const winRate = completedSessions.length > 0
+      ? Math.round((winningSessions / completedSessions.length) * 100)
+      : null;
+
     return (
       <>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Backtest Sessions
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Create and manage your backtesting sessions
-            </p>
-          </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
 
-          <div className="mb-6 flex items-start gap-4 flex-wrap">
+        {/* ── Top header bar ── */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#1E53E5" }}>
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Backtest</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Replay history, test your edge</p>
+              </div>
+            </div>
             <button
               onClick={() => setCurrentView("setup")}
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors flex-shrink-0"
+              style={{ background: "#1E53E5" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#1746c7")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#1E53E5")}
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Create New Session
+              <Plus className="w-4 h-4" />
+              New Session
             </button>
-
-            {/* Running account balance card */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-5 py-3 flex items-center gap-4">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Account Balance</p>
-                {isEditingBalance ? (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
-                      value={balanceInput}
-                      onChange={(e) => setBalanceInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmBalanceChange();
-                        if (e.key === "Escape") setIsEditingBalance(false);
-                      }}
-                      autoFocus
-                      className="w-28 px-2 py-1 rounded border border-blue-500 outline-none text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    <button
-                      onClick={confirmBalanceChange}
-                      className="px-2 py-1 rounded text-xs text-white font-medium"
-                      style={{ background: "#089981" }}
-                    >✓</button>
-                    <button
-                      onClick={() => setIsEditingBalance(false)}
-                      className="px-2 py-1 rounded text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700"
-                    >✕</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => { setBalanceInput(balance.toFixed(2)); setIsEditingBalance(true); }}
-                    className="flex items-center gap-1.5 group"
-                    title="Click to edit account balance"
-                  >
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                      ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[160px]">
-                Carries across all sessions. Click to reset.
-              </p>
-            </div>
           </div>
+        </div>
 
-          {/* Session History */}
-          {sessionHistory.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Recent Sessions
+        <div className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
+
+          {sessionHistory.length === 0 ? (
+            /* ── Empty state for first-time users ── */
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="w-20 h-20 rounded-2xl mb-6 flex items-center justify-center" style={{ background: "#e8f0fe" }}>
+                <TrendingUp className="w-10 h-10" style={{ color: "#1E53E5" }} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                Start your first backtest
               </h2>
-              <div className="space-y-3">
+              <p className="text-gray-500 dark:text-gray-400 max-w-md mb-2 leading-relaxed">
+                Replay real market data candle by candle. Practice entering and exiting trades, measure your performance, and refine your edge — all without risking capital.
+              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-8">
+                Your account balance carries between sessions so you can track cumulative performance.
+              </p>
+              <div className="flex items-center gap-4 flex-wrap justify-center">
+                <button
+                  onClick={() => setCurrentView("setup")}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-md transition-all"
+                  style={{ background: "#1E53E5" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#1746c7"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#1E53E5"; e.currentTarget.style.transform = ""; }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Create First Session
+                </button>
+                <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Balance:</span>
+                  {isEditingBalance ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number" value={balanceInput}
+                        onChange={(e) => setBalanceInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") confirmBalanceChange(); if (e.key === "Escape") setIsEditingBalance(false); }}
+                        autoFocus
+                        className="w-24 px-2 py-0.5 rounded border border-blue-500 outline-none text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                      <button onClick={confirmBalanceChange} className="px-1.5 py-0.5 rounded text-xs text-white" style={{ background: "#089981" }}>✓</button>
+                      <button onClick={() => setIsEditingBalance(false)} className="px-1.5 py-0.5 rounded text-xs text-gray-500 bg-gray-100 dark:bg-gray-700">✕</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setBalanceInput(balance.toFixed(2)); setIsEditingBalance(true); }} className="flex items-center gap-1 group font-mono font-semibold text-gray-900 dark:text-white hover:text-blue-600 transition-colors">
+                      ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Feature highlights */}
+              <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-2xl">
+                {[
+                  { icon: Play, title: "Candle-by-candle replay", desc: "Step forward or play at speed. See exactly how price moved." },
+                  { icon: Target, title: "Real positions", desc: "Place buy/sell orders with TP and SL, just like live trading." },
+                  { icon: ArrowUpDown, title: "Multi-chart analysis", desc: "Compare up to 3 instruments side-by-side with synced cursor." },
+                ].map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 text-left">
+                    <div className="w-8 h-8 rounded-lg mb-3 flex items-center justify-center" style={{ background: "#e8f0fe" }}>
+                      <Icon className="w-4 h-4" style={{ color: "#1E53E5" }} />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* ── Sessions list ── */
+            <>
+              {/* Stats row */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[
+                  {
+                    label: "Sessions",
+                    value: sessionHistory.length,
+                    sub: `${completedSessions.length} completed`,
+                    color: null,
+                  },
+                  {
+                    label: "Win Rate",
+                    value: winRate != null ? `${winRate}%` : "—",
+                    sub: `${winningSessions} of ${completedSessions.length} profitable`,
+                    color: winRate != null ? (winRate >= 50 ? "#089981" : "#f23645") : null,
+                  },
+                  {
+                    label: "Total P&L",
+                    value: completedSessions.length > 0 ? `${totalPnl >= 0 ? "+" : ""}$${Math.abs(totalPnl).toFixed(2)}` : "—",
+                    sub: "across completed sessions",
+                    color: completedSessions.length > 0 ? (totalPnl >= 0 ? "#089981" : "#f23645") : null,
+                  },
+                  {
+                    label: "Account Balance",
+                    value: `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    sub: "click to adjust",
+                    color: null,
+                    editable: true,
+                  },
+                ].map(({ label, value, sub, color, editable }) => (
+                  <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">{label}</p>
+                    {editable && isEditingBalance ? (
+                      <div className="flex items-center gap-1 mb-1">
+                        <input
+                          type="number" value={balanceInput}
+                          onChange={(e) => setBalanceInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") confirmBalanceChange(); if (e.key === "Escape") setIsEditingBalance(false); }}
+                          autoFocus
+                          className="w-full px-2 py-1 rounded border border-blue-500 outline-none text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                        <button onClick={confirmBalanceChange} className="px-1.5 py-1 rounded text-xs text-white flex-shrink-0" style={{ background: "#089981" }}>✓</button>
+                        <button onClick={() => setIsEditingBalance(false)} className="px-1.5 py-1 rounded text-xs flex-shrink-0 text-gray-500 bg-gray-100 dark:bg-gray-700">✕</button>
+                      </div>
+                    ) : (
+                      <p
+                        className={`text-xl font-bold mb-1 ${!color ? "text-gray-900 dark:text-white" : ""}`}
+                        style={color ? { color } : {}}
+                      >
+                        {editable ? (
+                          <button
+                            onClick={() => { setBalanceInput(balance.toFixed(2)); setIsEditingBalance(true); }}
+                            className="flex items-center gap-1 group hover:text-blue-600 transition-colors"
+                          >
+                            {value}
+                            <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                          </button>
+                        ) : value}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Session cards */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Recent Sessions</h2>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{sessionHistory.length} session{sessionHistory.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="space-y-2">
                 {sessionHistory.map((s) => {
-                  const sessionPnl = s.endingBalance != null
-                    ? s.endingBalance - s.initialBalance
-                    : null;
+                  const sessionPnl = s.endingBalance != null ? s.endingBalance - s.initialBalance : null;
+                  const pnlPositive = sessionPnl != null && sessionPnl >= 0;
+                  const completed = s.endingBalance != null;
                   return (
                     <div
                       key={s.id}
-                      onClick={() => {
-                        setHistoryModal({ ...s, trades: s.trades || [] });
-                      }}
-                      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
+                      onClick={() => setHistoryModal({ ...s, trades: s.trades || [] })}
+                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4 cursor-pointer transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 group"
                     >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">{s.symbol}</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{s.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {s.instrumentName} · {s.timeframe.toUpperCase()} · {s.strategy}
-                          </p>
-                        </div>
+                      {/* Left accent bar */}
+                      <div
+                        className="w-1 self-stretch rounded-full flex-shrink-0"
+                        style={{ background: !completed ? "#d1d4dc" : pnlPositive ? "#089981" : "#f23645", minHeight: 40 }}
+                      />
+
+                      {/* Symbol chip */}
+                      <div
+                        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                        style={{ background: "#e8f0fe", color: "#1E53E5" }}
+                      >
+                        {s.symbol ?? "—"}
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">
-                          {new Date(s.createdAt).toLocaleDateString()}
+
+                      {/* Name + meta */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-white truncate">{s.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {[s.instrumentName, s.timeframe?.toUpperCase(), s.strategy, s.setup].filter(Boolean).join(" · ")}
                         </p>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          ${s.initialBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          {s.endingBalance != null && (
-                            <span className="ml-2">
-                              →{" "}
-                              <span className={sessionPnl >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}>
-                                ${s.endingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
-                            </span>
-                          )}
+                      </div>
+
+                      {/* Date */}
+                      <div className="text-right hidden sm:block flex-shrink-0">
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {new Date(s.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                         </p>
-                        {sessionPnl != null && (
-                          <p className={`text-xs font-semibold mt-0.5 ${sessionPnl >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
-                            {sessionPnl >= 0 ? "+" : ""}${sessionPnl.toFixed(2)} P&L
-                          </p>
+                        {!completed && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">In progress</p>}
+                      </div>
+
+                      {/* P&L */}
+                      <div className="text-right flex-shrink-0 min-w-[80px]">
+                        {sessionPnl != null ? (
+                          <>
+                            <p className={`text-base font-bold ${pnlPositive ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                              {pnlPositive ? "+" : ""}${sessionPnl.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                              ${s.initialBalance?.toLocaleString(undefined, { maximumFractionDigits: 0 })} → ${s.endingBalance?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-gray-400 dark:text-gray-500">No result</p>
                         )}
                       </div>
+
+                      <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 flex-shrink-0 transition-colors" />
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -1519,6 +2196,7 @@ const Backtest = () => {
     };
 
     return (
+      <>
       <div
         ref={chartContainerRef}
         className="-mx-6 -my-6 flex-1 flex flex-col overflow-hidden"
@@ -1551,23 +2229,93 @@ const Backtest = () => {
                 }
                 setCurrentView("sessions");
               }}
-              className="text-xs transition-colors flex-shrink-0"
-              style={{ color: theme.textMuted }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = theme.text)}
-              onMouseLeave={(e) => (e.currentTarget.style.color = theme.textMuted)}
+              className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded transition-colors flex-shrink-0"
+              style={{ color: "#1E53E5", background: "#e8f0fe" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#dce6fd")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8f0fe")}
             >
               ← Sessions
             </button>
             <div className="h-4 w-px flex-shrink-0" style={{ background: theme.border }} />
-            <div className="flex items-baseline gap-1.5 min-w-0">
-              <span className="font-bold text-sm flex-shrink-0" style={{ color: theme.text }}>
-                {currentSession.instrument?.symbol}
-              </span>
-              <span className="text-xs hidden sm:block truncate" style={{ color: theme.textMuted }}>
+            <div className="flex items-center gap-1.5 min-w-0">
+              {/* Search icon — always visible; changes chart 1 directly in single-instrument sessions */}
+              <div ref={chartSearchOpen ? searchDropdownRef : null} style={{ position: "relative" }}>
+                <button
+                  onClick={() => { setChartSearchOpen((v) => v ? null : 1); setAssetSearchQuery(""); }}
+                  title={`Change asset for Chart ${activeChart}`}
+                  className="flex items-center justify-center w-5 h-5 rounded transition-colors"
+                  style={{ color: chartSearchOpen ? "#1E53E5" : theme.textMuted }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#1E53E5")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = chartSearchOpen ? "#1E53E5" : theme.textMuted)}
+                >
+                  <Search className="w-3 h-3" />
+                </button>
+                {chartSearchOpen && (
+                  <div className="absolute left-0 top-full mt-1 rounded-lg shadow-xl border z-50 overflow-hidden" style={{ background: theme.surface, borderColor: theme.border, width: 260 }}>
+                    <div className="px-3 pt-2.5 pb-2 border-b" style={{ borderColor: theme.border }}>
+                      <p className="text-xs font-semibold mb-1.5" style={{ color: "#b2b5be" }}>
+                        {`Chart ${activeChart} — ${
+                          activeChart === 1 ? currentSession.instrument?.symbol :
+                          activeChart === 2 ? (chart2Symbol ?? "empty") :
+                          (chart3Symbol ?? "empty")
+                        }`}
+                      </p>
+                      <input
+                        autoFocus type="text"
+                        placeholder={
+                          activeChart === 1 && selectedInstruments.length === 1
+                            ? "Change instrument…"
+                            : activeChart === 1
+                            ? "Add chart 2 or 3 instrument…"
+                            : "Search instrument…"
+                        }
+                        value={assetSearchQuery}
+                        onChange={(e) => setAssetSearchQuery(e.target.value)}
+                        className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                        style={{ background: theme.bg, color: theme.text, borderColor: theme.border }}
+                      />
+                    </div>
+                    <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
+                      {filteredInstruments.length === 0
+                        ? <p className="text-xs px-3 py-3" style={{ color: "#b2b5be" }}>No results</p>
+                        : filteredInstruments.map((inst) => (
+                          <button
+                            key={`${inst.market}-${inst.symbol}`}
+                            onClick={() => handleAssetSearchSelectFor(activeChart, inst.market, inst.symbol)}
+                            className="w-full flex items-center px-3 py-2 text-left gap-2 transition-colors"
+                            style={{ background: "transparent" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = theme.bg)}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <span className="text-xs font-bold w-10 flex-shrink-0" style={{ color: theme.text }}>{inst.symbol}</span>
+                            <span className="text-xs truncate flex-1" style={{ color: theme.textMuted }}>{inst.name}</span>
+                            <span className="text-xs flex-shrink-0" style={{ color: "#b2b5be" }}>{inst.marketName}</span>
+                          </button>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* All loaded asset symbols — active window's symbol is highlighted */}
+              {[
+                { chart: 1, symbol: currentSession.instrument?.symbol },
+                ...(chart2Symbol ? [{ chart: 2, symbol: chart2Symbol }] : []),
+                ...(chart3Symbol ? [{ chart: 3, symbol: chart3Symbol }] : []),
+              ].map(({ chart, symbol }, i) => (
+                <span key={chart} className="flex items-center gap-1">
+                  {i > 0 && <span className="text-xs select-none" style={{ color: theme.border }}>|</span>}
+                  <span
+                    className="font-bold text-sm"
+                    style={{ color: activeChart === chart ? theme.text : theme.textMuted }}
+                  >
+                    {symbol}
+                  </span>
+                </span>
+              ))}
+              <span className="text-xs hidden sm:block truncate max-w-[100px]" style={{ color: theme.textMuted }}>
                 {currentSession.instrument?.name}
-              </span>
-              <span className="text-xs hidden md:block flex-shrink-0" style={{ color: "#b2b5be" }}>
-                · {currentSession.instrument?.exchange}
               </span>
             </div>
             {currentPrice > 0 && (
@@ -1668,35 +2416,38 @@ const Backtest = () => {
           className="flex items-center px-3 py-1 overflow-x-auto flex-1 min-w-0"
           style={{ gap: "2px" }}
         >
-          {/* Timeframe buttons */}
-          {["1m", "5m", "15m", "30m", "1h", "4h", "1d"].map((tf) => (
-            <button
-              key={tf}
-              onClick={() => handleTimeframeChange(tf)}
-              disabled={isLoadingData}
-              className="px-2 py-1 text-xs rounded-sm transition-colors disabled:opacity-40 font-medium flex-shrink-0"
-              style={
-                timeframe === tf
-                  ? { background: "#e8f0fe", color: "#1E53E5", borderRadius: 3 }
-                  : { color: theme.textMuted }
-              }
-              onMouseEnter={(e) => {
-                if (timeframe !== tf) {
-                  e.currentTarget.style.color = theme.text;
-                  e.currentTarget.style.background = theme.bg;
+          {/* Timeframe buttons — context-aware: applies to the active chart window */}
+          {(() => {
+            const activeTf = activeChart === 2 ? chart2Timeframe : activeChart === 3 ? chart3Timeframe : timeframe;
+            const isLoading = activeChart === 2 ? isLoadingData2 : activeChart === 3 ? isLoadingData3 : isLoadingData;
+            return favTimeframes.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => handleActiveTfChange(tf)}
+                disabled={isLoading}
+                className="px-2 py-1 text-xs rounded-sm transition-colors disabled:opacity-40 font-medium flex-shrink-0"
+                style={
+                  activeTf === tf
+                    ? { background: "#e8f0fe", color: "#1E53E5", borderRadius: 3 }
+                    : { color: theme.textMuted }
                 }
-              }}
-              onMouseLeave={(e) => {
-                if (timeframe !== tf) {
-                  e.currentTarget.style.color = theme.textMuted;
-                  e.currentTarget.style.background = "transparent";
-                }
-              }}
-            >
-              {tf === "1d" ? "D" : tf.toUpperCase()}
-            </button>
-          ))}
-
+                onMouseEnter={(e) => {
+                  if (activeTf !== tf) {
+                    e.currentTarget.style.color = theme.text;
+                    e.currentTarget.style.background = theme.bg;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTf !== tf) {
+                    e.currentTarget.style.color = theme.textMuted;
+                    e.currentTarget.style.background = "transparent";
+                  }
+                }}
+              >
+                {tf === "1d" ? "D" : tf === "1w" ? "W" : tf === "1M" ? "M" : tf === "3d" ? "3D" : tf.toUpperCase()}
+              </button>
+            ));
+          })()}
           <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
 
           {/* ── Replay controls ── */}
@@ -1730,6 +2481,21 @@ const Backtest = () => {
             style={{ background: "#1E53E5", color: "#ffffff" }}
           >
             {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+          </button>
+
+          {/* Bar replay — click on chart to jump to that candle */}
+          <button
+            onClick={() => setBarReplayMode((v) => !v)}
+            disabled={isLoadingData || !chartData.length}
+            title={barReplayMode ? "Bar replay ON — click chart to seek" : "Bar replay — click to activate, then click chart to seek"}
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+            style={{
+              background: barReplayMode ? "#e8f0fe" : "transparent",
+              color: barReplayMode ? "#1E53E5" : theme.textMuted,
+              border: barReplayMode ? "1px solid #1E53E5" : "1px solid transparent",
+            }}
+          >
+            <Crosshair className="w-3.5 h-3.5" />
           </button>
 
           {/* Next candle */}
@@ -1933,6 +2699,53 @@ const Backtest = () => {
 
         </div>{/* end scrollable toolbar */}
 
+          {/* ── Add/remove timeframe favorites — outside overflow so dropdown is never clipped ── */}
+          <div ref={tfPickerRef} className="flex items-center flex-shrink-0 border-l px-2" style={{ borderColor: theme.border, position: "relative" }}>
+            <button
+              disabled
+              title="Additional timeframes coming soon"
+              className="flex items-center justify-center w-5 h-5 rounded cursor-not-allowed"
+              style={{ color: theme.textMuted, opacity: 0.35 }}
+            >
+              <Plus className="w-3 h-3" />
+            </button>
+            {tfPickerOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 rounded-lg shadow-xl border z-50 overflow-hidden"
+                style={{ background: theme.surface, borderColor: theme.border, width: 200 }}
+              >
+                <div className="px-3 pt-2.5 pb-1.5 border-b" style={{ borderColor: theme.border }}>
+                  <p className="text-xs font-semibold" style={{ color: "#b2b5be" }}>Timeframe favorites</p>
+                  <p className="text-xs mt-0.5" style={{ color: theme.textMuted }}>Click to add or remove</p>
+                </div>
+                <div className="py-1 max-h-56 overflow-y-auto">
+                  {ALL_TIMEFRAMES.map((tf) => {
+                    const isFav = favTimeframes.includes(tf);
+                    return (
+                      <button
+                        key={tf}
+                        onClick={() => setFavTimeframes((prev) =>
+                          isFav
+                            ? prev.filter((t) => t !== tf)
+                            : [...prev, tf].sort((a, b) => ALL_TIMEFRAMES.indexOf(a) - ALL_TIMEFRAMES.indexOf(b))
+                        )}
+                        className="w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors"
+                        style={{ color: isFav ? "#1E53E5" : theme.text, background: "transparent" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = theme.bg)}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <span className="font-medium">
+                          {tf === "1d" ? "1D" : tf === "1w" ? "1W" : tf === "1M" ? "1M" : tf === "3d" ? "3D" : tf.toUpperCase()}
+                        </span>
+                        {isFav && <Check className="w-3 h-3 flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* ── Far-right: Window layout button — outside overflow-x-auto so dropdown is never clipped ── */}
           <div className="flex items-center gap-1 flex-shrink-0 px-2 border-l" style={{ borderColor: theme.border }}>
 
@@ -2060,6 +2873,7 @@ const Backtest = () => {
                       {[
                         { key: "syncCursor", label: "Sync cursor & cut", desc: "All windows follow the same candle", value: syncCursor, set: setSyncCursor },
                         { key: "syncTimeframe", label: "Sync timeframe", desc: "Changing TF updates all windows", value: syncTimeframe, set: setSyncTimeframe },
+                        { key: "syncDrag", label: "Sync drag & zoom", desc: "Panning one window pans all others", value: syncDrag, set: setSyncDrag },
                       ].map(({ key, label, desc, value, set }) => (
                         <button
                           key={key}
@@ -2095,6 +2909,18 @@ const Backtest = () => {
                 </div>
               );
             })()}
+
+            {/* Chart appearance settings button */}
+            <button
+              onClick={() => setShowChartSettings(true)}
+              title="Chart appearance (candle colors, background)"
+              className="flex items-center gap-1 px-2 h-7 rounded transition-colors flex-shrink-0"
+              style={{ color: theme.textMuted }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = theme.text; e.currentTarget.style.background = theme.bg; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = theme.textMuted; e.currentTarget.style.background = "transparent"; }}
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>{/* end outer toolbar */}
 
@@ -2102,8 +2928,8 @@ const Backtest = () => {
         <div className="flex-1 flex overflow-hidden">
           {/* Chart column */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Inner row: [drawing toolbar | chart area] */}
-            <div className="flex-1 flex overflow-hidden">
+            {/* Inner row: [drawing toolbar | chart area] — relative so order panel can float across all chart windows */}
+            <div ref={innerRowRef} className="flex-1 flex overflow-hidden relative">
 
               {/* Drawing toolbar — always visible, TradingView-style left panel */}
               <div
@@ -2130,13 +2956,43 @@ const Backtest = () => {
 
                 {/* Line tools */}
                 {[
-                  { mode: "trendline",  Icon: TrendingUp,        title: "Trend Line" },
+                  { mode: "trendline",  Icon: TrendingUp,        title: "Trend Line (extends full width, 2 clicks)" },
+                  { mode: "ray",        Icon: ArrowUpRight,      title: "Ray (extends right, 2 clicks)" },
+                  { mode: "segment",    Icon: Slash,             title: "Line Segment (fixed length, 2 clicks)" },
                   { mode: "hline",      Icon: Minus,             title: "Horizontal Line" },
                   { mode: "vline",      Icon: SeparatorVertical, title: "Vertical Line" },
                 ].map(({ mode, Icon, title }) => (
                   <button
                     key={mode}
-                    onClick={() => setDrawingMode((prev) => prev === mode ? null : mode)}
+                    onClick={() => { setDrawingMode((prev) => prev === mode ? null : mode); setSelectedDrawingIds([]); }}
+                    title={title}
+                    className="w-8 h-8 rounded flex items-center justify-center transition-colors"
+                    style={{ background: drawingMode === mode ? "#e8f0fe" : "transparent", color: drawingMode === mode ? "#1E53E5" : theme.textMuted }}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </button>
+                ))}
+
+                {/* Fibonacci */}
+                <button
+                  onClick={() => { setDrawingMode((prev) => prev === "fibonacci" ? null : "fibonacci"); setSelectedDrawingIds([]); }}
+                  title="Fibonacci Retracement (2 clicks)"
+                  className="w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-bold"
+                  style={{ background: drawingMode === "fibonacci" ? "#e8f0fe" : "transparent", color: drawingMode === "fibonacci" ? "#1E53E5" : theme.textMuted }}
+                >
+                  Fib
+                </button>
+
+                <div className="w-6 h-px my-1" style={{ background: theme.border }} />
+
+                {/* Shape + annotation tools */}
+                {[
+                  { mode: "rectangle",    Icon: Square,     title: "Rectangle (2 clicks)" },
+                  { mode: "text",         Icon: Type,       title: "Text Label" },
+                ].map(({ mode, Icon, title }) => (
+                  <button
+                    key={mode}
+                    onClick={() => { setDrawingMode((prev) => prev === mode ? null : mode); setSelectedDrawingIds([]); }}
                     title={title}
                     className="w-8 h-8 rounded flex items-center justify-center transition-colors"
                     style={{ background: drawingMode === mode ? "#e8f0fe" : "transparent", color: drawingMode === mode ? "#1E53E5" : theme.textMuted }}
@@ -2147,9 +3003,44 @@ const Backtest = () => {
 
                 <div className="w-6 h-px my-1" style={{ background: theme.border }} />
 
+                {/* Buy / Sell position markers */}
+                <button
+                  onClick={() => { setDrawingMode((prev) => prev === "buy_marker" ? null : "buy_marker"); setSelectedDrawingIds([]); }}
+                  title="Mark Buy / Long entry"
+                  className="w-8 h-8 rounded flex items-center justify-center transition-colors"
+                  style={{ background: drawingMode === "buy_marker" ? "rgba(8,153,129,0.15)" : "transparent", color: drawingMode === "buy_marker" ? "#089981" : theme.textMuted }}
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => { setDrawingMode((prev) => prev === "sell_marker" ? null : "sell_marker"); setSelectedDrawingIds([]); }}
+                  title="Mark Sell / Short entry"
+                  className="w-8 h-8 rounded flex items-center justify-center transition-colors"
+                  style={{ background: drawingMode === "sell_marker" ? "rgba(242,54,69,0.12)" : "transparent", color: drawingMode === "sell_marker" ? "#f23645" : theme.textMuted }}
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
+
+                {/* Risk / Reward box */}
+                <button
+                  onClick={() => { setDrawingMode((prev) => prev === "rr" ? null : "rr"); setSelectedDrawingIds([]); }}
+                  title="Risk/Reward box — click entry, then stop loss (TP auto 2:1)"
+                  className="w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-bold"
+                  style={{
+                    background: drawingMode === "rr" ? "rgba(30,83,229,0.15)" : "transparent",
+                    color: drawingMode === "rr" ? "#1E53E5" : theme.textMuted,
+                    letterSpacing: "-0.5px",
+                    fontSize: 9,
+                  }}
+                >
+                  R:R
+                </button>
+
+                <div className="w-6 h-px my-1" style={{ background: theme.border }} />
+
                 {/* Eraser */}
                 <button
-                  onClick={() => setDrawingMode((prev) => prev === "eraser" ? null : "eraser")}
+                  onClick={() => { setDrawingMode((prev) => prev === "eraser" ? null : "eraser"); setSelectedDrawingIds([]); }}
                   title="Eraser — click a drawing to delete it"
                   className="w-8 h-8 rounded flex items-center justify-center transition-colors"
                   style={{ background: drawingMode === "eraser" ? "#fff3e0" : "transparent", color: drawingMode === "eraser" ? "#f7a600" : theme.textMuted }}
@@ -2178,59 +3069,15 @@ const Backtest = () => {
               </div>
 
               {/* Chart area */}
-              <div className="flex-1 relative overflow-hidden">
+              <div
+                className="relative"
+                style={{ flex: colSizes[0] }}
+                onMouseDown={() => setActiveChart(1)}
+                onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
+              >
 
-              {/* Chart 1 instrument label + search — top-left overlay */}
-              <div className="absolute top-2 left-2 z-20 flex items-center gap-0.5" ref={chartSearchOpen === 1 ? searchDropdownRef : null}>
-                <div
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
-                  style={{ background: isDark ? "rgba(19,23,34,0.85)" : "rgba(255,255,255,0.85)", color: theme.text, border: `1px solid ${theme.border}`, backdropFilter: "blur(4px)" }}
-                >
-                  <span>{currentSession.instrument?.symbol}</span>
-                  <button
-                    onClick={() => { setChartSearchOpen((v) => v === 1 ? null : 1); setAssetSearchQuery(""); }}
-                    title="Search for an asset to add"
-                    className="flex items-center justify-center w-4 h-4 rounded transition-colors"
-                    style={{ color: chartSearchOpen === 1 ? "#1E53E5" : theme.textMuted }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#1E53E5")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = chartSearchOpen === 1 ? "#1E53E5" : theme.textMuted)}
-                  >
-                    <Search className="w-3 h-3" />
-                  </button>
-                </div>
-                {chartSearchOpen === 1 && (
-                  <div
-                    className="absolute left-0 top-full mt-1 rounded-lg shadow-xl border z-50 overflow-hidden"
-                    style={{ background: theme.surface, borderColor: theme.border, width: 240 }}
-                  >
-                    <div className="p-2 border-b" style={{ borderColor: theme.border }}>
-                      <input autoFocus type="text" placeholder="Add chart 2 or 3 instrument…"
-                        value={assetSearchQuery} onChange={(e) => setAssetSearchQuery(e.target.value)}
-                        className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                        style={{ background: theme.bg, color: theme.text, borderColor: theme.border }}
-                      />
-                    </div>
-                    <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
-                      {filteredInstruments.length === 0
-                        ? <p className="text-xs px-3 py-3" style={{ color: "#b2b5be" }}>No results</p>
-                        : filteredInstruments.map((inst) => (
-                          <button key={`${inst.market}-${inst.symbol}`}
-                            onClick={() => handleAssetSearchSelectFor(1, inst.market, inst.symbol)}
-                            className="w-full flex items-center px-3 py-2 text-left gap-2 transition-colors"
-                            style={{ background: "transparent" }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = theme.bg)}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                          >
-                            <span className="text-xs font-bold w-10 flex-shrink-0" style={{ color: theme.text }}>{inst.symbol}</span>
-                            <span className="text-xs truncate flex-1" style={{ color: theme.textMuted }}>{inst.name}</span>
-                            <span className="text-xs flex-shrink-0" style={{ color: "#b2b5be" }}>{inst.marketName}</span>
-                          </button>
-                        ))
-                      }
-                    </div>
-                  </div>
-                )}
-              </div>
+
+              {/* Instrument labels moved to top bar */}
 
               {isLoadingData ? (
                 <div
@@ -2266,9 +3113,9 @@ const Backtest = () => {
                     isDark={isDark}
                     positions={positions}
                     onPositionUpdate={updatePosition}
-                    orderPreview={showOrderPanel ? {
+                    orderPreview={showOrderPanel && activeChart === 1 ? {
                       side: orderSide,
-                      entryPrice: currentPrice,
+                      entryPrice: activeChartPrice,
                       takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
                       stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
                     } : null}
@@ -2278,23 +3125,54 @@ const Backtest = () => {
                     }}
                     drawingMode={drawingMode}
                     userDrawings={userDrawings}
-                    onDrawingAdd={(drawing) =>
-                      pushDrawings([...userDrawings, { ...drawing, id: Date.now() }])
+                    onDrawingAdd={(drawing) => {
+                      pushDrawings([...userDrawings, { ...drawing, id: Date.now() }]);
+                      if (drawing.type === "rr") setDrawingMode(null);
+                    }}
+                    onDrawingDelete={(id) => {
+                      pushDrawings(userDrawings.filter((d) => d.id !== id));
+                      setSelectedDrawingIds((prev) => prev.filter((sid) => sid !== id));
+                    }}
+                    onCrosshairMove={(t) => setSyncedCrosshairTime(t)}
+                    barReplayActive={barReplayMode}
+                    selectedDrawingIds={selectedDrawingIds}
+                    onSelectionChange={(id) => {
+                      if (id === null) {
+                        setSelectedDrawingIds([]);
+                        return;
+                      }
+                      setSelectedDrawingIds((prev) =>
+                        prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+                      );
+                    }}
+                    onRangeChange={syncDrag ? (r) => {
+                      rangeSettersRef.current[2]?.(r);
+                      rangeSettersRef.current[3]?.(r);
+                    } : undefined}
+                    onRegisterRangeSetter={(fn, getFn) => { rangeSettersRef.current[1] = fn; rangeGettersRef.current[1] = getFn; }}
+                    onDrawingUpdate={(id, changes) =>
+                      pushDrawings(userDrawings.map((d) => d.id === id ? { ...d, ...changes } : d))
                     }
-                    onDrawingDelete={(id) =>
-                      pushDrawings(userDrawings.filter((d) => d.id !== id))
+                    panelDrawing={
+                      selectedDrawingIds.length === 1
+                        ? userDrawings.find((d) => d.id === selectedDrawingIds[0]) ?? null
+                        : null
                     }
+                    onPropertyChange={(id, changes) =>
+                      pushDrawings(userDrawings.map((d) => d.id === id ? { ...d, ...changes } : d))
+                    }
+                    chartSettings={chartSettings}
                   />
                 </ChartErrorBoundary>
               )}
 
-              {/* ── Order panel — draggable, floats over chart ── */}
+              {/* ── Order panel — draggable, fixed so it floats above all chart windows ── */}
               {showOrderPanel && (
                 <div
-                  className="absolute z-30 flex flex-col shadow-2xl rounded-lg border overflow-hidden"
+                  className="fixed z-50 flex flex-col shadow-2xl rounded-lg border overflow-hidden"
                   style={{
                     width: 280,
-                    maxHeight: "calc(100% - 20px)",
+                    maxHeight: "calc(100vh - 80px)",
                     top: panelPos.y,
                     left: panelPos.x,
                     background: theme.surface,
@@ -2335,7 +3213,7 @@ const Backtest = () => {
                       }}
                     >
                       <div className="text-xs font-medium mb-0.5">Sell</div>
-                      <div className="text-lg font-bold font-mono">{currentPrice > 0 ? (currentPrice - (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
+                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? (activeChartPrice - (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
                     </button>
                     <div className="flex flex-col items-center justify-center px-2" style={{ background: isDark ? "#131722" : "#e8e8e8", minWidth: 40 }}>
                       <span className="text-xs font-medium" style={{ color: theme.textMuted }}>
@@ -2351,7 +3229,7 @@ const Backtest = () => {
                       }}
                     >
                       <div className="text-xs font-medium mb-0.5">Buy</div>
-                      <div className="text-lg font-bold font-mono">{currentPrice > 0 ? (currentPrice + (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
+                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? (activeChartPrice + (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
                     </button>
                   </div>
 
@@ -2531,7 +3409,7 @@ const Backtest = () => {
                       <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
                         <span>Est. value</span>
                         <span className="font-semibold" style={{ color: theme.text }}>
-                          ${(currentPrice * orderSize).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          ${(activeChartPrice * orderSize).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
@@ -2561,10 +3439,35 @@ const Backtest = () => {
 
               {/* Second chart — visible when layout is 2col or 3col */}
               {(chartLayout === "2col" || chartLayout === "3col") && chartData.length > 0 && (
+                <>
                 <div
-                  className="flex-1 relative overflow-hidden border-l"
-                  style={{ borderColor: theme.border }}
+                  className="relative overflow-hidden border-l"
+                  style={{ flex: colSizes[1], borderColor: theme.border }}
+                  onMouseDown={() => setActiveChart(2)}
+                  onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
                 >
+                  {/* Resize zone — left edge of chart 2 (left of price axis), resizes chart 1 ↔ chart 2 */}
+                  <div
+                    className="absolute top-0 bottom-0 left-0 z-30 group flex items-center justify-center"
+                    style={{ width: 12, cursor: "col-resize" }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      isResizingCol.current = {
+                        startX: e.clientX,
+                        col: 0,
+                        startSizes: [...colSizes],
+                        visibleCols: chartLayout === "3col" ? 3 : 2,
+                      };
+                    }}
+                  >
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <div className="rounded px-1 py-0.5 shadow" style={{ background: theme.surface, border: `1px solid ${theme.border}` }}>
+                        <ArrowLeftRight className="w-3 h-3" style={{ color: theme.text }} />
+                      </div>
+                    </div>
+                  </div>
+
                   {isLoadingData2 ? (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: theme.bg }}>
                       <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#1E53E5" }} />
@@ -2581,73 +3484,73 @@ const Backtest = () => {
                     <ChartErrorBoundary>
                       <BacktestChart
                         candleData={chartData2}
-                        visibleCount={syncCursor ? currentCandle2 + 1 : chartData2.length}
+                        visibleCount={currentCandle2 + 1}
                         indicators={indicators}
-                        onCandleSeek={syncCursor ? (idx) => { setCurrentCandle2(idx); } : () => {}}
+                        onCandleSeek={handleCandleSeek2}
                         isPlaying={false}
                         isDark={isDark}
                         positions={[]}
                         onPositionUpdate={() => {}}
-                        orderPreview={null}
-                        onOrderPreviewUpdate={() => {}}
+                        orderPreview={showOrderPanel && activeChart === 2 ? {
+                          side: orderSide,
+                          entryPrice: activeChartPrice,
+                          takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
+                          stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
+                        } : null}
+                        onOrderPreviewUpdate={(field, value) => {
+                          if (field === "takeProfit") setTakeProfit(String(value));
+                          if (field === "stopLoss") setStopLoss(String(value));
+                        }}
                         drawingMode={null}
                         userDrawings={[]}
                         onDrawingAdd={() => {}}
                         onDrawingDelete={() => {}}
+                        onCrosshairMove={(t) => setSyncedCrosshairTime(t)}
+                        syncedCrosshairTime={syncCursor ? syncedCrosshairTime : null}
+                        onRangeChange={syncDrag ? (r) => {
+                          rangeSettersRef.current[1]?.(r);
+                          rangeSettersRef.current[3]?.(r);
+                        } : undefined}
+                        onRegisterRangeSetter={(fn, getFn) => { rangeSettersRef.current[2] = fn; rangeGettersRef.current[2] = getFn; }}
+                        chartSettings={chartSettings}
                       />
                     </ChartErrorBoundary>
                   )}
-                  {/* Chart 2 label + search */}
-                  <div className="absolute top-2 left-2 z-20 flex items-center gap-0.5" ref={chartSearchOpen === 2 ? searchDropdownRef : null}>
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
-                      style={{ background: isDark ? "rgba(19,23,34,0.85)" : "rgba(255,255,255,0.85)", color: theme.text, border: `1px solid ${theme.border}`, backdropFilter: "blur(4px)" }}>
-                      <span>{chart2Symbol ?? "Chart 2"}</span>
-                      <button onClick={() => { setChartSearchOpen((v) => v === 2 ? null : 2); setAssetSearchQuery(""); }}
-                        title="Change chart 2 asset" className="flex items-center justify-center w-4 h-4 rounded transition-colors"
-                        style={{ color: chartSearchOpen === 2 ? "#1E53E5" : theme.textMuted }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#1E53E5")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = chartSearchOpen === 2 ? "#1E53E5" : theme.textMuted)}>
-                        <Search className="w-3 h-3" />
-                      </button>
-                    </div>
-                    {chartSearchOpen === 2 && (
-                      <div className="absolute left-0 top-full mt-1 rounded-lg shadow-xl border z-50 overflow-hidden"
-                        style={{ background: theme.surface, borderColor: theme.border, width: 240 }}>
-                        <div className="p-2 border-b" style={{ borderColor: theme.border }}>
-                          <input autoFocus type="text" placeholder="Search instrument…"
-                            value={assetSearchQuery} onChange={(e) => setAssetSearchQuery(e.target.value)}
-                            className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                            style={{ background: theme.bg, color: theme.text, borderColor: theme.border }} />
-                        </div>
-                        <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
-                          {filteredInstruments.length === 0
-                            ? <p className="text-xs px-3 py-3" style={{ color: "#b2b5be" }}>No results</p>
-                            : filteredInstruments.map((inst) => (
-                              <button key={`${inst.market}-${inst.symbol}`}
-                                onClick={() => handleAssetSearchSelectFor(2, inst.market, inst.symbol)}
-                                className="w-full flex items-center px-3 py-2 text-left gap-2 transition-colors"
-                                style={{ background: "transparent" }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = theme.bg)}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                                <span className="text-xs font-bold w-10 flex-shrink-0" style={{ color: theme.text }}>{inst.symbol}</span>
-                                <span className="text-xs truncate flex-1" style={{ color: theme.textMuted }}>{inst.name}</span>
-                                <span className="text-xs flex-shrink-0" style={{ color: "#b2b5be" }}>{inst.marketName}</span>
-                              </button>
-                            ))
-                          }
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
+                </>
               )}
 
               {/* Third chart — visible when layout is 3col */}
               {chartLayout === "3col" && chartData.length > 0 && (
+                <>
                 <div
-                  className="flex-1 relative overflow-hidden border-l"
-                  style={{ borderColor: theme.border }}
+                  className="relative overflow-hidden border-l"
+                  style={{ flex: colSizes[2], borderColor: theme.border }}
+                  onMouseDown={() => setActiveChart(3)}
+                  onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
                 >
+                  {/* Resize zone — left edge of chart 3, resizes chart 2 ↔ chart 3 */}
+                  <div
+                    className="absolute top-0 bottom-0 left-0 z-30 group flex items-center justify-center"
+                    style={{ width: 12, cursor: "col-resize" }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      isResizingCol.current = {
+                        startX: e.clientX,
+                        col: 1,
+                        startSizes: [...colSizes],
+                        visibleCols: 3,
+                      };
+                    }}
+                  >
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <div className="rounded px-1 py-0.5 shadow" style={{ background: theme.surface, border: `1px solid ${theme.border}` }}>
+                        <ArrowLeftRight className="w-3 h-3" style={{ color: theme.text }} />
+                      </div>
+                    </div>
+                  </div>
+
                   {isLoadingData3 ? (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: theme.bg }}>
                       <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#1E53E5" }} />
@@ -2664,68 +3567,63 @@ const Backtest = () => {
                     <ChartErrorBoundary>
                       <BacktestChart
                         candleData={chartData3}
-                        visibleCount={syncCursor ? currentCandle3 + 1 : chartData3.length}
+                        visibleCount={currentCandle3 + 1}
                         indicators={indicators}
-                        onCandleSeek={syncCursor ? (idx) => { setCurrentCandle3(idx); } : () => {}}
+                        onCandleSeek={handleCandleSeek3}
                         isPlaying={false}
                         isDark={isDark}
                         positions={[]}
                         onPositionUpdate={() => {}}
-                        orderPreview={null}
-                        onOrderPreviewUpdate={() => {}}
+                        orderPreview={showOrderPanel && activeChart === 3 ? {
+                          side: orderSide,
+                          entryPrice: activeChartPrice,
+                          takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
+                          stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
+                        } : null}
+                        onOrderPreviewUpdate={(field, value) => {
+                          if (field === "takeProfit") setTakeProfit(String(value));
+                          if (field === "stopLoss") setStopLoss(String(value));
+                        }}
                         drawingMode={null}
                         userDrawings={[]}
                         onDrawingAdd={() => {}}
                         onDrawingDelete={() => {}}
+                        onCrosshairMove={(t) => setSyncedCrosshairTime(t)}
+                        syncedCrosshairTime={syncCursor ? syncedCrosshairTime : null}
+                        onRangeChange={syncDrag ? (r) => {
+                          rangeSettersRef.current[1]?.(r);
+                          rangeSettersRef.current[2]?.(r);
+                        } : undefined}
+                        onRegisterRangeSetter={(fn, getFn) => { rangeSettersRef.current[3] = fn; rangeGettersRef.current[3] = getFn; }}
+                        chartSettings={chartSettings}
                       />
                     </ChartErrorBoundary>
                   )}
-                  {/* Chart 3 label + search */}
-                  <div className="absolute top-2 left-2 z-20 flex items-center gap-0.5" ref={chartSearchOpen === 3 ? searchDropdownRef : null}>
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
-                      style={{ background: isDark ? "rgba(19,23,34,0.85)" : "rgba(255,255,255,0.85)", color: theme.text, border: `1px solid ${theme.border}`, backdropFilter: "blur(4px)" }}>
-                      <span>{chart3Symbol ?? "Chart 3"}</span>
-                      <button onClick={() => { setChartSearchOpen((v) => v === 3 ? null : 3); setAssetSearchQuery(""); }}
-                        title="Change chart 3 asset" className="flex items-center justify-center w-4 h-4 rounded transition-colors"
-                        style={{ color: chartSearchOpen === 3 ? "#1E53E5" : theme.textMuted }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#1E53E5")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = chartSearchOpen === 3 ? "#1E53E5" : theme.textMuted)}>
-                        <Search className="w-3 h-3" />
-                      </button>
-                    </div>
-                    {chartSearchOpen === 3 && (
-                      <div className="absolute left-0 top-full mt-1 rounded-lg shadow-xl border z-50 overflow-hidden"
-                        style={{ background: theme.surface, borderColor: theme.border, width: 240 }}>
-                        <div className="p-2 border-b" style={{ borderColor: theme.border }}>
-                          <input autoFocus type="text" placeholder="Search instrument…"
-                            value={assetSearchQuery} onChange={(e) => setAssetSearchQuery(e.target.value)}
-                            className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                            style={{ background: theme.bg, color: theme.text, borderColor: theme.border }} />
-                        </div>
-                        <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
-                          {filteredInstruments.length === 0
-                            ? <p className="text-xs px-3 py-3" style={{ color: "#b2b5be" }}>No results</p>
-                            : filteredInstruments.map((inst) => (
-                              <button key={`${inst.market}-${inst.symbol}`}
-                                onClick={() => handleAssetSearchSelectFor(3, inst.market, inst.symbol)}
-                                className="w-full flex items-center px-3 py-2 text-left gap-2 transition-colors"
-                                style={{ background: "transparent" }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = theme.bg)}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                                <span className="text-xs font-bold w-10 flex-shrink-0" style={{ color: theme.text }}>{inst.symbol}</span>
-                                <span className="text-xs truncate flex-1" style={{ color: theme.textMuted }}>{inst.name}</span>
-                                <span className="text-xs flex-shrink-0" style={{ color: "#b2b5be" }}>{inst.marketName}</span>
-                              </button>
-                            ))
-                          }
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
+                </>
               )}
             </div> {/* end inner flex row [toolbar | chart] */}
           </div> {/* end chart column */}
+
+          {/* Right-click context menu */}
+          {contextMenuPos && (
+            <ChartContextMenu
+              x={contextMenuPos.x}
+              y={contextMenuPos.y}
+              onSettings={() => setShowChartSettings(true)}
+              onPlaceOrder={() => setShowOrderPanel(true)}
+              onClose={() => setContextMenuPos(null)}
+            />
+          )}
+
+          {/* Chart settings modal */}
+          {showChartSettings && (
+            <ChartSettingsModal
+              chartSettings={chartSettings}
+              setChartSettings={setChartSettings}
+              onClose={() => setShowChartSettings(false)}
+            />
+          )}
 
           {/* Sidebar toggle — visible when sidebar is closed */}
           {!showSidebar && (
@@ -2907,6 +3805,8 @@ const Backtest = () => {
           )} {/* end showSidebar */}
         </div>
       </div>
+
+      </>
     );
   }
 
