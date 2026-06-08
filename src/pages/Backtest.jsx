@@ -18,6 +18,10 @@ import {
   Save,
   AlertTriangle,
   Info,
+  MousePointer,
+  Minus,
+  Square,
+  Trash2,
 } from "lucide-react";
 import { useBacktest } from "../context/BacktestContext";
 import toast from "react-hot-toast";
@@ -317,6 +321,13 @@ const Backtest = () => {
   const [lastFeedback, setLastFeedback] = useState(null);
   const feedbackTimerRef = useRef(null);
 
+  // Drawing tools state
+  const [activeTool, setActiveTool] = useState("cursor");
+  const [drawings, setDrawings] = useState([]);
+  const [drawingInProgress, setDrawingInProgress] = useState(null);
+  const svgRef = useRef(null);
+  const chartScaleRef = useRef(null);
+
   // Generate sample OHLCV data based on selected instrument
   const generateSampleData = (instrument, days = 30) => {
     const data = [];
@@ -451,9 +462,30 @@ const Backtest = () => {
       );
     };
 
+    // Store scale params for mouse handlers
+    chartScaleRef.current = {
+      chartWidth,
+      chartHeight,
+      padding,
+      minPrice,
+      maxPrice,
+      priceRange,
+      priceBuffer,
+    };
+
     return (
       <div className="bg-gray-900 rounded-lg overflow-hidden">
-        <svg width="100%" height={chartHeight} className="bg-gray-900">
+        <svg
+          ref={svgRef}
+          width="100%"
+          height={chartHeight}
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+          preserveAspectRatio="none"
+          className="bg-gray-900"
+          style={{ cursor: activeTool === "cursor" ? "default" : "crosshair" }}
+          onClick={handleChartClick}
+          onMouseMove={handleChartMouseMove}
+        >
           {/* Price Grid Lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
             const price =
@@ -551,6 +583,102 @@ const Backtest = () => {
               strokeDasharray="5,5"
             />
           )}
+
+          {/* Completed Drawings */}
+          {drawings.map((d) => {
+            if (d.type === "hline") {
+              const y = yScale(d.price);
+              return (
+                <g key={d.id}>
+                  <line
+                    x1={padding.left}
+                    y1={y}
+                    x2={chartWidth - padding.right}
+                    y2={y}
+                    stroke="#A78BFA"
+                    strokeWidth="1.5"
+                    strokeDasharray="6,3"
+                    pointerEvents="none"
+                  />
+                  <text
+                    x={padding.left + 4}
+                    y={y - 3}
+                    fill="#A78BFA"
+                    fontSize="9"
+                    pointerEvents="none"
+                  >
+                    {d.price.toFixed(2)}
+                  </text>
+                </g>
+              );
+            }
+            if (d.type === "trendline") {
+              return (
+                <line
+                  key={d.id}
+                  x1={d.x1}
+                  y1={d.y1}
+                  x2={d.x2}
+                  y2={d.y2}
+                  stroke="#F472B6"
+                  strokeWidth="1.5"
+                  pointerEvents="none"
+                />
+              );
+            }
+            if (d.type === "rect") {
+              return (
+                <rect
+                  key={d.id}
+                  x={Math.min(d.x1, d.x2)}
+                  y={Math.min(d.y1, d.y2)}
+                  width={Math.abs(d.x2 - d.x1)}
+                  height={Math.abs(d.y2 - d.y1)}
+                  fill="rgba(96,165,250,0.08)"
+                  stroke="#60A5FA"
+                  strokeWidth="1.5"
+                  pointerEvents="none"
+                />
+              );
+            }
+            return null;
+          })}
+
+          {/* Drawing in progress (preview) */}
+          {drawingInProgress &&
+            (() => {
+              const { type, x1, y1, x2, y2 } = drawingInProgress;
+              if (type === "trendline")
+                return (
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="#F472B6"
+                    strokeWidth="1.5"
+                    strokeDasharray="4,2"
+                    opacity={0.6}
+                    pointerEvents="none"
+                  />
+                );
+              if (type === "rect")
+                return (
+                  <rect
+                    x={Math.min(x1, x2)}
+                    y={Math.min(y1, y2)}
+                    width={Math.abs(x2 - x1)}
+                    height={Math.abs(y2 - y1)}
+                    fill="rgba(96,165,250,0.08)"
+                    stroke="#60A5FA"
+                    strokeWidth="1.5"
+                    strokeDasharray="4,2"
+                    opacity={0.6}
+                    pointerEvents="none"
+                  />
+                );
+              return null;
+            })()}
         </svg>
       </div>
     );
@@ -604,6 +732,9 @@ const Backtest = () => {
     setSetupTag("breakout");
     setMarketConditionTag("trending_up");
     setConfidenceTag("medium");
+    setDrawings([]);
+    setDrawingInProgress(null);
+    setActiveTool("cursor");
   };
 
   const executeOrder = () => {
@@ -750,6 +881,77 @@ const Backtest = () => {
 
   const currentDrawdown =
     sessionPeak > 0 ? ((sessionPeak - balance) / sessionPeak) * 100 : 0;
+
+  // Drawing tool helpers
+  const getSVGCoords = (e) => {
+    const svg = svgRef.current;
+    const scale = chartScaleRef.current;
+    if (!svg || !scale) return { x: 0, y: 0 };
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * scale.chartWidth,
+      y: ((e.clientY - rect.top) / rect.height) * scale.chartHeight,
+    };
+  };
+
+  const svgYToPrice = (y) => {
+    const s = chartScaleRef.current;
+    if (!s) return 0;
+    return (
+      s.minPrice - s.priceBuffer +
+      ((s.chartHeight - s.padding.bottom - y) /
+        (s.chartHeight - s.padding.top - s.padding.bottom)) *
+        (s.priceRange + 2 * s.priceBuffer)
+    );
+  };
+
+  const handleChartClick = (e) => {
+    if (activeTool === "cursor") return;
+    const { x, y } = getSVGCoords(e);
+
+    if (activeTool === "hline") {
+      const price = svgYToPrice(y);
+      setDrawings((prev) => [...prev, { id: Date.now(), type: "hline", price }]);
+      // Tool stays active — user keeps placing h-lines until they switch to cursor
+      return;
+    }
+
+    // trendline / rect: two-click flow
+    if (!drawingInProgress) {
+      setDrawingInProgress({ type: activeTool, x1: x, y1: y, x2: x, y2: y });
+    } else {
+      setDrawings((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          type: drawingInProgress.type,
+          x1: drawingInProgress.x1,
+          y1: drawingInProgress.y1,
+          x2: x,
+          y2: y,
+        },
+      ]);
+      setDrawingInProgress(null);
+      // Tool stays active — user keeps placing more drawings until they switch to cursor
+    }
+  };
+
+  const handleChartMouseMove = (e) => {
+    if (!drawingInProgress) return;
+    const { x, y } = getSVGCoords(e);
+    setDrawingInProgress((prev) => (prev ? { ...prev, x2: x, y2: y } : null));
+  };
+
+  // ESC cancels in-progress drawing; second ESC reverts to cursor
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      if (drawingInProgress) setDrawingInProgress(null);
+      else setActiveTool("cursor");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawingInProgress]);
 
   // Render views
   if (currentView === "sessions") {
@@ -1341,30 +1543,67 @@ const Backtest = () => {
             {/* Chart */}
             <div className="bg-gray-800 rounded-lg p-4 flex-1">
               {/* Chart Legend */}
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-700">
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
-                    <span className="text-xs text-gray-300">
-                      Bullish Candle
-                    </span>
+              <div className="mb-4 pb-2 border-b border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+                      <span className="text-xs text-gray-300">Bullish</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                      <span className="text-xs text-gray-300">Bearish</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className="w-6 h-0.5 bg-yellow-500"
+                        style={{ borderStyle: "dashed", borderWidth: "1px 0" }}
+                      ></div>
+                      <span className="text-xs text-gray-300">Price</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
-                    <span className="text-xs text-gray-300">
-                      Bearish Candle
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div
-                      className="w-6 h-0.5 bg-yellow-500"
-                      style={{ borderStyle: "dashed", borderWidth: "1px 0" }}
-                    ></div>
-                    <span className="text-xs text-gray-300">Current Price</span>
+                  <div className="text-xs text-gray-500">
+                    {activeTool !== "cursor" && drawingInProgress
+                      ? "Click to complete drawing • ESC to cancel"
+                      : activeTool !== "cursor"
+                      ? "Click on chart to draw • ESC to return to cursor"
+                      : "Select a drawing tool below"}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400">
-                  Hover over candles for details
+
+                {/* Drawing Toolbar */}
+                <div className="flex items-center space-x-1 mt-2">
+                  <span className="text-xs text-gray-500 mr-1">Tools:</span>
+                  {[
+                    { id: "cursor", label: "Cursor", icon: <MousePointer className="w-3 h-3" /> },
+                    { id: "hline", label: "H-Line", icon: <Minus className="w-3 h-3" /> },
+                    { id: "trendline", label: "Trend", icon: <TrendingUp className="w-3 h-3" /> },
+                    { id: "rect", label: "Box", icon: <Square className="w-3 h-3" /> },
+                  ].map((tool) => (
+                    <button
+                      key={tool.id}
+                      onClick={() => { setActiveTool(tool.id); setDrawingInProgress(null); }}
+                      title={tool.label}
+                      className={`flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors ${
+                        activeTool === tool.id
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
+                    >
+                      {tool.icon}
+                      <span>{tool.label}</span>
+                    </button>
+                  ))}
+                  {drawings.length > 0 && (
+                    <button
+                      onClick={() => { setDrawings([]); setDrawingInProgress(null); }}
+                      title="Clear all drawings"
+                      className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-gray-700 text-red-400 hover:bg-gray-600 transition-colors ml-2"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Clear ({drawings.length})</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
