@@ -10,6 +10,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  ReferenceLine,
 } from "recharts";
 
 const StrategyAnalysis = ({ trades, detailed = false }) => {
@@ -200,41 +201,42 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
           )}
         </div>
 
-        <div className="h-72">
+        <div style={{ height: Math.max(280, strategyData.length * 44 + 40) }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
+              layout="vertical"
               data={strategyData}
-              barCategoryGap="25%"
-              margin={{ top: 8, right: 16, left: 8, bottom: 60 }}
+              barCategoryGap="30%"
+              margin={{ top: 8, right: 48, left: 8, bottom: 8 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
-              <XAxis
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} horizontal={false} />
+              <YAxis
+                type="category"
                 dataKey="name"
                 stroke="#9ca3af"
-                fontSize={11}
+                fontSize={12}
                 axisLine={false}
                 tickLine={false}
-                angle={-40}
-                textAnchor="end"
-                interval={0}
-                tick={{ fill: "#6b7280" }}
+                tick={{ fill: "#374151" }}
+                width={130}
               />
-              <YAxis
+              <XAxis
+                type="number"
                 stroke="#9ca3af"
                 fontSize={11}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                 tick={{ fill: "#6b7280" }}
-                width={48}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.1)" }} />
-              <Bar dataKey="totalPnL" radius={[6, 6, 0, 0]} maxBarSize={56}>
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.08)" }} />
+              <ReferenceLine x={0} stroke="#d1d5db" strokeWidth={2} />
+              <Bar dataKey="totalPnL" radius={[0, 5, 5, 0]} maxBarSize={28}>
                 {strategyData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={entry.totalPnL >= 0 ? "#22c55e" : "#ef4444"}
-                    fillOpacity={0.85}
+                    fillOpacity={0.8}
                   />
                 ))}
               </Bar>

@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  ReferenceLine,
 } from "recharts";
 import { format, getHours, getDay } from "date-fns";
 
@@ -217,11 +218,11 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
               {hourlyData.length} active hours
             </div>
           </div>
-          <div className="h-72">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={hourlyData}
-                barCategoryGap="20%"
+                barCategoryGap="15%"
                 margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
@@ -242,13 +243,14 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                   tick={{ fill: "#6b7280" }}
                   width={48}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.1)" }} />
-                <Bar dataKey="totalPnL" radius={[5, 5, 0, 0]} maxBarSize={40}>
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.08)" }} />
+                <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1.5} />
+                <Bar dataKey="totalPnL" radius={[4, 4, 0, 0]} maxBarSize={24}>
                   {hourlyData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={entry.totalPnL >= 0 ? "#22c55e" : "#ef4444"}
-                      fillOpacity={0.85}
+                      fillOpacity={0.8}
                     />
                   ))}
                 </Bar>
@@ -273,20 +275,21 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
             {dailyData.length} trading days
           </div>
         </div>
-        <div className="h-72">
+        <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={dailyData}
-              barCategoryGap="25%"
+              barCategoryGap="28%"
               margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
               <XAxis
                 dataKey="name"
                 stroke="#9ca3af"
-                fontSize={12}
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
+                tickFormatter={(name) => name.slice(0, 3)}
                 tick={{ fill: "#6b7280" }}
               />
               <YAxis
@@ -298,13 +301,14 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                 tick={{ fill: "#6b7280" }}
                 width={48}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.1)" }} />
-              <Bar dataKey="totalPnL" radius={[6, 6, 0, 0]} maxBarSize={64}>
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.08)" }} />
+              <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1.5} />
+              <Bar dataKey="totalPnL" radius={[5, 5, 0, 0]} maxBarSize={36}>
                 {dailyData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={entry.totalPnL >= 0 ? "#0ea5e9" : "#ef4444"}
-                    fillOpacity={0.85}
+                    fillOpacity={0.8}
                   />
                 ))}
               </Bar>
@@ -331,11 +335,11 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                   {monthlyData.length} months analyzed
                 </div>
               </div>
-              <div className="h-72">
+              <div className="h-64" style={{ paddingBottom: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={monthlyData}
-                    barCategoryGap="20%"
+                    barCategoryGap="22%"
                     margin={{ top: 8, right: 16, left: 8, bottom: 60 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
@@ -359,13 +363,14 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                       tick={{ fill: "#6b7280" }}
                       width={48}
                     />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.1)" }} />
-                    <Bar dataKey="totalPnL" radius={[6, 6, 0, 0]} maxBarSize={56}>
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.08)" }} />
+                    <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1.5} />
+                    <Bar dataKey="totalPnL" radius={[5, 5, 0, 0]} maxBarSize={40}>
                       {monthlyData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={entry.totalPnL >= 0 ? "#f59e0b" : "#ef4444"}
-                          fillOpacity={0.85}
+                          fillOpacity={0.8}
                         />
                       ))}
                     </Bar>

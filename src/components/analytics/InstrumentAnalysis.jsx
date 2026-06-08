@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  ReferenceLine,
 } from "recharts";
 
 const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
@@ -114,11 +115,11 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
         </div>
       </div>
 
-      <div className="h-72">
+      <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            barCategoryGap="25%"
+            barCategoryGap="30%"
             margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
@@ -128,7 +129,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
               fontSize={12}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#6b7280", fontWeight: 600 }}
+              tick={{ fill: "#374151", fontWeight: 600 }}
             />
             <YAxis
               stroke="#9ca3af"
@@ -139,13 +140,14 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
               tick={{ fill: "#6b7280" }}
               width={48}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.1)" }} />
-            <Bar dataKey="totalPnL" radius={[6, 6, 0, 0]} maxBarSize={72}>
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.08)" }} />
+            <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1.5} />
+            <Bar dataKey="totalPnL" radius={[5, 5, 0, 0]} maxBarSize={44}>
               {chartData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={entry.totalPnL >= 0 ? "#10b981" : "#ef4444"}
-                  fillOpacity={0.85}
+                  fillOpacity={0.8}
                 />
               ))}
             </Bar>
