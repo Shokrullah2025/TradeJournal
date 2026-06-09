@@ -1141,8 +1141,10 @@ const BacktestChart = ({
       }
     };
     updateSvgDrawingsRef.current = updateSvgDrawings;
+
+    // Redraw SVG drawings on horizontal scroll/zoom
     chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
-      updateSvgDrawings();
+      requestAnimationFrame(updateSvgDrawings);
       if (!applyingRangeRef.current && onRangeChangeRef.current) {
         try {
           const range = chartRef.current?.timeScale().getVisibleLogicalRange();
@@ -1150,6 +1152,17 @@ const BacktestChart = ({
         } catch {}
       }
     });
+
+    // Redraw SVG drawings on vertical price-scale zoom/drag (axisPressedMouseMove)
+    try {
+      chart.priceScale("right").subscribeVisiblePriceRangeChange(() => {
+        requestAnimationFrame(updateSvgDrawings);
+      });
+    } catch {}
+    // Also watch the mouse while the price scale is being dragged — wheel events over the
+    // price axis don't always fire subscribeVisiblePriceRangeChange on every browser
+    const onPriceScaleDrag = () => requestAnimationFrame(updateSvgDrawings);
+    wrapperRef.current?.addEventListener("wheel", onPriceScaleDrag, { passive: true });
 
     // Click-to-draw or click-to-seek (seek only when bar replay mode is active)
     chart.subscribeClick((param) => {
@@ -1278,6 +1291,7 @@ const BacktestChart = ({
       previewLineRefs.current = [];
       userHLineRefs.current = [];
       updateSvgDrawingsRef.current = () => {};
+      wrapperRef.current?.removeEventListener("wheel", onPriceScaleDrag);
       chart.remove();
       chartRef.current = null;
       seriesRef.current = {};
