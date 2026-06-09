@@ -58,15 +58,15 @@ function calcEMAIndexed(candles, period) {
 
 // Returns how many candles should fill the default viewport for each timeframe
 function defaultWindow(candleData) {
-  if (candleData.length < 2) return 150;
+  if (candleData.length < 2) return 200;
   const intervalSec = candleData[1].time - candleData[0].time;
-  if (intervalSec <=    60) return 300;  // 1m  → ~5 hours
-  if (intervalSec <=   300) return 120;  // 5m  → ~10 hours
-  if (intervalSec <=   900) return  80;  // 15m → ~20 hours
-  if (intervalSec <=  1800) return  60;  // 30m → ~30 hours
-  if (intervalSec <=  3600) return 120;  // 1h  → ~5 days
-  if (intervalSec <= 14400) return  84;  // 4h  → ~2 weeks
-  return 120;                            // 1d  → ~5 months
+  if (intervalSec <=    60) return 400;  // 1m  → ~6.5 hours
+  if (intervalSec <=   300) return 160;  // 5m  → ~13 hours
+  if (intervalSec <=   900) return 110;  // 15m → ~27 hours
+  if (intervalSec <=  1800) return  80;  // 30m → ~40 hours
+  if (intervalSec <=  3600) return 160;  // 1h  → ~6.5 days
+  if (intervalSec <= 14400) return 110;  // 4h  → ~18 days
+  return 160;                            // 1d  → ~7.5 months
 }
 
 const BacktestChart = ({
@@ -130,14 +130,17 @@ const BacktestChart = ({
   const onRegisterRangeSetterRef = useRef(onRegisterRangeSetter);
   const onDrawingUpdateRef = useRef(onDrawingUpdate);
   const applyingRangeRef = useRef(false); // suppress re-emission while applying an incoming range
-  const svgDraggingRef = useRef(null); // { drawingId, field: 'sl'|'tp'|'endTime' }
+  const svgDraggingRef = useRef(null); // { drawingId, field: 'sl'|'tp'|'endTime'|'move', ... }
+  const candleDataRef = useRef(candleData);
   // Drawing mode / state
   const drawingModeRef = useRef(null);
   const drawingStateRef = useRef(null);   // first point when drawing a trendline
   const previewPointRef = useRef(null);   // current mouse position for trendline preview
+  const shiftKeyRef = useRef(false);      // true while Shift is held — snaps line to 0°/45°/90°
   const userDrawingsRef = useRef([]);
   const updateSvgDrawingsRef = useRef(() => {});
   const propsPanelRef = useRef(null); // floating properties panel DOM node
+  const wasDraggedRef = useRef(false); // suppresses click after a drag ends
 
   // OHLCV bar — direct DOM writes for 60fps crosshair, no React re-render
   const ohlcBarRef = useRef();
@@ -165,6 +168,7 @@ const BacktestChart = ({
   useEffect(() => { onRangeChangeRef.current = onRangeChange; });
   useEffect(() => { onRegisterRangeSetterRef.current = onRegisterRangeSetter; });
   useEffect(() => { onDrawingUpdateRef.current = onDrawingUpdate; });
+  useEffect(() => { candleDataRef.current = candleData; }, [candleData]);
   useEffect(() => {
     drawingModeRef.current = drawingMode;
     drawingStateRef.current = null;
@@ -276,9 +280,81 @@ const BacktestChart = ({
       } else if (drag.field === "endTime") {
         const t = chart.timeScale().coordinateToTime?.(x);
         if (t != null) onDrawingUpdateRef.current?.(drag.drawingId, { endTime: Number(t) });
+      } else if (drag.field === "p1" || drag.field === "p2") {
+        // Shift snaps endpoint to 0°/45°/90° relative to the fixed anchor endpoint
+        let cx = x, cy = y;
+        if (shiftKeyRef.current && drag.anchorPrice != null) {
+          const anchorT = drag.field === "p1" ? drag.visualP2Time : drag.p1Time;
+          const anchorX = chart.timeScale().timeToCoordinate(anchorT);
+          const anchorY = main.priceToCoordinate(drag.anchorPrice);
+          if (anchorX != null && anchorY != null) {
+            const adx = Math.abs(cx - anchorX), ady = Math.abs(cy - anchorY);
+            if (adx > ady * 2.414)      { cy = anchorY; }
+            else if (ady > adx * 2.414) { cx = anchorX; }
+            else { const d = Math.max(adx, ady); cx = anchorX + (cx >= anchorX ? d : -d); cy = anchorY + (cy >= anchorY ? d : -d); }
+          }
+        }
+        const rawT = chart.timeScale().coordinateToTime?.(cx);
+        const p = main.coordinateToPrice(cy);
+        if (rawT != null && p != null) {
+          const newTime = Number(rawT);
+          if (drag.field === "p1") {
+            const newSpan = Math.max(1, Math.round((drag.visualP2Time - newTime) / drag.candleInterval));
+            onDrawingUpdateRef.current?.(drag.drawingId, { p1: { time: newTime, price: p }, candleSpan: newSpan });
+          } else {
+            const newSpan = Math.max(1, Math.round((newTime - drag.p1Time) / drag.candleInterval));
+            onDrawingUpdateRef.current?.(drag.drawingId, { p2: { time: newTime, price: p }, candleSpan: newSpan });
+          }
+        }
+      } else if (drag.field === "move") {
+        const dx = e.clientX - drag.startClientX;
+        const dy = e.clientY - drag.startClientY;
+        if (!drag.hasMoved && Math.abs(dx) + Math.abs(dy) < 5) return;
+        drag.hasMoved = true;
+        // startLogical and startPrice are captured once at mousedown — never recomputed,
+        // so zoom/scroll between mousedown and now doesn't corrupt the delta.
+        // Shift constrains movement to horizontal or vertical axis only
+        let effectiveX = e.clientX - rect.left, effectiveY = e.clientY - rect.top;
+        if (shiftKeyRef.current) {
+          if (Math.abs(dx) >= Math.abs(dy)) {
+            effectiveY = drag.startClientY - rect.top; // horizontal — lock price
+          } else {
+            effectiveX = drag.startClientX - rect.left; // vertical — lock time
+          }
+        }
+        const logicalNow = chart.timeScale().coordinateToLogical(effectiveX) ?? drag.startLogical;
+        const timeDelta  = Math.round((logicalNow - drag.startLogical) * drag.candleInterval);
+        const priceNow   = main.coordinateToPrice(effectiveY) ?? drag.startPrice;
+        const priceDelta = priceNow - drag.startPrice;
+        if (drag.drawingType === "vline") {
+          onDrawingUpdateRef.current?.(drag.drawingId, { time: drag.startTime + timeDelta });
+        } else if (drag.drawingType === "hline") {
+          onDrawingUpdateRef.current?.(drag.drawingId, { price: drag.startPrice + priceDelta });
+        } else if (drag.drawingType === "text") {
+          onDrawingUpdateRef.current?.(drag.drawingId, {
+            time:  drag.startTime         + timeDelta,
+            price: drag.startDrawingPrice + priceDelta,
+          });
+        } else if (drag.drawingType === "rr") {
+          onDrawingUpdateRef.current?.(drag.drawingId, {
+            entry: drag.startEntry + priceDelta,
+            sl:    drag.startSl    + priceDelta,
+            tp:    drag.startTp    + priceDelta,
+            time:    drag.startTime    + timeDelta,
+            endTime: drag.startEndTime != null ? drag.startEndTime + timeDelta : null,
+          });
+        } else {
+          onDrawingUpdateRef.current?.(drag.drawingId, {
+            p1: { time: drag.startP1.time + timeDelta, price: drag.startP1.price + priceDelta },
+            p2: { time: drag.startP2.time + timeDelta, price: drag.startP2.price + priceDelta },
+          });
+        }
       }
     };
-    const onUp = () => { svgDraggingRef.current = null; };
+    const onUp = () => {
+      wasDraggedRef.current = svgDraggingRef.current?.hasMoved ?? false;
+      svgDraggingRef.current = null;
+    };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
     return () => {
@@ -431,6 +507,17 @@ const BacktestChart = ({
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
+  // ── Track Shift key state for line angle snapping ──
+  useEffect(() => {
+    const onKey = (e) => { shiftKeyRef.current = e.shiftKey; };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+    };
+  }, []);
+
   // ── Chart creation — runs only when candleData changes (new session / new timeframe) ──
   useEffect(() => {
     if (!wrapperRef.current || !candleData?.length) return;
@@ -472,7 +559,7 @@ const BacktestChart = ({
         textColor: T.textMuted,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+      handleScale: { axisPressedMouseMove: { time: false, price: true }, mouseWheel: true, pinch: false },
     });
     chartRef.current = chart;
 
@@ -587,6 +674,63 @@ const BacktestChart = ({
       const svgW = svg.clientWidth;
       const svgH = svg.clientHeight;
 
+      // Snap a drawing timestamp to the nearest candle — keeps drawings visible across TF switches
+      const interval = candleDataRef.current?.length > 1
+        ? candleDataRef.current[1].time - candleDataRef.current[0].time : 3600;
+      const snapTime = (t) => {
+        const data = candleDataRef.current;
+        if (!data?.length) return t;
+        let best = data[0], bestDist = Math.abs(data[0].time - t);
+        for (const c of data) {
+          const d = Math.abs(c.time - t);
+          if (d < bestDist) { bestDist = d; best = c; }
+        }
+        return best.time;
+      };
+
+      // logX: converts a bar timestamp to a pixel X coordinate that works even when the bar is
+      // outside the visible range. lightweight-charts timeToCoordinate returns null for off-screen
+      // times; logicalToCoordinate extrapolates pixel positions beyond the viewport (SVG clips them).
+      const _barData = candleDataRef.current || [];
+      const _timeToIdx = new Map(_barData.map((c, i) => [c.time, i]));
+      const logX = (t) => {
+        const idx = _timeToIdx.get(t);
+        if (idx !== undefined) {
+          const c = ts.logicalToCoordinate(idx);
+          if (c != null) return c;
+        }
+        return ts.timeToCoordinate(t); // fallback for times not in current data set
+      };
+
+      // Factory for move handles — blue circle with grab cursor, starts a 'move' drag on mousedown.
+      // Captures startLogical and startPrice at mousedown so zoom/scroll between then and onMove
+      // can't corrupt the delta calculation.
+      const mkMoveHandle = (hx, hy, drawing, extraState) => {
+        const h = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        h.setAttribute("cx", hx); h.setAttribute("cy", hy); h.setAttribute("r", "6");
+        h.setAttribute("fill", "#1E53E5"); h.setAttribute("fill-opacity", "0.85");
+        h.setAttribute("stroke", "#fff"); h.setAttribute("stroke-width", "1.5");
+        h.style.cursor = "grab";
+        h.style.pointerEvents = "all";
+        h.addEventListener("mousedown", (e) => {
+          e.stopPropagation();
+          const svgEl = svgRef.current;
+          const svgRect = svgEl?.getBoundingClientRect();
+          const ch = chartRef.current;
+          const mn2 = seriesRef.current.main;
+          const startLogical = ch?.timeScale().coordinateToLogical(e.clientX - (svgRect?.left ?? 0)) ?? 0;
+          const startPrice   = mn2?.coordinateToPrice(e.clientY - (svgRect?.top ?? 0)) ?? 0;
+          svgDraggingRef.current = {
+            drawingId: drawing.id, field: "move", drawingType: drawing.type,
+            startClientX: e.clientX, startClientY: e.clientY,
+            startLogical, startPrice,
+            candleInterval: interval, hasMoved: false,
+            ...extraState,
+          };
+        });
+        return h;
+      };
+
       // No SVG filters — selection uses thicker stroke only, no shadow/glow
       const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
       svg.appendChild(defs);
@@ -606,12 +750,20 @@ const BacktestChart = ({
       // Helper: attach delete/select click to any SVG element
       const attachInteraction = (el, drawing) => {
         el.addEventListener("click", (e) => {
+          // Suppress click if mouse moved (drag) — wasDraggedRef is set by onUp
+          if (wasDraggedRef.current) { wasDraggedRef.current = false; return; }
           e.stopPropagation();
           if (drawingModeRef.current === "eraser") {
             onDrawingDeleteRef.current?.(drawing.id);
           } else if (!drawingModeRef.current || drawingModeRef.current === "selector") {
-            onSelectionChangeRef.current?.(drawing.id, e.clientX, e.clientY);
+            // Ctrl/Cmd + left-click: multi-select toggle; plain click: single-select
+            onSelectionChangeRef.current?.(drawing.id, e.ctrlKey || e.metaKey || e.shiftKey);
           }
+        });
+        // Suppress browser context menu on right-click over drawings
+        el.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
         });
       };
       const isSelected = (id) => selectedDrawingIdsRef.current.includes(id);
@@ -622,26 +774,58 @@ const BacktestChart = ({
       userDrawingsRef.current.forEach((drawing) => {
         // Vertical line
         if (drawing.type === "vline") {
-          const x = ts.timeToCoordinate(drawing.time);
+          const x = logX(drawing.time);
           if (x == null) return;
+          const sel = isSelected(drawing.id);
+          const vBaseW = drawing.lineWidth || 1;
+
+          // Wide transparent hit area — easy to click & drag the whole line
+          const hitEl = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          hitEl.setAttribute("x1", x); hitEl.setAttribute("y1", 0);
+          hitEl.setAttribute("x2", x); hitEl.setAttribute("y2", svgH);
+          hitEl.setAttribute("stroke", "transparent");
+          hitEl.setAttribute("stroke-width", "12");
+          hitEl.style.cursor = sel ? "ew-resize" : "pointer";
+          hitEl.style.pointerEvents = "stroke";
+          attachInteraction(hitEl, drawing);
+          hitEl.addEventListener("mousedown", (e) => {
+            if (drawingModeRef.current) return;
+            e.stopPropagation();
+            const svgEl = svgRef.current;
+            const svgRect = svgEl?.getBoundingClientRect();
+            const ch = chartRef.current;
+            const mn2 = seriesRef.current.main;
+            const startLogical = ch?.timeScale().coordinateToLogical(e.clientX - (svgRect?.left ?? 0)) ?? 0;
+            const startPrice   = mn2?.coordinateToPrice(e.clientY - (svgRect?.top ?? 0)) ?? 0;
+            svgDraggingRef.current = {
+              drawingId: drawing.id, field: "move", drawingType: "vline",
+              startClientX: e.clientX, startClientY: e.clientY,
+              startLogical, startPrice,
+              candleInterval: interval, hasMoved: false,
+              startTime: drawing.time,
+            };
+          });
+          svg.appendChild(hitEl);
+
+          // Visible line
           const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
           el.setAttribute("x1", x); el.setAttribute("y1", 0);
           el.setAttribute("x2", x); el.setAttribute("y2", svgH);
-          el.setAttribute("stroke", selStroke(drawing.color || "#f7a600"));
-          const vBaseW = drawing.lineWidth || 1;
-          el.setAttribute("stroke-width", isSelected(drawing.id) ? String(vBaseW + 1) : String(vBaseW));
-          el.setAttribute("stroke-dasharray", drawing.lineStyle === "solid" ? "" : "4,3");
-          el.style.cursor = "pointer";
-          el.style.pointerEvents = "stroke";
-          applyGlow(el, drawing.id);
-          attachInteraction(el, drawing);
+          el.setAttribute("stroke", sel ? "#60a5fa" : (drawing.color || "#f7a600"));
+          el.setAttribute("stroke-width", sel ? String(vBaseW + 1) : String(vBaseW));
+          if (drawing.lineStyle === "dashed") el.setAttribute("stroke-dasharray", "4,3");
+          el.style.pointerEvents = "none";
           svg.appendChild(el);
+
+          if (sel) {
+            svg.appendChild(mkMoveHandle(x, svgH / 2, drawing, { startTime: drawing.time }));
+          }
           return;
         }
 
         // Text label
         if (drawing.type === "text") {
-          const x = ts.timeToCoordinate(drawing.time);
+          const x = logX(drawing.time);
           const y = mn.priceToCoordinate(drawing.price);
           if (x == null || y == null) return;
           const el = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -654,16 +838,22 @@ const BacktestChart = ({
           el.style.cursor = "pointer";
           el.style.pointerEvents = "all";
           el.textContent = drawing.label || "Label";
+          el.style.cursor = isSelected(drawing.id) ? "grab" : "pointer";
           attachInteraction(el, drawing);
           svg.appendChild(el);
+          if (isSelected(drawing.id)) {
+            svg.appendChild(mkMoveHandle(x, y - 4, drawing, {
+              startTime: drawing.time, startDrawingPrice: drawing.price,
+            }));
+          }
           return;
         }
 
         // Rectangle
         if (drawing.type === "rectangle") {
-          const x1 = ts.timeToCoordinate(drawing.p1.time);
+          const x1 = logX(drawing.p1.time);
           const y1 = mn.priceToCoordinate(drawing.p1.price);
-          const x2 = ts.timeToCoordinate(drawing.p2.time);
+          const x2 = logX(drawing.p2.time);
           const y2 = mn.priceToCoordinate(drawing.p2.price);
           if (x1 == null || y1 == null || x2 == null || y2 == null) return;
           const rx = Math.min(x1, x2), ry = Math.min(y1, y2);
@@ -679,16 +869,42 @@ const BacktestChart = ({
           applyGlow(el, drawing.id);
           attachInteraction(el, drawing);
           svg.appendChild(el);
+          if (isSelected(drawing.id)) {
+            const p = { startP1: { ...drawing.p1 }, startP2: { ...drawing.p2 } };
+            svg.appendChild(mkMoveHandle((x1 + x2) / 2, (y1 + y2) / 2, drawing, p));
+          }
           return;
         }
 
-        // Segment — fixed-length line exactly from p1 to p2
+        // Segment — scales with timeframe via candleSpan; endpoint handles for resize
         if (drawing.type === "segment") {
-          const x1 = ts.timeToCoordinate(drawing.p1.time);
+          const p1Idx = _timeToIdx.get(drawing.p1.time);
+          const x1 = p1Idx !== undefined
+            ? (ts.logicalToCoordinate(p1Idx) ?? ts.timeToCoordinate(drawing.p1.time))
+            : ts.timeToCoordinate(drawing.p1.time);
           const y1 = mn.priceToCoordinate(drawing.p1.price);
-          const x2 = ts.timeToCoordinate(drawing.p2.time);
+          const scaledEndTime = drawing.candleSpan != null
+            ? drawing.p1.time + drawing.candleSpan * interval
+            : drawing.p2.time;
+          // Use p1Idx + candleSpan for the end logical position — works even when the endpoint
+          // is outside the visible range (logicalToCoordinate extrapolates; SVG clips the result).
+          const x2 = (p1Idx !== undefined && drawing.candleSpan != null)
+            ? (ts.logicalToCoordinate(p1Idx + drawing.candleSpan) ?? ts.timeToCoordinate(scaledEndTime))
+            : ts.timeToCoordinate(scaledEndTime);
           const y2 = mn.priceToCoordinate(drawing.p2.price);
-          if (x1 == null || y1 == null || x2 == null || y2 == null) return;
+          if (y1 == null || y2 == null) return;
+          if (x1 == null && x2 == null) return; // entirely off-screen horizontally
+          // Wide transparent hit area — 12px stroke so the line is easy to click
+          const hitEl = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          hitEl.setAttribute("x1", x1); hitEl.setAttribute("y1", y1);
+          hitEl.setAttribute("x2", x2); hitEl.setAttribute("y2", y2);
+          hitEl.setAttribute("stroke", "transparent");
+          hitEl.setAttribute("stroke-width", "12");
+          hitEl.style.cursor = "pointer";
+          hitEl.style.pointerEvents = "stroke";
+          attachInteraction(hitEl, drawing);
+          svg.appendChild(hitEl);
+          // Visible line
           const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
           el.setAttribute("x1", x1); el.setAttribute("y1", y1);
           el.setAttribute("x2", x2); el.setAttribute("y2", y2);
@@ -696,11 +912,10 @@ const BacktestChart = ({
           const segBaseW = drawing.lineWidth || 1.5;
           el.setAttribute("stroke-width", isSelected(drawing.id) ? String(segBaseW + 1) : String(segBaseW));
           if (drawing.lineStyle === "dashed") el.setAttribute("stroke-dasharray", "6,4");
-          el.style.cursor = "pointer";
-          el.style.pointerEvents = "stroke";
+          el.style.pointerEvents = "none";
           applyGlow(el, drawing.id);
-          attachInteraction(el, drawing);
           svg.appendChild(el);
+          // Endpoint dots
           [[x1, y1], [x2, y2]].forEach(([cx, cy]) => {
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             dot.setAttribute("cx", cx); dot.setAttribute("cy", cy); dot.setAttribute("r", "3");
@@ -708,14 +923,42 @@ const BacktestChart = ({
             dot.style.pointerEvents = "none";
             svg.appendChild(dot);
           });
+          if (isSelected(drawing.id)) {
+            const moveP = { startP1: { ...drawing.p1 }, startP2: { ...drawing.p2 } };
+            svg.appendChild(mkMoveHandle((x1 + x2) / 2, (y1 + y2) / 2, drawing, moveP));
+            // Endpoint resize handles — white ring with line color border; anchorPrice enables Shift snap
+            const mkResizeHandle = (hx, hy, field, anchorPrice) => {
+              const h = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              h.setAttribute("cx", hx); h.setAttribute("cy", hy); h.setAttribute("r", "5");
+              h.setAttribute("fill", isDarkRef.current ? "#131722" : "#ffffff");
+              h.setAttribute("stroke", drawing.color || "#f7a600");
+              h.setAttribute("stroke-width", "2");
+              h.style.cursor = "crosshair";
+              h.style.pointerEvents = "all";
+              h.addEventListener("mousedown", (ev) => {
+                ev.stopPropagation();
+                svgDraggingRef.current = {
+                  drawingId: drawing.id, field,
+                  drawingType: "segment",
+                  candleInterval: interval,
+                  visualP2Time: scaledEndTime,
+                  p1Time: drawing.p1.time,
+                  anchorPrice,
+                };
+              });
+              return h;
+            };
+            svg.appendChild(mkResizeHandle(x1, y1, "p1", drawing.p2.price));
+            svg.appendChild(mkResizeHandle(x2, y2, "p2", drawing.p1.price));
+          }
           return;
         }
 
         // Ray — extends right from p1 through p2
         if (drawing.type === "ray") {
-          const x1 = ts.timeToCoordinate(drawing.p1.time);
+          const x1 = logX(drawing.p1.time);
           const y1 = mn.priceToCoordinate(drawing.p1.price);
-          const x2 = ts.timeToCoordinate(drawing.p2.time);
+          const x2 = logX(drawing.p2.time);
           const y2 = mn.priceToCoordinate(drawing.p2.price);
           if (x1 == null || y1 == null || x2 == null || y2 == null) return;
           const dx = x2 - x1, dy = y2 - y1;
@@ -740,14 +983,20 @@ const BacktestChart = ({
           dot.setAttribute("fill", selStroke(drawing.color || "#089981"));
           dot.style.pointerEvents = "none";
           svg.appendChild(dot);
+          if (isSelected(drawing.id)) {
+            const midX = (x1 + Math.min(lx2, svgW)) / 2;
+            const midY = y1 + (Math.abs(dx) > 0.5 ? (dy / dx) * (midX - x1) : 0);
+            const p = { startP1: { ...drawing.p1 }, startP2: { ...drawing.p2 } };
+            svg.appendChild(mkMoveHandle(midX, midY, drawing, p));
+          }
           return;
         }
 
         // Trendline — extends across full chart width
         if (drawing.type === "trendline") {
-          const x1 = ts.timeToCoordinate(drawing.p1.time);
+          const x1 = logX(drawing.p1.time);
           const y1 = mn.priceToCoordinate(drawing.p1.price);
-          const x2 = ts.timeToCoordinate(drawing.p2.time);
+          const x2 = logX(drawing.p2.time);
           const y2 = mn.priceToCoordinate(drawing.p2.price);
           if (x1 == null || y1 == null || x2 == null || y2 == null) return;
           const dx = x2 - x1, dy = y2 - y1;
@@ -776,13 +1025,19 @@ const BacktestChart = ({
             dot.style.pointerEvents = "none";
             svg.appendChild(dot);
           });
+          if (isSelected(drawing.id)) {
+            const midX = svgW / 2;
+            const midY = Math.abs(dx) > 0.5 ? y1 + (dy / dx) * (midX - x1) : y1;
+            const p = { startP1: { ...drawing.p1 }, startP2: { ...drawing.p2 } };
+            svg.appendChild(mkMoveHandle(midX, midY, drawing, p));
+          }
           return;
         }
 
         // Fibonacci retracement
         if (drawing.type === "fibonacci") {
-          const x1 = ts.timeToCoordinate(drawing.p1.time);
-          const x2 = ts.timeToCoordinate(drawing.p2.time);
+          const x1 = logX(drawing.p1.time);
+          const x2 = logX(drawing.p2.time);
           if (x1 == null || x2 == null) return;
           const lx1 = Math.min(x1, x2), lx2 = Math.max(x1, x2);
           const priceRange = drawing.p2.price - drawing.p1.price;
@@ -795,38 +1050,68 @@ const BacktestChart = ({
             { r: 0.786, color: "#089981" },
             { r: 1.0,   color: "#787b86" },
           ];
-          const selected = isSelected(drawing.id);
+          const selected   = isSelected(drawing.id);
+          const overColor  = drawing.color || null;
+          const lineW      = drawing.lineWidth || 1;
+          const isDashed   = drawing.lineStyle === "dashed";
+          const showLabels = drawing.showLabels !== false;
+          const sw         = selected ? String(lineW + 1) : String(lineW);
+
           FIB_LEVELS.forEach(({ r, color }) => {
             const fibPrice = drawing.p1.price + priceRange * r;
             const fy = mn.priceToCoordinate(fibPrice);
             if (fy == null) return;
+            const stroke = selected ? "#60a5fa" : (overColor || color);
+
+            const hit = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            hit.setAttribute("x1", lx1); hit.setAttribute("y1", fy);
+            hit.setAttribute("x2", lx2); hit.setAttribute("y2", fy);
+            hit.setAttribute("stroke", "transparent");
+            hit.setAttribute("stroke-width", "10");
+            hit.style.cursor = "pointer";
+            hit.style.pointerEvents = "stroke";
+            attachInteraction(hit, drawing);
+            svg.appendChild(hit);
+
             const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             line.setAttribute("x1", lx1); line.setAttribute("y1", fy);
             line.setAttribute("x2", lx2); line.setAttribute("y2", fy);
-            line.setAttribute("stroke", selected ? "#60a5fa" : color);
-            line.setAttribute("stroke-width", selected ? "2" : "1");
-            line.setAttribute("stroke-dasharray", (r === 0 || r === 1) ? "" : "4,3");
-            line.style.cursor = "pointer";
-            line.style.pointerEvents = "stroke";
-            attachInteraction(line, drawing);
+            line.setAttribute("stroke", stroke);
+            line.setAttribute("stroke-width", sw);
+            if (r !== 0 && r !== 1) {
+              line.setAttribute("stroke-dasharray", isDashed ? "6,4" : "4,3");
+            }
+            line.style.pointerEvents = "none";
             svg.appendChild(line);
-            // Label
-            const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            lbl.setAttribute("x", lx1 + 4); lbl.setAttribute("y", fy - 2);
-            lbl.setAttribute("fill", selected ? "#60a5fa" : color);
-            lbl.setAttribute("font-size", "9");
-            lbl.setAttribute("font-family", "'Trebuchet MS', Roboto, sans-serif");
-            lbl.setAttribute("font-weight", "600");
-            lbl.textContent = `${(r * 100).toFixed(1)}%  ${fibPrice.toFixed(2)}`;
-            lbl.style.pointerEvents = "none";
-            svg.appendChild(lbl);
+
+            if (showLabels) {
+              const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+              lbl.setAttribute("x", lx1 + 4); lbl.setAttribute("y", fy - 2);
+              lbl.setAttribute("fill", stroke);
+              lbl.setAttribute("font-size", "9");
+              lbl.setAttribute("font-family", "'Trebuchet MS', Roboto, sans-serif");
+              lbl.setAttribute("font-weight", "600");
+              lbl.textContent = `${(r * 100).toFixed(1)}%  ${fibPrice.toFixed(2)}`;
+              lbl.style.pointerEvents = "none";
+              svg.appendChild(lbl);
+            }
           });
+
+          if (selected) {
+            const midPrice = drawing.p1.price + priceRange * 0.5;
+            const midY = mn.priceToCoordinate(midPrice);
+            if (midY != null) {
+              svg.appendChild(mkMoveHandle((lx1 + lx2) / 2, midY, drawing, {
+                startP1: { ...drawing.p1 }, startP2: { ...drawing.p2 },
+              }));
+            }
+          }
           return;
         }
 
         // Buy / Sell position markers
         if (drawing.type === "buy_marker" || drawing.type === "sell_marker") {
-          const x = ts.timeToCoordinate(drawing.time);
+          const x = logX(drawing.time);
           const y = mn.priceToCoordinate(drawing.price);
           if (x == null || y == null) return;
           const isBuy = drawing.type === "buy_marker";
@@ -860,9 +1145,9 @@ const BacktestChart = ({
 
         // Risk/Reward box — two colored rectangles, width controlled by endTime
         if (drawing.type === "rr") {
-          const x = ts.timeToCoordinate(drawing.time);
+          const x = logX(drawing.time);
           if (x == null) return;
-          const xEndRaw = drawing.endTime ? ts.timeToCoordinate(drawing.endTime) : null;
+          const xEndRaw = drawing.endTime ? ts.timeToCoordinate(snapTime(drawing.endTime)) : null;
           const xEnd = xEndRaw ?? svgW;
           if (xEnd <= x) return;
           const yEntry = mn.priceToCoordinate(drawing.entry);
@@ -881,15 +1166,12 @@ const BacktestChart = ({
           const slAmt  = Math.round(risk   * size);
           const tpAmt  = Math.round(reward * size);
           const inDrawMode = !!drawingModeRef.current;
+          const fillOp = drawing.fillOpacity ?? 0.18; // zone fill transparency
+          const showLabels = drawing.showLabels !== false; // default on
 
-          // Clamp zone pixel heights to a minimum of 20 px so the box is always visible
-          const minZonePx = 20;
-          const ySLv = drawing.isLong
-            ? yEntry + Math.max(ySL - yEntry, minZonePx)   // long: SL below entry
-            : yEntry - Math.max(yEntry - ySL, minZonePx);  // short: SL above entry
-          const yTPv = drawing.isLong
-            ? yEntry - Math.max(yEntry - yTP, minZonePx)   // long: TP above entry
-            : yEntry + Math.max(yTP - yEntry, minZonePx);  // short: TP below entry
+          // Use actual price coordinates — zones scale naturally with chart zoom
+          const ySLv = ySL;
+          const yTPv = yTP;
 
           // Container group — CSS :hover shows rr-labels and rr-handles sub-groups
           const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -912,12 +1194,10 @@ const BacktestChart = ({
             }
             group.appendChild(r);
           };
-          mkRect(yEntry, ySLv,
-            sel ? "rgba(242,54,69,0.28)" : "rgba(242,54,69,0.18)",
-            sel ? "#f23645" : "rgba(242,54,69,0.45)");
-          mkRect(yEntry, yTPv,
-            sel ? "rgba(8,153,129,0.28)" : "rgba(8,153,129,0.18)",
-            sel ? "#089981" : "rgba(8,153,129,0.45)");
+          const slFill = `rgba(242,54,69,${sel ? Math.min(fillOp * 1.6, 1) : fillOp})`;
+          const tpFill = `rgba(8,153,129,${sel ? Math.min(fillOp * 1.6, 1) : fillOp})`;
+          mkRect(yEntry, ySLv, slFill, sel ? "#f23645" : `rgba(242,54,69,${Math.min(fillOp * 2.5, 1)})`);
+          mkRect(yEntry, yTPv, tpFill, sel ? "#089981" : `rgba(8,153,129,${Math.min(fillOp * 2.5, 1)})`);
 
           // Boundary lines (always visible)
           const mkLine = (y1, stroke, dash) => {
@@ -929,13 +1209,15 @@ const BacktestChart = ({
             ln.style.pointerEvents = "none";
             group.appendChild(ln);
           };
-          mkLine(yEntry, sel ? "#60a5fa" : "rgba(255,255,255,0.7)", "6,3");
+          const entryDash = (drawing.lineStyle === "dashed") ? "6,3" : null;
+          mkLine(yEntry, sel ? "#60a5fa" : "rgba(255,255,255,0.7)", entryDash);
           mkLine(ySLv, sel ? "#60a5fa" : "rgba(242,54,69,0.85)");
           mkLine(yTPv, sel ? "#60a5fa" : "rgba(8,153,129,0.85)");
 
           // Labels — in sub-group, CSS controls visibility on hover / selected
           const labelsG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-          labelsG.setAttribute("class", "rr-labels");
+          labelsG.setAttribute("class", showLabels ? "rr-labels" : "rr-labels-hidden");
+          if (!showLabels) labelsG.style.display = "none";
           const fontFam = "'Inter','Trebuchet MS',sans-serif";
           // Smaller font; labels sit to the LEFT of the box so they don't overlap the zones
           const fontSize = 8, lineH = 11, padX = 5, padY = 3, charW = 4.5;
@@ -991,6 +1273,12 @@ const BacktestChart = ({
             mkHandle(xEnd, midY,  "ew-resize", "endTime", "#1E53E5");
             mkHandle(midX, ySLv, "ns-resize", "sl",      "#f23645"); // visual pos; drag maps back to price
             mkHandle(midX, yTPv, "ns-resize", "tp",      "#089981");
+            // Move handle — sits on the entry line in the center of the box
+            const moveH = mkMoveHandle(midX, yEntry, drawing, {
+              startEntry: drawing.entry, startSl: drawing.sl, startTp: drawing.tp,
+              startTime: drawing.time, startEndTime: drawing.endTime,
+            });
+            handlesG.appendChild(moveH);
             group.appendChild(handlesG);
           }
 
@@ -1004,7 +1292,7 @@ const BacktestChart = ({
       const twoPointModes = ["trendline", "ray", "segment", "rectangle", "fibonacci", "rr"];
       if (twoPointModes.includes(mode) && drawingStateRef.current && previewPointRef.current) {
         const p1 = drawingStateRef.current;
-        const ax = ts.timeToCoordinate(p1.time);
+        const ax = ts.timeToCoordinate(snapTime(p1.time));
         const ay = mn.priceToCoordinate(p1.price);
         if (ax != null && ay != null) {
           if (mode === "rectangle") {
@@ -1076,10 +1364,20 @@ const BacktestChart = ({
               }
             }
           } else {
+            // Shift snaps the preview to 0° / 45° / 90°
+            const rawPrev = previewPointRef.current;
+            const prev = shiftKeyRef.current ? (() => {
+              const dx = rawPrev.x - ax, dy = rawPrev.y - ay;
+              const adx = Math.abs(dx), ady = Math.abs(dy);
+              if (adx > ady * 2.414) return { x: rawPrev.x, y: ay };          // horizontal
+              if (ady > adx * 2.414) return { x: ax, y: rawPrev.y };           // vertical
+              const d = Math.max(adx, ady);                                    // 45-degree
+              return { x: ax + (dx >= 0 ? d : -d), y: ay + (dy >= 0 ? d : -d) };
+            })() : rawPrev;
             const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
             el.setAttribute("x1", ax); el.setAttribute("y1", ay);
-            el.setAttribute("x2", previewPointRef.current.x);
-            el.setAttribute("y2", previewPointRef.current.y);
+            el.setAttribute("x2", prev.x);
+            el.setAttribute("y2", prev.y);
             const previewColor = mode === "ray" ? "#089981" : mode === "segment" ? "#f7a600" : "#1E53E5";
             el.setAttribute("stroke", previewColor);
             el.setAttribute("stroke-width", "1.5");
@@ -1096,46 +1394,18 @@ const BacktestChart = ({
         }
       }
 
-      // ── Reposition the properties panel so it tracks the selected line ──
+      // ── Position the properties panel at the top-center of the chart (never over the line) ──
       const panel = propsPanelRef.current;
-      if (panel) {
-        const selIds = selectedDrawingIdsRef.current;
-        const LINE_TYPES = ["segment", "trendline", "ray", "hline", "vline"];
-        let anchored = false;
-        if (selIds.length === 1) {
-          const selD = userDrawingsRef.current.find((d) => d.id === selIds[0]);
-          if (selD && LINE_TYPES.includes(selD.type)) {
-            let px = svgW / 2, py = 0;
-            if (selD.type === "hline") {
-              const hy = mn.priceToCoordinate(selD.price);
-              if (hy != null) { px = svgW / 2; py = hy; anchored = true; }
-            } else if (selD.type === "vline") {
-              const vx = ts.timeToCoordinate(selD.time);
-              if (vx != null) { px = Math.max(0, Math.min(vx, svgW)); py = svgH / 3; anchored = true; }
-            } else {
-              const x1 = ts.timeToCoordinate(selD.p1.time);
-              const y1 = mn.priceToCoordinate(selD.p1.price);
-              const x2 = ts.timeToCoordinate(selD.p2.time);
-              const y2 = mn.priceToCoordinate(selD.p2.price);
-              if (x1 != null && y1 != null && x2 != null && y2 != null) {
-                px = (x1 + x2) / 2;
-                py = Math.max(y1, y2);
-                anchored = true;
-              }
-            }
-            if (anchored) {
-              const rect = wrapperRef.current?.getBoundingClientRect();
-              if (rect) {
-                const pw = panel.offsetWidth || 260;
-                const ph = panel.offsetHeight || 80;
-                let fl = rect.left + px - pw / 2;
-                let ft = rect.top + py + 12;
-                fl = Math.max(8, Math.min(fl, window.innerWidth - pw - 8));
-                if (ft + ph > window.innerHeight - 8) ft = rect.top + py - ph - 12;
-                panel.style.left = `${Math.round(fl)}px`;
-                panel.style.top  = `${Math.round(ft)}px`;
-              }
-            }
+      if (panel && selectedDrawingIdsRef.current.length === 1) {
+        const PANEL_TYPES = ["segment", "trendline", "ray", "hline", "vline", "rr", "text", "fibonacci"];
+        const selD = userDrawingsRef.current.find((d) => d.id === selectedDrawingIdsRef.current[0]);
+        if (selD && PANEL_TYPES.includes(selD.type)) {
+          const rect = wrapperRef.current?.getBoundingClientRect();
+          if (rect) {
+            const pw = panel.offsetWidth || 260;
+            const fl = rect.left + rect.width / 2 - pw / 2;
+            panel.style.left = `${Math.round(Math.max(8, Math.min(fl, window.innerWidth - pw - 8)))}px`;
+            panel.style.top  = `${Math.round(rect.top + 8)}px`;
           }
         }
       }
@@ -1178,11 +1448,33 @@ const BacktestChart = ({
             drawingStateRef.current = { price, time: t };
           } else {
             const p1 = drawingStateRef.current;
+            // Apply Shift angle-snap for line tools (not rectangle/fibonacci)
+            let p2Price = price, p2Time = t;
+            if (shiftKeyRef.current && ["trendline", "ray", "segment"].includes(mode) && param.point) {
+              const p1x = chart.timeScale().timeToCoordinate(p1.time);
+              const p1y = main.priceToCoordinate(p1.price);
+              if (p1x != null && p1y != null) {
+                const dx = param.point.x - p1x, dy = param.point.y - p1y;
+                const adx = Math.abs(dx), ady = Math.abs(dy);
+                let cx = param.point.x, cy = param.point.y;
+                if (adx > ady * 2.414)      { cy = p1y; }                                           // horizontal
+                else if (ady > adx * 2.414) { cx = p1x; }                                           // vertical
+                else { const d = Math.max(adx, ady); cx = p1x + (dx >= 0 ? d : -d); cy = p1y + (dy >= 0 ? d : -d); } // 45°
+                const snapT = chart.timeScale().coordinateToTime?.(cx);
+                const snapP = main.coordinateToPrice(cy);
+                if (snapT != null) p2Time = Number(snapT);
+                if (snapP != null) p2Price = snapP;
+              }
+            }
+            const baseInterval = candleData.length > 1 ? candleData[1].time - candleData[0].time : 3600;
             const newDrawing = {
               type: mode,
               p1: { price: p1.price, time: p1.time },
-              p2: { price, time: t },
+              p2: { price: p2Price, time: p2Time },
               color: mode === "ray" ? "#089981" : mode === "segment" ? "#f7a600" : "#089981",
+              ...(mode === "segment" && {
+                candleSpan: Math.max(1, Math.round(Math.abs(p2Time - p1.time) / baseInterval)),
+              }),
             };
             onDrawingAddRef.current?.(newDrawing);
             drawingStateRef.current = null;
@@ -1399,20 +1691,12 @@ const BacktestChart = ({
       {/* Chart mount point — fills parent */}
       <div ref={wrapperRef} style={{ width: "100%", height: "100%" }} />
 
-      {/* ── Floating line properties panel — position tracked by updateSvgDrawings via propsPanelRef ── */}
+      {/* ── Floating properties panel — top-center, position set imperatively by updateSvgDrawings ── */}
       {(() => {
         const sel = panelDrawing;
         if (!sel) return null;
-        const LINE_TYPES = ["segment","trendline","ray","hline","vline"];
-        if (!LINE_TYPES.includes(sel.type)) return null;
-
-        const COLORS = [
-          "#1E53E5","#089981","#f23645","#f7a600",
-          "#9333ea","#ef4444","#787b86","#ffffff",
-        ];
-        const curColor = sel.color || "#1E53E5";
-        const curStyle = sel.lineStyle || "solid";
-        const curW     = sel.lineWidth || 1;
+        const PANEL_TYPES = ["segment","trendline","ray","hline","vline","rr","text","fibonacci"];
+        if (!PANEL_TYPES.includes(sel.type)) return null;
 
         const bgPanel  = isDark ? "#1e222d" : "#ffffff";
         const bgSect   = isDark ? "#262b36" : "#f5f7fa";
@@ -1422,31 +1706,192 @@ const BacktestChart = ({
         const activeC  = "#1E53E5";
         const inactiveC = isDark ? "#787b86" : "#9ca3af";
 
+        const sectStyle = { padding: "8px 10px", display: "flex", flexDirection: "column", gap: 4 };
+        const headStyle = { fontSize: 9, fontWeight: 600, color: labelC, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 };
+        const btnStyle = (active) => ({
+          padding: "3px 8px", borderRadius: 4, cursor: "pointer", border: "none",
+          background: active ? activeB : "transparent",
+          color: active ? activeC : inactiveC,
+          fontSize: 11, fontWeight: 600, textAlign: "left",
+        });
+
+        // ── R:R panel ──
+        if (sel.type === "rr") {
+          const curOp     = sel.fillOpacity ?? 0.18;
+          const curLabels = sel.showLabels !== false;
+          const curDir    = sel.isLong !== false;
+          const OPACITIES = [
+            { val: 0.08,  label: "Low" },
+            { val: 0.18,  label: "Med" },
+            { val: 0.32,  label: "High" },
+          ];
+          return (
+            <div
+              ref={propsPanelRef}
+              style={{
+                position: "fixed", zIndex: 9999, background: bgPanel,
+                border: `1px solid ${divider}`, borderRadius: 10,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                display: "flex", flexDirection: "row", overflow: "hidden", userSelect: "none",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {/* Direction */}
+              <div style={{ ...sectStyle, background: bgSect }}>
+                <div style={headStyle}>Direction</div>
+                {[{ val: true, label: "Long" }, { val: false, label: "Short" }].map(({ val, label }) => (
+                  <button key={label} onClick={() => onPropertyChange?.(sel.id, { isLong: val })} style={btnStyle(curDir === val)}>{label}</button>
+                ))}
+              </div>
+
+              <div style={{ width: 1, background: divider }} />
+
+              {/* Fill opacity */}
+              <div style={sectStyle}>
+                <div style={headStyle}>Fill</div>
+                {OPACITIES.map(({ val, label }) => (
+                  <button key={label} onClick={() => onPropertyChange?.(sel.id, { fillOpacity: val })} style={btnStyle(Math.abs(curOp - val) < 0.01)}>{label}</button>
+                ))}
+              </div>
+
+              <div style={{ width: 1, background: divider }} />
+
+              {/* Labels */}
+              <div style={sectStyle}>
+                <div style={headStyle}>Labels</div>
+                {[{ val: true, label: "Show" }, { val: false, label: "Hide" }].map(({ val, label }) => (
+                  <button key={label} onClick={() => onPropertyChange?.(sel.id, { showLabels: val })} style={btnStyle(curLabels === val)}>{label}</button>
+                ))}
+              </div>
+
+              <div style={{ width: 1, background: divider }} />
+
+              {/* Entry line style */}
+              <div style={sectStyle}>
+                <div style={headStyle}>Entry line</div>
+                {[{ val: "solid", label: "——" }, { val: "dashed", label: "- - -" }].map(({ val, label }) => (
+                  <button key={val} onClick={() => onPropertyChange?.(sel.id, { lineStyle: val })}
+                    style={{ ...btnStyle((sel.lineStyle || "solid") === val), fontSize: val === "solid" ? 13 : 10, letterSpacing: val === "dashed" ? 2 : 0.5 }}
+                  >{label}</button>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // ── Fibonacci panel ──
+        if (sel.type === "fibonacci") {
+          const FIB_COLORS = [
+            "#1E53E5","#089981","#f23645","#f7a600",
+            "#9333ea","#ef4444","#787b86","#ffffff",
+          ];
+          const curColor  = sel.color || null;
+          const curStyle  = sel.lineStyle || "solid";
+          const curW      = sel.lineWidth || 1;
+          const curLabels = sel.showLabels !== false;
+          return (
+            <div
+              ref={propsPanelRef}
+              style={{
+                position: "fixed", zIndex: 9999, background: bgPanel,
+                border: `1px solid ${divider}`, borderRadius: 10,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                display: "flex", flexDirection: "row", overflow: "hidden", userSelect: "none",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {/* Color — first button resets to multi-colour default */}
+              <div style={{ padding: "8px 10px", background: bgSect }}>
+                <div style={{ ...headStyle, marginBottom: 6 }}>Color</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 18px)", gap: 4 }}>
+                  <button
+                    title="Default (multi-color)"
+                    onClick={() => onPropertyChange?.(sel.id, { color: null })}
+                    style={{
+                      gridColumn: "1 / -1", height: 18, borderRadius: 4, cursor: "pointer", padding: 0,
+                      background: "linear-gradient(90deg,#787b86 0%,#089981 40%,#f7a600 70%,#787b86 100%)",
+                      border: !curColor ? "2.5px solid #60a5fa" : `1.5px solid ${isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.16)"}`,
+                      outline: "none",
+                    }}
+                  />
+                  {FIB_COLORS.map((c) => (
+                    <button key={c} onClick={() => onPropertyChange?.(sel.id, { color: c })} title={c}
+                      style={{
+                        width: 18, height: 18, borderRadius: 4, background: c, cursor: "pointer",
+                        border: curColor === c ? "2.5px solid #60a5fa" : `1.5px solid ${isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.16)"}`,
+                        outline: "none", padding: 0,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ width: 1, background: divider }} />
+
+              {/* Inner line style */}
+              <div style={sectStyle}>
+                <div style={headStyle}>Lines</div>
+                {[{ val: "solid", label: "——" }, { val: "dashed", label: "- - -" }].map(({ val, label }) => (
+                  <button key={val} onClick={() => onPropertyChange?.(sel.id, { lineStyle: val })}
+                    style={{ ...btnStyle(curStyle === val), fontSize: val === "solid" ? 13 : 10, letterSpacing: val === "dashed" ? 2 : 0.5 }}
+                  >{label}</button>
+                ))}
+              </div>
+
+              <div style={{ width: 1, background: divider }} />
+
+              {/* Thickness */}
+              <div style={sectStyle}>
+                <div style={headStyle}>Weight</div>
+                {[1, 2, 3].map((w) => (
+                  <button key={w} onClick={() => onPropertyChange?.(sel.id, { lineWidth: w })}
+                    style={{ width: 52, padding: "3px 6px", borderRadius: 4, cursor: "pointer", border: "none",
+                      background: curW === w ? activeB : "transparent", display: "flex", alignItems: "center" }}
+                  >
+                    <div style={{ width: 38, height: w * 1.5 + 0.5, background: curW === w ? activeC : inactiveC, borderRadius: 2 }} />
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ width: 1, background: divider }} />
+
+              {/* Labels */}
+              <div style={sectStyle}>
+                <div style={headStyle}>Labels</div>
+                {[{ val: true, label: "Show" }, { val: false, label: "Hide" }].map(({ val, label }) => (
+                  <button key={label} onClick={() => onPropertyChange?.(sel.id, { showLabels: val })} style={btnStyle(curLabels === val)}>{label}</button>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // ── Line panel (segment / trendline / ray / hline / vline) ──
+        const COLORS = [
+          "#1E53E5","#089981","#f23645","#f7a600",
+          "#9333ea","#ef4444","#787b86","#ffffff",
+        ];
+        const curColor = sel.color || "#1E53E5";
+        const curStyle = sel.lineStyle || "solid";
+        const curW     = sel.lineWidth || 1;
+
         return (
           <div
             ref={propsPanelRef}
             style={{
-              position: "fixed", zIndex: 9999,
-              background: bgPanel,
-              border: `1px solid ${divider}`,
-              borderRadius: 10,
+              position: "fixed", zIndex: 9999, background: bgPanel,
+              border: `1px solid ${divider}`, borderRadius: 10,
               boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-              display: "flex", flexDirection: "row",
-              overflow: "hidden",
-              userSelect: "none",
-              // left/top are set imperatively by updateSvgDrawings via propsPanelRef.current.style
+              display: "flex", flexDirection: "row", overflow: "hidden", userSelect: "none",
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
             {/* Color */}
             <div style={{ padding: "8px 10px", background: bgSect, minWidth: 102 }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: labelC, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Color</div>
+              <div style={{ ...headStyle, marginBottom: 6 }}>Color</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 18px)", gap: 4 }}>
                 {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => onPropertyChange?.(sel.id, { color: c })}
-                    title={c}
+                  <button key={c} onClick={() => onPropertyChange?.(sel.id, { color: c })} title={c}
                     style={{
                       width: 18, height: 18, borderRadius: 4, background: c, cursor: "pointer",
                       border: curColor === c ? "2.5px solid #60a5fa" : `1.5px solid ${isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.16)"}`,
@@ -1460,50 +1905,26 @@ const BacktestChart = ({
             <div style={{ width: 1, background: divider }} />
 
             {/* Style */}
-            <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: labelC, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Style</div>
-              {[
-                { val: "solid",  label: "——",   title: "Solid" },
-                { val: "dashed", label: "- - -", title: "Dashed" },
-              ].map(({ val, label: lbl, title }) => (
-                <button
-                  key={val}
-                  onClick={() => onPropertyChange?.(sel.id, { lineStyle: val })}
-                  title={title}
-                  style={{
-                    padding: "3px 8px", borderRadius: 4, cursor: "pointer", border: "none",
-                    background: curStyle === val ? activeB : "transparent",
-                    color: curStyle === val ? activeC : inactiveC,
-                    fontSize: val === "solid" ? 13 : 10,
-                    fontWeight: 700,
-                    letterSpacing: val === "dashed" ? 2 : 0.5,
-                    textAlign: "left",
-                  }}
-                >{lbl}</button>
+            <div style={sectStyle}>
+              <div style={headStyle}>Style</div>
+              {[{ val: "solid", label: "——" }, { val: "dashed", label: "- - -" }].map(({ val, label }) => (
+                <button key={val} onClick={() => onPropertyChange?.(sel.id, { lineStyle: val })}
+                  style={{ ...btnStyle(curStyle === val), fontSize: val === "solid" ? 13 : 10, letterSpacing: val === "dashed" ? 2 : 0.5 }}
+                >{label}</button>
               ))}
             </div>
 
             <div style={{ width: 1, background: divider }} />
 
             {/* Thickness */}
-            <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: labelC, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Thickness</div>
+            <div style={sectStyle}>
+              <div style={headStyle}>Thickness</div>
               {[1, 2, 3].map((w) => (
-                <button
-                  key={w}
-                  onClick={() => onPropertyChange?.(sel.id, { lineWidth: w })}
-                  title={`Weight ${w}`}
-                  style={{
-                    width: 52, padding: "3px 6px", borderRadius: 4, cursor: "pointer", border: "none",
-                    background: curW === w ? activeB : "transparent",
-                    display: "flex", alignItems: "center",
-                  }}
+                <button key={w} onClick={() => onPropertyChange?.(sel.id, { lineWidth: w })} title={`Weight ${w}`}
+                  style={{ width: 52, padding: "3px 6px", borderRadius: 4, cursor: "pointer", border: "none",
+                    background: curW === w ? activeB : "transparent", display: "flex", alignItems: "center" }}
                 >
-                  <div style={{
-                    width: 38, height: w * 1.5 + 0.5,
-                    background: curW === w ? activeC : inactiveC,
-                    borderRadius: 2,
-                  }} />
+                  <div style={{ width: 38, height: w * 1.5 + 0.5, background: curW === w ? activeC : inactiveC, borderRadius: 2 }} />
                 </button>
               ))}
             </div>

@@ -75,15 +75,15 @@ class ChartErrorBoundary extends Component {
 
 // How many candles to pre-load so the viewport is full on first render
 function defaultWindowCandles(candles) {
-  if (!candles || candles.length < 2) return 150;
+  if (!candles || candles.length < 2) return 200;
   const sec = candles[1].time - candles[0].time;
-  if (sec <=    60) return 300; // 1m  → ~5 h
-  if (sec <=   300) return 120; // 5m  → ~10 h
-  if (sec <=   900) return  80; // 15m → ~20 h
-  if (sec <=  1800) return  60; // 30m → ~30 h
-  if (sec <=  3600) return 120; // 1h  → ~5 d
-  if (sec <= 14400) return  84; // 4h  → ~2 wk
-  return 120;                   // 1d  → ~5 mo
+  if (sec <=    60) return 400; // 1m  → ~6.5 h
+  if (sec <=   300) return 160; // 5m  → ~13 h
+  if (sec <=   900) return 110; // 15m → ~27 h
+  if (sec <=  1800) return  80; // 30m → ~40 h
+  if (sec <=  3600) return 160; // 1h  → ~6.5 d
+  if (sec <= 14400) return 110; // 4h  → ~18 d
+  return 160;                   // 1d  → ~7.5 mo
 }
 
 // Market and instrument configurations
@@ -818,6 +818,7 @@ const Backtest = () => {
   const canUndo = drawingHist.idx > 0;
   const canRedo = drawingHist.idx < drawingHist.history.length - 1;
   const [selectedDrawingIds, setSelectedDrawingIds] = useState([]);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   // Bar replay mode — when active, clicking the chart seeks to that candle
   const [barReplayMode, setBarReplayMode] = useState(false);
@@ -3054,16 +3055,70 @@ const Backtest = () => {
                 {userDrawings.length > 0 && (
                   <>
                     <div className="w-6 h-px" style={{ background: theme.border }} />
-                    <button
-                      onClick={() => pushDrawings([])}
-                      title="Clear all drawings"
-                      className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                      style={{ color: theme.textMuted }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f23645")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = theme.textMuted)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div style={{ position: "relative" }}>
+                      <button
+                        onClick={() => setShowClearAllConfirm(true)}
+                        title="Clear all drawings"
+                        className="w-8 h-8 rounded flex items-center justify-center transition-colors"
+                        style={{ color: theme.textMuted }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "#f23645")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = theme.textMuted)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+
+                      {showClearAllConfirm && (
+                        <div
+                          style={{
+                            position: "fixed", inset: 0, zIndex: 10000,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            background: "rgba(0,0,0,0.45)",
+                          }}
+                          onMouseDown={() => setShowClearAllConfirm(false)}
+                        >
+                          <div
+                            style={{
+                              background: isDark ? "#1e222d" : "#ffffff",
+                              border: `1px solid ${isDark ? "#2a2e39" : "#e1ecf2"}`,
+                              borderRadius: 12,
+                              padding: "24px 28px",
+                              maxWidth: 340,
+                              boxShadow: "0 12px 40px rgba(0,0,0,0.3)",
+                              display: "flex", flexDirection: "column", gap: 16,
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <Trash2 style={{ width: 20, height: 20, color: "#f23645", flexShrink: 0 }} />
+                              <span style={{ fontWeight: 700, fontSize: 15, color: isDark ? "#d1d4dc" : "#131722" }}>
+                                Delete all drawings?
+                              </span>
+                            </div>
+                            <p style={{ fontSize: 13, color: isDark ? "#787b86" : "#6b7280", margin: 0, lineHeight: 1.5 }}>
+                              This will permanently remove all {userDrawings.length} drawing{userDrawings.length !== 1 ? "s" : ""} from the chart. This action cannot be undone.
+                            </p>
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                              <button
+                                onClick={() => setShowClearAllConfirm(false)}
+                                style={{
+                                  padding: "7px 16px", borderRadius: 6, border: `1px solid ${isDark ? "#2a2e39" : "#e1ecf2"}`,
+                                  background: "transparent", color: isDark ? "#787b86" : "#6b7280",
+                                  fontSize: 13, fontWeight: 600, cursor: "pointer",
+                                }}
+                              >Cancel</button>
+                              <button
+                                onClick={() => { pushDrawings([]); setSelectedDrawingIds([]); setShowClearAllConfirm(false); }}
+                                style={{
+                                  padding: "7px 16px", borderRadius: 6, border: "none",
+                                  background: "#f23645", color: "#fff",
+                                  fontSize: 13, fontWeight: 600, cursor: "pointer",
+                                }}
+                              >Delete all</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
@@ -3136,14 +3191,19 @@ const Backtest = () => {
                     onCrosshairMove={(t) => setSyncedCrosshairTime(t)}
                     barReplayActive={barReplayMode}
                     selectedDrawingIds={selectedDrawingIds}
-                    onSelectionChange={(id) => {
-                      if (id === null) {
-                        setSelectedDrawingIds([]);
-                        return;
+                    onSelectionChange={(id, shift) => {
+                      if (id === null) { setSelectedDrawingIds([]); return; }
+                      if (shift) {
+                        // Shift-click: toggle this drawing in/out of the multi-selection
+                        setSelectedDrawingIds((prev) =>
+                          prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+                        );
+                      } else {
+                        // Normal click: select only this drawing (opens settings panel)
+                        setSelectedDrawingIds((prev) =>
+                          prev.length === 1 && prev[0] === id ? [] : [id]
+                        );
                       }
-                      setSelectedDrawingIds((prev) =>
-                        prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
-                      );
                     }}
                     onRangeChange={syncDrag ? (r) => {
                       rangeSettersRef.current[2]?.(r);
