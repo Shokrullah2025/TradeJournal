@@ -2,6 +2,32 @@ import React, { createContext, useContext, useReducer, useEffect, useCallback } 
 import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../utils/logActivity";
+import { emitNotification } from "../utils/notifications";
+
+// Fire-and-forget security notification on sign-in. Fetches the user's channel
+// prefs so the email decision is honored, then emits. Never blocks login.
+const notifyNewLogin = (userId) => {
+  if (!userId) return;
+  supabase
+    .from("user_profiles")
+    .select("preferences")
+    .eq("user_id", userId)
+    .maybeSingle()
+    .then(({ data }) => {
+      emitNotification({
+        userId,
+        prefs: data?.preferences?.notifications,
+        record: {
+          category: "security",
+          event_type: "new_login",
+          title: "New sign-in to your account",
+          body: `A new sign-in was detected on ${new Date().toLocaleString()}.`,
+          severity: "info",
+          link_to: "/profile",
+        },
+      });
+    });
+};
 
 // ── State ──────────────────────────────────────────────────────────────────
 const initialState = {
@@ -47,38 +73,99 @@ const friendlyError = (error) => {
   return "Something went wrong. Please try again.";
 };
 
-// ── Fetch the full user profile from public.users + public.user_profiles ──
+// Default shape for a user with no profile data yet — also used as the
+// fallback when fetchUserProfile throws so the app never sees undefined fields.
+const emptyProfile = (authUser) => ({
+  id:                authUser.id,
+  email:             authUser.email,
+  emailVerified:     !!authUser.email_confirmed_at,
+  role:              "user",
+  status:            "active",
+  createdAt:         null,
+  firstName:         "",
+  lastName:          "",
+  displayName:       "",
+  avatarUrl:         "",
+  phone:             "",
+  birthday:          "",
+  bio:               "",
+  timezone:          "UTC",
+  currency:          "USD",
+  language:          "en",
+  address:           "",
+  city:              "",
+  state:             "",
+  zipCode:           "",
+  country:           "",
+  tradingExperience: "",
+  riskTolerance:     "",
+  preferredMarkets:  [],
+  investmentGoals:   "",
+});
+
+// ── Fetch the full user profile across users / profile / address / trading ──
+// All four reads run in parallel so the extra tables add ~no latency.
 const fetchUserProfile = async (authUser) => {
-  const { data: userRow, error: userError } = await supabase
-    .from("users")
-    .select("role, status")
-    .eq("id", authUser.id)
-    .maybeSingle();
+  const [userRes, profileRes, addressRes, tradingRes] = await Promise.all([
+    supabase
+      .from("users")
+      .select("role, status, created_at")
+      .eq("id", authUser.id)
+      .maybeSingle(),
+    supabase
+      .from("user_profiles")
+      .select("first_name, last_name, display_name, avatar_url, phone, birthday, bio, timezone, currency, language")
+      .eq("user_id", authUser.id)
+      .maybeSingle(),
+    supabase
+      .from("user_addresses")
+      .select("street_address, city, state_province, postal_code, country")
+      .eq("user_id", authUser.id)
+      .order("is_primary", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("trading_profiles")
+      .select("trading_experience, risk_tolerance, preferred_markets, investment_goals")
+      .eq("user_id", authUser.id)
+      .maybeSingle(),
+  ]);
 
-  const { data: profileRow, error: profileError } = await supabase
-    .from("user_profiles")
-    .select("first_name, last_name, display_name, avatar_url, timezone, currency, language")
-    .eq("user_id", authUser.id)
-    .maybeSingle();
+  if (userRes.error)    console.error("[Auth] users table error:", userRes.error.message);
+  if (profileRes.error) console.error("[Auth] user_profiles table error:", profileRes.error.message);
+  if (addressRes.error) console.error("[Auth] user_addresses table error:", addressRes.error.message);
+  if (tradingRes.error) console.error("[Auth] trading_profiles table error:", tradingRes.error.message);
 
-  if (userError) console.error("[Auth] users table error:", userError.message);
-  if (profileError) console.error("[Auth] user_profiles table error:", profileError.message);
+  const userRow    = userRes.data;
+  const profileRow = profileRes.data;
+  const addressRow = addressRes.data;
+  const tradingRow = tradingRes.data;
 
-  const profile = {
-    id:            authUser.id,
-    email:         authUser.email,
-    emailVerified: !!authUser.email_confirmed_at,
-    role:          userRow?.role    ?? "user",
-    status:        userRow?.status  ?? "active",
-    firstName:     profileRow?.first_name   ?? "",
-    lastName:      profileRow?.last_name    ?? "",
-    displayName:   profileRow?.display_name ?? "",
-    avatarUrl:     profileRow?.avatar_url   ?? "",
-    timezone:      profileRow?.timezone     ?? "UTC",
-    currency:      profileRow?.currency     ?? "USD",
-    language:      profileRow?.language     ?? "en",
+  return {
+    ...emptyProfile(authUser),
+    role:              userRow?.role    ?? "user",
+    status:            userRow?.status  ?? "active",
+    createdAt:         userRow?.created_at ?? null,
+    firstName:         profileRow?.first_name   ?? "",
+    lastName:          profileRow?.last_name    ?? "",
+    displayName:       profileRow?.display_name ?? "",
+    avatarUrl:         profileRow?.avatar_url   ?? "",
+    phone:             profileRow?.phone        ?? "",
+    birthday:          profileRow?.birthday     ?? "",
+    bio:               profileRow?.bio          ?? "",
+    timezone:          profileRow?.timezone     ?? "UTC",
+    currency:          profileRow?.currency     ?? "USD",
+    language:          profileRow?.language     ?? "en",
+    address:           addressRow?.street_address ?? "",
+    city:              addressRow?.city           ?? "",
+    state:             addressRow?.state_province ?? "",
+    zipCode:           addressRow?.postal_code    ?? "",
+    country:           addressRow?.country        ?? "",
+    tradingExperience: tradingRow?.trading_experience ?? "",
+    riskTolerance:     tradingRow?.risk_tolerance     ?? "",
+    preferredMarkets:  tradingRow?.preferred_markets  ?? [],
+    investmentGoals:   tradingRow?.investment_goals   ?? "",
   };
-  return profile;
 };
 
 // ── Context ────────────────────────────────────────────────────────────────
@@ -96,23 +183,7 @@ export const AuthProvider = ({ children }) => {
         dispatch({ type: ActionTypes.SET_USER, payload: profile });
       } catch (err) {
         console.error("[Auth] fetchUserProfile threw:", err);
-        dispatch({
-          type: ActionTypes.SET_USER,
-          payload: {
-            id:            session.user.id,
-            email:         session.user.email,
-            emailVerified: !!session.user.email_confirmed_at,
-            role:          'user',
-            status:        'active',
-            firstName:     '',
-            lastName:      '',
-            displayName:   '',
-            avatarUrl:     '',
-            timezone:      'UTC',
-            currency:      'USD',
-            language:      'en',
-          },
-        });
+        dispatch({ type: ActionTypes.SET_USER, payload: emptyProfile(session.user) });
       }
     } else {
       dispatch({ type: ActionTypes.LOGOUT });
@@ -149,7 +220,10 @@ export const AuthProvider = ({ children }) => {
       toast.error(msg);
       throw new Error(msg);
     }
-    if (data.user) logActivity(data.user.id, "login", {});
+    if (data.user) {
+      logActivity(data.user.id, "login", {});
+      notifyNewLogin(data.user.id);
+    }
     // onAuthStateChange fires and sets the user — no manual dispatch needed
     toast.success("Welcome back!");
   }, []);
@@ -200,48 +274,117 @@ export const AuthProvider = ({ children }) => {
 
   // ── Forgot password ──────────────────────────────────────────────────────
   const sendPasswordReset = useCallback(async (email) => {
+    // Supabase handles email validation internally. For security reasons (prevent email enumeration),
+    // it returns success even if the email doesn't exist. We follow the same pattern.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
+
     if (error) {
       const msg = friendlyError(error);
       toast.error(msg);
       throw new Error(msg);
     }
-    toast.success("Password reset email sent. Check your inbox.");
+
+    // Show generic success message regardless of whether email exists (security best practice)
+    toast.success("If this email is registered, you will receive a password reset link. Check your inbox and spam folder.");
   }, []);
 
   // ── Update profile ───────────────────────────────────────────────────────
-  const updateUserProfile = useCallback(async (profileData) => {
+  // Accepts a partial patch. Only the groups whose keys are present are
+  // written, so an avatar-only update never clears address/trading data.
+  const updateUserProfile = useCallback(async (profileData, { silent = false } = {}) => {
     if (!state.user) throw new Error("Not authenticated.");
+    const userId = state.user.id;
+    const u = state.user;
 
-    const { firstName, lastName, displayName, timezone, currency, language, avatarUrl } = profileData;
-
-    const { error } = await supabase.from("user_profiles").upsert({
-      user_id:      state.user.id,
-      first_name:   firstName   ?? state.user.firstName,
-      last_name:    lastName    ?? state.user.lastName,
-      display_name: displayName ?? state.user.displayName,
-      timezone:     timezone    ?? state.user.timezone,
-      currency:     currency    ?? state.user.currency,
-      language:     language    ?? state.user.language,
-      avatar_url:   avatarUrl   ?? state.user.avatarUrl,
+    // 1) Core profile (always upserted; unspecified fields keep current value)
+    const { error: profileError } = await supabase.from("user_profiles").upsert({
+      user_id:      userId,
+      first_name:   profileData.firstName   ?? u.firstName,
+      last_name:    profileData.lastName    ?? u.lastName,
+      display_name: profileData.displayName ?? u.displayName,
+      phone:        (profileData.phone ?? u.phone) || null,
+      birthday:     (profileData.birthday ?? u.birthday) || null,
+      bio:          (profileData.bio ?? u.bio) || null,
+      timezone:     profileData.timezone    ?? u.timezone,
+      currency:     profileData.currency    ?? u.currency,
+      language:     profileData.language    ?? u.language,
+      avatar_url:   profileData.avatarUrl   ?? u.avatarUrl,
     }, { onConflict: "user_id" });
 
-    if (error) {
-      const msg = friendlyError(error);
+    if (profileError) {
+      const msg = friendlyError(profileError);
       toast.error(msg);
       throw new Error(msg);
     }
 
-    // Refresh user in state
+    // 2) Address — separate table, no unique(user_id), so read-then-write the
+    //    user's primary address. Only runs when an address field is provided.
+    const addressKeys = ["address", "city", "state", "zipCode", "country"];
+    if (addressKeys.some((k) => k in profileData)) {
+      const addrPayload = {
+        street_address: (profileData.address ?? u.address) || null,
+        city:           (profileData.city    ?? u.city)    || null,
+        state_province: (profileData.state   ?? u.state)   || null,
+        postal_code:    (profileData.zipCode ?? u.zipCode) || null,
+        country:        (profileData.country ?? u.country) || null,
+      };
+
+      const { data: existingAddr } = await supabase
+        .from("user_addresses")
+        .select("id")
+        .eq("user_id", userId)
+        .order("is_primary", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { error: addrError } = existingAddr?.id
+        ? await supabase.from("user_addresses").update(addrPayload).eq("id", existingAddr.id)
+        : await supabase.from("user_addresses").insert({
+            user_id: userId, address_type: "home", is_primary: true, ...addrPayload,
+          });
+
+      if (addrError) {
+        const msg = friendlyError(addrError);
+        toast.error(msg);
+        throw new Error(msg);
+      }
+    }
+
+    // 3) Trading profile — has unique(user_id), so a clean upsert. Enum columns
+    //    are only set when non-empty so the DB defaults/CHECK stay valid.
+    const tradingKeys = ["tradingExperience", "riskTolerance", "preferredMarkets", "investmentGoals"];
+    if (tradingKeys.some((k) => k in profileData)) {
+      const tradingPayload = {
+        user_id:          userId,
+        preferred_markets: profileData.preferredMarkets ?? u.preferredMarkets ?? [],
+        investment_goals: (profileData.investmentGoals ?? u.investmentGoals) || null,
+      };
+      const experience = profileData.tradingExperience ?? u.tradingExperience;
+      const risk        = profileData.riskTolerance ?? u.riskTolerance;
+      if (experience) tradingPayload.trading_experience = experience;
+      if (risk)       tradingPayload.risk_tolerance = risk;
+
+      const { error: tradingError } = await supabase
+        .from("trading_profiles")
+        .upsert(tradingPayload, { onConflict: "user_id" });
+
+      if (tradingError) {
+        const msg = friendlyError(tradingError);
+        toast.error(msg);
+        throw new Error(msg);
+      }
+    }
+
+    // Refresh user in state from the source of truth
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (authUser) {
       const updated = await fetchUserProfile(authUser);
       dispatch({ type: ActionTypes.SET_USER, payload: updated });
     }
 
-    toast.success("Profile updated.");
+    if (!silent) toast.success("Profile updated.");
   }, [state.user]);
 
   // ── Admin: update another user's role/status ─────────────────────────────

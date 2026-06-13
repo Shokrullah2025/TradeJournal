@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
+import { useNotifications } from "./NotificationContext";
 
 const BrokerContext = createContext();
 
@@ -481,6 +482,7 @@ class BrokerService {
 }
 
 export const BrokerProvider = ({ children }) => {
+  const { createNotification } = useNotifications();
   const [state, setState] = useState(initialState);
   const [brokerService] = useState(() => new BrokerService());
 
@@ -618,6 +620,38 @@ export const BrokerProvider = ({ children }) => {
     } catch (error) {
       setState((prev) => ({ ...prev, syncStatus: "error" }));
       toast.error(`Sync failed: ${error.message}`);
+
+      // A 401/expired session means the broker connection must be re-authorized;
+      // anything else is a transient sync failure.
+      const msg = (error.message || "").toLowerCase();
+      const needsReconnect =
+        msg.includes("reconnect") ||
+        msg.includes("expired") ||
+        msg.includes("401") ||
+        msg.includes("unauthorized");
+      const brokerName = BROKERS[state.selectedBroker]?.name || "your broker";
+
+      createNotification(
+        needsReconnect
+          ? {
+              category: "broker_sync",
+              event_type: "broker_reconnect_required",
+              title: `Reconnect ${brokerName}`,
+              body: `Your ${brokerName} session expired. Reconnect to keep syncing trades.`,
+              severity: "warning",
+              link_to: "/brokers",
+              metadata: { broker: state.selectedBroker },
+            }
+          : {
+              category: "broker_sync",
+              event_type: "sync_failed",
+              title: `${brokerName} sync failed`,
+              body: error.message,
+              severity: "error",
+              link_to: "/brokers",
+              metadata: { broker: state.selectedBroker },
+            }
+      );
     }
   };
 
