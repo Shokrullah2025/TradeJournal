@@ -71,6 +71,44 @@ export const profileUpdateSchema = z.object({
     .email("Please enter a valid email address"),
 });
 
+// Full profile form schema (Profile page). Optional fields accept empty strings.
+export const profileFormSchema = z.object({
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "First name is required")
+    .max(100, "First name must be 100 characters or fewer"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Last name is required")
+    .max(100, "Last name must be 100 characters or fewer"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+  phone: z
+    .string()
+    .trim()
+    .max(20, "Phone number must be 20 characters or fewer")
+    .optional()
+    .or(z.literal("")),
+  birthday: z.string().optional().or(z.literal("")),
+  bio: z
+    .string()
+    .trim()
+    .max(1000, "Bio must be 1,000 characters or fewer")
+    .optional()
+    .or(z.literal("")),
+  investmentGoals: z
+    .string()
+    .trim()
+    .max(1000, "Investment goals must be 1,000 characters or fewer")
+    .optional()
+    .or(z.literal("")),
+});
+
 // Admin user management schema
 export const adminUserSchema = z.object({
   name: z
@@ -147,6 +185,7 @@ export default {
   loginSchema,
   registerSchema,
   profileUpdateSchema,
+  profileFormSchema,
   adminUserSchema,
   billingSchema,
   changePasswordSchema,
