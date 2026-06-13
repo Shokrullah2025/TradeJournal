@@ -1,18 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { X, BarChart2 } from "lucide-react";
+import { computeEdgeStats } from "../../utils/edgeStats";
 
-function computeMaxDrawdown(trades, initialBalance) {
-  const balances = [initialBalance, ...trades.filter((t) => t.balanceAfter != null).map((t) => t.balanceAfter)];
-  let peak = balances[0], maxDD = 0;
-  for (const b of balances) {
-    if (b > peak) peak = b;
-    const dd = peak > 0 ? (peak - b) / peak : 0;
-    if (dd > maxDD) maxDD = dd;
-  }
-  return maxDD;
-}
-
-function EquityCurve({ trades, initialBalance, isDark }) {
+export function EquityCurve({ trades, initialBalance, isDark }) {
   const { pts, W, H, color } = useMemo(() => {
     const W = 100, H = 44;
     const data = [
@@ -87,45 +77,10 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
     textMuted: "#787b86",
   };
 
-  const stats = useMemo(() => {
-    const wins   = trades.filter((t) => t.pnl > 0);
-    const losses = trades.filter((t) => t.pnl <= 0);
-    const total  = trades.length;
-    const winRate    = total ? wins.length / total : 0;
-    const grossWin   = wins.reduce((s, t) => s + t.pnl, 0);
-    const grossLoss  = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
-    const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0;
-    const avgWin   = wins.length   ? grossWin  / wins.length   : 0;
-    const avgLoss  = losses.length ? grossLoss / losses.length : 0;
-    const expectancy = winRate * avgWin - (1 - winRate) * avgLoss;
-    const totalR  = trades.reduce((s, t) => s + (t.rAchieved ?? 0), 0);
-    const maxDD   = computeMaxDrawdown(trades, initialBalance);
-
-    let streak = 0, streakType = null;
-    for (let i = trades.length - 1; i >= 0; i--) {
-      const isWin = trades[i].pnl > 0;
-      if (streakType === null) { streakType = isWin ? "W" : "L"; streak = 1; }
-      else if ((streakType === "W") === isWin) { streak++; }
-      else break;
-    }
-
-    const best  = trades.reduce((m, t) => (t.pnl > m ? t.pnl : m), -Infinity);
-    const worst = trades.reduce((m, t) => (t.pnl < m ? t.pnl : m), Infinity);
-
-    const byExit = { TP: 0, SL: 0, Manual: 0 };
-    trades.forEach((t) => { const k = t.exitReason || "Manual"; byExit[k] = (byExit[k] || 0) + 1; });
-
-    const rWins   = wins.filter((t) => t.rAchieved != null).map((t) => t.rAchieved);
-    const rLosses = losses.filter((t) => t.rAchieved != null).map((t) => t.rAchieved);
-    const avgRWin  = rWins.length   ? rWins.reduce((a, b) => a + b, 0)   / rWins.length   : null;
-    const avgRLoss = rLosses.length ? rLosses.reduce((a, b) => a + b, 0) / rLosses.length : null;
-
-    return {
-      total, wins: wins.length, losses: losses.length, winRate, grossWin, grossLoss,
-      profitFactor, avgWin, avgLoss, expectancy, totalR, maxDD, streak, streakType,
-      best, worst, byExit, avgRWin, avgRLoss,
-    };
-  }, [trades, initialBalance]);
+  const stats = useMemo(
+    () => computeEdgeStats(trades, initialBalance),
+    [trades, initialBalance]
+  );
 
   const bySetup = useMemo(() => {
     const map = {};
