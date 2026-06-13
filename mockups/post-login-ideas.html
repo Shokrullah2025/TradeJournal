@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Post-Login Feature Mockups</title>
+<style>
+  body{font-family:Segoe UI,Arial,sans-serif;background:#f3f4f6;margin:0;padding:24px;color:#111827}
+  h2{margin:40px 0 4px;font-size:18px}
+  .hint{color:#6b7280;font-size:13px;margin:0 0 12px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;max-width:860px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .green{color:#16a34a}.red{color:#dc2626}.muted{color:#6b7280}
+  .pill{display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+  .pill.warn{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+  .pill.info{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+  .btn{background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
+  .btn.ghost{background:#fff;color:#374151;border:1px solid #d1d5db}
+  .stat{flex:1;min-width:150px;background:#f9fafb;border:1px solid #f3f4f6;border-radius:10px;padding:12px}
+  .stat .v{font-size:20px;font-weight:700}
+  .stat .l{font-size:12px;color:#6b7280}
+  .bar{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:6px}
+  .bar i{display:block;height:100%;border-radius:999px}
+  .insight{display:flex;gap:10px;align-items:flex-start;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:10px}
+  .insight .ic{font-size:18px}
+  .insight b{font-size:13px}
+  .insight p{margin:2px 0 0;font-size:12.5px;color:#4b5563}
+  .badge{width:74px;text-align:center}
+  .badge .em{font-size:30px;filter:grayscale(0)}
+  .badge.locked .em{filter:grayscale(1);opacity:.35}
+  .badge span{display:block;font-size:11px;color:#6b7280;margin-top:4px}
+  input[type=number]{width:90px;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px}
+  label{font-size:12px;color:#6b7280;display:block;margin-bottom:3px}
+</style>
+</head>
+<body>
+
+<h1 style="font-size:22px;margin:0">Post-Login Feature Mockups</h1>
+<p class="hint">Four ideas, each shown as it would appear on the dashboard after login.</p>
+
+<!-- ============ 1. PRE-MARKET BRIEFING ============ -->
+<h2>1. Pre-Market Briefing</h2>
+<p class="hint">Dismissible card at top of dashboard, first visit of the day. Built from your existing trade history (same data as the When You Win heatmap).</p>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:16px;font-weight:700">Good morning, Shoko 👋 — Wednesday, Jun 11</div>
+      <div class="muted" style="font-size:13px">Market opens in 1h 24m</div>
+    </div>
+    <button class="btn ghost">Dismiss</button>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <div class="stat">
+      <div class="l">Your Wednesdays</div>
+      <div class="v green">+$540 avg</div>
+      <div class="l">71% win rate — your <b>best</b> day</div>
+    </div>
+    <div class="stat">
+      <div class="l">Your golden hour</div>
+      <div class="v">9–10 AM</div>
+      <div class="l">82% of Wednesday profit comes here</div>
+    </div>
+    <div class="stat">
+      <div class="l">Yesterday</div>
+      <div class="v red">−$120</div>
+      <div class="l">3 trades · 1 win · NQ</div>
+    </div>
+    <div class="stat">
+      <div class="l">Open positions</div>
+      <div class="v">1</div>
+      <div class="l">ES long · unrealized <span class="green">+$210</span></div>
+    </div>
+  </div>
+  <div style="margin-top:12px;font-size:13px" class="muted">⚠️ Heads-up: your last 5 trades after 2 PM are all losses. Consider stopping early today.</div>
+</div>
+
+<!-- ============ 2. DISCIPLINE GUARD ============ -->
+<h2>2. Discipline Guard</h2>
+<p class="hint">Inside the briefing you commit to a plan in one tap. A small widget then tracks it live all day and warns before you break it.</p>
+<div class="card" style="margin-bottom:14px">
+  <b style="font-size:14px">Set today's plan</b>
+  <div class="row" style="margin-top:10px;align-items:flex-end">
+    <div><label>Max loss ($)</label><input type="number" value="300"></div>
+    <div><label>Max trades</label><input type="number" value="3"></div>
+    <div><label>Focus instrument</label><input type="text" value="NQ" style="width:90px;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"></div>
+    <button class="btn">Commit to plan</button>
+  </div>
+</div>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <b style="font-size:14px">Today's discipline</b>
+    <span class="pill warn">⚠ Near loss limit</span>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <div class="stat">
+      <div class="l">Daily loss limit</div>
+      <div class="v red">−$280 <span class="muted" style="font-size:13px">/ −$300</span></div>
+      <div class="bar"><i style="width:93%;background:#dc2626"></i></div>
+    </div>
+    <div class="stat">
+      <div class="l">Trades used</div>
+      <div class="v">2 <span class="muted" style="font-size:13px">/ 3</span></div>
+      <div class="bar"><i style="width:66%;background:#f59e0b"></i></div>
+    </div>
+    <div class="stat">
+      <div class="l">Plan adherence (30d)</div>
+      <div class="v green">86%</div>
+      <div class="l">On plan days: <span class="green">+$2.1K</span> · Off plan: <span class="red">−$890</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. EDGE DECAY + REAL INSIGHTS ============ -->
+<h2>3. Edge Decay & Real Insights</h2>
+<p class="hint">Replaces the current hardcoded "Trading Insights" cards with insights generated from your actual trades.</p>
+<div class="card">
+  <b style="font-size:14px">Trading Insights <span class="pill info">auto-generated</span></b>
+  <div class="insight">
+    <div class="ic">📉</div>
+    <div><b>Edge decay: "Breakout" setup is fading</b>
+      <p>Win rate dropped from 68% (baseline) to 41% over your last 15 breakout trades. Consider reviewing or pausing this setup.</p></div>
+  </div>
+  <div class="insight">
+    <div class="ic">🔁</div>
+    <div><b>Revenge trading detected</b>
+      <p>4 of your last 6 losses were entered within 10 minutes of a previous loss — those trades average <span class="red">−$185</span> vs <span class="green">+$95</span> normally.</p></div>
+  </div>
+  <div class="insight">
+    <div class="ic">⏰</div>
+    <div><b>Your edge lives in the first hour</b>
+      <p>9–10 AM trades: 74% win rate. After 1 PM: 38%. Cutting afternoon trades would have added <span class="green">+$1,430</span> this quarter.</p></div>
+  </div>
+</div>
+
+<!-- ============ 4. STREAKS & MILESTONES ============ -->
+<h2>4. Streaks & Milestones</h2>
+<p class="hint">Small strip near the header — rewards consistent journaling, not just profit.</p>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <div>
+      <span style="font-size:26px">🔥</span>
+      <b style="font-size:16px"> 12-day journaling streak</b>
+      <div class="muted" style="font-size:12.5px">Log today's trades to keep it alive · best: 21 days</div>
+    </div>
+    <div><span class="pill">🟢 3 green days in a row</span></div>
+  </div>
+  <div class="row" style="margin-top:16px">
+    <div class="badge"><div class="em">📒</div><span>First 50 trades</span></div>
+    <div class="badge"><div class="em">🎯</div><span>60% WR month</span></div>
+    <div class="badge"><div class="em">🛡️</div><span>10 days on plan</span></div>
+    <div class="badge locked"><div class="em">🏆</div><span>100 green days</span></div>
+    <div class="badge locked"><div class="em">💎</div><span>$10K total P&L</span></div>
+  </div>
+</div>
+
+</body>
+</html>

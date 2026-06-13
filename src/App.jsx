@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
@@ -9,21 +9,26 @@ import Backtest from "./pages/Backtest";
 import Analytics from "./pages/Analytics";
 import RiskCalculator from "./pages/RiskCalculator";
 import Settings from "./pages/Settings_new";
-import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import MultiStepRegistration from "./pages/MultiStepRegistration";
+import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./components/auth/EmailVerification";
 import Admin from "./pages/Admin";
 import Billing from "./pages/Billing";
 import BrokerSelection from "./pages/BrokerSelection";
 import TradeEntry from "./pages/TradeEntry";
 import OAuthCallback from "./pages/OAuthCallback";
+
+// Lazy — keeps the bundled country/state dataset out of the initial load.
+const Profile = React.lazy(() => import("./pages/Profile"));
 import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { BillingProvider } from "./context/BillingContext";
 import { BrokerProvider } from "./context/BrokerContext";
 import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -38,10 +43,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BillingProvider>
-          <TradeProvider>
-            <BrokerProvider>
-              <BacktestProvider>
+        <NotificationProvider>
+          <BillingProvider>
+            <TradeProvider>
+              <BrokerProvider>
+                <BacktestProvider>
                 <Router>
                   <Routes>
                     {/* Public routes */}
@@ -62,6 +68,10 @@ function App() {
                       }
                     />
                     <Route
+                      path="/auth/reset-password"
+                      element={<ResetPassword />}
+                    />
+                    <Route
                       path="/verify-email"
                       element={<EmailVerification />}
                     />
@@ -76,6 +86,7 @@ function App() {
                       path="/*"
                       element={
                         <ProtectedRoute>
+                          <ErrorBoundary>
                           <div className="flex h-screen bg-gray-50">
                             <Sidebar
                               isOpen={sidebarOpen}
@@ -121,7 +132,17 @@ function App() {
                                   />
                                   <Route
                                     path="/profile"
-                                    element={<Profile />}
+                                    element={
+                                      <Suspense
+                                        fallback={
+                                          <div className="flex items-center justify-center h-64">
+                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                                          </div>
+                                        }
+                                      >
+                                        <Profile />
+                                      </Suspense>
+                                    }
                                   />
                                   <Route
                                     path="/admin"
@@ -139,6 +160,7 @@ function App() {
                               </main>
                             </div>
                           </div>
+                          </ErrorBoundary>
                         </ProtectedRoute>
                       }
                     />
@@ -159,10 +181,11 @@ function App() {
                     }}
                   />
                 </Router>
-              </BacktestProvider>
-            </BrokerProvider>
-          </TradeProvider>
-        </BillingProvider>
+                </BacktestProvider>
+              </BrokerProvider>
+            </TradeProvider>
+          </BillingProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

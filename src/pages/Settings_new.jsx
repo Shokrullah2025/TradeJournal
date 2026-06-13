@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useTemplates } from "../hooks/useTemplates";
 import { RR_MODES, getDefaultModeForInstrument, getUserRRList, saveUserRRList } from "../utils/rrModes";
 import {
@@ -29,21 +29,78 @@ import {
   Search,
   Zap,
   Paperclip,
+  Bell,
+  UserCircle,
+  CreditCard,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
 import { exportToExcel, importFromFile } from "../utils/exportUtils";
+import { useNotificationPrefs } from "../hooks/useNotificationPrefs";
 import toast from "react-hot-toast";
+
+// Reuse the full Profile and Billing pages as Settings tabs — lazy so the
+// Profile page's bundled country/state dataset stays out of the Settings chunk.
+const Profile = React.lazy(() => import("./Profile"));
+const Billing = React.lazy(() => import("./Billing"));
+
+// Spinner fallback shown while a lazy tab component loads.
+const TabSpinner = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+  </div>
+);
+
+// Category metadata for the Notifications tab toggle matrix.
+const NOTIFICATION_CATEGORY_META = [
+  {
+    id: "broker_sync",
+    label: "Broker & Sync",
+    description: "Trade sync failures and broker reconnect alerts",
+  },
+  {
+    id: "billing",
+    label: "Billing",
+    description: "Payment failures, trial ending, and subscription changes",
+  },
+  {
+    id: "performance",
+    label: "Performance",
+    description: "Milestones like best days and win streaks",
+  },
+  {
+    id: "security",
+    label: "Security",
+    description: "New sign-ins and password changes",
+  },
+];
 
 const Settings = () => {
   const { trades } = useTrades();
+  const {
+    prefs: notificationPrefs,
+    loading: notificationPrefsLoading,
+    setChannel: setNotificationChannel,
+  } = useNotificationPrefs();
   const [activeTab, setActiveTab] = useState("general");
 
   const tabs = [
+    {
+      id: "profile",
+      name: "Profile",
+      icon: UserCircle,
+      description: "Your personal info and trading profile",
+    },
     {
       id: "general",
       name: "General",
       icon: SettingsIcon,
       description: "Basic preferences and display settings",
+    },
+    {
+      id: "notifications",
+      name: "Notifications",
+      icon: Bell,
+      description: "Choose which alerts you receive and how",
     },
     {
       id: "templates",
@@ -56,6 +113,12 @@ const Settings = () => {
       name: "Data Management",
       icon: Database,
       description: "Import, export, and backup your data",
+    },
+    {
+      id: "billing",
+      name: "Billing",
+      icon: CreditCard,
+      description: "Manage your plan, payment, and invoices",
     },
   ];
 
@@ -1007,6 +1070,13 @@ const Settings = () => {
       <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
         {/*tab content area*/}
         <div className="mt-6">
+          {/* Profile Tab — reuses the full Profile page */}
+          {activeTab === "profile" && (
+            <Suspense fallback={<TabSpinner />}>
+              <Profile />
+            </Suspense>
+          )}
+
           {/* General Tab */}
           {activeTab === "general" && (
             <div className="max-w-3xl space-y-6">
@@ -1111,29 +1181,6 @@ const Settings = () => {
                 <div className="mt-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="label mb-0">Enable Notifications</label>
-                      <p className="text-sm text-gray-500">
-                        Get alerts for important trade events
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={preferences.notifications}
-                        onChange={(e) =>
-                          setPreferences({
-                            ...preferences,
-                            notifications: e.target.checked,
-                          })
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
                       <label className="label mb-0">Auto Backup</label>
                       <p className="text-sm text-gray-500">
                         Automatically backup your data weekly
@@ -1209,6 +1256,104 @@ const Settings = () => {
                     <div className="text-sm text-gray-600">Strategies Used</div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Tab */}
+          {activeTab === "notifications" && (
+            <div className="max-w-3xl" data-testid="notifications-settings-tab">
+              <div className="card">
+                <div className="flex items-center space-x-3 mb-2">
+                  <Bell className="w-5 h-5 text-primary-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Notification Preferences
+                  </h2>
+                </div>
+                <p className="text-sm text-gray-600 mb-6">
+                  Choose which alerts appear in your notification bell and which
+                  are also sent to your email. Email requires the in-app channel
+                  to be on.
+                </p>
+
+                {notificationPrefsLoading ? (
+                  <div
+                    data-testid="notifications-settings-loading"
+                    className="flex items-center justify-center py-10"
+                  >
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    <div className="hidden sm:flex items-center justify-end gap-8 pb-2 pr-1 text-xs font-medium text-gray-500">
+                      <span className="w-12 text-center">In-App</span>
+                      <span className="w-12 text-center">Email</span>
+                    </div>
+                    {NOTIFICATION_CATEGORY_META.map((cat) => {
+                      const channel = notificationPrefs[cat.id];
+                      return (
+                        <div
+                          key={cat.id}
+                          className="flex items-center justify-between py-4"
+                          data-testid={`notifications-settings-row-${cat.id}`}
+                        >
+                          <div className="pr-4">
+                            <label className="label mb-0">{cat.label}</label>
+                            <p className="text-sm text-gray-500">
+                              {cat.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-8 shrink-0">
+                            <label className="relative inline-flex items-center cursor-pointer w-12 justify-center">
+                              <input
+                                type="checkbox"
+                                data-testid={`notifications-settings-${cat.id}-inapp-toggle`}
+                                checked={channel.inApp}
+                                onChange={(e) =>
+                                  setNotificationChannel(
+                                    cat.id,
+                                    "inApp",
+                                    e.target.checked
+                                  )
+                                }
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                            <label
+                              className={`relative inline-flex items-center w-12 justify-center ${
+                                channel.inApp
+                                  ? "cursor-pointer"
+                                  : "cursor-not-allowed"
+                              }`}
+                              title={
+                                channel.inApp
+                                  ? "Also send this to email"
+                                  : "Enable in-app first to receive email"
+                              }
+                            >
+                              <input
+                                type="checkbox"
+                                data-testid={`notifications-settings-${cat.id}-email-toggle`}
+                                checked={channel.inApp && channel.email}
+                                disabled={!channel.inApp}
+                                onChange={(e) =>
+                                  setNotificationChannel(
+                                    cat.id,
+                                    "email",
+                                    e.target.checked
+                                  )
+                                }
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 peer-disabled:opacity-40"></div>
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1424,6 +1569,13 @@ const Settings = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Billing Tab — reuses the full Billing page */}
+          {activeTab === "billing" && (
+            <Suspense fallback={<TabSpinner />}>
+              <Billing />
+            </Suspense>
           )}
 
           {/* Strategy and Setup Tab */}

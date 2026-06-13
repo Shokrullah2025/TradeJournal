@@ -4,12 +4,15 @@ import React, {
   useReducer,
   useEffect,
   useState,
+  useRef,
   useCallback,
 } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
+import { useNotifications } from "./NotificationContext";
 import toast from "react-hot-toast";
 import { logActivity } from "../utils/logActivity";
+import { getMilestoneCandidates } from "../utils/milestones";
 
 const TradeContext = createContext();
 
@@ -190,8 +193,11 @@ const tradeReducer = (state, action) => {
 
 export const TradeProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
+  const { createNotification } = useNotifications();
   const [state, dispatch] = useReducer(tradeReducer, initialState);
   const [localMigrationDone, setLocalMigrationDone] = useState(false);
+  // In-session guard so milestone checks don't re-query the DB on every recompute.
+  const firedMilestonesRef = useRef(new Set());
 
   // Ensure user has a default trading account, return its id
   const ensureDefaultAccount = useCallback(async (userId) => {
@@ -514,6 +520,48 @@ export const TradeProvider = ({ children }) => {
       .eq("user_id", user.id);
     if (error) throw new Error(error.message);
   }, [user]);
+
+  // ── Performance milestones ──────────────────────────────────────────────
+  // When stats cross a tier, emit a one-time celebratory notification. Deduped
+  // per session via a ref and across sessions/devices via an existence check
+  // on the notifications table (metadata.key), so a tier never re-notifies.
+  useEffect(() => {
+    if (!user?.id || state.loading) return;
+    const candidates = getMilestoneCandidates(state.stats);
+    if (candidates.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      for (const candidate of candidates) {
+        if (firedMilestonesRef.current.has(candidate.key)) continue;
+        firedMilestonesRef.current.add(candidate.key);
+
+        const { data: existing } = await supabase
+          .from("notifications")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("event_type", candidate.event_type)
+          .eq("metadata->>key", candidate.key)
+          .limit(1);
+        if (cancelled) return;
+        if (existing && existing.length > 0) continue;
+
+        await createNotification({
+          category: "performance",
+          event_type: candidate.event_type,
+          title: candidate.title,
+          body: candidate.body,
+          severity: "success",
+          link_to: "/analytics",
+          metadata: { key: candidate.key },
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.stats, state.loading, user?.id, createNotification]);
 
   const value = {
     trades:          state.trades,

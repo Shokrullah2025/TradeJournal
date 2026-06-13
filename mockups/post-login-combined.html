@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — All Features Combined</title>
+<style>
+  body{font-family:Segoe UI,Arial,sans-serif;background:#f3f4f6;margin:0;color:#111827}
+  .top{background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 24px;display:flex;justify-content:space-between;align-items:center}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 24px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:2fr 1fr}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .green{color:#16a34a}.red{color:#dc2626}.muted{color:#6b7280}
+  .pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+  .pill.ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+  .pill.warn{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+  .pill.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+  .btn{background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .btn.ghost{background:#fff;color:#374151;border:1px solid #d1d5db}
+  .stat{flex:1;min-width:140px;background:#f9fafb;border:1px solid #f3f4f6;border-radius:10px;padding:11px}
+  .stat .v{font-size:18px;font-weight:700}
+  .stat .l{font-size:11.5px;color:#6b7280}
+  .bar{height:7px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:6px}
+  .bar i{display:block;height:100%;border-radius:999px}
+  .insight{display:flex;gap:9px;align-items:flex-start;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-top:9px}
+  .insight b{font-size:12.5px}
+  .insight p{margin:2px 0 0;font-size:11.5px;color:#4b5563}
+  h3{margin:0 0 8px;font-size:14.5px}
+  .ph{background:#f9fafb;border:1px dashed #d1d5db;border-radius:10px;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-size:13px;height:120px}
+</style>
+</head>
+<body>
+
+<!-- ===== Header: streaks live here, always visible ===== -->
+<div class="top">
+  <b>Trade Journal Pro</b>
+  <div style="display:flex;gap:10px;align-items:center;font-size:13px">
+    <span title="Journaling streak">🔥 <b>12</b> day streak</span>
+    <span class="pill ok">🟢 3 green days</span>
+    <span class="muted">🔔</span>
+    <span class="muted">Shoko ▾</span>
+  </div>
+</div>
+
+<div class="wrap grid">
+
+  <!-- ===== 1. Pre-Market Briefing — first thing after login, dismissible ===== -->
+  <div class="card" style="border-left:4px solid #16a34a">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <b style="font-size:15.5px">Good morning, Shoko 👋 — Wednesday, Jun 11</b>
+        <div class="muted" style="font-size:12.5px">Market opens in 1h 24m · Pre-market briefing</div>
+      </div>
+      <button class="btn ghost">Dismiss</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="stat"><div class="l">Your Wednesdays</div><div class="v green">+$540 avg</div><div class="l">71% win rate — your <b>best</b> day</div></div>
+      <div class="stat"><div class="l">Your golden hour</div><div class="v">9–10 AM</div><div class="l">82% of Wed profit comes here</div></div>
+      <div class="stat"><div class="l">Yesterday</div><div class="v red">−$120</div><div class="l">3 trades · 1 win · NQ</div></div>
+      <div class="stat"><div class="l">Open positions</div><div class="v">1</div><div class="l">ES long · <span class="green">+$210</span> unrealized</div></div>
+    </div>
+    <!-- ===== 2a. Discipline Guard: commit inside the briefing ===== -->
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div style="font-size:13px">📋 <b>Today's plan:</b> <span class="muted">max loss</span> <b>$300</b> · <span class="muted">max trades</span> <b>3</b> · <span class="muted">focus</span> <b>NQ</b></div>
+      <button class="btn">Commit to plan</button>
+    </div>
+    <div style="margin-top:8px;font-size:12.5px" class="muted">⚠️ Your last 5 trades after 2 PM are all losses — consider stopping early today.</div>
+  </div>
+
+  <div class="grid g3">
+    <div class="grid">
+
+      <!-- ===== 2b. Discipline Guard: live tracking during the day ===== -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Today's Discipline</h3>
+          <span class="pill warn">⚠ Near loss limit</span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="stat"><div class="l">Loss limit</div><div class="v red">−$280 <span class="muted" style="font-size:12px">/ −$300</span></div><div class="bar"><i style="width:93%;background:#dc2626"></i></div></div>
+          <div class="stat"><div class="l">Trades used</div><div class="v">2 <span class="muted" style="font-size:12px">/ 3</span></div><div class="bar"><i style="width:66%;background:#f59e0b"></i></div></div>
+          <div class="stat"><div class="l">Adherence (30d)</div><div class="v green">86%</div><div class="l">On plan: <span class="green">+$2.1K</span> · Off: <span class="red">−$890</span></div></div>
+        </div>
+      </div>
+
+      <!-- existing charts stay below -->
+      <div class="row">
+        <div class="ph" style="flex:1">Daily P&L (existing)</div>
+        <div class="ph" style="flex:1">Cumulative P&L (existing)</div>
+        <div class="ph" style="flex:1">When You Win (existing)</div>
+      </div>
+      <div class="ph" style="height:90px">Recent Trades (existing)</div>
+    </div>
+
+    <!-- ===== 3. Sidebar: real generated insights replace hardcoded ones ===== -->
+    <div class="grid">
+      <div class="card">
+        <h3>Trading Insights <span class="pill info">auto</span></h3>
+        <div class="insight"><div>📉</div><div><b>Edge decay: "Breakout" fading</b><p>Win rate 68% → 41% over last 15 trades. Review or pause this setup.</p></div></div>
+        <div class="insight"><div>🔁</div><div><b>Revenge trading detected</b><p>4 of last 6 losses entered &lt;10 min after a loss — avg <span class="red">−$185</span> vs <span class="green">+$95</span> normally.</p></div></div>
+        <div class="insight"><div>⏰</div><div><b>Edge lives in the first hour</b><p>9–10 AM: 74% WR. After 1 PM: 38%. Skipping afternoons = <span class="green">+$1,430</span> this quarter.</p></div></div>
+      </div>
+
+      <!-- ===== 4. Milestones ===== -->
+      <div class="card">
+        <h3>Milestones</h3>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;text-align:center;font-size:11px;color:#6b7280">
+          <div><div style="font-size:26px">📒</div>First 50 trades</div>
+          <div><div style="font-size:26px">🎯</div>60% WR month</div>
+          <div><div style="font-size:26px">🛡️</div>10 days on plan</div>
+          <div style="opacity:.35;filter:grayscale(1)"><div style="font-size:26px">🏆</div>100 green days</div>
+          <div style="opacity:.35;filter:grayscale(1)"><div style="font-size:26px">💎</div>$10K P&L</div>
+        </div>
+        <div class="muted" style="font-size:11.5px;margin-top:10px">🔥 Log today's trades to keep your 12-day streak · best: 21</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

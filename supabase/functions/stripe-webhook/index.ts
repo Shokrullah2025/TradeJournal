@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14?target=deno&no-check";
+import { createServerNotification } from "../_shared/notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -170,6 +171,41 @@ Deno.serve(async (req: Request) => {
               .eq("stripe_subscription_id", inv.subscription as string)
               .eq("user_id", userId);
           }
+
+          await createServerNotification(supabase, {
+            userId,
+            category: "billing",
+            event_type: "payment_failed",
+            title: "Payment failed",
+            body:
+              "We couldn't process your latest payment. Update your payment method to keep your subscription active.",
+            severity: "error",
+            link_to: "/billing",
+            metadata: { invoice: inv.id },
+          });
+
+          break;
+        }
+
+        case "customer.subscription.trial_will_end": {
+          const sub = event.data.object as Stripe.Subscription;
+          const userId = await resolveUserId(supabase, sub.customer as string);
+          if (!userId) break;
+
+          const endsAt = sub.trial_end
+            ? new Date(sub.trial_end * 1000).toLocaleDateString()
+            : "soon";
+
+          await createServerNotification(supabase, {
+            userId,
+            category: "billing",
+            event_type: "trial_ending",
+            title: "Your free trial is ending soon",
+            body: `Your trial ends on ${endsAt}. Add a payment method to keep your plan without interruption.`,
+            severity: "warning",
+            link_to: "/billing",
+            metadata: { subscription: sub.id },
+          });
 
           break;
         }

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Menu, Bell, User, Search, UserCircle, CreditCard, LogOut } from "lucide-react";
+import { Menu, User, Search, UserCircle, CreditCard, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useTrades } from "../../context/TradeContext";
 import { useAuth } from "../../context/AuthContext";
 import ThemeToggle from "../common/ThemeToggle";
+import NotificationBell from "./NotificationBell";
 
 const Header = ({ onMenuClick }) => {
   const { stats } = useTrades();
@@ -37,6 +38,16 @@ const Header = ({ onMenuClick }) => {
   const toggleProfileMenu = () => {
     setIsProfileMenuOpen(!isProfileMenuOpen);
   };
+
+  // Prefer the display name the user chose, then their full name, then the
+  // email handle. Falls back to a placeholder while the profile is loading.
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+  const displayName = loading
+    ? "Loading..."
+    : user?.displayName?.trim() ||
+      fullName ||
+      user?.email?.split("@")[0] ||
+      "Guest User";
 
   const handleProfileMenuClick = (item) => {
     if (item.action === "logout") {
@@ -94,16 +105,13 @@ const Header = ({ onMenuClick }) => {
 
           <ThemeToggle size="sm" />
 
-          <button className="header__notification p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
-            <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-danger-500 rounded-full"></div>
-          </button>
+          <NotificationBell />
 
           <div className="header__profile relative" ref={profileMenuRef}>
             <div className="flex items-center space-x-3">
               <div className="header__profile-info hidden md:block text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {loading ? 'Loading...' : (user?.name || user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email?.split('@')[0] || 'Guest User')}
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100" data-testid="header-profile-name">
+                  {displayName}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {user?.subscription === 'premium' ? 'Premium Account' : 
@@ -115,10 +123,19 @@ const Header = ({ onMenuClick }) => {
 
               <button
                 onClick={toggleProfileMenu}
-                className="header__profile-avatar w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors duration-200"
+                className="header__profile-avatar w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors duration-200 overflow-hidden"
                 title="Profile Menu"
+                data-testid="header-profile-menu-btn"
               >
-                <User className="w-4 h-4 text-white" />
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-4 h-4 text-white" />
+                )}
               </button>
             </div>
 
@@ -129,13 +146,21 @@ const Header = ({ onMenuClick }) => {
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
-                        <UserCircle className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                      <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center overflow-hidden">
+                        {user?.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <UserCircle className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                        )}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {loading ? 'Loading...' : (user?.name || user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email?.split('@')[0] || 'Guest User')}
+                        {displayName}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {user?.email || 'Not logged in'}
