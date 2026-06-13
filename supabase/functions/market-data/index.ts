@@ -7,14 +7,16 @@ const CORS = {
 }
 
 // Yahoo Finance interval mapping (4h not natively supported — use 60m and aggregate client-side)
+// Ranges are set to Yahoo's hard limits per interval: 1m caps at ~7 days,
+// 5m/15m/30m at 60 days, 60m at 730 days. Only daily can go back years.
 const YF_INTERVAL_MAP: Record<string, { interval: string; range: string }> = {
   '1m':  { interval: '1m',  range: '7d' },
   '5m':  { interval: '5m',  range: '60d' },
   '15m': { interval: '15m', range: '60d' },
   '30m': { interval: '30m', range: '60d' },
-  '1h':  { interval: '60m', range: '1y' },
-  '4h':  { interval: '60m', range: '1y' },
-  '1d':  { interval: '1d',  range: '1y' },
+  '1h':  { interval: '60m', range: '730d' },
+  '4h':  { interval: '60m', range: '730d' },
+  '1d':  { interval: '1d',  range: '10y' },
 }
 
 serve(async (req: Request) => {

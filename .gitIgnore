@@ -29,6 +29,12 @@ Thumbs.db
 # Test coverage
 coverage/
 
+# Supabase CLI local state
+supabase/.temp/
+
+# Editor backups
+*.backup
+
 # Misc
 *.pem
 *.key
