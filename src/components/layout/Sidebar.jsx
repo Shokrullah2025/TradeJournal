@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  Radar,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -26,6 +27,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Backtest", href: "/backtest", icon: Activity },
     { name: "Brokers", href: "/brokers", icon: Link },
     { name: "Analytics", href: "/analytics", icon: BarChart3 },
+    { name: "Live Analysis", href: "/live-analysis", icon: Radar },
     { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator },
     { name: "Settings", href: "/settings", icon: Settings },
   ];

@@ -19,6 +19,7 @@ import BrokerSelection from "./pages/BrokerSelection";
 import TradeEntry from "./pages/TradeEntry";
 import OAuthCallback from "./pages/OAuthCallback";
 
+const LiveAnalysis = React.lazy(() => import("./pages/LiveAnalysis"));
 // Lazy — keeps the bundled country/state dataset out of the initial load.
 const Profile = React.lazy(() => import("./pages/Profile"));
 import { TradeProvider } from "./context/TradeContext";
@@ -121,6 +122,20 @@ function App() {
                                   <Route
                                     path="/analytics"
                                     element={<Analytics />}
+                                  />
+                                  <Route
+                                    path="/live-analysis"
+                                    element={
+                                      <Suspense
+                                        fallback={
+                                          <div className="flex items-center justify-center h-64">
+                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                                          </div>
+                                        }
+                                      >
+                                        <LiveAnalysis />
+                                      </Suspense>
+                                    }
                                   />
                                   <Route
                                     path="/risk-calculator"
