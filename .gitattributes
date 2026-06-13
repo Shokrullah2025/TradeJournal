@@ -1,0 +1,16 @@
+# Normalize line endings: store text files as LF in the repo, check out as LF.
+# Stops Windows autocrlf from flagging whole files as "changed".
+* text=auto eol=lf
+
+# Treat common binary types as binary (never touch their bytes).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
