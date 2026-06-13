@@ -43,14 +43,15 @@ const niceCeil = (v) => {
 };
 
 // Bar indices that get a date label.
-// Never includes 0. Always includes n-1. Spaced so labels are at least MIN_SPACING px apart.
+// Labels sit only at regular step positions (never index 0) so spacing stays
+// uniform as bars fill in — the newest date appears once the chart grows past
+// the next step slot, instead of being force-pinned to the last bar.
 function labelSet(n) {
   if (n === 0) return [];
-  const step = Math.max(1, Math.round(MIN_SPACING / BAR_W));
-  const set  = new Set();
-  for (let i = step; i < n; i += step) set.add(i);
-  if (n > 1) set.add(n - 1);
-  return [...set].sort((a, b) => a - b);
+  const step   = Math.max(1, Math.round(MIN_SPACING / BAR_W));
+  const result = [];
+  for (let i = step; i < n; i += step) result.push(i);
+  return result;
 }
 
 const PnLChart = ({ trades = [] }) => {

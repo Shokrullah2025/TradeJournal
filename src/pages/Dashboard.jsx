@@ -29,6 +29,8 @@ import RecentTrades from "../components/dashboard/RecentTrades";
 import PnLChart from "../components/dashboard/PnLChart_simple";
 import CumulativePnLChart from "../components/dashboard/CumulativePnLChart";
 import WhenYouWinChart from "../components/dashboard/WhenYouWinChart";
+import PreMarketBriefing from "../components/dashboard/PreMarketBriefing";
+import TradeScatterChart from "../components/dashboard/TradeScatterChart";
 import { MiniLineChart, MiniBarChart, MiniDonutChart, MiniAreaChart, MiniRiskRewardChart, MiniDrawdownChart } from "../components/dashboard/MiniCharts";
 
 const Dashboard = () => {
@@ -142,6 +144,9 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Pre-Market Briefing — daily personalized edge summary, dismissible */}
+      <PreMarketBriefing trades={trades} user={user} />
+
       {/* Stats Cards with Mini Charts */}
       <div className="dashboard__stats grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((card, index) => {
@@ -232,14 +237,36 @@ const Dashboard = () => {
 
         {/* Cumulative P&L Chart */}
         <div className="card !pt-3 !px-3 !pb-2 flex flex-col h-[340px]">
-          {/* Row 1: title + period tabs */}
-          <div className="flex items-center justify-between mb-1 gap-2">
-            <span
-              className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap"
-              style={{ fontSize: 14 }}
+          {/* Single header row: title + total + session count + period tabs */}
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div
+              className="flex items-baseline gap-2 min-w-0"
+              data-testid="cumulative-pnl-chart-caption-row"
             >
-              Cumulative P&L
-            </span>
+              <span
+                className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap"
+                style={{ fontSize: 14 }}
+              >
+                Cumulative P&L
+              </span>
+              <span
+                className={`font-semibold whitespace-nowrap ${
+                  (cumData[cumData.length - 1] ?? 0) >= 0
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+                style={{ fontSize: 12 }}
+                data-testid="cumulative-pnl-chart-caption-total-value"
+              >
+                {fmtK(cumData[cumData.length - 1] ?? 0)}
+              </span>
+              <span
+                className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap"
+                data-testid="cumulative-pnl-chart-caption-count"
+              >
+                {sessionCount} sessions
+              </span>
+            </div>
             <div
               className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5"
               data-testid="cumulative-pnl-range-toggle"
@@ -264,34 +291,11 @@ const Dashboard = () => {
               })}
             </div>
           </div>
-          {/* Row 2: cumulative total + session count */}
-          <div
-            className="flex items-baseline gap-2 mb-2"
-            data-testid="cumulative-pnl-chart-caption-row"
-          >
-            <span
-              className={`font-semibold ${
-                (cumData[cumData.length - 1] ?? 0) >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}
-              style={{ fontSize: 14 }}
-              data-testid="cumulative-pnl-chart-caption-total-value"
-            >
-              {fmtK(cumData[cumData.length - 1] ?? 0)}
-            </span>
-            <span
-              className="text-xs text-gray-500 dark:text-gray-400"
-              data-testid="cumulative-pnl-chart-caption-count"
-            >
-              {sessionCount} sessions
-            </span>
-          </div>
           <CumulativePnLChart data={cumData} dates={cumDates} />
         </div>
 
         {/* When You Win — heatmap of avg P&L by day of week × trading hour */}
-        <div className="card !pt-3 !pr-2 !pb-0 !pl-2 flex flex-col h-[340px]">
+        <div className="card !pt-3 !pr-2 !pb-2 !pl-2 flex flex-col h-[340px]">
           <div className="flex items-center justify-between mb-1 px-1">
             <div className="flex items-center gap-1.5">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
@@ -336,45 +340,17 @@ const Dashboard = () => {
         </div>
 
         <div className="space-y-6">
-          {/* Key Metrics */}
+          {/* Trade Outcomes scatter — one dot per closed trade */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Key Metrics
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Average Win
-                </span>
-                <span className="font-medium text-success-600 dark:text-success-400">
-                  ${stats.avgWin.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Average Loss
-                </span>
-                <span className="font-medium text-danger-600 dark:text-danger-400">
-                  ${stats.avgLoss.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Max Drawdown
-                </span>
-                <span className="font-medium text-danger-600 dark:text-danger-400">
-                  ${stats.maxDrawdown.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Sharpe Ratio
-                </span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {stats.sharpeRatio.toFixed(2)}
-                </span>
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Trade Outcomes
+              </h3>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                1 dot = 1 trade
+              </span>
             </div>
+            <TradeScatterChart trades={trades} />
           </div>
 
           {/* Trading Insights */}

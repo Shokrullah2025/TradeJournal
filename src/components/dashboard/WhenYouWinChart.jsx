@@ -2,7 +2,9 @@ import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
 const DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const PAD   = { l: 30, r: 4, t: 6, b: 18 };
+// b: 36 matches PAD_BOTTOM of the P&L charts so the grid's bottom edge and
+// hour labels line up with the neighbouring cards' plot areas and date labels.
+const PAD   = { l: 30, r: 4, t: 6, b: 36 };
 
 const WhenYouWinChart = ({ trades = [] }) => {
   const wrapRef = useRef(null);
@@ -84,15 +86,13 @@ const WhenYouWinChart = ({ trades = [] }) => {
     );
   }
 
-  const chartW   = (dims ? dims.w : 400) - PAD.l - PAD.r;
-  const chartH   = (dims ? dims.h : 260) - PAD.t - PAD.b;
-  const cellSize = Math.floor(Math.min(chartW / HOURS.length, chartH / DAYS.length));
-  const cellW    = cellSize;
-  const cellH    = cellSize;
-  const gridW    = cellSize * HOURS.length;
-  const gridH    = cellSize * DAYS.length;
-  const offsetX  = (chartW - gridW) / 2;
-  const offsetY  = (chartH - gridH) / 2;
+  // Cells stretch independently in each axis so the grid always fills the
+  // card, whatever its aspect ratio — no centering gap on wide screens.
+  const chartW = (dims ? dims.w : 400) - PAD.l - PAD.r;
+  const chartH = (dims ? dims.h : 260) - PAD.t - PAD.b;
+  const cellW  = chartW / HOURS.length;
+  const cellH  = chartH / DAYS.length;
+  const gridH  = chartH;
 
   return (
     <div
@@ -116,8 +116,8 @@ const WhenYouWinChart = ({ trades = [] }) => {
         >
           {DAYS.map((_, dayIdx) =>
             HOURS.map((hr, j) => {
-              const x    = PAD.l + offsetX + j * cellW;
-              const y    = PAD.t + offsetY + dayIdx * cellH;
+              const x    = PAD.l + j * cellW;
+              const y    = PAD.t + dayIdx * cellH;
               const fill = cellFill(dayIdx, hr);
               return (
                 <rect
@@ -139,8 +139,8 @@ const WhenYouWinChart = ({ trades = [] }) => {
           {DAYS.map((d, i) => (
             <text
               key={d}
-              x={PAD.l + offsetX - 4}
-              y={PAD.t + offsetY + i * cellH + cellH / 2}
+              x={PAD.l - 4}
+              y={PAD.t + i * cellH + cellH / 2}
               textAnchor="end"
               dominantBaseline="middle"
               fontSize="9.5"
@@ -157,8 +157,8 @@ const WhenYouWinChart = ({ trades = [] }) => {
             return (
               <text
                 key={hr}
-                x={(PAD.l + offsetX + j * cellW + cellW / 2).toFixed(1)}
-                y={PAD.t + offsetY + gridH + 13}
+                x={(PAD.l + j * cellW + cellW / 2).toFixed(1)}
+                y={PAD.t + gridH + 13}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="9.5"

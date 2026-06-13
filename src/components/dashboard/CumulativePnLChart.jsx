@@ -2,7 +2,7 @@ import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState }
 
 const PAD_LEFT   = 38;
 const PAD_RIGHT  = 12;
-const PAD_TOP    = 10;
+const PAD_TOP    = 18;
 const PAD_BOTTOM = 36;
 
 const fmtDate = (d) => {
@@ -184,9 +184,10 @@ const CumulativePnLChart = ({
             <stop offset="0%"   stopColor="#ef4444" stopOpacity="0.02" />
             <stop offset="100%" stopColor="#ef4444" stopOpacity="0.20" />
           </linearGradient>
-          {/* Clip above the zero line */}
+          {/* Clip above the zero line — 2px headroom so the stroke at the
+              domain max isn't shaved in half by the clip edge */}
           <clipPath id={`ca_${uid}`}>
-            <rect x={PAD_LEFT} y={PAD_TOP} width={chartW} height={aboveH} />
+            <rect x={PAD_LEFT} y={PAD_TOP - 2} width={chartW} height={aboveH + 2} />
           </clipPath>
           {/* Clip below the zero line */}
           <clipPath id={`cb_${uid}`}>
@@ -197,10 +198,17 @@ const CumulativePnLChart = ({
               height={belowH}
             />
           </clipPath>
-          {/* Master chart area clip — prevents right-edge overflow */}
+          {/* Master chart area clip — prevents right-edge overflow; extends
+              2px above PAD_TOP to match the above-zero clip headroom */}
           <clipPath id={`cm_${uid}`}>
-            <rect x={PAD_LEFT} y={PAD_TOP} width={chartW} height={chartH} />
+            <rect x={PAD_LEFT} y={PAD_TOP - 2} width={chartW} height={chartH + 2} />
           </clipPath>
+          {/* Hides grid lines where the trend area sits, so they read as
+              behind the chart instead of showing through the translucent fill */}
+          <mask id={`gm_${uid}`}>
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            <path d={areaPath} fill="black" />
+          </mask>
         </defs>
 
         {/* Y grid lines + labels — outside master clip so labels stay visible */}
@@ -217,6 +225,7 @@ const CumulativePnLChart = ({
                 stroke={isZero ? '#d1d5db' : '#f3f4f6'}
                 strokeWidth="1"
                 strokeDasharray={isZero ? '4,3' : undefined}
+                mask={`url(#gm_${uid})`}
               />
               <text
                 x={Math.round(PAD_LEFT / 2)}
