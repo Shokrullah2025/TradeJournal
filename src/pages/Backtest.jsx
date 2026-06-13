@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Component } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import {
   Play,
   Pause,
@@ -41,20 +41,25 @@ import {
   Minimize2,
   PanelRightClose,
   PanelRightOpen,
-  ArrowUpRight,
-  ArrowUp,
-  ArrowDown,
   ArrowLeftRight,
   Check,
-  Slash,
+  BarChart2,
+  GripVertical,
 } from "lucide-react";
 import { useBacktest } from "../context/BacktestContext";
 import BacktestChart from "../components/trades/BacktestChart";
-import { fetchMarketCandles } from "../utils/marketData";
+import { TrendlineIcon, RayIcon, SegmentIcon } from "../components/trades/BacktestChart/toolIcons";
+import EdgeAnalyticsPanel, { EquityCurve } from "../components/backtest/EdgeAnalyticsPanel";
+import { computeEdgeStats, withBalanceSnapshots } from "../utils/edgeStats";
+import { TZ_OPTIONS } from "../utils/chartTimezone";
+import { fetchMarketCandles, clearCandleCache } from "../utils/marketData";
 import { useTemplates } from "../hooks/useTemplates";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { sessionMetaSchema, sessionTagSchema, MAX_SESSION_TAGS } from "../lib/schemas/backtest";
+import { autoSaveDefaults } from "../components/trades/BacktestChart/drawingDefaults";
+import { trimPrice } from "../components/trades/BacktestChart/chartConfig";
 import toast from "react-hot-toast";
 
 class ChartErrorBoundary extends Component {
@@ -156,9 +161,59 @@ const MARKET_CONFIG = {
   },
 };
 
-function HistoryModal({ session, onClose }) {
-  const trades = session.trades || [];
+function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
+  const trades = useMemo(
+    () => withBalanceSnapshots(session.trades || [], session.initialBalance),
+    [session.trades, session.initialBalance]
+  );
   const totalPnl = trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+  const edge = useMemo(
+    () => computeEdgeStats(trades, session.initialBalance ?? 0),
+    [trades, session.initialBalance]
+  );
+  const pfStr = edge.profitFactor === 0 ? "—"
+    : isFinite(edge.profitFactor) ? edge.profitFactor.toFixed(2) : "∞";
+
+  // Editable session metadata
+  const [note, setNote] = useState(session.note || "");
+  const [tags, setTags] = useState(session.tags || []);
+  const [tagInput, setTagInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const dirty =
+    note !== (session.note || "") ||
+    JSON.stringify(tags) !== JSON.stringify(session.tags || []);
+
+  const addTag = (raw) => {
+    const parsed = sessionTagSchema.safeParse(raw);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Invalid tag");
+      return;
+    }
+    const tag = parsed.data;
+    if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+      setTagInput("");
+      return;
+    }
+    if (tags.length >= MAX_SESSION_TAGS) {
+      toast.error(`A session can have at most ${MAX_SESSION_TAGS} tags`);
+      return;
+    }
+    setTags((prev) => [...prev, tag]);
+    setTagInput("");
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(session.id, { note, tags });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const suggestions = tagSuggestions
+    .filter((s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase()))
+    .slice(0, 8);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
       <div
@@ -212,11 +267,140 @@ function HistoryModal({ session, onClose }) {
           ))}
         </div>
 
+        {/* Per-session edge analytics */}
+        {trades.length > 0 && (
+          <div
+            className="grid grid-cols-4 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40"
+            data-testid="history-modal-edge-stats"
+          >
+            {[
+              {
+                label: "Win Rate",
+                value: `${(edge.winRate * 100).toFixed(0)}%`,
+                cls: edge.winRate >= 0.5 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400",
+                testId: "history-modal-win-rate-value",
+              },
+              {
+                label: "Profit Factor",
+                value: pfStr,
+                cls: edge.profitFactor >= 1 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400",
+                testId: "history-modal-profit-factor-value",
+              },
+              {
+                label: "Expectancy",
+                value: `${edge.expectancy >= 0 ? "+" : "-"}$${Math.abs(edge.expectancy).toFixed(2)}`,
+                cls: edge.expectancy >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400",
+                testId: "history-modal-expectancy-value",
+              },
+              {
+                label: "Max Drawdown",
+                value: `${(edge.maxDD * 100).toFixed(1)}%`,
+                cls: edge.maxDD > 0.05 ? "text-red-500 dark:text-red-400" : "text-gray-900 dark:text-white",
+                testId: "history-modal-max-dd-value",
+              },
+            ].map(({ label, value, cls, testId }) => (
+              <div key={label} className="p-3 text-center">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</p>
+                <p className={`text-sm font-bold ${cls}`} data-testid={testId}>{value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Editable note + custom tags */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3" data-testid="history-modal-meta-editor">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</label>
+            <textarea
+              data-testid="history-modal-note-input"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              maxLength={2000}
+              placeholder="What did you learn from this session?"
+              className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tags</label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  data-testid={`history-modal-tag-${tag}`}
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium"
+                >
+                  {tag}
+                  <button
+                    data-testid={`history-modal-remove-tag-${tag}`}
+                    onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                    className="hover:text-blue-900 dark:hover:text-blue-100"
+                    aria-label={`Remove tag ${tag}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              <input
+                data-testid="history-modal-tag-input"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addTag(tagInput);
+                  }
+                }}
+                maxLength={30}
+                placeholder={tags.length === 0 ? "Add a tag…" : "Add another…"}
+                className="text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:border-blue-400 w-28"
+              />
+              {tagInput.trim() && (
+                <button
+                  data-testid="history-modal-add-tag-btn"
+                  onClick={() => addTag(tagInput)}
+                  className="text-xs px-2 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 font-medium"
+                >
+                  Add
+                </button>
+              )}
+            </div>
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Suggestions</span>
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    data-testid={`history-modal-suggested-tag-${s}`}
+                    onClick={() => addTag(s)}
+                    className="text-xs px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+                  >
+                    + {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {dirty && (
+            <div className="flex justify-end">
+              <button
+                data-testid="history-modal-save-btn"
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 font-medium"
+              >
+                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="flex-1 overflow-y-auto">
           {trades.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
               <p className="text-sm">No trades recorded for this session</p>
-              <p className="text-xs mt-1">Trades are saved when you leave the backtest view</p>
+              <p className="text-xs mt-1">Trades are saved automatically as you close them</p>
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -277,6 +461,55 @@ const DEFAULT_CHART_SETTINGS = {
 
 const ALL_TIMEFRAMES = ["1m","2m","3m","5m","10m","15m","20m","30m","45m","1h","2h","3h","4h","6h","8h","12h","1d","3d","1w","1M"];
 const DEFAULT_FAV_TIMEFRAMES = ["1m","5m","15m","30m","1h","4h","1d"];
+
+// Drawing tools — shared by the left toolbar and the floating favourites bar.
+// Icon components are module-level imports, so this can live at module scope.
+const BACKTEST_DRAW_TOOLS = [
+  { mode: "trendline", Icon: TrendlineIcon,     title: "Trend Line (double-click to finish)" },
+  { mode: "ray",       Icon: RayIcon,           title: "Ray (extends right)" },
+  { mode: "segment",   Icon: SegmentIcon,       title: "Line Segment" },
+  { mode: "hline",     Icon: Minus,             title: "Horizontal Line" },
+  { mode: "vline",     Icon: SeparatorVertical, title: "Vertical Line" },
+  { mode: "fibonacci", Icon: null,              title: "Fibonacci Retracement", label: "Fib" },
+  { mode: "rectangle", Icon: Square,            title: "Rectangle" },
+  { mode: "text",      Icon: Type,              title: "Text Label (double-click to edit)" },
+  { mode: "brush",     Icon: Pencil,            title: "Freehand Brush" },
+  { mode: "rr",        Icon: null,              title: "Risk/Reward Box", label: "R:R" },
+];
+
+// Minutes per timeframe — used by the candle-formation replay to offer lower TFs
+const TF_MINUTES = {
+  "1m":1,"2m":2,"3m":3,"5m":5,"10m":10,"15m":15,"20m":20,"30m":30,"45m":45,
+  "1h":60,"2h":120,"3h":180,"4h":240,"6h":360,"8h":480,"12h":720,
+  "1d":1440,"3d":4320,"1w":10080,"1M":43200,
+};
+
+// Lower-TF candles that fall inside chart candle `idx`'s time window
+function subCandlesIn(data, idx, subs) {
+  const start = data[idx]?.time;
+  if (start == null || !subs?.length) return [];
+  const end = data[idx + 1]?.time ?? Infinity;
+  const out = [];
+  for (let i = 0; i < subs.length; i++) {
+    const t = subs[i].time;
+    if (t >= end) break;
+    if (t >= start) out.push(subs[i]);
+  }
+  return out;
+}
+
+// Aggregate the first `count` lower-TF candles into a partial (forming) candle
+function buildFormingCandle(htfCandle, subs, count) {
+  const n = Math.min(count, subs.length);
+  if (!htfCandle || n <= 0) return null;
+  let high = -Infinity, low = Infinity, volume = 0;
+  for (let i = 0; i < n; i++) {
+    if (subs[i].high > high) high = subs[i].high;
+    if (subs[i].low < low) low = subs[i].low;
+    volume += subs[i].volume || 0;
+  }
+  return { time: htfCandle.time, open: subs[0].open, high, low, close: subs[n - 1].close, volume };
+}
 
 const CHART_COLOR_PALETTE = [
   ["#ffffff","#e0e0e0","#b0b3bb","#787b86","#555965","#363a45","#2a2e39","#1e2230","#131722","#000000"],
@@ -595,20 +828,45 @@ const Backtest = () => {
 
   // Session history — loaded from DB, persists across devices
   const [sessionHistory, setSessionHistory] = useState([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [historyModal, setHistoryModal] = useState(null); // session obj with .trades when open
+  const [tagSuggestions, setTagSuggestions] = useState([]); // user's saved custom tags
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) { setIsLoadingSessions(false); return; }
+    setIsLoadingSessions(true);
     let cancelled = false;
     supabase
       .from("backtest_sessions")
-      .select("id, name, parameters, results, created_at")
+      .select("id, name, parameters, results, note, tags, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20)
-      .then(({ data }) => {
-        if (cancelled || !data) return;
-        setSessionHistory(data.map((row) => ({
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setIsLoadingSessions(false);
+        if (error) {
+          console.error("[Backtest] history load error:", error.message);
+          toast.error("Could not load your backtest history. Please refresh the page.");
+          return;
+        }
+        if (!data) return;
+        // Sessions where the user never placed an order are not history —
+        // purge ALL of them from the DB (not just the rows fetched here),
+        // sparing only the session currently in progress
+        const activeId = currentSessionRef.current?.id ?? null;
+        let cleanup = supabase
+          .from("backtest_sessions")
+          .delete()
+          .eq("user_id", user.id)
+          .filter("results->trades", "eq", "[]");
+        if (activeId) cleanup = cleanup.neq("id", activeId);
+        cleanup.then(({ error: delErr }) => {
+          if (delErr) console.error("[Backtest] empty-session cleanup error:", delErr.message);
+        });
+        const mapped = data
+          .filter((row) => row.id === activeId || (row.results?.trades ?? []).length > 0)
+          .map((row) => ({
           id:              row.id,
           name:            row.name,
           market:          row.parameters?.market,
@@ -621,7 +879,40 @@ const Backtest = () => {
           initialBalance:  row.parameters?.initialBalance,
           endingBalance:   row.results?.endingBalance ?? null,
           trades:          row.results?.trades ?? [],
-        })));
+          // Older sessions stored a setup note inside parameters
+          note:            row.note ?? row.parameters?.notes ?? "",
+          tags:            Array.isArray(row.tags) ? row.tags : [],
+          }));
+        setSessionHistory(mapped);
+        // Fresh device/browser: carry the running account balance over from
+        // the most recent session's ending balance stored in the DB
+        if (localStorage.getItem("backtestRunningBalance") == null && !currentSessionRef.current) {
+          const latest = mapped.find((s) => s.endingBalance != null);
+          if (latest) {
+            setBalance(latest.endingBalance);
+            localStorage.setItem("backtestRunningBalance", latest.endingBalance.toString());
+          }
+        }
+      });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // The user's saved custom tags, offered as suggestions in the history modal
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    supabase
+      .from("backtest_setup_tags")
+      .select("name")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[Backtest] tag suggestions load error:", error.message);
+          return; // suggestions are a nice-to-have — don't block the page
+        }
+        setTagSuggestions((data ?? []).map((r) => r.name));
       });
     return () => { cancelled = true; };
   }, [user?.id]);
@@ -773,7 +1064,7 @@ const Backtest = () => {
     const base = parseFloat(localStorage.getItem("backtestBaseBalance"));
     return isFinite(base) && base > 0 ? base : 10000;
   });
-  // Tracks the balance when the current session started (used by Reset button)
+  // Tracks the balance when the current session started
   const sessionStartBalanceRef = useRef(null);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
@@ -809,18 +1100,74 @@ const Backtest = () => {
   const intervalRef = useRef(null);
   const currentCandleRef = useRef(0); // mirror of currentCandle for interval closure
   const positionsRef = useRef([]); // mirror of positions — read by interval without updater closure
+  // Mirrors read by the session save handlers (pagehide/unmount fire from a
+  // mount-time closure, so they must go through refs to see current values)
+  const tradesRef = useRef([]);
+  const balanceRef = useRef(balance);
+  const currentSessionRef = useRef(null);
+  const userIdRef = useRef(null);
 
   // Drawing tools
   const [drawingMode, setDrawingMode] = useState(null);
+  // Tracks whether the active drawing mode was set from the left panel ("panel") or the floating favorites bar ("floating")
+  const [drawingModeSource, setDrawingModeSource] = useState(null);
+  const floatDragRef = useRef(null); // for drag-to-reorder within the floating bar
+  const [favBarPos, setFavBarPos] = useState(null); // null = default centered; { left, top } = fixed viewport coords after user drags the bar
+  // Favourite drawing tools — persisted to localStorage
+  const [favDrawingTools, setFavDrawingTools] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("backtestFavTools") || "[]"); } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("backtestFavTools", JSON.stringify(favDrawingTools)); } catch {}
+  }, [favDrawingTools]);
+  const toggleFavTool = (mode) =>
+    setFavDrawingTools((prev) =>
+      prev.includes(mode) ? prev.filter((m) => m !== mode) : [...prev, mode]
+    );
   // History stack for undo/redo — single state object so pushDrawings is one atomic setState call
   const [drawingHist, setDrawingHist] = useState({ history: [[]], idx: 0 });
   const userDrawings = drawingHist.history[drawingHist.idx] ?? [];
   const canUndo = drawingHist.idx > 0;
   const canRedo = drawingHist.idx < drawingHist.history.length - 1;
+  // Per-chart drawing arrays for windows 2 and 3
+  const [userDrawings2, setUserDrawings2] = useState([]);
+  const [userDrawings3, setUserDrawings3] = useState([]);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState([]);
 
   // Bar replay mode — when active, clicking the chart seeks to that candle
   const [barReplayMode, setBarReplayMode] = useState(false);
+
+  // Seek-to-date picker dropdown in the top-center replay controls
+  const [showSeekDatePicker, setShowSeekDatePicker] = useState(false);
+  const seekDatePickerRef = useRef(null);
+
+  // Compact timezone dropdown (shows a short code closed, full labels open)
+  const [showTzDropdown, setShowTzDropdown] = useState(false);
+  const tzDropdownRef = useRef(null);
+
+  // Candle-formation replay — step each chart-TF candle using lower-TF data
+  // (e.g. watch a 4h candle form from eight 30m steps)
+  const [formTf, setFormTf] = useState(null); // null = off
+  const [formData, setFormData] = useState([]); // lower-TF candles
+  const [formStep, setFormStep] = useState(0); // sub-steps consumed of the forming candle
+  const [isLoadingFormData, setIsLoadingFormData] = useState(false);
+  const formStateRef = useRef({ formTf: null, formData: [], formStep: 0 });
+  useEffect(() => {
+    formStateRef.current = { formTf, formData, formStep };
+  }, [formTf, formData, formStep]);
+
+  // Chart timezone — applies to all chart windows, persisted across sessions
+  const [chartTz, setChartTz] = useState(() => {
+    try {
+      const saved = localStorage.getItem("backtestChartTz");
+      if (saved && TZ_OPTIONS.some((o) => o.id === saved)) return saved;
+    } catch { /* storage unavailable */ }
+    return "America/New_York";
+  });
+  const handleChartTzChange = (value) => {
+    setChartTz(value);
+    try { localStorage.setItem("backtestChartTz", value); } catch { /* storage unavailable */ }
+  };
 
   // Chart layout: "single" | "2col" | "3col"
   const [chartLayout, setChartLayout] = useState("single");
@@ -839,7 +1186,11 @@ const Backtest = () => {
   const [currentCandle3, setCurrentCandle3] = useState(0);
 
   // Sidebar & fullscreen
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
+  // Collapsible sections inside the side panel (collapsed by default)
+  const [showOpenPositions, setShowOpenPositions] = useState(false);
+  const [showTradeHistory, setShowTradeHistory] = useState(false);
+  const [showEdgeAnalytics, setShowEdgeAnalytics] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const chartContainerRef = useRef(null);
 
@@ -863,8 +1214,10 @@ const Backtest = () => {
   const [assetSearchQuery, setAssetSearchQuery] = useState("");
   const searchDropdownRef = useRef(null);
 
-  // Shared crosshair time for sync across chart windows
-  const [syncedCrosshairTime, setSyncedCrosshairTime] = useState(null);
+  // Imperative crosshair setters — charts move each other's crosshair directly
+  // (going through React state re-rendered the whole page per mousemove and
+  // made the synced cursor shake/choppy in 2–3 window layouts)
+  const crosshairSettersRef = useRef({});
   // Imperative range setters/getters — each BacktestChart registers here for smooth sync
   const rangeSettersRef = useRef({});
   const rangeGettersRef = useRef({});
@@ -874,8 +1227,43 @@ const Backtest = () => {
 
   // Column flex sizes for resizable chart panels [col1, col2, col3]
   const [colSizes, setColSizes] = useState([1, 1, 1]);
-  const isResizingCol = useRef(null); // { startX, col, startSizes, visibleCols }
+  const isResizingCol = useRef(null); // { startX, col, startSizes, visibleCols, latestSizes }
   const innerRowRef = useRef(null);
+  const colPanelRefs = useRef([]); // DOM nodes of the three chart panels — flex written directly during drag
+
+  // Right price-scale width per window {1,2,3} — reported by each BacktestChart.
+  // Used to size + position the timezone dropdown flush under the active
+  // window's price-scale column (not the far-right edge in 2/3-window layouts).
+  const [psWidths, setPsWidths] = useState({ 1: 0, 2: 0, 3: 0 });
+  const reportPsWidth = (chart, w) =>
+    setPsWidths((prev) => (prev[chart] === w ? prev : { ...prev, [chart]: w }));
+  // Computed { left, width } (px, relative to innerRowRef) for the TZ dropdown,
+  // or null until the active window's price-scale width is known.
+  const [tzBox, setTzBox] = useState(null);
+
+  // Keep the TZ dropdown aligned under the LAST visible chart window's
+  // price-scale column (rightmost window regardless of which is active).
+  useLayoutEffect(() => {
+    const recompute = () => {
+      const lastIdx = chartLayout === "3col" ? 2 : chartLayout === "2col" ? 1 : 0;
+      const lastNum = lastIdx + 1;
+      const panel = colPanelRefs.current[lastIdx];
+      const psW = psWidths[lastNum] || 0;
+      if (!panel || !psW) { setTzBox(null); return; }
+      const left = panel.offsetLeft + panel.offsetWidth - psW;
+      setTzBox((prev) =>
+        prev && prev.left === left && prev.width === psW ? prev : { left, width: psW });
+    };
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    if (innerRowRef.current) ro.observe(innerRowRef.current);
+    colPanelRefs.current.forEach((el) => el && ro.observe(el));
+    window.addEventListener("resize", recompute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", recompute);
+    };
+  }, [chartLayout, colSizes, psWidths]);
 
   // Chart appearance settings (candle colors, background) — persisted to localStorage
   const [chartSettings, setChartSettings] = useState(() => {
@@ -889,6 +1277,9 @@ const Backtest = () => {
 
   // Right-click context menu position
   const [contextMenuPos, setContextMenuPos] = useState(null); // { x, y } or null
+
+  // "Delete all drawings" confirmation modal (replaces window.confirm)
+  const [showClearDrawingsConfirm, setShowClearDrawingsConfirm] = useState(false);
   const contextMenuRef = useRef(null);
 
   // Draggable order panel
@@ -932,7 +1323,7 @@ const Backtest = () => {
 
   // Sync cursor during PLAYBACK — only runs while playing so manual seeks don't loop
   useEffect(() => {
-    if (!syncCursor || !isPlaying) return;
+    if ((!syncCursor && !barReplayMode) || !isPlaying) return;
     const ts = chartData[currentCandle]?.time;
     if (ts == null) return;
     if (chartData2.length > 0) {
@@ -949,7 +1340,7 @@ const Backtest = () => {
       }
       setCurrentCandle3(idx);
     }
-  }, [syncCursor, isPlaying, currentCandle, chartData, chartData2, chartData3]);
+  }, [syncCursor, barReplayMode, isPlaying, currentCandle, chartData, chartData2, chartData3]);
 
   // Close layout menu / search on outside click
   useEffect(() => {
@@ -958,19 +1349,35 @@ const Backtest = () => {
         setShowLayoutMenu(false);
       if (searchDropdownRef.current && !searchDropdownRef.current.contains(e.target))
         setChartSearchOpen(null);
+      if (seekDatePickerRef.current && !seekDatePickerRef.current.contains(e.target))
+        setShowSeekDatePicker(false);
+      if (tzDropdownRef.current && !tzDropdownRef.current.contains(e.target))
+        setShowTzDropdown(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Backspace deletes selected drawings (when not focused on a text input)
+  // Backspace/Delete removes selected drawings; Ctrl+Z undoes; Ctrl+A selects all
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key !== "Backspace" && e.key !== "Delete") return;
       if (e.target.closest("input, textarea, select")) return;
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        if (userDrawings.length > 0) setSelectedDrawingIds(userDrawings.map((d) => d.id));
+        return;
+      }
+      if (e.key !== "Backspace" && e.key !== "Delete") return;
       if (selectedDrawingIds.length > 0) {
         const toDelete = new Set(selectedDrawingIds);
         pushDrawings(userDrawings.filter((d) => !toDelete.has(d.id)));
+        setUserDrawings2((prev) => prev.filter((d) => !toDelete.has(d.id)));
+        setUserDrawings3((prev) => prev.filter((d) => !toDelete.has(d.id)));
         setSelectedDrawingIds([]);
       }
     };
@@ -978,28 +1385,58 @@ const Backtest = () => {
     return () => document.removeEventListener("keydown", onKey);
   }, [selectedDrawingIds, userDrawings]); // eslint-disable-line
 
-  // Column resize — global mouse move/up so dragging outside the panel still works
+  // Column resize — global mouse move/up so dragging outside the panel still works.
+  // Updates are coalesced to one per animation frame so the charts resize smoothly.
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isResizingCol.current) return;
+    let rafId = null;
+    let pendingX = null;
+    const applyResize = () => {
+      rafId = null;
+      if (!isResizingCol.current || pendingX == null) return;
       const { startX, col, startSizes, visibleCols } = isResizingCol.current;
-      const delta = e.clientX - startX;
       const parent = innerRowRef.current;
       if (!parent) return;
       const totalWidth = parent.offsetWidth - 34; // subtract drawing toolbar width
       const totalFlex = startSizes.slice(0, visibleCols).reduce((a, b) => a + b, 0);
-      const flexDelta = (delta / totalWidth) * totalFlex;
+      const flexDelta = ((pendingX - startX) / totalWidth) * totalFlex;
+      // Clamp the shared delta so both panels respect the 0.15 minimum and total flex stays constant
+      const MIN_COL_FLEX = 0.15;
+      const clamped = Math.max(
+        MIN_COL_FLEX - startSizes[col],
+        Math.min(startSizes[col + 1] - MIN_COL_FLEX, flexDelta)
+      );
       const newSizes = [...startSizes];
-      newSizes[col] = Math.max(0.15, newSizes[col] + flexDelta);
-      newSizes[col + 1] = Math.max(0.15, newSizes[col + 1] - flexDelta);
-      setColSizes(newSizes);
+      newSizes[col] = startSizes[col] + clamped;
+      newSizes[col + 1] = startSizes[col + 1] - clamped;
+      // Write flex directly to the DOM — re-rendering the whole page per frame makes the charts stutter
+      const elA = colPanelRefs.current[col];
+      const elB = colPanelRefs.current[col + 1];
+      if (elA) elA.style.flex = String(newSizes[col]);
+      if (elB) elB.style.flex = String(newSizes[col + 1]);
+      isResizingCol.current.latestSizes = newSizes;
     };
-    const handleMouseUp = () => { isResizingCol.current = null; };
+    const handleMouseMove = (e) => {
+      if (!isResizingCol.current) return;
+      e.preventDefault();
+      pendingX = e.clientX;
+      if (rafId == null) rafId = requestAnimationFrame(applyResize);
+    };
+    const handleMouseUp = () => {
+      if (!isResizingCol.current) return;
+      const { latestSizes } = isResizingCol.current;
+      isResizingCol.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      if (latestSizes) setColSizes(latestSizes); // commit so React state matches the DOM
+    };
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
+      if (rafId != null) cancelAnimationFrame(rafId);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
   }, []); // eslint-disable-line
 
@@ -1024,6 +1461,33 @@ const Backtest = () => {
   useEffect(() => {
     try { localStorage.setItem("backtestFavTimeframes", JSON.stringify(favTimeframes)); } catch {}
   }, [favTimeframes]);
+
+  // ── Per-instrument drawing persistence via sessionStorage (auto-clears on page/tab close) ──
+  // Load drawings when the instrument changes
+  useEffect(() => {
+    const symbol = currentSession?.instrument?.symbol;
+    if (!symbol) return;
+    try {
+      const raw = sessionStorage.getItem(`backtest_drawings_${symbol}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setDrawingHist({ history: [parsed], idx: 0 });
+      }
+    } catch {}
+  }, [currentSession?.instrument?.symbol]); // eslint-disable-line
+
+  // Save drawings whenever they change.
+  // Intentionally reads symbol from ref (not state dep) so this effect does NOT fire
+  // on symbol change — only on drawing changes. Firing on symbol change would race
+  // with the load effect above and overwrite the stored drawings with an empty array
+  // before the loaded state has settled.
+  useEffect(() => {
+    const symbol = currentSessionRef.current?.instrument?.symbol;
+    if (!symbol) return;
+    try {
+      sessionStorage.setItem(`backtest_drawings_${symbol}`, JSON.stringify(userDrawings));
+    } catch {}
+  }, [userDrawings]); // eslint-disable-line
 
   // Close TF picker on outside click
   useEffect(() => {
@@ -1066,26 +1530,23 @@ const Backtest = () => {
     setAssetSearchQuery("");
 
     if (chartNum === 1) {
-      if (selectedInstruments.length === 1) {
-        // Single-instrument session: change chart 1's asset directly
-        setIsLoadingData(true);
-        try {
-          const candles = await fetchMarketCandles(market, symbol, timeframe);
-          setChartData(candles);
-          setCurrentCandle(candles.length - 1);
-          setCurrentPrice(candles[candles.length - 1]?.close || 0);
-          setPositions([]);
-          setCurrentSession((prev) => ({
-            ...prev,
-            instrument: { ...prev.instrument, symbol, market },
-          }));
-        } catch (err) { toast.error(err.message); }
-        finally { setIsLoadingData(false); }
-        return;
-      }
-      // Multi-instrument session: add to next available extra slot
-      const useSlot = chartData2.length === 0 ? 2 : 3;
-      chartNum = useSlot;
+      // Always change the active window's (chart 1's) asset directly — the
+      // selected window owns the search. Extra windows are populated by
+      // selecting them (or via the layout buttons), not from chart 1.
+      setIsLoadingData(true);
+      try {
+        const candles = await fetchMarketCandles(market, symbol, timeframe);
+        setChartData(candles);
+        setCurrentCandle(candles.length - 1);
+        setCurrentPrice(candles[candles.length - 1]?.close || 0);
+        setPositions([]);
+        setCurrentSession((prev) => ({
+          ...prev,
+          instrument: { ...prev.instrument, symbol, market },
+        }));
+      } catch (err) { toast.error(err.message); }
+      finally { setIsLoadingData(false); }
+      return;
     }
 
     if (chartNum === 2) {
@@ -1163,7 +1624,7 @@ const Backtest = () => {
           ? (exitPrice - pos.entryPrice) * pos.size * pos.tickRatio
           : (pos.entryPrice - exitPrice) * pos.size * pos.tickRatio;
         balanceDelta += pnl;
-        closedTrades.push({ ...pos, exitPrice, pnl, exitReason });
+        closedTrades.push({ ...pos, exitPrice, pnl, exitReason, exitTime: candle.time });
       } else {
         const currentPnL = pos.side === "buy"
           ? (candle.close - pos.entryPrice) * pos.size * pos.tickRatio
@@ -1175,15 +1636,109 @@ const Backtest = () => {
     return { stillOpen, closedTrades, balanceDelta };
   };
 
+  // R multiple achieved relative to the initial stop-loss risk (null if no SL)
+  const rAchievedOf = (pos, pnl) => {
+    if (pos.stopLoss == null) return null;
+    const risk = Math.abs(pos.entryPrice - pos.stopLoss) * pos.size * pos.tickRatio;
+    return risk > 0 ? pnl / risk : null;
+  };
+
   // Apply closed-trade results — called after processPositionsForCandle
   const applyClosedTrades = (closedTrades, balanceDelta) => {
     if (closedTrades.length === 0) return;
+    // Snapshot the balance after each close so equity curves and drawdown work
+    let running = balanceRef.current;
+    const enriched = closedTrades.map((trade) => {
+      running += trade.pnl;
+      return { ...trade, balanceAfter: running, rAchieved: rAchievedOf(trade, trade.pnl) };
+    });
     setBalance((b) => b + balanceDelta);
-    setTrades((t) => [...t, ...closedTrades]);
-    closedTrades.forEach((trade) => {
+    setTrades((t) => [...t, ...enriched]);
+    enriched.forEach((trade) => {
       if (trade.pnl > 0) toast.success(`${trade.exitReason}: +$${trade.pnl.toFixed(2)}`);
       else toast.error(`${trade.exitReason}: $${trade.pnl.toFixed(2)}`);
     });
+  };
+
+  // Persist the active session's trades + running balance to the DB and the
+  // running balance locally. Reads only refs so it stays correct when called
+  // from pagehide/unmount handlers registered at mount.
+  const saveSessionResults = (status = "running") => {
+    const session = currentSessionRef.current;
+    if (!session) return;
+    localStorage.setItem("backtestRunningBalance", balanceRef.current.toString());
+    if (!userIdRef.current) return;
+    // A completed session with no trades is not history — remove its row
+    if (status === "completed" && tradesRef.current.length === 0) {
+      supabase
+        .from("backtest_sessions")
+        .delete()
+        .eq("id", session.id)
+        .eq("user_id", userIdRef.current)
+        .then(({ error }) => {
+          if (error) console.error("[Backtest] empty-session delete error:", error.message);
+        });
+      return;
+    }
+    supabase
+      .from("backtest_sessions")
+      .update({
+        results: { trades: tradesRef.current, endingBalance: balanceRef.current },
+        status,
+      })
+      .eq("id", session.id)
+      .then(({ error }) => {
+        if (error) console.error("[Backtest] session save error:", error.message);
+      });
+  };
+
+  // Save a note + custom tags edited in the history modal. New tags are also
+  // remembered in backtest_setup_tags so they show up as suggestions later.
+  const handleSaveSessionMeta = async (sessionId, meta) => {
+    if (!user?.id) {
+      toast.error("You must be signed in to save changes.");
+      return;
+    }
+    const parsed = sessionMetaSchema.safeParse(meta);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Invalid note or tags");
+      return;
+    }
+    const { note, tags } = parsed.data;
+    try {
+      const { error } = await supabase
+        .from("backtest_sessions")
+        .update({ note, tags })
+        .eq("id", sessionId)
+        .eq("user_id", user.id);
+      if (error) throw new Error(error.message);
+
+      setSessionHistory((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, note, tags } : s))
+      );
+      setHistoryModal((m) => (m && m.id === sessionId ? { ...m, note, tags } : m));
+
+      const newTags = tags.filter(
+        (t) => !tagSuggestions.some((s) => s.toLowerCase() === t.toLowerCase())
+      );
+      if (newTags.length > 0) {
+        const { error: tagErr } = await supabase
+          .from("backtest_setup_tags")
+          .upsert(
+            newTags.map((name) => ({ user_id: user.id, name })),
+            { onConflict: "user_id,name", ignoreDuplicates: true }
+          );
+        if (tagErr) {
+          console.error("[Backtest] tag save error:", tagErr.message);
+        } else {
+          setTagSuggestions((prev) => [...new Set([...prev, ...newTags])].sort());
+        }
+      }
+      toast.success("Session updated");
+    } catch (err) {
+      console.error("[Backtest] session meta save error:", err.message);
+      toast.error("Could not save your changes. Please try again.");
+    }
   };
 
   const handleCreateSession = async () => {
@@ -1250,10 +1805,24 @@ const Backtest = () => {
         .select("id")
         .single();
 
-      if (!insertErr && inserted?.id) newSession.id = inserted.id;
+      if (insertErr || !inserted?.id) {
+        // Without a DB row every later save is a no-op update, so the whole
+        // session would vanish on refresh — surface it instead of hiding it.
+        console.error("[Backtest] session insert error:", insertErr?.message);
+        toast.error("Could not save this session to your history. Your trades will not persist after you leave this page.");
+      } else {
+        newSession.id = inserted.id;
+      }
     }
 
+    // Fresh session — clear any trades/positions left from a previous one
+    setTrades([]);
+    setPositions([]);
+    positionsRef.current = [];
+    tradesRef.current = [];
+
     setCurrentSession(newSession);
+    currentSessionRef.current = newSession;
     setCurrentView("backtest");
 
     // Prepend to local history state (already in DB)
@@ -1271,6 +1840,8 @@ const Backtest = () => {
         initialBalance: sessionBalance,
         endingBalance:  null,
         trades:         [],
+        note:           notes || "",
+        tags:           [],
       },
       ...prev.slice(0, 19),
     ]);
@@ -1323,24 +1894,113 @@ const Backtest = () => {
   // Keep refs in sync (used by interval to avoid stale closures)
   useEffect(() => { currentCandleRef.current = currentCandle; }, [currentCandle]);
   useEffect(() => { positionsRef.current = positions; }, [positions]);
+  useEffect(() => { tradesRef.current = trades; }, [trades]);
+  useEffect(() => { balanceRef.current = balance; }, [balance]);
+  useEffect(() => { currentSessionRef.current = currentSession; }, [currentSession]);
+  useEffect(() => { userIdRef.current = user?.id ?? null; }, [user?.id]);
+
+  // Evaluate window 2/3 positions against their own candles as those windows
+  // advance (their cursors move via the playback-sync effect, not advanceOneStep).
+  // Only forward single/multi steps are processed; the prev-ref resets on data
+  // reload so a load-time jump to the last candle never back-processes history.
+  const currentCandle2PrevRef = useRef(0);
+  const currentCandle3PrevRef = useRef(0);
+  useEffect(() => { currentCandle2PrevRef.current = currentCandle2; }, [chartData2]); // eslint-disable-line
+  useEffect(() => { currentCandle3PrevRef.current = currentCandle3; }, [chartData3]); // eslint-disable-line
+  useEffect(() => {
+    const prev = currentCandle2PrevRef.current;
+    if (currentCandle2 > prev) {
+      const run = [];
+      for (let i = prev + 1; i <= currentCandle2 && i < chartData2.length; i++) run.push(chartData2[i]);
+      if (run.length) processCandleRun(run, 2);
+    }
+    currentCandle2PrevRef.current = currentCandle2;
+  }, [currentCandle2]); // eslint-disable-line
+  useEffect(() => {
+    const prev = currentCandle3PrevRef.current;
+    if (currentCandle3 > prev) {
+      const run = [];
+      for (let i = prev + 1; i <= currentCandle3 && i < chartData3.length; i++) run.push(chartData3[i]);
+      if (run.length) processCandleRun(run, 3);
+    }
+    currentCandle3PrevRef.current = currentCandle3;
+  }, [currentCandle3]); // eslint-disable-line
+
+  // Persist after every closed trade (and after Reset clears them) so the
+  // session history survives a tab close or refresh mid-session
+  useEffect(() => {
+    if (!currentSession || currentView !== "backtest") return;
+    saveSessionResults("running");
+  }, [trades]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Belt-and-suspenders: save when the tab is hidden/closed and when the
+  // component unmounts (sidebar navigation away from the Backtest page)
+  useEffect(() => {
+    const handler = () => saveSessionResults("running");
+    window.addEventListener("pagehide", handler);
+    return () => {
+      window.removeEventListener("pagehide", handler);
+      handler();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Trading logic — reads positionsRef directly so no state is read inside an updater
   // (StrictMode double-invokes updater functions; calling setTrades inside setPositions's
   //  updater caused every closed trade to be added twice)
+  // Process a list of candles (or sub-candles) for ONE window against that
+  // window's open positions; positions on other windows are left untouched.
+  const processCandleRun = (candles, chartNum = 1) => {
+    const all = positionsRef.current;
+    let pos = all.filter((p) => (p.chartNum ?? 1) === chartNum);
+    const others = all.filter((p) => (p.chartNum ?? 1) !== chartNum);
+    if (pos.length === 0) return; // nothing open on this window
+    const closed = [];
+    let delta = 0;
+    candles.forEach((c) => {
+      const r = processPositionsForCandle(c, pos);
+      pos = r.stillOpen;
+      closed.push(...r.closedTrades);
+      delta += r.balanceDelta;
+    });
+    setPositions([...others, ...pos]);
+    applyClosedTrades(closed, delta);
+  };
+
+  // Advance the replay by one step. In candle-formation mode a step is one
+  // lower-TF sub-candle of the forming chart candle; otherwise a full candle.
+  const advanceOneStep = () => {
+    const prev = currentCandleRef.current;
+    if (prev >= chartData.length - 1) { setIsPlaying(false); return; }
+    const nextIdx = prev + 1;
+    const candle = chartData[nextIdx];
+    const { formTf: fTf, formData: fData, formStep: fStep } = formStateRef.current;
+    const subs = fTf && fData.length ? subCandlesIn(chartData, nextIdx, fData) : [];
+
+    if (subs.length > 1 && fStep < subs.length - 1) {
+      // Partial step — the next candle keeps forming
+      const s = fStep + 1;
+      formStateRef.current.formStep = s;
+      setFormStep(s);
+      const sub = subs[s - 1];
+      setCurrentPrice(sub.close);
+      processCandleRun([sub]);
+      return;
+    }
+
+    // Full step — completes the forming candle (processing only the sub-candles
+    // not yet seen, so positions aren't run through the same range twice)
+    const remaining = subs.length ? subs.slice(fStep) : [candle];
+    formStateRef.current.formStep = 0;
+    setFormStep(0);
+    currentCandleRef.current = nextIdx;
+    setCurrentCandle(nextIdx);
+    setCurrentPrice(candle.close);
+    processCandleRun(remaining.length ? remaining : [candle]);
+  };
+
   useEffect(() => {
     if (isPlaying && currentCandle < chartData.length - 1) {
-      intervalRef.current = setInterval(() => {
-        const prev = currentCandleRef.current;
-        if (prev >= chartData.length - 1) { setIsPlaying(false); return; }
-        const nextIdx = prev + 1;
-        const candle = chartData[nextIdx];
-        currentCandleRef.current = nextIdx;
-        setCurrentCandle(nextIdx);
-        setCurrentPrice(candle.close);
-        const { stillOpen, closedTrades, balanceDelta } = processPositionsForCandle(candle, positionsRef.current);
-        setPositions(stillOpen);
-        applyClosedTrades(closedTrades, balanceDelta);
-      }, 1000 / speed);
+      intervalRef.current = setInterval(advanceOneStep, 1000 / speed);
     } else {
       clearInterval(intervalRef.current);
     }
@@ -1374,32 +2034,34 @@ const Backtest = () => {
 
   const handleStepForward = () => {
     if (currentCandle >= chartData.length - 1) return;
-    const next = currentCandle + 1;
-    const candle = chartData[next];
-    setCurrentCandle(next);
-    setCurrentPrice(candle.close);
-    if (syncCursor) syncToTimestamp(candle.time, 1);
-    const { stillOpen, closedTrades, balanceDelta } = processPositionsForCandle(candle, positionsRef.current);
-    setPositions(stillOpen);
-    applyClosedTrades(closedTrades, balanceDelta);
+    advanceOneStep();
+    // Always sync other windows when a candle completes (not mid sub-candle formation)
+    if (formStateRef.current.formStep === 0) {
+      syncToTimestamp(chartData[currentCandleRef.current]?.time, 1);
+    }
   };
 
+  // Restores the default viewport (zoom + position, anchored at each window's
+  // current candle) for ALL open windows — must NOT rewind the replay cursor
+  // or hide candle history.
   const handleReset = () => {
-    setIsPlaying(false);
-    const win = defaultWindowCandles(chartData);
-    const start = Math.min(win, chartData.length - 1);
-    setCurrentCandle(start);
-    setCurrentPrice(chartData[start]?.close || 0);
-    setPositions([]);
-    setTrades([]);
-    setBalance(sessionStartBalanceRef.current ?? baseBalance); // restore to session start balance
+    const resetWin = (data, curr, setter) => {
+      if (!data?.length || !setter) return;
+      const win = defaultWindowCandles(data);
+      const last = Math.min(curr, data.length - 1);
+      setter({ from: last - win, to: last + 3 });
+    };
+    resetWin(chartData, currentCandle, rangeSettersRef.current[1]);
+    resetWin(chartData2, currentCandle2, rangeSettersRef.current[2]);
+    resetWin(chartData3, currentCandle3, rangeSettersRef.current[3]);
   };
 
   const handleCandleSeek = (idx) => {
     setIsPlaying(false);
+    setFormStep(0);
     setCurrentCandle(idx);
     setCurrentPrice(chartData[idx]?.close || 0);
-    if (syncCursor) syncToTimestamp(chartData[idx]?.time, 1);
+    if (syncCursor || barReplayMode) syncToTimestamp(chartData[idx]?.time, 1);
   };
 
   const handleCandleSeek2 = (idx) => {
@@ -1413,12 +2075,24 @@ const Backtest = () => {
   };
 
   const handleStepBack = () => {
+    setIsPlaying(false);
+    // Candle-formation mode: unwind one sub-step of the forming candle first
+    if (formTf && formStep > 0) {
+      const s = formStep - 1;
+      setFormStep(s);
+      if (s > 0) {
+        const subs = subCandlesIn(chartData, currentCandle + 1, formData);
+        setCurrentPrice(subs[s - 1]?.close ?? chartData[currentCandle]?.close ?? 0);
+      } else {
+        setCurrentPrice(chartData[currentCandle]?.close || 0);
+      }
+      return;
+    }
     if (currentCandle <= 0) return;
     const prev = currentCandle - 1;
     setCurrentCandle(prev);
     setCurrentPrice(chartData[prev]?.close || 0);
-    if (syncCursor) syncToTimestamp(chartData[prev]?.time, 1);
-    setIsPlaying(false);
+    syncToTimestamp(chartData[prev]?.time, 1);
   };
 
   // seekDate: the date the user has typed into the date picker
@@ -1427,6 +2101,7 @@ const Backtest = () => {
   const handleCut = () => {
     if (!chartData.length) return;
     setIsPlaying(false);
+    setFormStep(0);
     if (!seekDate) return;
     // Yahoo Finance timestamps are UTC seconds; date input gives "YYYY-MM-DD" in local tz.
     const findIdx = (data) => {
@@ -1443,20 +2118,81 @@ const Backtest = () => {
     // Always sync cut to extra charts so all windows jump to the same date
     if (chartData2.length > 0) setCurrentCandle2(findIdx(chartData2));
     if (chartData3.length > 0) setCurrentCandle3(findIdx(chartData3));
+
+    // Scroll chart to show the cut candle at the right edge, preserving current zoom level
+    setTimeout(() => {
+      const currentRange = rangeGettersRef.current[1]?.();
+      const win = currentRange
+        ? Math.round(currentRange.to - currentRange.from)
+        : defaultWindowCandles(chartData);
+      rangeSettersRef.current[1]?.({ from: target - win + 3, to: target + 3 });
+    }, 0);
   };
+
+  // Turn candle-formation replay on/off — loads the lower-TF dataset once
+  const handleFormTfChange = async (tf) => {
+    setIsPlaying(false);
+    setFormStep(0);
+    if (!tf) {
+      setFormTf(null);
+      setFormData([]);
+      return;
+    }
+    setFormTf(tf);
+    setIsLoadingFormData(true);
+    try {
+      const candles = await fetchMarketCandles(
+        currentSession.market,
+        currentSession.instrument.symbol,
+        tf,
+      );
+      setFormData(candles);
+      const firstCovered = candles.length ? candles[0].time : null;
+      if (firstCovered != null && chartData.length && firstCovered > chartData[Math.min(currentCandle + 1, chartData.length - 1)]?.time) {
+        toast(`${tf.toUpperCase()} data starts later than the replay position — formation kicks in once it's covered`, { icon: "ℹ️" });
+      }
+    } catch {
+      toast.error(`Failed to load ${tf.toUpperCase()} data for candle formation`);
+      setFormTf(null);
+      setFormData([]);
+    } finally {
+      setIsLoadingFormData(false);
+    }
+  };
+
+  // Formation data belongs to chart 1's instrument — drop it when that changes
+  useEffect(() => {
+    setFormTf(null);
+    setFormData([]);
+    setFormStep(0);
+  }, [currentSession?.instrument?.symbol]);
+
+  // The partially-formed next candle (null when not forming) — drawn by chart 1
+  const formingCandle = useMemo(() => {
+    if (!formTf || formStep <= 0 || !formData.length) return null;
+    const next = chartData[currentCandle + 1];
+    if (!next) return null;
+    const subs = subCandlesIn(chartData, currentCandle + 1, formData);
+    return buildFormingCandle(next, subs, formStep);
+  }, [formTf, formStep, formData, chartData, currentCandle]);
 
   const handleTimeframeChange = async (newTf) => {
     if (newTf === timeframe || isLoadingData || !currentSession) return;
     // Preserve the timestamp of the current cut position
     const currentTs = chartData[currentCandle]?.time ?? null;
     setIsPlaying(false);
+    setFormStep(0);
+    // Formation TF must stay strictly below the chart TF — clear it otherwise
+    if (formTf && (TF_MINUTES[formTf] >= TF_MINUTES[newTf] || TF_MINUTES[newTf] % TF_MINUTES[formTf] !== 0)) {
+      setFormTf(null);
+      setFormData([]);
+    }
     setCurrentCandle(0);
     setChartData([]);
     setTimeframe(newTf);
     setIsLoadingData(true);
     // Clear cache so we re-fetch with new timeframe
-    const cacheKey = `chart_${currentSession.market}_${currentSession.instrument.symbol}_${newTf}`;
-    sessionStorage.removeItem(cacheKey);
+    clearCandleCache(currentSession.market, currentSession.instrument.symbol, newTf);
     try {
       const candles = await fetchMarketCandles(
         currentSession.market,
@@ -1578,6 +2314,12 @@ const Backtest = () => {
 
   const openOrderPanel = (side) => {
     setOrderSide(side);
+    // TP/SL always start OFF — reset any leftover state from a cancelled panel
+    // (toggling one on seeds a value ≥10 ticks from entry via clampExitLevel)
+    setUseTakeProfit(false);
+    setUseStopLoss(false);
+    setTakeProfit("");
+    setStopLoss("");
     const rect = chartContainerRef.current?.getBoundingClientRect();
     setPanelPos({
       x: (rect?.left ?? 0) + 60,
@@ -1592,21 +2334,101 @@ const Backtest = () => {
     : activeChart === 3 ? (chartData3[currentCandle3]?.close ?? 0)
     : currentPrice;
 
+  // Resolve a symbol to its full instrument (tickSize/tickValue) for the
+  // current market — falls back to window 1's instrument if unknown.
+  const resolveInstrument = (symbol) => {
+    const market = currentSession?.market;
+    return (
+      MARKET_CONFIG[market]?.instruments.find((i) => i.symbol === symbol) ??
+      currentSession?.instrument
+    );
+  };
+
+  // Instrument + entry candle of the window the order panel is acting on, so an
+  // order placed while window 2/3 is selected uses THAT window's contract and bar.
+  const activeChartInstrument =
+    activeChart === 2 ? resolveInstrument(chart2Symbol)
+    : activeChart === 3 ? resolveInstrument(chart3Symbol)
+    : currentSession?.instrument;
+  const activeChartCandleTime =
+    activeChart === 2 ? chartData2[currentCandle2]?.time
+    : activeChart === 3 ? chartData3[currentCandle3]?.time
+    : chartData[currentCandle]?.time;
+
+  // TP/SL must stay at least 10 ticks away from the entry price — applied to
+  // line drags and order execution
+  const MIN_EXIT_TICKS = 10;
+  const clampExitLevel = (field, value) => {
+    const tickSize = activeChartInstrument?.tickSize || 0.25;
+    const entry = activeChartPrice || currentPrice;
+    if (!entry || !isFinite(value)) return value;
+    const min = MIN_EXIT_TICKS * tickSize;
+    const isBuy = orderSide === "buy";
+    if (field === "takeProfit") return isBuy ? Math.max(value, entry + min) : Math.min(value, entry - min);
+    if (field === "stopLoss")   return isBuy ? Math.min(value, entry - min) : Math.max(value, entry + min);
+    return value;
+  };
+
+  // Positions + trades split per window so each chart draws only its own
+  const positionsByChart = useMemo(() => ({
+    1: positions.filter((p) => (p.chartNum ?? 1) === 1),
+    2: positions.filter((p) => p.chartNum === 2),
+    3: positions.filter((p) => p.chartNum === 3),
+  }), [positions]);
+  const tradesByChart = useMemo(() => ({
+    1: trades.filter((t) => (t.chartNum ?? 1) === 1),
+    2: trades.filter((t) => t.chartNum === 2),
+    3: trades.filter((t) => t.chartNum === 3),
+  }), [trades]);
+
+  // Memoised so BacktestChart's preview-line effect doesn't fire on every unrelated render
+  const orderPreview1 = useMemo(() =>
+    showOrderPanel && activeChart === 1 ? {
+      side: orderSide,
+      entryPrice: activeChartPrice,
+      takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
+      stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
+    } : null
+  , [showOrderPanel, activeChart, orderSide, activeChartPrice, useTakeProfit, takeProfit, useStopLoss, stopLoss]); // eslint-disable-line
+
+  const orderPreview2 = useMemo(() =>
+    showOrderPanel && activeChart === 2 ? {
+      side: orderSide,
+      entryPrice: activeChartPrice,
+      takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
+      stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
+    } : null
+  , [showOrderPanel, activeChart, orderSide, activeChartPrice, useTakeProfit, takeProfit, useStopLoss, stopLoss]); // eslint-disable-line
+
+  const orderPreview3 = useMemo(() =>
+    showOrderPanel && activeChart === 3 ? {
+      side: orderSide,
+      entryPrice: activeChartPrice,
+      takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
+      stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
+    } : null
+  , [showOrderPanel, activeChart, orderSide, activeChartPrice, useTakeProfit, takeProfit, useStopLoss, stopLoss]); // eslint-disable-line
+
   const executeOrder = () => {
     if (!currentSession) return;
-    const instrument = currentSession.instrument;
+    // Execute against the window the panel is acting on — its instrument, its
+    // current candle, and tag the position so it's drawn + processed there.
+    const chartNum = activeChart;
+    const instrument = activeChartInstrument || currentSession.instrument;
     const tickRatio = instrument.tickValue / instrument.tickSize;
     const entryPrice = activeChartPrice || currentPrice;
 
     const position = {
       id: Date.now(),
+      chartNum,
+      symbol: instrument.symbol,
       side: orderSide,
       size: orderSize,
       entryPrice,
-      stopLoss: useStopLoss && stopLoss ? parseFloat(stopLoss) : null,
-      takeProfit: useTakeProfit && takeProfit ? parseFloat(takeProfit) : null,
+      stopLoss: useStopLoss && stopLoss ? clampExitLevel("stopLoss", parseFloat(stopLoss)) : null,
+      takeProfit: useTakeProfit && takeProfit ? clampExitLevel("takeProfit", parseFloat(takeProfit)) : null,
       orderType,
-      timestamp: chartData[currentCandle]?.time,
+      timestamp: activeChartCandleTime,
       currentPnL: 0,
       tickRatio,
     };
@@ -1619,8 +2441,26 @@ const Backtest = () => {
     setUseTakeProfit(false);
     setUseStopLoss(false);
 
-    toast.success(`${orderSide.toUpperCase()} ${orderSize} ${instrument.symbol} at $${entryPrice.toFixed(2)}`);
+    toast.success(`${orderSide.toUpperCase()} ${orderSize} ${instrument.symbol} at $${trimPrice(entryPrice)}`);
   };
+
+  // Trade-level edge analytics aggregated across the whole saved history,
+  // walked chronologically so the equity curve carries across sessions
+  const historyEdge = useMemo(() => {
+    const sessionsAsc = sessionHistory
+      .filter((s) => (s.trades?.length ?? 0) > 0)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const allTrades = sessionsAsc.flatMap((s) =>
+      withBalanceSnapshots(s.trades, s.initialBalance)
+    );
+    const initialBalance = sessionsAsc[0]?.initialBalance ?? 0;
+    return {
+      trades: allTrades,
+      sessions: sessionsAsc.length,
+      initialBalance,
+      stats: computeEdgeStats(allTrades, initialBalance),
+    };
+  }, [sessionHistory]);
 
   // Render views
   if (currentView === "sessions") {
@@ -1662,7 +2502,12 @@ const Backtest = () => {
 
         <div className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
 
-          {sessionHistory.length === 0 ? (
+          {isLoadingSessions ? (
+            /* ── Loading — prevent flash of empty state while DB query is in-flight ── */
+            <div className="flex items-center justify-center py-32">
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#1E53E5" }} />
+            </div>
+          ) : sessionHistory.length === 0 ? (
             /* ── Empty state for first-time users ── */
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-20 h-20 rounded-2xl mb-6 flex items-center justify-center" style={{ background: "#e8f0fe" }}>
@@ -1795,6 +2640,99 @@ const Backtest = () => {
                 ))}
               </div>
 
+              {/* Edge analytics across the whole backtest history */}
+              {historyEdge.stats.total > 0 && (
+                <div
+                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-8"
+                  data-testid="history-edge-analytics"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <BarChart2 className="w-4 h-4" style={{ color: "#1E53E5" }} />
+                      <h2 className="text-base font-semibold text-gray-900 dark:text-white">Edge Analytics</h2>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {historyEdge.stats.total} trade{historyEdge.stats.total !== 1 ? "s" : ""} across{" "}
+                      {historyEdge.sessions} session{historyEdge.sessions !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  {/* Cumulative equity curve across sessions */}
+                  <div
+                    className="rounded-lg overflow-hidden mb-4 bg-gray-50 dark:bg-gray-900"
+                    data-testid="history-edge-equity-curve"
+                  >
+                    <EquityCurve
+                      trades={historyEdge.trades}
+                      initialBalance={historyEdge.initialBalance}
+                      isDark={isDark}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      {
+                        label: "Win Rate",
+                        value: `${(historyEdge.stats.winRate * 100).toFixed(1)}%`,
+                        color: historyEdge.stats.winRate >= 0.5 ? "#089981" : "#f23645",
+                        testId: "history-edge-win-rate-value",
+                      },
+                      {
+                        label: "Profit Factor",
+                        value: historyEdge.stats.profitFactor === 0 ? "—"
+                          : isFinite(historyEdge.stats.profitFactor)
+                            ? historyEdge.stats.profitFactor.toFixed(2) : "∞",
+                        color: historyEdge.stats.profitFactor >= 1.5 ? "#089981"
+                          : historyEdge.stats.profitFactor >= 1 ? "#f7a600" : "#f23645",
+                        testId: "history-edge-profit-factor-value",
+                      },
+                      {
+                        label: "Expectancy / Trade",
+                        value: `${historyEdge.stats.expectancy >= 0 ? "+" : "-"}$${Math.abs(historyEdge.stats.expectancy).toFixed(2)}`,
+                        color: historyEdge.stats.expectancy >= 0 ? "#089981" : "#f23645",
+                        testId: "history-edge-expectancy-value",
+                      },
+                      {
+                        label: "Max Drawdown",
+                        value: `${(historyEdge.stats.maxDD * 100).toFixed(1)}%`,
+                        color: historyEdge.stats.maxDD > 0.05 ? "#f23645"
+                          : historyEdge.stats.maxDD > 0 ? "#f7a600" : "#089981",
+                        testId: "history-edge-max-dd-value",
+                      },
+                      {
+                        label: "Avg Win",
+                        value: historyEdge.stats.wins > 0 ? `+$${historyEdge.stats.avgWin.toFixed(2)}` : "—",
+                        color: "#089981",
+                        testId: "history-edge-avg-win-value",
+                      },
+                      {
+                        label: "Avg Loss",
+                        value: historyEdge.stats.losses > 0 ? `-$${historyEdge.stats.avgLoss.toFixed(2)}` : "—",
+                        color: "#f23645",
+                        testId: "history-edge-avg-loss-value",
+                      },
+                      {
+                        label: "Best Trade",
+                        value: isFinite(historyEdge.stats.best) ? `+$${historyEdge.stats.best.toFixed(2)}` : "—",
+                        color: "#089981",
+                        testId: "history-edge-best-trade-value",
+                      },
+                      {
+                        label: "Worst Trade",
+                        value: isFinite(historyEdge.stats.worst) ? `$${historyEdge.stats.worst.toFixed(2)}` : "—",
+                        color: "#f23645",
+                        testId: "history-edge-worst-trade-value",
+                      },
+                    ].map(({ label, value, color, testId }) => (
+                      <div key={label} className="rounded-lg p-3 bg-gray-50 dark:bg-gray-900">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{label}</p>
+                        <p className="text-sm font-bold" style={{ color }} data-testid={testId}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Session cards */}
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">Recent Sessions</h2>
@@ -1831,6 +2769,24 @@ const Backtest = () => {
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {[s.instrumentName, s.timeframe?.toUpperCase(), s.strategy, s.setup].filter(Boolean).join(" · ")}
                         </p>
+                        {s.tags?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {s.tags.slice(0, 4).map((tag) => (
+                              <span
+                                key={tag}
+                                data-testid={`session-card-tag-${s.id}-${tag}`}
+                                className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 font-medium"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {s.tags.length > 4 && (
+                              <span className="text-[10px] px-1.5 py-0.5 text-gray-400 dark:text-gray-500">
+                                +{s.tags.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Date */}
@@ -1867,7 +2823,13 @@ const Backtest = () => {
         </div>
       </div>
       {historyModal && (
-        <HistoryModal session={historyModal} onClose={() => setHistoryModal(null)} />
+        <HistoryModal
+          key={historyModal.id}
+          session={historyModal}
+          onClose={() => setHistoryModal(null)}
+          onSave={handleSaveSessionMeta}
+          tagSuggestions={tagSuggestions}
+        />
       )}
       </>
     );
@@ -2032,11 +2994,11 @@ const Backtest = () => {
                               key={instrument.symbol}
                               type="button"
                               onClick={() =>
-                                setSelectedInstruments((prev) =>
-                                  isSelected
-                                    ? prev.filter((s) => s !== instrument.symbol)
-                                    : [...prev, instrument.symbol]
-                                )
+                                setSelectedInstruments((prev) => {
+                                  if (isSelected) return prev.filter((s) => s !== instrument.symbol);
+                                  if (prev.length >= 3) return prev; // max 3 assets
+                                  return [...prev, instrument.symbol];
+                                })
                               }
                               className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                                 isSelected
@@ -2050,11 +3012,11 @@ const Backtest = () => {
                         })}
                       </div>
                     )}
-                    {selectedInstruments.length > 0 && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        Selected: {selectedInstruments.join(", ")} · Chart loads {selectedInstruments[0]}
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      {selectedInstruments.length === 0
+                        ? "Select up to 3 assets — each opens in its own chart window"
+                        : `Selected: ${selectedInstruments.join(", ")}${selectedInstruments.length >= 3 ? " · Max 3 reached" : " · Select up to 3"}`}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2204,28 +3166,27 @@ const Backtest = () => {
       >
         {/* ── Top bar — TradingView light toolbar style ── */}
         <div
-          className="flex items-center justify-between px-4 py-1.5 flex-shrink-0 border-b"
+          className="relative flex items-center justify-between px-4 py-1.5 flex-shrink-0 border-b"
           style={{ background: theme.surface, borderColor: theme.border }}
         >
           <div className="flex items-center space-x-4 min-w-0">
             <button
               onClick={() => {
                 if (currentSession) {
-                  // Persist running balance locally (used to pre-fill next session)
-                  localStorage.setItem("backtestRunningBalance", balance.toString());
-                  // Save trades + ending balance to DB and update local history state
-                  supabase
-                    .from("backtest_sessions")
-                    .update({ results: { trades, endingBalance: balance }, status: "completed" })
-                    .eq("id", currentSession.id)
-                    .then(({ error }) => {
-                      if (error) console.error("[Backtest] session save error:", error.message);
-                    });
+                  saveSessionResults("completed");
+                  // A session with no trades was deleted from the DB — drop it
+                  // from the visible history too
                   setSessionHistory((prev) =>
-                    prev.map((s) =>
-                      s.id === currentSession.id ? { ...s, endingBalance: balance, trades } : s
-                    )
+                    trades.length === 0
+                      ? prev.filter((s) => s.id !== currentSession.id)
+                      : prev.map((s) =>
+                          s.id === currentSession.id ? { ...s, endingBalance: balance, trades } : s
+                        )
                   );
+                  // Clear the session so the unmount/pagehide save doesn't
+                  // flip the status back to "running"
+                  setCurrentSession(null);
+                  currentSessionRef.current = null;
                 }
                 setCurrentView("sessions");
               }}
@@ -2263,10 +3224,8 @@ const Backtest = () => {
                       <input
                         autoFocus type="text"
                         placeholder={
-                          activeChart === 1 && selectedInstruments.length === 1
-                            ? "Change instrument…"
-                            : activeChart === 1
-                            ? "Add chart 2 or 3 instrument…"
+                          activeChart === 1
+                            ? "Change this window's instrument…"
                             : "Search instrument…"
                         }
                         value={assetSearchQuery}
@@ -2314,21 +3273,176 @@ const Backtest = () => {
                   </span>
                 </span>
               ))}
-              <span className="text-xs hidden sm:block truncate max-w-[100px]" style={{ color: theme.textMuted }}>
-                {currentSession.instrument?.name}
-              </span>
             </div>
-            {currentPrice > 0 && (
-              <span
-                className="font-mono font-semibold text-base flex-shrink-0"
-                style={{ color: theme.text }}
-              >
-                ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            )}
           </div>
 
-          <div className="flex items-center space-x-3 text-xs flex-shrink-0">
+          {/* ── Center: replay controls — Formation / Prev / Play / Speed / Next / Bar replay / Seek date ── */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-0.5" style={{ marginLeft: -28 }}>
+            {/* Bar magnifier — replay each chart-TF candle building from lower-TF
+                steps (e.g. watch a 4H candle form from 30M sub-candles) */}
+            <div
+              className="flex items-center gap-0.5 flex-shrink-0 rounded border pl-1"
+              style={{
+                borderColor: formTf ? "#1E53E5" : "#d1d4dc",
+                background: formTf ? "#e8f0fe" : theme.surface,
+                opacity: (isLoadingData || isLoadingFormData || !chartData.length) ? 0.4 : 1,
+              }}
+              title="Build candles — watch each candle form from a lower timeframe (e.g. a 4H candle building in 30M steps)"
+            >
+              <Layers className="w-3 h-3 flex-shrink-0" style={{ color: formTf ? "#1E53E5" : theme.textMuted }} />
+              <select
+                data-testid="backtest-form-tf-select"
+                value={formTf ?? ""}
+                onChange={(e) => handleFormTfChange(e.target.value || null)}
+                disabled={isLoadingData || isLoadingFormData || !chartData.length}
+                className="text-[10px] py-0.5 pr-1 bg-transparent outline-none disabled:cursor-not-allowed"
+                style={{ color: formTf ? "#1E53E5" : theme.textMuted, fontWeight: formTf ? 600 : 400 }}
+              >
+                <option value="">Build: off</option>
+                {ALL_TIMEFRAMES
+                  .filter((tf) => TF_MINUTES[tf] < (TF_MINUTES[timeframe] ?? 0) && TF_MINUTES[timeframe] % TF_MINUTES[tf] === 0)
+                  .map((tf) => (
+                    <option key={tf} value={tf}>Build: {tf.toUpperCase()}</option>
+                  ))}
+              </select>
+            </div>
+            <button
+              data-testid="backtest-prev-btn"
+              onClick={handleStepBack}
+              disabled={isLoadingData || !chartData.length || currentCandle <= 0}
+              title="Previous candle"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
+              style={{ color: theme.textMuted }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = theme.text;
+                e.currentTarget.style.background = theme.bg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.textMuted;
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <SkipBack className="w-3 h-3" />
+              Prev
+            </button>
+            <button
+              data-testid="backtest-play-btn"
+              onClick={handlePlay}
+              disabled={isLoadingData || !chartData.length || (!isPlaying && currentCandle >= chartData.length - 1)}
+              title={isPlaying ? "Pause" : currentCandle >= chartData.length - 1 ? "At last candle — use the date picker or Prev to rewind" : "Play forward"}
+              className="flex items-center px-2.5 py-0.5 text-[10px] rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+              style={{ background: "#1E53E5", color: "#ffffff" }}
+            >
+              {isPlaying ? <Pause className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
+            </button>
+            <button
+              data-testid="backtest-next-btn"
+              onClick={handleStepForward}
+              disabled={isLoadingData || !chartData.length || currentCandle >= chartData.length - 1}
+              title="Next candle"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
+              style={{ color: theme.textMuted }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = theme.text;
+                e.currentTarget.style.background = theme.bg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.textMuted;
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              Next
+              <SkipForward className="w-3 h-3" />
+            </button>
+            <select
+              data-testid="backtest-speed-select"
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              title="Playback speed"
+              className="text-[10px] rounded px-1 py-0.5 border flex-shrink-0 outline-none"
+              style={{ background: theme.surface, color: theme.text, borderColor: "#d1d4dc" }}
+            >
+              <option value={0.5}>0.5×</option>
+              <option value={1}>1×</option>
+              <option value={2}>2×</option>
+              <option value={4}>4×</option>
+              <option value={8}>8×</option>
+            </select>
+            <button
+              data-testid="backtest-bar-replay-btn"
+              onClick={() => setBarReplayMode((v) => !v)}
+              disabled={isLoadingData || !chartData.length}
+              title={barReplayMode ? "Bar replay ON — click chart to seek" : "Bar replay — click to activate, then click chart to seek"}
+              className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+              style={{
+                background: barReplayMode ? "#e8f0fe" : "transparent",
+                color: barReplayMode ? "#1E53E5" : theme.textMuted,
+                border: barReplayMode ? "1px solid #1E53E5" : "1px solid transparent",
+              }}
+            >
+              <Crosshair className="w-3 h-3" />
+              {barReplayMode ? <span>Replay ON</span> : <span>Replay</span>}
+            </button>
+
+            {/* Seek to date — calendar toggle opens a dropdown with the date picker + Cut */}
+            <div ref={seekDatePickerRef} className="relative flex-shrink-0">
+              <button
+                data-testid="backtest-seek-date-btn"
+                onClick={() => setShowSeekDatePicker((v) => !v)}
+                disabled={isLoadingData || !chartData.length}
+                title="Go to date — cut the chart at a date for replay"
+                className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded font-medium transition-colors disabled:opacity-40"
+                style={{
+                  background: showSeekDatePicker ? "#e8f0fe" : "transparent",
+                  color: showSeekDatePicker ? "#1E53E5" : theme.textMuted,
+                  border: showSeekDatePicker ? "1px solid #1E53E5" : "1px solid transparent",
+                }}
+              >
+                <Calendar className="w-3 h-3" />
+                Date
+              </button>
+              {showSeekDatePicker && (
+                <div
+                  data-testid="backtest-seek-date-dropdown"
+                  className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 flex items-center gap-1.5 rounded-lg shadow-xl border px-2.5 py-2"
+                  style={{ background: theme.surface, borderColor: theme.border }}
+                >
+                  <input
+                    data-testid="backtest-seek-date-input"
+                    type="date"
+                    value={seekDate}
+                    onChange={(e) => setSeekDate(e.target.value)}
+                    className="text-xs rounded px-1.5 py-0.5 border outline-none"
+                    style={{
+                      background: theme.surface,
+                      color: theme.text,
+                      borderColor: "#d1d4dc",
+                      width: 120,
+                    }}
+                  />
+                  <button
+                    data-testid="backtest-cut-btn"
+                    onClick={() => { handleCut(); setShowSeekDatePicker(false); }}
+                    disabled={isLoadingData || !chartData.length || !seekDate}
+                    title="Cut chart at selected date — hides future candles for replay"
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+                    style={{ background: "#f23645", color: "#ffffff" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#d42c3a";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#f23645";
+                    }}
+                  >
+                    <Scissors className="w-3 h-3" />
+                    Cut
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-1.5 text-xs flex-shrink-0">
             {/* Balance — click to edit, shows warning before saving */}
             {isEditingBalance ? (
               <div className="flex items-center gap-1">
@@ -2375,7 +3489,7 @@ const Backtest = () => {
             <div>
               <span style={{ color: theme.textMuted }}>P&amp;L </span>
               <span className="font-semibold" style={{ color: pnlPositive ? "#089981" : "#f23645" }}>
-                {pnlPositive ? "+" : ""}${pnl.toFixed(2)}
+                {pnlPositive ? "+" : ""}${trimPrice(pnl)}
               </span>
             </div>
             {/* Buy / Sell buttons — in the top bar */}
@@ -2383,7 +3497,7 @@ const Backtest = () => {
               <>
                 <button
                   onClick={() => openOrderPanel("buy")}
-                  className="px-3 py-1 rounded text-xs font-bold transition-colors"
+                  className="px-3 py-1 rounded text-xs font-bold transition-colors ml-1.5"
                   style={{ background: "#089981", color: "#fff" }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "#067a68")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "#089981")}
@@ -2450,174 +3564,9 @@ const Backtest = () => {
           })()}
           <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
 
-          {/* ── Replay controls ── */}
-
-          {/* Previous candle */}
-          <button
-            onClick={handleStepBack}
-            disabled={isLoadingData || !chartData.length || currentCandle <= 0}
-            title="Previous candle"
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
-            style={{ color: theme.textMuted }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = theme.text;
-              e.currentTarget.style.background = theme.bg;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = theme.textMuted;
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <SkipBack className="w-3.5 h-3.5" />
-            Prev
-          </button>
-
-          {/* Play / Pause */}
-          <button
-            onClick={handlePlay}
-            disabled={isLoadingData || !chartData.length || (!isPlaying && currentCandle >= chartData.length - 1)}
-            title={isPlaying ? "Pause" : currentCandle >= chartData.length - 1 ? "At last candle — use Reset to replay" : "Play forward"}
-            className="flex items-center px-3 py-1 text-xs rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
-            style={{ background: "#1E53E5", color: "#ffffff" }}
-          >
-            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-          </button>
-
-          {/* Bar replay — click on chart to jump to that candle */}
-          <button
-            onClick={() => setBarReplayMode((v) => !v)}
-            disabled={isLoadingData || !chartData.length}
-            title={barReplayMode ? "Bar replay ON — click chart to seek" : "Bar replay — click to activate, then click chart to seek"}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
-            style={{
-              background: barReplayMode ? "#e8f0fe" : "transparent",
-              color: barReplayMode ? "#1E53E5" : theme.textMuted,
-              border: barReplayMode ? "1px solid #1E53E5" : "1px solid transparent",
-            }}
-          >
-            <Crosshair className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Next candle */}
-          <button
-            onClick={handleStepForward}
-            disabled={isLoadingData || !chartData.length || currentCandle >= chartData.length - 1}
-            title="Next candle"
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0 font-medium"
-            style={{ color: theme.textMuted }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = theme.text;
-              e.currentTarget.style.background = theme.bg;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = theme.textMuted;
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            Next
-            <SkipForward className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Reset */}
-          <button
-            onClick={handleReset}
-            disabled={isLoadingData}
-            title="Reset to start"
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-40 flex-shrink-0"
-            style={{ color: theme.textMuted }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = theme.text;
-              e.currentTarget.style.background = theme.bg;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = theme.textMuted;
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <RotateCcw className="w-3 h-3" />
-          </button>
-
-          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
-
-          {/* Undo / Redo */}
-          <button
-            onClick={undo}
-            disabled={!canUndo}
-            title="Undo last drawing"
-            className="flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors disabled:opacity-30 flex-shrink-0"
-            style={{ color: theme.textMuted }}
-            onMouseEnter={(e) => { if (canUndo) { e.currentTarget.style.color = theme.text; e.currentTarget.style.background = theme.bg; } }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = theme.textMuted; e.currentTarget.style.background = "transparent"; }}
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={redo}
-            disabled={!canRedo}
-            title="Redo drawing"
-            className="flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors disabled:opacity-30 flex-shrink-0"
-            style={{ color: theme.textMuted }}
-            onMouseEnter={(e) => { if (canRedo) { e.currentTarget.style.color = theme.text; e.currentTarget.style.background = theme.bg; } }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = theme.textMuted; e.currentTarget.style.background = "transparent"; }}
-          >
-            <Redo2 className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
-
-          {/* ── Cut by date ── */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Calendar className="w-3 h-3 flex-shrink-0" style={{ color: "#b2b5be" }} />
-            <input
-              type="date"
-              value={seekDate}
-              onChange={(e) => setSeekDate(e.target.value)}
-              className="text-xs rounded px-1.5 py-0.5 border outline-none"
-              style={{
-                background: theme.surface,
-                color: theme.text,
-                borderColor: "#d1d4dc",
-                width: 120,
-              }}
-            />
-            <button
-              onClick={handleCut}
-              disabled={isLoadingData || !chartData.length || !seekDate}
-              title="Cut chart at selected date — hides future candles for replay"
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
-              style={{ background: "#f23645", color: "#ffffff" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#d42c3a";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#f23645";
-              }}
-            >
-              <Scissors className="w-3 h-3" />
-              Cut
-            </button>
-          </div>
-
-          <div className="h-4 w-px mx-2 flex-shrink-0" style={{ background: theme.border }} />
-
-          {/* Speed */}
-          <select
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            className="text-xs rounded px-2 py-1 border flex-shrink-0"
-            style={{ background: theme.surface, color: theme.text, borderColor: "#d1d4dc" }}
-          >
-            <option value={0.5}>0.5×</option>
-            <option value={1}>1×</option>
-            <option value={2}>2×</option>
-            <option value={4}>4×</option>
-            <option value={8}>8×</option>
-          </select>
-
-          <div className="h-4 w-px flex-shrink-0" style={{ background: theme.border }} />
-
-          {/* Indicators button + dropdown */}
-          <div className="relative flex-shrink-0 ml-1" ref={indicatorPanelRef}>
+          {/* Indicators button + dropdown (dropdown is fixed-positioned so the
+              scrollable toolbar's overflow can't clip it) */}
+          <div className="relative flex-shrink-0" ref={indicatorPanelRef}>
             <button
               onClick={() => setShowIndicatorPanel((v) => !v)}
               className="flex items-center px-2 py-1 text-xs rounded-sm transition-colors font-medium"
@@ -2645,10 +3594,17 @@ const Backtest = () => {
               </svg>
             </button>
 
-            {showIndicatorPanel && (
+            {showIndicatorPanel && (() => {
+              const anchor = indicatorPanelRef.current?.getBoundingClientRect();
+              return (
               <div
-                className="absolute left-0 top-full mt-1 rounded-lg shadow-xl border z-50 py-2 min-w-[200px]"
-                style={{ background: theme.surface, borderColor: theme.border }}
+                className="fixed rounded-lg shadow-xl border z-50 py-2 min-w-[200px]"
+                style={{
+                  background: theme.surface,
+                  borderColor: theme.border,
+                  top: (anchor?.bottom ?? 0) + 4,
+                  left: anchor?.left ?? 0,
+                }}
               >
                 <p
                   className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider border-b"
@@ -2694,8 +3650,35 @@ const Backtest = () => {
                   </button>
                 ))}
               </div>
-            )}
+              );
+            })()}
           </div>
+
+          {/* Undo / Redo — to the right of Indicators, slightly spaced out */}
+          <button
+            data-testid="backtest-undo-btn"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo last drawing"
+            className="flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors disabled:opacity-30 flex-shrink-0 ml-3"
+            style={{ color: theme.textMuted }}
+            onMouseEnter={(e) => { if (canUndo) { e.currentTarget.style.color = theme.text; e.currentTarget.style.background = theme.bg; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = theme.textMuted; e.currentTarget.style.background = "transparent"; }}
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            data-testid="backtest-redo-btn"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo drawing"
+            className="flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors disabled:opacity-30 flex-shrink-0 ml-1"
+            style={{ color: theme.textMuted }}
+            onMouseEnter={(e) => { if (canRedo) { e.currentTarget.style.color = theme.text; e.currentTarget.style.background = theme.bg; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = theme.textMuted; e.currentTarget.style.background = "transparent"; }}
+          >
+            <Redo2 className="w-3.5 h-3.5" />
+          </button>
 
         </div>{/* end scrollable toolbar */}
 
@@ -2932,150 +3915,239 @@ const Backtest = () => {
             <div ref={innerRowRef} className="flex-1 flex overflow-hidden relative">
 
               {/* Drawing toolbar — always visible, TradingView-style left panel */}
-              <div
-                className="flex flex-col items-center py-2 px-1 border-r flex-shrink-0 gap-0.5 overflow-y-auto"
-                style={{
-                  background: theme.surface,
-                  borderColor: theme.border,
-                  width: 44,
-                  opacity: chartData.length === 0 ? 0.35 : 1,
-                  pointerEvents: chartData.length === 0 ? "none" : "auto",
-                }}
-              >
-                {/* Cursor */}
-                <button
-                  onClick={() => setDrawingMode(null)}
-                  title="Cursor (default)"
-                  className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                  style={{ background: drawingMode === null ? "#e8f0fe" : "transparent", color: drawingMode === null ? "#1E53E5" : theme.textMuted }}
-                >
-                  <MousePointer2 className="w-4 h-4" />
-                </button>
-
-                <div className="w-6 h-px my-1" style={{ background: theme.border }} />
-
-                {/* Line tools */}
-                {[
-                  { mode: "trendline",  Icon: TrendingUp,        title: "Trend Line (extends full width, 2 clicks)" },
-                  { mode: "ray",        Icon: ArrowUpRight,      title: "Ray (extends right, 2 clicks)" },
-                  { mode: "segment",    Icon: Slash,             title: "Line Segment (fixed length, 2 clicks)" },
-                  { mode: "hline",      Icon: Minus,             title: "Horizontal Line" },
-                  { mode: "vline",      Icon: SeparatorVertical, title: "Vertical Line" },
-                ].map(({ mode, Icon, title }) => (
-                  <button
-                    key={mode}
-                    onClick={() => { setDrawingMode((prev) => prev === mode ? null : mode); setSelectedDrawingIds([]); }}
-                    title={title}
-                    className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                    style={{ background: drawingMode === mode ? "#e8f0fe" : "transparent", color: drawingMode === mode ? "#1E53E5" : theme.textMuted }}
+              {(() => {
+                const ALL_DRAW_TOOLS = BACKTEST_DRAW_TOOLS;
+                const ToolBtn = ({ mode, Icon, title, label }) => {
+                  // Only highlight from the left panel — not when the same tool was activated via the floating bar
+                  const active = drawingMode === mode && drawingModeSource !== "floating";
+                  const faved = favDrawingTools.includes(mode);
+                  return (
+                    <div className="relative group" style={{ width: 42 }}>
+                      <button
+                        onClick={() => { setDrawingMode(mode); setDrawingModeSource("panel"); setSelectedDrawingIds([]); }}
+                        title={title}
+                        style={{
+                          width: 42, height: 36,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          borderRadius: 5,
+                          background: active ? "#e8f0fe" : "transparent",
+                          color: active ? "#1E53E5" : theme.textMuted,
+                          fontSize: 9, fontWeight: 700, letterSpacing: "-0.5px",
+                          border: "none", cursor: "pointer", transition: "background 0.12s, color 0.12s",
+                        }}
+                        onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = theme.bg; e.currentTarget.style.color = theme.text; }}}
+                        onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.textMuted; }}}
+                      >
+                        {Icon ? <Icon style={{ width: 16, height: 16 }} /> : label}
+                      </button>
+                      {/* Star — always visible so users know they can favourite tools */}
+                      <button
+                        title={faved ? "Remove from favourites" : "Add to favourites"}
+                        onClick={(e) => { e.stopPropagation(); toggleFavTool(mode); }}
+                        style={{
+                          position: "absolute", top: 1, right: 1,
+                          width: 11, height: 11,
+                          fontSize: 9, lineHeight: "11px", textAlign: "center",
+                          color: faved ? "#f7a600" : theme.textMuted,
+                          opacity: 1,
+                          background: "transparent", border: "none", cursor: "pointer", padding: 0,
+                          WebkitTextStroke: faved ? "0.4px #333" : "0.4px #555",
+                          textShadow: "0 0 1px rgba(0,0,0,0.6)",
+                        }}
+                      >
+                        {faved ? "★" : "☆"}
+                      </button>
+                    </div>
+                  );
+                };
+                const favTools = ALL_DRAW_TOOLS.filter((t) => favDrawingTools.includes(t.mode));
+                return (
+                  <div
+                    className="flex flex-col items-center py-2 px-0.5 border-r flex-shrink-0 gap-0.5 overflow-y-auto"
+                    style={{
+                      background: theme.surface,
+                      borderColor: theme.border,
+                      width: 46,
+                      opacity: chartData.length === 0 ? 0.35 : 1,
+                      pointerEvents: chartData.length === 0 ? "none" : "auto",
+                    }}
                   >
-                    <Icon className="w-4 h-4" />
-                  </button>
-                ))}
-
-                {/* Fibonacci */}
-                <button
-                  onClick={() => { setDrawingMode((prev) => prev === "fibonacci" ? null : "fibonacci"); setSelectedDrawingIds([]); }}
-                  title="Fibonacci Retracement (2 clicks)"
-                  className="w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-bold"
-                  style={{ background: drawingMode === "fibonacci" ? "#e8f0fe" : "transparent", color: drawingMode === "fibonacci" ? "#1E53E5" : theme.textMuted }}
-                >
-                  Fib
-                </button>
-
-                <div className="w-6 h-px my-1" style={{ background: theme.border }} />
-
-                {/* Shape + annotation tools */}
-                {[
-                  { mode: "rectangle",    Icon: Square,     title: "Rectangle (2 clicks)" },
-                  { mode: "text",         Icon: Type,       title: "Text Label" },
-                ].map(({ mode, Icon, title }) => (
-                  <button
-                    key={mode}
-                    onClick={() => { setDrawingMode((prev) => prev === mode ? null : mode); setSelectedDrawingIds([]); }}
-                    title={title}
-                    className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                    style={{ background: drawingMode === mode ? "#e8f0fe" : "transparent", color: drawingMode === mode ? "#1E53E5" : theme.textMuted }}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </button>
-                ))}
-
-                <div className="w-6 h-px my-1" style={{ background: theme.border }} />
-
-                {/* Buy / Sell position markers */}
-                <button
-                  onClick={() => { setDrawingMode((prev) => prev === "buy_marker" ? null : "buy_marker"); setSelectedDrawingIds([]); }}
-                  title="Mark Buy / Long entry"
-                  className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                  style={{ background: drawingMode === "buy_marker" ? "rgba(8,153,129,0.15)" : "transparent", color: drawingMode === "buy_marker" ? "#089981" : theme.textMuted }}
-                >
-                  <ArrowUp className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => { setDrawingMode((prev) => prev === "sell_marker" ? null : "sell_marker"); setSelectedDrawingIds([]); }}
-                  title="Mark Sell / Short entry"
-                  className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                  style={{ background: drawingMode === "sell_marker" ? "rgba(242,54,69,0.12)" : "transparent", color: drawingMode === "sell_marker" ? "#f23645" : theme.textMuted }}
-                >
-                  <ArrowDown className="w-4 h-4" />
-                </button>
-
-                {/* Risk / Reward box */}
-                <button
-                  onClick={() => { setDrawingMode((prev) => prev === "rr" ? null : "rr"); setSelectedDrawingIds([]); }}
-                  title="Risk/Reward box — click entry, then stop loss (TP auto 2:1)"
-                  className="w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-bold"
-                  style={{
-                    background: drawingMode === "rr" ? "rgba(30,83,229,0.15)" : "transparent",
-                    color: drawingMode === "rr" ? "#1E53E5" : theme.textMuted,
-                    letterSpacing: "-0.5px",
-                    fontSize: 9,
-                  }}
-                >
-                  R:R
-                </button>
-
-                <div className="w-6 h-px my-1" style={{ background: theme.border }} />
-
-                {/* Eraser */}
-                <button
-                  onClick={() => { setDrawingMode((prev) => prev === "eraser" ? null : "eraser"); setSelectedDrawingIds([]); }}
-                  title="Eraser — click a drawing to delete it"
-                  className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                  style={{ background: drawingMode === "eraser" ? "#fff3e0" : "transparent", color: drawingMode === "eraser" ? "#f7a600" : theme.textMuted }}
-                >
-                  <Eraser className="w-4 h-4" />
-                </button>
-
-                {/* Spacer pushes trash to bottom */}
-                <div className="flex-1" />
-
-                {userDrawings.length > 0 && (
-                  <>
-                    <div className="w-6 h-px" style={{ background: theme.border }} />
+                    {/* Cursor */}
                     <button
-                      onClick={() => pushDrawings([])}
-                      title="Clear all drawings"
-                      className="w-8 h-8 rounded flex items-center justify-center transition-colors"
-                      style={{ color: theme.textMuted }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f23645")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = theme.textMuted)}
+                      onClick={() => { setDrawingMode(null); setDrawingModeSource(null); }}
+                      title="Cursor (default)"
+                      style={{
+                        width: 42, height: 36,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        borderRadius: 5,
+                        background: drawingMode === null ? "#e8f0fe" : "transparent",
+                        color: drawingMode === null ? "#1E53E5" : theme.textMuted,
+                        border: "none", cursor: "pointer", transition: "background 0.12s, color 0.12s",
+                      }}
+                      onMouseEnter={(e) => { if (drawingMode !== null) { e.currentTarget.style.background = theme.bg; e.currentTarget.style.color = theme.text; }}}
+                      onMouseLeave={(e) => { if (drawingMode !== null) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.textMuted; }}}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <MousePointer2 style={{ width: 16, height: 16 }} />
                     </button>
-                  </>
-                )}
-              </div>
 
-              {/* Chart area */}
+                    {/* All tools */}
+                    {ALL_DRAW_TOOLS.map((t) => <ToolBtn key={t.mode} {...t} />)}
+
+                    <div style={{ width: 24, height: 1, background: theme.border, margin: "4px 0 2px" }} />
+
+                    {/* Eraser — click a drawing to delete it */}
+                    <button
+                      onClick={() => { setDrawingMode("eraser"); setDrawingModeSource("panel"); setSelectedDrawingIds([]); }}
+                      title="Eraser — click a drawing to delete it"
+                      style={{
+                        width: 42, height: 36,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        borderRadius: 5,
+                        background: drawingMode === "eraser" ? "#fff3e0" : "transparent",
+                        color: drawingMode === "eraser" ? "#f7a600" : theme.textMuted,
+                        border: "none", cursor: "pointer", transition: "background 0.12s, color 0.12s",
+                      }}
+                      onMouseEnter={(e) => { if (drawingMode !== "eraser") { e.currentTarget.style.background = theme.bg; e.currentTarget.style.color = theme.text; }}}
+                      onMouseLeave={(e) => { if (drawingMode !== "eraser") { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.textMuted; }}}
+                    >
+                      <Eraser style={{ width: 16, height: 16 }} />
+                    </button>
+
+                    {/* Spacer pushes trash to bottom */}
+                    <div style={{ flex: 1 }} />
+
+                    {/* Clear all drawings */}
+                    {userDrawings.length > 0 && (
+                      <>
+                        <div style={{ width: 24, height: 1, background: theme.border, margin: "2px 0" }} />
+                        <button
+                          data-testid="drawing-clear-all-btn"
+                          onClick={() => setShowClearDrawingsConfirm(true)}
+                          title="Delete all drawings"
+                          style={{
+                            width: 42, height: 36,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            borderRadius: 5,
+                            background: "transparent",
+                            color: theme.textMuted,
+                            border: "none", cursor: "pointer", transition: "background 0.12s, color 0.12s",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#f23645"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.textMuted; }}
+                        >
+                          <Trash2 style={{ width: 16, height: 16 }} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Chart area — overflow-hidden + minWidth:0 so flex can shrink it below the canvas's current width */}
               <div
-                className="relative"
-                style={{ flex: colSizes[0] }}
+                ref={(el) => (colPanelRefs.current[0] = el)}
+                className="relative overflow-hidden"
+                style={{ flex: colSizes[0], minWidth: 0 }}
                 onMouseDown={() => setActiveChart(1)}
                 onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
               >
 
+              {/* Floating favourite tools — hovers over the chart.
+                  Single grip on the left drags the entire bar to reposition it.
+                  Selecting a tool here does NOT highlight the left panel button. */}
+              {favDrawingTools.length > 0 && !isLoadingData && chartData.length > 0 && (
+                <div
+                  data-testid="fav-tools-floating-bar"
+                  className={favBarPos ? "" : "absolute top-2 left-1/2 -translate-x-1/2"}
+                  style={{
+                    position: favBarPos ? "fixed" : undefined,
+                    left: favBarPos ? favBarPos.left : undefined,
+                    top: favBarPos ? favBarPos.top : undefined,
+                    zIndex: 50,
+                    display: "flex", alignItems: "center", gap: 1,
+                    borderRadius: 8, border: `1px solid ${theme.border}`,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+                    background: theme.surface,
+                    padding: "2px 4px 2px 2px",
+                  }}
+                >
+                  {/* Single drag handle for the whole bar */}
+                  <div
+                    title="Drag to move toolbar"
+                    style={{ cursor: "grab", padding: "0 2px", display: "flex", alignItems: "center", flexShrink: 0 }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const bar = e.currentTarget.parentElement;
+                      const barRect = bar.getBoundingClientRect();
+                      const startMouseX = e.clientX;
+                      const startMouseY = e.clientY;
+                      const startLeft = barRect.left;
+                      const startTop = barRect.top;
+                      const onMove = (ev) => {
+                        setFavBarPos({
+                          left: startLeft + ev.clientX - startMouseX,
+                          top: startTop + ev.clientY - startMouseY,
+                        });
+                      };
+                      const onUp = () => {
+                        window.removeEventListener("mousemove", onMove);
+                        window.removeEventListener("mouseup", onUp);
+                      };
+                      window.addEventListener("mousemove", onMove);
+                      window.addEventListener("mouseup", onUp);
+                    }}
+                  >
+                    <GripVertical style={{ width: 12, height: 20, color: theme.textMuted, opacity: 0.55 }} />
+                  </div>
+
+                  {/* Tool buttons — draggable among themselves to reorder */}
+                  {BACKTEST_DRAW_TOOLS
+                    .filter((t) => favDrawingTools.includes(t.mode))
+                    .sort((a, b) => favDrawingTools.indexOf(a.mode) - favDrawingTools.indexOf(b.mode))
+                    .map(({ mode, Icon, title, label }) => {
+                      const active = drawingMode === mode && drawingModeSource === "floating";
+                      return (
+                        <div
+                          key={mode}
+                          draggable
+                          onDragStart={() => { floatDragRef.current = mode; }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            const src = floatDragRef.current;
+                            if (!src || src === mode) return;
+                            setFavDrawingTools((prev) => {
+                              const arr = [...prev];
+                              const from = arr.indexOf(src), to = arr.indexOf(mode);
+                              if (from === -1 || to === -1) return prev;
+                              arr.splice(from, 1);
+                              arr.splice(to, 0, src);
+                              return arr;
+                            });
+                          }}
+                        >
+                          <button
+                            data-testid={`fav-tool-${mode}-btn`}
+                            onClick={() => { setDrawingMode(mode); setDrawingModeSource("floating"); setSelectedDrawingIds([]); }}
+                            title={title}
+                            style={{
+                              width: 28, height: 26,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              borderRadius: 4,
+                              background: active ? "#e8f0fe" : "transparent",
+                              color: active ? "#1E53E5" : theme.textMuted,
+                              fontSize: 9, fontWeight: 700, letterSpacing: "-0.5px",
+                              border: "none", cursor: "pointer", transition: "background 0.12s, color 0.12s",
+                            }}
+                            onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = theme.bg; e.currentTarget.style.color = theme.text; } }}
+                            onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.textMuted; } }}
+                          >
+                            {Icon ? <Icon style={{ width: 14, height: 14 }} /> : label}
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
 
               {/* Instrument labels moved to top bar */}
 
@@ -3111,45 +4183,55 @@ const Backtest = () => {
                     onCandleSeek={handleCandleSeek}
                     isPlaying={isPlaying}
                     isDark={isDark}
-                    positions={positions}
+                    symbol={currentSession?.instrument?.symbol}
+                    isActiveChart={activeChart === 1}
+                    onPriceScaleWidth={(w) => reportPsWidth(1, w)}
+                    positions={positionsByChart[1]}
+                    trades={tradesByChart[1]}
                     onPositionUpdate={updatePosition}
-                    orderPreview={showOrderPanel && activeChart === 1 ? {
-                      side: orderSide,
-                      entryPrice: activeChartPrice,
-                      takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
-                      stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
-                    } : null}
+                    orderPreview={orderPreview1}
                     onOrderPreviewUpdate={(field, value) => {
-                      if (field === "takeProfit") setTakeProfit(String(value));
-                      if (field === "stopLoss") setStopLoss(String(value));
+                      if (field === "takeProfit") setTakeProfit(clampExitLevel("takeProfit", value).toFixed(2));
+                      if (field === "stopLoss") setStopLoss(clampExitLevel("stopLoss", value).toFixed(2));
                     }}
                     drawingMode={drawingMode}
                     userDrawings={userDrawings}
                     onDrawingAdd={(drawing) => {
-                      pushDrawings([...userDrawings, { ...drawing, id: Date.now() }]);
-                      if (drawing.type === "rr") setDrawingMode(null);
+                      // Keep a caller-provided id (text tool pre-selects by id)
+                      pushDrawings([...userDrawings, { id: Date.now(), ...drawing }]);
+                      // Auto-switch back to cursor after completing a drawing.
+                      // Brush stays armed so several strokes can be drawn in a row.
+                      if (drawing.type !== "freehand") setDrawingMode(null);
                     }}
                     onDrawingDelete={(id) => {
                       pushDrawings(userDrawings.filter((d) => d.id !== id));
                       setSelectedDrawingIds((prev) => prev.filter((sid) => sid !== id));
                     }}
-                    onCrosshairMove={(t) => setSyncedCrosshairTime(t)}
+                    onCrosshairMove={(syncCursor || barReplayMode) ? (t, y) => {
+                      crosshairSettersRef.current[2]?.(t, y);
+                      crosshairSettersRef.current[3]?.(t, y);
+                    } : undefined}
+                    onRegisterCrosshairSetter={(fn) => { crosshairSettersRef.current[1] = fn; }}
                     barReplayActive={barReplayMode}
+                    onBarReplayDeactivate={() => setBarReplayMode(false)}
                     selectedDrawingIds={selectedDrawingIds}
-                    onSelectionChange={(id) => {
-                      if (id === null) {
-                        setSelectedDrawingIds([]);
-                        return;
+                    onSelectionChange={(id, multi) => {
+                      if (id === null) { setSelectedDrawingIds([]); return; }
+                      if (multi) {
+                        setSelectedDrawingIds((prev) =>
+                          prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+                        );
+                      } else {
+                        setSelectedDrawingIds([id]);
                       }
-                      setSelectedDrawingIds((prev) =>
-                        prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
-                      );
                     }}
                     onRangeChange={syncDrag ? (r) => {
                       rangeSettersRef.current[2]?.(r);
                       rangeSettersRef.current[3]?.(r);
                     } : undefined}
                     onRegisterRangeSetter={(fn, getFn) => { rangeSettersRef.current[1] = fn; rangeGettersRef.current[1] = getFn; }}
+                    timezone={chartTz}
+                    formingCandle={formingCandle}
                     onDrawingUpdate={(id, changes) =>
                       pushDrawings(userDrawings.map((d) => d.id === id ? { ...d, ...changes } : d))
                     }
@@ -3158,9 +4240,12 @@ const Backtest = () => {
                         ? userDrawings.find((d) => d.id === selectedDrawingIds[0]) ?? null
                         : null
                     }
-                    onPropertyChange={(id, changes) =>
-                      pushDrawings(userDrawings.map((d) => d.id === id ? { ...d, ...changes } : d))
-                    }
+                    onPropertyChange={(id, changes) => {
+                      const next = userDrawings.map((d) => d.id === id ? { ...d, ...changes } : d);
+                      pushDrawings(next);
+                      const updated = next.find((d) => d.id === id);
+                      if (updated) autoSaveDefaults(updated.type, updated);
+                    }}
                     chartSettings={chartSettings}
                   />
                 </ChartErrorBoundary>
@@ -3179,6 +4264,11 @@ const Backtest = () => {
                     borderColor: theme.border,
                     userSelect: "none",
                   }}
+                  // The panel is a DOM child of window 1's chart area (whose
+                  // onMouseDown sets activeChart=1). Stop bubbling so interacting
+                  // with the panel never steals focus to window 1 — the order
+                  // preview stays on whichever window is actually selected.
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
                   {/* Drag handle header */}
                   <div
@@ -3189,7 +4279,9 @@ const Backtest = () => {
                       dragOrigin.current = { mx: e.clientX, my: e.clientY, px: panelPos.x, py: panelPos.y };
                     }}
                   >
-                    <span className="text-xs font-semibold select-none" style={{ color: theme.textMuted }}>Order Entry</span>
+                    <span className="text-xs font-semibold select-none" style={{ color: theme.textMuted }}>
+                      Order Entry · {activeChartInstrument?.symbol ?? "—"}{chartLayout !== "single" ? ` (W${activeChart})` : ""}
+                    </span>
                     <button
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={() => setShowOrderPanel(false)}
@@ -3213,11 +4305,11 @@ const Backtest = () => {
                       }}
                     >
                       <div className="text-xs font-medium mb-0.5">Sell</div>
-                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? (activeChartPrice - (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
+                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? trimPrice(activeChartPrice - (activeChartInstrument?.tickSize || 0.25)) : "—"}</div>
                     </button>
                     <div className="flex flex-col items-center justify-center px-2" style={{ background: isDark ? "#131722" : "#e8e8e8", minWidth: 40 }}>
                       <span className="text-xs font-medium" style={{ color: theme.textMuted }}>
-                        {((currentSession?.instrument?.tickSize || 0.25) * 2).toFixed(3)}
+                        {((activeChartInstrument?.tickSize || 0.25) * 2).toFixed(3)}
                       </span>
                     </div>
                     <button
@@ -3229,7 +4321,7 @@ const Backtest = () => {
                       }}
                     >
                       <div className="text-xs font-medium mb-0.5">Buy</div>
-                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? (activeChartPrice + (currentSession?.instrument?.tickSize || 0.25)).toFixed(2) : "—"}</div>
+                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? trimPrice(activeChartPrice + (activeChartInstrument?.tickSize || 0.25)) : "—"}</div>
                     </button>
                   </div>
 
@@ -3279,11 +4371,11 @@ const Backtest = () => {
                           <span className="text-xs" style={{ color: "#787b86" }}>Take profit, price</span>
                           <button
                             onClick={() => {
-                              if (!useTakeProfit && currentPrice) {
-                                const tickSize = currentSession?.instrument?.tickSize || 0.25;
+                              if (!useTakeProfit && activeChartPrice) {
+                                const tickSize = activeChartInstrument?.tickSize || 0.25;
                                 const tp = orderSide === "buy"
-                                  ? currentPrice + 20 * tickSize
-                                  : currentPrice - 20 * tickSize;
+                                  ? activeChartPrice + 20 * tickSize
+                                  : activeChartPrice - 20 * tickSize;
                                 setTakeProfit(tp.toFixed(2));
                               }
                               setUseTakeProfit((v) => !v);
@@ -3304,13 +4396,13 @@ const Backtest = () => {
                               value={takeProfit}
                               onChange={(e) => setTakeProfit(e.target.value)}
                               placeholder="Take profit price"
-                              step={currentSession?.instrument?.tickSize || 0.25}
+                              step={activeChartInstrument?.tickSize || 0.25}
                               className="w-full px-3 py-2 rounded text-sm border outline-none"
                               style={{ background: theme.bg, borderColor: "#089981", color: theme.text }}
                             />
                             {takeProfit && !isNaN(parseFloat(takeProfit)) && (
                               <p className="text-xs mt-1" style={{ color: "#089981" }}>
-                                {Math.abs((parseFloat(takeProfit) - currentPrice) / (currentSession?.instrument?.tickSize || 0.25)).toFixed(0)} ticks from entry
+                                {Math.abs((parseFloat(takeProfit) - activeChartPrice) / (activeChartInstrument?.tickSize || 0.25)).toFixed(0)} ticks from entry
                               </p>
                             )}
                             <div className="flex gap-1 mt-1.5">
@@ -3318,9 +4410,9 @@ const Backtest = () => {
                                 <button
                                   key={ticks}
                                   onClick={() => {
-                                    const ts = currentSession?.instrument?.tickSize || 0.25;
+                                    const ts = activeChartInstrument?.tickSize || 0.25;
                                     // Add ticks onto the current TP value (additive), not from entry price
-                                    const base = parseFloat(takeProfit) || currentPrice;
+                                    const base = parseFloat(takeProfit) || activeChartPrice;
                                     const tp = orderSide === "buy" ? base + ticks * ts : base - ticks * ts;
                                     setTakeProfit(tp.toFixed(2));
                                   }}
@@ -3341,11 +4433,11 @@ const Backtest = () => {
                           <span className="text-xs" style={{ color: "#787b86" }}>Stop loss, price</span>
                           <button
                             onClick={() => {
-                              if (!useStopLoss && currentPrice) {
-                                const tickSize = currentSession?.instrument?.tickSize || 0.25;
+                              if (!useStopLoss && activeChartPrice) {
+                                const tickSize = activeChartInstrument?.tickSize || 0.25;
                                 const sl = orderSide === "buy"
-                                  ? currentPrice - 10 * tickSize
-                                  : currentPrice + 10 * tickSize;
+                                  ? activeChartPrice - 10 * tickSize
+                                  : activeChartPrice + 10 * tickSize;
                                 setStopLoss(sl.toFixed(2));
                               }
                               setUseStopLoss((v) => !v);
@@ -3366,13 +4458,13 @@ const Backtest = () => {
                               value={stopLoss}
                               onChange={(e) => setStopLoss(e.target.value)}
                               placeholder="Stop loss price"
-                              step={currentSession?.instrument?.tickSize || 0.25}
+                              step={activeChartInstrument?.tickSize || 0.25}
                               className="w-full px-3 py-2 rounded text-sm border outline-none"
                               style={{ background: theme.bg, borderColor: "#f23645", color: theme.text }}
                             />
                             {stopLoss && !isNaN(parseFloat(stopLoss)) && (
                               <p className="text-xs mt-1" style={{ color: "#f23645" }}>
-                                {Math.abs((parseFloat(stopLoss) - currentPrice) / (currentSession?.instrument?.tickSize || 0.25)).toFixed(0)} ticks from entry
+                                {Math.abs((parseFloat(stopLoss) - activeChartPrice) / (activeChartInstrument?.tickSize || 0.25)).toFixed(0)} ticks from entry
                               </p>
                             )}
                             <div className="flex gap-1 mt-1.5">
@@ -3380,8 +4472,8 @@ const Backtest = () => {
                                 <button
                                   key={ticks}
                                   onClick={() => {
-                                    const ts = currentSession?.instrument?.tickSize || 0.25;
-                                    const base = parseFloat(stopLoss) || currentPrice;
+                                    const ts = activeChartInstrument?.tickSize || 0.25;
+                                    const base = parseFloat(stopLoss) || activeChartPrice;
                                     const sl = orderSide === "buy" ? base - ticks * ts : base + ticks * ts;
                                     setStopLoss(sl.toFixed(2));
                                   }}
@@ -3403,7 +4495,7 @@ const Backtest = () => {
                       <div className="flex justify-between text-xs" style={{ color: "#787b86" }}>
                         <span>Tick value</span>
                         <span className="font-semibold" style={{ color: theme.text }}>
-                          {currentSession?.instrument?.tickValue?.toFixed(2) || "—"} USD
+                          {activeChartInstrument?.tickValue?.toFixed(2) || "—"} USD
                         </span>
                       </div>
                       <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
@@ -3429,7 +4521,7 @@ const Backtest = () => {
                     >
                       {orderSide === "buy" ? "Buy" : "Sell"}<br />
                       <span className="text-xs font-normal opacity-90">
-                        {orderSize} {currentSession?.instrument?.symbol} {orderType.toUpperCase()}
+                        {orderSize} {activeChartInstrument?.symbol ?? currentSession?.instrument?.symbol} {orderType.toUpperCase()}
                       </span>
                     </button>
                   </div>
@@ -3441,8 +4533,9 @@ const Backtest = () => {
               {(chartLayout === "2col" || chartLayout === "3col") && chartData.length > 0 && (
                 <>
                 <div
+                  ref={(el) => (colPanelRefs.current[1] = el)}
                   className="relative overflow-hidden border-l"
-                  style={{ flex: colSizes[1], borderColor: theme.border }}
+                  style={{ flex: colSizes[1], minWidth: 0, borderColor: theme.border }}
                   onMouseDown={() => setActiveChart(2)}
                   onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
                 >
@@ -3453,6 +4546,8 @@ const Backtest = () => {
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      document.body.style.cursor = "col-resize";
+                      document.body.style.userSelect = "none";
                       isResizingCol.current = {
                         startX: e.clientX,
                         col: 0,
@@ -3489,30 +4584,68 @@ const Backtest = () => {
                         onCandleSeek={handleCandleSeek2}
                         isPlaying={false}
                         isDark={isDark}
-                        positions={[]}
-                        onPositionUpdate={() => {}}
-                        orderPreview={showOrderPanel && activeChart === 2 ? {
-                          side: orderSide,
-                          entryPrice: activeChartPrice,
-                          takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
-                          stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
-                        } : null}
+                        positions={positionsByChart[2]}
+                        trades={tradesByChart[2]}
+                        onPositionUpdate={(id, field, value) => updatePosition(id, field, value)}
+                        orderPreview={orderPreview2}
                         onOrderPreviewUpdate={(field, value) => {
-                          if (field === "takeProfit") setTakeProfit(String(value));
-                          if (field === "stopLoss") setStopLoss(String(value));
+                          if (field === "takeProfit") setTakeProfit(clampExitLevel("takeProfit", value).toFixed(2));
+                          if (field === "stopLoss") setStopLoss(clampExitLevel("stopLoss", value).toFixed(2));
                         }}
-                        drawingMode={null}
-                        userDrawings={[]}
-                        onDrawingAdd={() => {}}
-                        onDrawingDelete={() => {}}
-                        onCrosshairMove={(t) => setSyncedCrosshairTime(t)}
-                        syncedCrosshairTime={syncCursor ? syncedCrosshairTime : null}
+                        symbol={chart2Symbol}
+                        isActiveChart={activeChart === 2}
+                        onPriceScaleWidth={(w) => reportPsWidth(2, w)}
+                        drawingMode={drawingMode}
+                        userDrawings={userDrawings2}
+                        onDrawingAdd={(drawing) => {
+                          setUserDrawings2((prev) => [...prev, { id: Date.now(), ...drawing }]);
+                          if (drawing.type !== "freehand") setDrawingMode(null);
+                        }}
+                        onDrawingDelete={(id) => {
+                          setUserDrawings2((prev) => prev.filter((d) => d.id !== id));
+                          setSelectedDrawingIds((prev) => prev.filter((sid) => sid !== id));
+                        }}
+                        onDrawingUpdate={(id, changes) =>
+                          setUserDrawings2((prev) => prev.map((d) => d.id === id ? { ...d, ...changes } : d))
+                        }
+                        selectedDrawingIds={selectedDrawingIds}
+                        onSelectionChange={(id, multi) => {
+                          if (id === null) { setSelectedDrawingIds([]); return; }
+                          if (multi) {
+                            setSelectedDrawingIds((prev) =>
+                              prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+                            );
+                          } else {
+                            setSelectedDrawingIds([id]);
+                          }
+                        }}
+                        panelDrawing={
+                          selectedDrawingIds.length === 1
+                            ? userDrawings2.find((d) => d.id === selectedDrawingIds[0]) ?? null
+                            : null
+                        }
+                        onPropertyChange={(id, changes) => {
+                          setUserDrawings2((prev) => {
+                            const next = prev.map((d) => d.id === id ? { ...d, ...changes } : d);
+                            const updated = next.find((d) => d.id === id);
+                            if (updated) autoSaveDefaults(updated.type, updated);
+                            return next;
+                          });
+                        }}
+                        barReplayActive={barReplayMode}
+                        onCrosshairMove={(syncCursor || barReplayMode) ? (t, y) => {
+                          crosshairSettersRef.current[1]?.(t, y);
+                          crosshairSettersRef.current[3]?.(t, y);
+                        } : undefined}
+                        onRegisterCrosshairSetter={(fn) => { crosshairSettersRef.current[2] = fn; }}
                         onRangeChange={syncDrag ? (r) => {
                           rangeSettersRef.current[1]?.(r);
                           rangeSettersRef.current[3]?.(r);
                         } : undefined}
                         onRegisterRangeSetter={(fn, getFn) => { rangeSettersRef.current[2] = fn; rangeGettersRef.current[2] = getFn; }}
                         chartSettings={chartSettings}
+                        timezone={chartTz}
+                        hideAttribution
                       />
                     </ChartErrorBoundary>
                   )}
@@ -3524,8 +4657,9 @@ const Backtest = () => {
               {chartLayout === "3col" && chartData.length > 0 && (
                 <>
                 <div
+                  ref={(el) => (colPanelRefs.current[2] = el)}
                   className="relative overflow-hidden border-l"
-                  style={{ flex: colSizes[2], borderColor: theme.border }}
+                  style={{ flex: colSizes[2], minWidth: 0, borderColor: theme.border }}
                   onMouseDown={() => setActiveChart(3)}
                   onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
                 >
@@ -3536,6 +4670,8 @@ const Backtest = () => {
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      document.body.style.cursor = "col-resize";
+                      document.body.style.userSelect = "none";
                       isResizingCol.current = {
                         startX: e.clientX,
                         col: 1,
@@ -3572,35 +4708,136 @@ const Backtest = () => {
                         onCandleSeek={handleCandleSeek3}
                         isPlaying={false}
                         isDark={isDark}
-                        positions={[]}
-                        onPositionUpdate={() => {}}
-                        orderPreview={showOrderPanel && activeChart === 3 ? {
-                          side: orderSide,
-                          entryPrice: activeChartPrice,
-                          takeProfit: useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null,
-                          stopLoss: useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null,
-                        } : null}
+                        positions={positionsByChart[3]}
+                        trades={tradesByChart[3]}
+                        onPositionUpdate={(id, field, value) => updatePosition(id, field, value)}
+                        orderPreview={orderPreview3}
                         onOrderPreviewUpdate={(field, value) => {
-                          if (field === "takeProfit") setTakeProfit(String(value));
-                          if (field === "stopLoss") setStopLoss(String(value));
+                          if (field === "takeProfit") setTakeProfit(clampExitLevel("takeProfit", value).toFixed(2));
+                          if (field === "stopLoss") setStopLoss(clampExitLevel("stopLoss", value).toFixed(2));
                         }}
-                        drawingMode={null}
-                        userDrawings={[]}
-                        onDrawingAdd={() => {}}
-                        onDrawingDelete={() => {}}
-                        onCrosshairMove={(t) => setSyncedCrosshairTime(t)}
-                        syncedCrosshairTime={syncCursor ? syncedCrosshairTime : null}
+                        symbol={chart3Symbol}
+                        isActiveChart={activeChart === 3}
+                        onPriceScaleWidth={(w) => reportPsWidth(3, w)}
+                        drawingMode={drawingMode}
+                        userDrawings={userDrawings3}
+                        onDrawingAdd={(drawing) => {
+                          setUserDrawings3((prev) => [...prev, { id: Date.now(), ...drawing }]);
+                          if (drawing.type !== "freehand") setDrawingMode(null);
+                        }}
+                        onDrawingDelete={(id) => {
+                          setUserDrawings3((prev) => prev.filter((d) => d.id !== id));
+                          setSelectedDrawingIds((prev) => prev.filter((sid) => sid !== id));
+                        }}
+                        onDrawingUpdate={(id, changes) =>
+                          setUserDrawings3((prev) => prev.map((d) => d.id === id ? { ...d, ...changes } : d))
+                        }
+                        selectedDrawingIds={selectedDrawingIds}
+                        onSelectionChange={(id, multi) => {
+                          if (id === null) { setSelectedDrawingIds([]); return; }
+                          if (multi) {
+                            setSelectedDrawingIds((prev) =>
+                              prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+                            );
+                          } else {
+                            setSelectedDrawingIds([id]);
+                          }
+                        }}
+                        panelDrawing={
+                          selectedDrawingIds.length === 1
+                            ? userDrawings3.find((d) => d.id === selectedDrawingIds[0]) ?? null
+                            : null
+                        }
+                        onPropertyChange={(id, changes) => {
+                          setUserDrawings3((prev) => {
+                            const next = prev.map((d) => d.id === id ? { ...d, ...changes } : d);
+                            const updated = next.find((d) => d.id === id);
+                            if (updated) autoSaveDefaults(updated.type, updated);
+                            return next;
+                          });
+                        }}
+                        barReplayActive={barReplayMode}
+                        onCrosshairMove={(syncCursor || barReplayMode) ? (t, y) => {
+                          crosshairSettersRef.current[1]?.(t, y);
+                          crosshairSettersRef.current[2]?.(t, y);
+                        } : undefined}
+                        onRegisterCrosshairSetter={(fn) => { crosshairSettersRef.current[3] = fn; }}
                         onRangeChange={syncDrag ? (r) => {
                           rangeSettersRef.current[1]?.(r);
                           rangeSettersRef.current[2]?.(r);
                         } : undefined}
                         onRegisterRangeSetter={(fn, getFn) => { rangeSettersRef.current[3] = fn; rangeGettersRef.current[3] = getFn; }}
                         chartSettings={chartSettings}
+                        timezone={chartTz}
+                        hideAttribution
                       />
                     </ChartErrorBoundary>
                   )}
                 </div>
                 </>
+              )}
+              {/* ── Timezone dropdown — compact closed (short code), expands to
+                   full city labels when opened. Shown for any window count. ── */}
+              <div
+                ref={tzDropdownRef}
+                className={`absolute bottom-1 z-30 ${tzBox ? "" : "right-1"}`}
+                style={tzBox ? { left: tzBox.left, width: tzBox.width } : undefined}
+              >
+                <button
+                  data-testid="backtest-timezone-select"
+                  onClick={() => setShowTzDropdown((v) => !v)}
+                  title="Chart timezone"
+                  className={`flex items-center justify-center gap-0.5 text-[11px] leading-none rounded px-1.5 py-1 border outline-none cursor-pointer transition-colors ${tzBox ? "w-full" : ""}`}
+                  style={{
+                    background: showTzDropdown ? theme.bg : theme.surface,
+                    color: theme.textMuted,
+                    borderColor: theme.border,
+                  }}
+                >
+                  {TZ_OPTIONS.find((o) => o.id === chartTz)?.short ?? "TZ"}
+                  <svg className="w-2.5 h-2.5" viewBox="0 0 10 6" fill="currentColor"><path d="M0 0l5 6 5-6z" /></svg>
+                </button>
+                {showTzDropdown && (
+                  <div
+                    className="absolute bottom-full right-0 mb-1 rounded-lg shadow-xl border py-1 overflow-y-auto"
+                    style={{ background: theme.surface, borderColor: theme.border, minWidth: 150, maxHeight: 220 }}
+                  >
+                    {TZ_OPTIONS.map((o) => (
+                      <button
+                        key={o.id}
+                        onClick={() => { handleChartTzChange(o.id); setShowTzDropdown(false); }}
+                        className="w-full flex items-center justify-between gap-3 px-3 py-1.5 text-xs text-left transition-colors"
+                        style={{
+                          background: o.id === chartTz ? theme.bg : "transparent",
+                          color: o.id === chartTz ? "#1E53E5" : theme.text,
+                          fontWeight: o.id === chartTz ? 600 : 400,
+                        }}
+                        onMouseEnter={(e) => { if (o.id !== chartTz) e.currentTarget.style.background = theme.bg; }}
+                        onMouseLeave={(e) => { if (o.id !== chartTz) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <span>{o.label}</span>
+                        <span style={{ color: "#b2b5be" }}>{o.short}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Reset all windows — centered across the whole chart row, above
+                  the time axis. Resets every open window's zoom together. */}
+              {!isLoadingData && chartData.length > 0 && (
+                <button
+                  data-testid="backtest-reset-btn"
+                  onClick={handleReset}
+                  title="Reset zoom for all windows"
+                  className="absolute bottom-9 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2.5 py-1 text-xs rounded-full border shadow font-medium transition-colors"
+                  style={{ background: theme.surface, borderColor: theme.border, color: theme.textMuted }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = theme.text)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = theme.textMuted)}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset{chartLayout !== "single" ? " all" : ""}
+                </button>
               )}
             </div> {/* end inner flex row [toolbar | chart] */}
           </div> {/* end chart column */}
@@ -3614,6 +4851,50 @@ const Backtest = () => {
               onPlaceOrder={() => setShowOrderPanel(true)}
               onClose={() => setContextMenuPos(null)}
             />
+          )}
+
+          {/* Delete-all-drawings confirmation modal */}
+          {showClearDrawingsConfirm && (
+            <div
+              data-testid="clear-drawings-modal"
+              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50"
+              onClick={() => setShowClearDrawingsConfirm(false)}
+            >
+              <div
+                className="rounded-xl shadow-2xl border p-5 w-80"
+                style={{ background: theme.surface, borderColor: theme.border }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-sm font-semibold mb-1" style={{ color: theme.text }}>
+                  Delete all drawings?
+                </p>
+                <p className="text-xs mb-4" style={{ color: theme.textMuted }}>
+                  Every drawing on this chart will be removed. You can bring them back with Undo (Ctrl+Z).
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    data-testid="clear-drawings-cancel-btn"
+                    onClick={() => setShowClearDrawingsConfirm(false)}
+                    className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                    style={{ background: theme.bg, color: theme.text }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    data-testid="clear-drawings-confirm-btn"
+                    onClick={() => {
+                      pushDrawings([]);
+                      setSelectedDrawingIds([]);
+                      setShowClearDrawingsConfirm(false);
+                    }}
+                    className="px-3 py-1.5 rounded text-xs font-bold transition-colors"
+                    style={{ background: "#f23645", color: "#ffffff" }}
+                  >
+                    Delete all
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Chart settings modal */}
@@ -3655,6 +4936,20 @@ const Backtest = () => {
               </span>
               <div className="flex items-center gap-0.5">
                 <button
+                  onClick={() => setShowEdgeAnalytics(!showEdgeAnalytics)}
+                  title={showEdgeAnalytics ? "Hide Edge Analytics" : "Show Edge Analytics"}
+                  className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+                  style={{
+                    color: showEdgeAnalytics ? "#1E53E5" : theme.textMuted,
+                    background: showEdgeAnalytics ? "rgba(30,83,229,0.1)" : "transparent"
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = showEdgeAnalytics ? "#1E53E5" : theme.text)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = showEdgeAnalytics ? "#1E53E5" : theme.textMuted)}
+                  data-testid="edge-analytics-toggle-btn"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                </button>
+                <button
                   onClick={handleFullscreen}
                   title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
                   className="w-6 h-6 flex items-center justify-center rounded transition-colors"
@@ -3677,17 +4972,24 @@ const Backtest = () => {
               </div>
             </div>
 
-            {/* Open positions */}
+            {/* Open positions — collapsible */}
             <div
               className="p-3 border-b flex-shrink-0"
               style={{ borderColor: theme.border }}
             >
-              <p
-                className="text-xs font-semibold uppercase tracking-wider mb-2"
-                style={{ color: "#b2b5be" }}
+              <button
+                onClick={() => setShowOpenPositions((v) => !v)}
+                className="w-full flex items-center justify-between mb-2"
+                data-testid="open-positions-toggle"
               >
-                Open Positions
-              </p>
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#b2b5be" }}>
+                  Open Positions{positions.length > 0 ? ` (${positions.length})` : ""}
+                </span>
+                {showOpenPositions
+                  ? <ChevronDown className="w-3.5 h-3.5" style={{ color: "#b2b5be" }} />
+                  : <ChevronRight className="w-3.5 h-3.5" style={{ color: "#b2b5be" }} />}
+              </button>
+              {showOpenPositions && (
               <div className="space-y-1.5 max-h-36 overflow-y-auto">
                 {positions.length === 0 ? (
                   <p className="text-xs py-2" style={{ color: "#b2b5be" }}>
@@ -3705,11 +5007,11 @@ const Backtest = () => {
                           {pos.side.toUpperCase()} ×{pos.size}
                         </span>
                         <span style={{ color: pos.currentPnL >= 0 ? "#089981" : "#f23645" }}>
-                          {pos.currentPnL >= 0 ? "+" : ""}${pos.currentPnL.toFixed(2)}
+                          {pos.currentPnL >= 0 ? "+" : ""}${trimPrice(pos.currentPnL)}
                         </span>
                       </div>
                       <div className="mb-1" style={{ color: theme.textMuted }}>
-                        Entry ${pos.entryPrice.toFixed(2)}
+                        Entry ${trimPrice(pos.entryPrice)}
                       </div>
                       {/* Editable TP */}
                       <div className="flex items-center gap-1 mb-0.5">
@@ -3739,14 +5041,23 @@ const Backtest = () => {
                       </div>
                       <button
                         onClick={() => {
-                          const candle = chartData[currentCandle];
+                          // Close against the position's own window's candle
+                          const cn = pos.chartNum ?? 1;
+                          const candle = cn === 2 ? chartData2[currentCandle2]
+                            : cn === 3 ? chartData3[currentCandle3]
+                            : chartData[currentCandle];
                           const exitPrice = candle?.close || currentPrice;
                           const pnl = pos.side === "buy"
                             ? (exitPrice - pos.entryPrice) * pos.size * pos.tickRatio
                             : (pos.entryPrice - exitPrice) * pos.size * pos.tickRatio;
                           setPositions((prev) => prev.filter((p) => p.id !== pos.id));
                           setBalance((b) => b + pnl);
-                          setTrades((t) => [...t, { ...pos, exitPrice, pnl, exitReason: "Manual" }]);
+                          setTrades((t) => [...t, {
+                            ...pos, exitPrice, pnl, exitReason: "Manual",
+                            exitTime: candle?.time,
+                            balanceAfter: balance + pnl,
+                            rAchieved: rAchievedOf(pos, pnl),
+                          }]);
                         }}
                         className="text-xs w-full text-center py-0.5 rounded"
                         style={{ background: theme.border, color: "#787b86" }}
@@ -3757,16 +5068,24 @@ const Backtest = () => {
                   ))
                 )}
               </div>
+              )}
             </div>
 
-            {/* Trade history */}
+            {/* Trade history — collapsible */}
             <div className="flex-1 p-3 flex flex-col overflow-hidden">
-              <p
-                className="text-xs font-semibold uppercase tracking-wider mb-2 flex-shrink-0"
-                style={{ color: "#b2b5be" }}
+              <button
+                onClick={() => setShowTradeHistory((v) => !v)}
+                className="w-full flex items-center justify-between mb-2 flex-shrink-0"
+                data-testid="trade-history-toggle"
               >
-                Trade History
-              </p>
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#b2b5be" }}>
+                  Trade History{trades.length > 0 ? ` (${trades.length})` : ""}
+                </span>
+                {showTradeHistory
+                  ? <ChevronDown className="w-3.5 h-3.5" style={{ color: "#b2b5be" }} />
+                  : <ChevronRight className="w-3.5 h-3.5" style={{ color: "#b2b5be" }} />}
+              </button>
+              {showTradeHistory && (
               <div className="flex-1 space-y-1.5 overflow-y-auto">
                 {trades.length === 0 ? (
                   <p className="text-xs py-2" style={{ color: "#b2b5be" }}>
@@ -3790,19 +5109,30 @@ const Backtest = () => {
                             {t.side.toUpperCase()} ×{t.size}
                           </span>
                           <span style={{ color: t.pnl >= 0 ? "#089981" : "#f23645" }}>
-                            {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
+                            {t.pnl >= 0 ? "+" : ""}${trimPrice(t.pnl)}
                           </span>
                         </div>
                         <div style={{ color: theme.textMuted }}>
-                          {t.entryPrice.toFixed(2)} → {t.exitPrice.toFixed(2)}
+                          {trimPrice(t.entryPrice)} → {trimPrice(t.exitPrice)}
                         </div>
                       </div>
                     ))
                 )}
               </div>
+              )}
             </div>
           </div>
           )} {/* end showSidebar */}
+
+          {/* Edge Analytics Panel */}
+          {showEdgeAnalytics && (
+            <EdgeAnalyticsPanel
+              trades={trades}
+              initialBalance={currentSession.initialBalance ?? baseBalance}
+              isDark={isDark}
+              onClose={() => setShowEdgeAnalytics(false)}
+            />
+          )}
         </div>
       </div>
 
