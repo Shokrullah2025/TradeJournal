@@ -16,7 +16,7 @@ const SAVED_FIELDS = {
   vline: ["color", "lineWidth", "lineStyle"],
   rectangle: ["color", "lineWidth", "lineStyle", "fontSize", "labelPos", "label"],
   freehand: ["color", "lineWidth"],
-  text: ["color", "fontSize", "label"],
+  text: ["color", "fontSize"],
   fibonacci: ["color", "lineWidth", "lineStyle", "showLabels", "levels"],
   rr: ["fillOpacity", "showLabels", "lineStyle", "label", "labelPos"],
 };
@@ -106,13 +106,25 @@ export function autoSaveDefaults(type, drawing) {
 //      hasn't been written yet).
 //   3. Returns null when neither exists → caller uses hard-coded built-in defaults.
 export function getToolDefaults(type) {
+  // Filter through the current whitelist so stale fields persisted by older
+  // builds (e.g. a `label` saved before it was removed from text defaults)
+  // are never re-applied to new drawings.
+  const fields = SAVED_FIELDS[type] || ["color", "lineWidth", "lineStyle"];
+  const sanitize = (style) => {
+    const out = {};
+    fields.forEach((f) => { if (style[f] !== undefined && style[f] !== null) out[f] = style[f]; });
+    return out;
+  };
+
   const lastUsed = readLastUsed()[type];
-  if (lastUsed && typeof lastUsed === "object" && Object.keys(lastUsed).length > 0) {
-    return lastUsed;
+  if (lastUsed && typeof lastUsed === "object") {
+    const cleaned = sanitize(lastUsed);
+    if (Object.keys(cleaned).length > 0) return cleaned;
   }
   const { presets, active } = readType(type);
-  if (active && presets[active] && Object.keys(presets[active]).length > 0) {
-    return presets[active];
+  if (active && presets[active]) {
+    const cleaned = sanitize(presets[active]);
+    if (Object.keys(cleaned).length > 0) return cleaned;
   }
   return null;
 }

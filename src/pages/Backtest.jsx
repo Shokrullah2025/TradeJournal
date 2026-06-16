@@ -161,6 +161,62 @@ const MARKET_CONFIG = {
   },
 };
 
+// ── Date-range quick-select for the Create Session form ──────────────────────
+// Returns a local yyyy-mm-dd string (the format the native date input expects).
+function toISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Display a yyyy-mm-dd string as MM/DD/YYYY without touching the local timezone.
+function formatRangeDate(iso) {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${m}/${d}/${y}`;
+}
+
+const DATE_RANGE_PRESETS = [
+  { key: "30d", label: "Last 30 days" },
+  { key: "90d", label: "Last 90 days" },
+  { key: "6m",  label: "Last 6 months" },
+  { key: "1y",  label: "Last year" },
+  { key: "ytd", label: "Year to date" },
+  { key: "custom", label: "Custom" },
+];
+
+// Compute { start, end } yyyy-mm-dd for a preset. End is yesterday — the last
+// fully-formed session day — and start is offset back from it.
+function rangeForPreset(key) {
+  const end = new Date();
+  end.setDate(end.getDate() - 1);
+  const start = new Date(end);
+  switch (key) {
+    case "30d": start.setDate(end.getDate() - 30); break;
+    case "90d": start.setDate(end.getDate() - 90); break;
+    case "6m":  start.setMonth(end.getMonth() - 6); break;
+    case "1y":  start.setFullYear(end.getFullYear() - 1); break;
+    case "ytd": start.setMonth(0, 1); break; // Jan 1 of the current year
+    default: return null; // "custom" — caller keeps the existing dates
+  }
+  return { start: toISODate(start), end: toISODate(end) };
+}
+
+// Restrict a candle series to the session's chosen [startDate, endDate] window.
+// Candle .time is Unix seconds (UTC); bounds are inclusive and the end date
+// covers its whole day. If the window falls outside the available history the
+// full series is returned so the chart never receives an empty dataset.
+function sliceCandlesToRange(candles, startDate, endDate) {
+  if (!Array.isArray(candles) || candles.length === 0) return candles;
+  if (!startDate && !endDate) return candles;
+  const startSec = startDate ? Date.parse(`${startDate}T00:00:00Z`) / 1000 : -Infinity;
+  const endSec = endDate ? Date.parse(`${endDate}T23:59:59Z`) / 1000 : Infinity;
+  if (!isFinite(startSec) && !isFinite(endSec)) return candles;
+  const sliced = candles.filter((c) => c.time >= startSec && c.time <= endSec);
+  return sliced.length > 1 ? sliced : candles;
+}
+
 function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
   const trades = useMemo(
     () => withBalanceSnapshots(session.trades || [], session.initialBalance),
@@ -765,6 +821,117 @@ function ChartSettingsModal({ chartSettings, setChartSettings, onClose }) {
   );
 }
 
+// One open-position card in the side panel: live P&L, editable TP/SL, and a
+// partial-close control so the user can close any portion of the open size.
+function PositionCard({ pos, theme, tickSize, onUpdateField, onClose, trimPrice }) {
+  const [closeQty, setCloseQty] = useState(pos.size);
+  // Keep the chosen close quantity valid after a partial close shrinks the size
+  useEffect(() => { setCloseQty((q) => Math.min(Math.max(1, q), pos.size)); }, [pos.size]);
+  const pct = Math.round((closeQty / pos.size) * 100);
+  const partial = closeQty < pos.size;
+
+  return (
+    <div
+      data-testid={`position-card-${pos.id}`}
+      className="rounded p-2 text-xs border"
+      style={{ background: theme.bg, borderColor: theme.border }}
+    >
+      <div className="flex justify-between mb-1">
+        <span className="font-semibold" style={{ color: pos.side === "buy" ? "#089981" : "#f23645" }}>
+          {pos.side.toUpperCase()} ×{pos.size}
+        </span>
+        <span data-testid={`position-pnl-${pos.id}`} style={{ color: pos.currentPnL >= 0 ? "#089981" : "#f23645" }}>
+          {pos.currentPnL >= 0 ? "+" : ""}${trimPrice(pos.currentPnL)}
+        </span>
+      </div>
+      <div className="mb-1" style={{ color: theme.textMuted }}>
+        Entry ${trimPrice(pos.entryPrice)}
+      </div>
+      {/* Editable TP */}
+      <div className="flex items-center gap-1 mb-0.5">
+        <span className="w-5 text-center font-bold" style={{ color: "#089981", fontSize: 9 }}>TP</span>
+        <input
+          type="number"
+          value={pos.takeProfit ?? ""}
+          onChange={(e) => onUpdateField(pos.id, "takeProfit", e.target.value)}
+          placeholder="—"
+          step={tickSize}
+          className="flex-1 px-1 py-0.5 rounded border outline-none text-xs"
+          style={{ background: theme.surface, borderColor: pos.takeProfit !== null ? "#089981" : theme.border, color: "#089981", minWidth: 0 }}
+        />
+      </div>
+      {/* Editable SL */}
+      <div className="flex items-center gap-1 mb-1">
+        <span className="w-5 text-center font-bold" style={{ color: "#f23645", fontSize: 9 }}>SL</span>
+        <input
+          type="number"
+          value={pos.stopLoss ?? ""}
+          onChange={(e) => onUpdateField(pos.id, "stopLoss", e.target.value)}
+          placeholder="—"
+          step={tickSize}
+          className="flex-1 px-1 py-0.5 rounded border outline-none text-xs"
+          style={{ background: theme.surface, borderColor: pos.stopLoss !== null ? "#f23645" : theme.border, color: "#f23645", minWidth: 0 }}
+        />
+      </div>
+
+      {/* Partial-close amount — only meaningful with more than one contract */}
+      {pos.size > 1 && (
+        <div className="mb-1.5">
+          <div className="flex items-center justify-between mb-1">
+            <span style={{ color: theme.textMuted }}>Close amount</span>
+            <span
+              data-testid={`position-close-qty-${pos.id}`}
+              className="font-semibold tabular-nums"
+              style={{ color: theme.text }}
+            >
+              {closeQty}/{pos.size} · {pct}%
+            </span>
+          </div>
+          <div className="flex gap-1 mb-1">
+            {[25, 50, 75, 100].map((p) => {
+              const q = Math.max(1, Math.min(pos.size, Math.round((pos.size * p) / 100)));
+              const active = q === closeQty;
+              return (
+                <button
+                  key={p}
+                  data-testid={`position-close-preset-${p}-${pos.id}`}
+                  onClick={() => setCloseQty(q)}
+                  className="flex-1 py-0.5 rounded font-medium"
+                  style={active
+                    ? { background: "#1E53E5", color: "#fff" }
+                    : { background: theme.surface, color: theme.textMuted, border: `1px solid ${theme.border}` }}
+                >
+                  {p}%
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="range"
+            data-testid={`position-close-slider-${pos.id}`}
+            min="1"
+            max={pos.size}
+            step="1"
+            value={closeQty}
+            onChange={(e) => setCloseQty(Number(e.target.value))}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{ accentColor: "#1E53E5" }}
+          />
+        </div>
+      )}
+
+      <button
+        data-testid={`position-close-btn-${pos.id}`}
+        onClick={() => onClose(pos, closeQty)}
+        className="text-xs w-full text-center py-0.5 rounded"
+        style={{ background: partial ? "#1E53E5" : theme.border, color: partial ? "#fff" : "#787b86" }}
+      >
+        {partial ? `Close ${pct}% (${closeQty})` : "Close at Market"}
+      </button>
+    </div>
+  );
+}
+
 function ChartContextMenu({ x, y, onSettings, onPlaceOrder, onClose }) {
   const adjX = Math.min(x, window.innerWidth - 170);
   const adjY = Math.min(y, window.innerHeight - 90);
@@ -820,11 +987,20 @@ const Backtest = () => {
   const [sessionName, setSessionName] = useState("");
   const [selectedMarket, setSelectedMarket] = useState("");
   const [selectedInstruments, setSelectedInstruments] = useState([]);
-  const [startDate, setStartDate] = useState(() => {
-    // Default to today's date
-    return new Date().toISOString().split("T")[0];
-  });
-  const [endDate, setEndDate] = useState(""); // Start empty so user can select
+  // Date range driven by quick-select presets (default: Last 90 days)
+  const [dateRangePreset, setDateRangePreset] = useState("90d");
+  const [startDate, setStartDate] = useState(() => rangeForPreset("90d").start);
+  const [endDate, setEndDate] = useState(() => rangeForPreset("90d").end);
+
+  // Apply a date-range preset, syncing start/end. "Custom" keeps current dates.
+  const applyDateRangePreset = (key) => {
+    setDateRangePreset(key);
+    const range = rangeForPreset(key);
+    if (range) {
+      setStartDate(range.start);
+      setEndDate(range.end);
+    }
+  };
 
   // Session history — loaded from DB, persists across devices
   const [sessionHistory, setSessionHistory] = useState([]);
@@ -875,6 +1051,8 @@ const Backtest = () => {
           timeframe:       row.parameters?.timeframe,
           strategy:        row.parameters?.strategy,
           setup:           row.parameters?.setup,
+          startDate:       row.parameters?.startDate ?? null,
+          endDate:         row.parameters?.endDate ?? null,
           createdAt:       row.created_at,
           initialBalance:  row.parameters?.initialBalance,
           endingBalance:   row.results?.endingBalance ?? null,
@@ -981,9 +1159,11 @@ const Backtest = () => {
             break;
           case "startDate":
             setStartDate(value);
+            setDateRangePreset("custom");
             break;
           case "endDate":
             setEndDate(value);
+            setDateRangePreset("custom");
             break;
           case "stopLoss":
             setStopLoss(value);
@@ -1050,6 +1230,9 @@ const Backtest = () => {
   const [orderType, setOrderType] = useState("market"); // market | limit | stop | stopLimit
   const [useTakeProfit, setUseTakeProfit] = useState(false);
   const [useStopLoss, setUseStopLoss] = useState(false);
+  // Risk-per-trade selector for the order panel (shows the $ risk budget)
+  const [riskOn, setRiskOn] = useState(true);
+  const [riskPct, setRiskPct] = useState(1.0);
 
   // Account balance — runs as a single persistent account across all sessions.
   // backtestRunningBalance = last saved exit balance (carries between sessions).
@@ -1535,7 +1718,11 @@ const Backtest = () => {
       // selecting them (or via the layout buttons), not from chart 1.
       setIsLoadingData(true);
       try {
-        const candles = await fetchMarketCandles(market, symbol, timeframe);
+        const candles = sliceCandlesToRange(
+          await fetchMarketCandles(market, symbol, timeframe),
+          currentSession?.startDate,
+          currentSession?.endDate,
+        );
         setChartData(candles);
         setCurrentCandle(candles.length - 1);
         setCurrentPrice(candles[candles.length - 1]?.close || 0);
@@ -1552,7 +1739,11 @@ const Backtest = () => {
     if (chartNum === 2) {
       setIsLoadingData2(true);
       try {
-        const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, chart2Timeframe);
+        const candles = sliceCandlesToRange(
+          await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, chart2Timeframe),
+          currentSession?.startDate,
+          currentSession?.endDate,
+        );
         setChartData2(candles);
         setChart2Symbol(symbol);
         setCurrentCandle2(candles.length - 1);
@@ -1567,7 +1758,11 @@ const Backtest = () => {
     } else {
       setIsLoadingData3(true);
       try {
-        const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, chart3Timeframe);
+        const candles = sliceCandlesToRange(
+          await fetchMarketCandles(currentSession?.market ?? selectedMarket, symbol, chart3Timeframe),
+          currentSession?.startDate,
+          currentSession?.endDate,
+        );
         setChartData3(candles);
         setChart3Symbol(symbol);
         setCurrentCandle3(candles.length - 1);
@@ -1773,6 +1968,8 @@ const Backtest = () => {
       marketCondition,
       notes: notes || "",
       stopLoss: stopLoss || "",
+      startDate,
+      endDate,
       createdAt: new Date().toISOString(),
       status: "active",
     };
@@ -1798,6 +1995,8 @@ const Backtest = () => {
             notes:           notes || "",
             stopLoss:        stopLoss || "",
             initialBalance:  sessionBalance,
+            startDate,
+            endDate,
           },
           results: { trades: [], endingBalance: null },
           status: "running",
@@ -1836,6 +2035,8 @@ const Backtest = () => {
         timeframe,
         strategy,
         setup,
+        startDate,
+        endDate,
         createdAt:      newSession.createdAt,
         initialBalance: sessionBalance,
         endingBalance:  null,
@@ -1847,10 +2048,10 @@ const Backtest = () => {
     ]);
 
     try {
-      const candles = await fetchMarketCandles(
-        selectedMarket,
-        selectedInstruments[0],
-        timeframe,
+      const candles = sliceCandlesToRange(
+        await fetchMarketCandles(selectedMarket, selectedInstruments[0], timeframe),
+        startDate,
+        endDate,
       );
       const latest = candles.length - 1;
       setChartData(candles);
@@ -1862,7 +2063,11 @@ const Backtest = () => {
       if (selectedInstruments.length > 1) {
         setIsLoadingData2(true);
         try {
-          const candles2 = await fetchMarketCandles(selectedMarket, selectedInstruments[1], timeframe);
+          const candles2 = sliceCandlesToRange(
+            await fetchMarketCandles(selectedMarket, selectedInstruments[1], timeframe),
+            startDate,
+            endDate,
+          );
           setChartData2(candles2);
           setChart2Symbol(selectedInstruments[1]);
           setCurrentCandle2(candles2.length - 1);
@@ -1872,7 +2077,11 @@ const Backtest = () => {
         if (selectedInstruments.length > 2) {
           setIsLoadingData3(true);
           try {
-            const candles3 = await fetchMarketCandles(selectedMarket, selectedInstruments[2], timeframe);
+            const candles3 = sliceCandlesToRange(
+              await fetchMarketCandles(selectedMarket, selectedInstruments[2], timeframe),
+              startDate,
+              endDate,
+            );
             setChartData3(candles3);
             setChart3Symbol(selectedInstruments[2]);
             setCurrentCandle3(candles3.length - 1);
@@ -2194,10 +2403,14 @@ const Backtest = () => {
     // Clear cache so we re-fetch with new timeframe
     clearCandleCache(currentSession.market, currentSession.instrument.symbol, newTf);
     try {
-      const candles = await fetchMarketCandles(
-        currentSession.market,
-        currentSession.instrument.symbol,
-        newTf,
+      const candles = sliceCandlesToRange(
+        await fetchMarketCandles(
+          currentSession.market,
+          currentSession.instrument.symbol,
+          newTf,
+        ),
+        currentSession.startDate,
+        currentSession.endDate,
       );
       // Find the closest candle to the saved timestamp
       let newIdx = candles.length - 1;
@@ -2219,7 +2432,11 @@ const Backtest = () => {
         const tf2 = syncTimeframe ? newTf : chart2Timeframe;
         if (syncTimeframe) setChart2Timeframe(newTf);
         try {
-          const c2 = await fetchMarketCandles(currentSession.market, chart2Symbol, tf2);
+          const c2 = sliceCandlesToRange(
+            await fetchMarketCandles(currentSession.market, chart2Symbol, tf2),
+            currentSession.startDate,
+            currentSession.endDate,
+          );
           setChartData2(c2);
           if (refTs !== null) {
             let i2 = c2.length - 1;
@@ -2238,7 +2455,11 @@ const Backtest = () => {
         const tf3 = syncTimeframe ? newTf : chart3Timeframe;
         if (syncTimeframe) setChart3Timeframe(newTf);
         try {
-          const c3 = await fetchMarketCandles(currentSession.market, chart3Symbol, tf3);
+          const c3 = sliceCandlesToRange(
+            await fetchMarketCandles(currentSession.market, chart3Symbol, tf3),
+            currentSession.startDate,
+            currentSession.endDate,
+          );
           setChartData3(c3);
           if (refTs !== null) {
             let i3 = c3.length - 1;
@@ -2264,7 +2485,11 @@ const Backtest = () => {
     setChart2Timeframe(newTf);
     setIsLoadingData2(true);
     try {
-      const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, chart2Symbol, newTf);
+      const candles = sliceCandlesToRange(
+        await fetchMarketCandles(currentSession?.market ?? selectedMarket, chart2Symbol, newTf),
+        currentSession?.startDate,
+        currentSession?.endDate,
+      );
       setChartData2(candles);
       setCurrentCandle2(candles.length - 1);
       setTimeout(() => {
@@ -2280,7 +2505,11 @@ const Backtest = () => {
     setChart3Timeframe(newTf);
     setIsLoadingData3(true);
     try {
-      const candles = await fetchMarketCandles(currentSession?.market ?? selectedMarket, chart3Symbol, newTf);
+      const candles = sliceCandlesToRange(
+        await fetchMarketCandles(currentSession?.market ?? selectedMarket, chart3Symbol, newTf),
+        currentSession?.startDate,
+        currentSession?.endDate,
+      );
       setChartData3(candles);
       setCurrentCandle3(candles.length - 1);
       setTimeout(() => {
@@ -2310,6 +2539,40 @@ const Backtest = () => {
         p.id === posId ? { ...p, [field]: value !== "" && value !== null ? parseFloat(value) : null } : p
       )
     );
+  };
+
+  // Manually close all (or part) of an open position at the current market
+  // price. `closeQty` contracts are closed (clamped to 1..pos.size); any
+  // remainder stays open as a reduced position.
+  const closePositionManually = (pos, closeQty) => {
+    const cn = pos.chartNum ?? 1;
+    const candle = cn === 2 ? chartData2[currentCandle2]
+      : cn === 3 ? chartData3[currentCandle3]
+      : chartData[currentCandle];
+    const exitPrice = candle?.close || currentPrice;
+    const qty = Math.max(1, Math.min(Math.round(closeQty), pos.size));
+    const pnl = pos.side === "buy"
+      ? (exitPrice - pos.entryPrice) * qty * pos.tickRatio
+      : (pos.entryPrice - exitPrice) * qty * pos.tickRatio;
+    const remaining = pos.size - qty;
+
+    if (remaining > 0) {
+      // Partial close — reduce the open size, keep it on the book
+      setPositions((prev) => prev.map((p) => (p.id === pos.id ? { ...p, size: remaining } : p)));
+    } else {
+      setPositions((prev) => prev.filter((p) => p.id !== pos.id));
+    }
+    setBalance((b) => b + pnl);
+    setTrades((t) => [...t, {
+      ...pos,
+      size: qty,
+      exitPrice,
+      pnl,
+      exitReason: remaining > 0 ? "Partial" : "Manual",
+      exitTime: candle?.time,
+      balanceAfter: balance + pnl,
+      rAchieved: rAchievedOf({ ...pos, size: qty }, pnl),
+    }]);
   };
 
   const openOrderPanel = (side) => {
@@ -2409,6 +2672,38 @@ const Backtest = () => {
     } : null
   , [showOrderPanel, activeChart, orderSide, activeChartPrice, useTakeProfit, takeProfit, useStopLoss, stopLoss]); // eslint-disable-line
 
+  // Derived risk / position-sizing values for the order panel. When risk +
+  // auto-size are on and a stop is set, the contract count is computed from
+  // account balance, risk %, and the stop distance instead of typed manually.
+  const orderCalc = useMemo(() => {
+    const instrument = activeChartInstrument || currentSession?.instrument;
+    const tickSize = instrument?.tickSize || 0.25;
+    const tickValue = instrument?.tickValue || 5;
+    const entry = activeChartPrice || 0;
+
+    const slPrice = useStopLoss && stopLoss !== "" ? parseFloat(stopLoss) : null;
+    const tpPrice = useTakeProfit && takeProfit !== "" ? parseFloat(takeProfit) : null;
+    const slTicks = slPrice != null && entry > 0 && !isNaN(slPrice)
+      ? Math.abs(slPrice - entry) / tickSize : 0;
+    const tpTicks = tpPrice != null && entry > 0 && !isNaN(tpPrice)
+      ? Math.abs(tpPrice - entry) / tickSize : 0;
+
+    const units = Math.max(1, orderSize);
+    const riskAmt = balance * (riskPct / 100);
+
+    const riskOnStop = slTicks > 0 ? units * slTicks * tickValue : 0;
+    const rewardAtTgt = tpTicks > 0 ? units * tpTicks * tickValue : 0;
+    const rr = slTicks > 0 && tpTicks > 0 ? tpTicks / slTicks : null;
+    const estValue = entry * units;
+
+    return {
+      tickSize, tickValue, entry,
+      slTicks, tpTicks, units, riskAmt,
+      riskOnStop, rewardAtTgt, rr, estValue,
+    };
+  }, [activeChartInstrument, currentSession, activeChartPrice, useStopLoss, stopLoss,
+      useTakeProfit, takeProfit, orderSize, balance, riskPct]);
+
   const executeOrder = () => {
     if (!currentSession) return;
     // Execute against the window the panel is acting on — its instrument, its
@@ -2423,7 +2718,7 @@ const Backtest = () => {
       chartNum,
       symbol: instrument.symbol,
       side: orderSide,
-      size: orderSize,
+      size: orderCalc.units,
       entryPrice,
       stopLoss: useStopLoss && stopLoss ? clampExitLevel("stopLoss", parseFloat(stopLoss)) : null,
       takeProfit: useTakeProfit && takeProfit ? clampExitLevel("takeProfit", parseFloat(takeProfit)) : null,
@@ -2441,7 +2736,7 @@ const Backtest = () => {
     setUseTakeProfit(false);
     setUseStopLoss(false);
 
-    toast.success(`${orderSide.toUpperCase()} ${orderSize} ${instrument.symbol} at $${trimPrice(entryPrice)}`);
+    toast.success(`${orderSide.toUpperCase()} ${orderCalc.units} ${instrument.symbol} at $${trimPrice(entryPrice)}`);
   };
 
   // Trade-level edge analytics aggregated across the whole saved history,
@@ -2847,22 +3142,23 @@ const Backtest = () => {
               <ChevronRight className="w-4 h-4 rotate-180 mr-1" />
               Back to Sessions
             </button>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Create Backtest Session
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Configure your backtesting environment and strategy
-            </p>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Create Backtest Session
+              </h1>
+              <div className="group relative">
+                <Info className="w-5 h-5 text-gray-400 hover:text-blue-500 cursor-help" />
+                <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                  Configure your backtesting environment and strategy.
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
             {/* Header Section */}
             <div className="bg-blue-600 dark:bg-blue-700 px-8 py-6 text-white">
-              <h2 className="text-2xl font-bold mb-2">Session Configuration</h2>
-              <p className="text-blue-100">
-                Set up your trading environment and strategy for historical
-                testing
-              </p>
+              <h2 className="text-2xl font-bold">Session Configuration</h2>
             </div>
 
             <div className="p-8 space-y-8">
@@ -2902,9 +3198,17 @@ const Backtest = () => {
                     </span>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Use Template
-                    </label>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Use Template
+                      </label>
+                      <div className="group relative">
+                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
+                        <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                          Auto-fill this form from a saved template. Templates are stored on your account and available across all devices — create or edit them in Settings.
+                        </div>
+                      </div>
+                    </div>
                     <select
                       value={selectedTemplateId}
                       disabled={templatesLoading}
@@ -2929,9 +3233,6 @@ const Backtest = () => {
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      Templates are saved to your account and available across all devices
-                    </p>
                   </div>
                 </div>
               </div>
@@ -2968,9 +3269,17 @@ const Backtest = () => {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Instruments * <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(select one or more)</span>
-                      </label>
+                      <div className="flex items-center space-x-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Instruments *
+                        </label>
+                        <div className="group relative">
+                          <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
+                          <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                            Select up to 3 assets at a time — each opens in its own chart window.
+                          </div>
+                        </div>
+                      </div>
                       {selectedInstruments.length > 0 && (
                         <button
                           type="button"
@@ -3012,11 +3321,11 @@ const Backtest = () => {
                         })}
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      {selectedInstruments.length === 0
-                        ? "Select up to 3 assets — each opens in its own chart window"
-                        : `Selected: ${selectedInstruments.join(", ")}${selectedInstruments.length >= 3 ? " · Max 3 reached" : " · Select up to 3"}`}
-                    </p>
+                    {selectedInstruments.length > 0 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        {`Selected: ${selectedInstruments.join(", ")}${selectedInstruments.length >= 3 ? " · Max 3 reached" : ""}`}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3083,35 +3392,71 @@ const Backtest = () => {
                 <div className="flex items-center space-x-2 mb-6">
                   <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Additional Settings
+                    Date Range
                   </h3>
                 </div>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        End Date
-                      </label>
-                      <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
-                      />
-                    </div>
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    How far back to test
+                  </label>
+                  <div className="flex flex-wrap gap-2" data-testid="date-range-presets">
+                    {DATE_RANGE_PRESETS.map(({ key, label }) => {
+                      const isActive = dateRangePreset === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          data-testid={`date-range-preset-${key}`}
+                          onClick={() => applyDateRangePreset(key)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                            isActive
+                              ? "bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500"
+                              : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:border-blue-400"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
                   </div>
 
+                  {dateRangePreset === "custom" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Start Date
+                        </label>
+                        <input
+                          type="date"
+                          data-testid="date-range-start-input"
+                          value={startDate}
+                          max={endDate || undefined}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          End Date
+                        </label>
+                        <input
+                          type="date"
+                          data-testid="date-range-end-input"
+                          value={endDate}
+                          min={startDate || undefined}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="date-range-preview">
+                    Testing{" "}
+                    <span className="font-semibold text-gray-900 dark:text-white">{formatRangeDate(startDate)}</span>
+                    {" → "}
+                    <span className="font-semibold text-gray-900 dark:text-white">{formatRangeDate(endDate)}</span>
+                  </p>
                 </div>
               </div>
 
@@ -3963,7 +4308,7 @@ const Backtest = () => {
                 const favTools = ALL_DRAW_TOOLS.filter((t) => favDrawingTools.includes(t.mode));
                 return (
                   <div
-                    className="flex flex-col items-center py-2 px-0.5 border-r flex-shrink-0 gap-0.5 overflow-y-auto"
+                    className="flex flex-col items-center py-2 px-0.5 border-r flex-shrink-0 gap-0.5 overflow-y-auto overflow-x-hidden"
                     style={{
                       background: theme.surface,
                       borderColor: theme.border,
@@ -4222,7 +4567,12 @@ const Backtest = () => {
                           prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
                         );
                       } else {
-                        setSelectedDrawingIds([id]);
+                        // Keep the same array ref when already the sole selection
+                        // so React skips a re-render (and the full SVG rebuild that
+                        // would flash every drawing) — e.g. clicking to start an edit.
+                        setSelectedDrawingIds((prev) =>
+                          prev.length === 1 && prev[0] === id ? prev : [id]
+                        );
                       }
                     }}
                     onRangeChange={syncDrag ? (r) => {
@@ -4256,7 +4606,7 @@ const Backtest = () => {
                 <div
                   className="fixed z-50 flex flex-col shadow-2xl rounded-lg border overflow-hidden"
                   style={{
-                    width: 280,
+                    width: 312,
                     maxHeight: "calc(100vh - 80px)",
                     top: panelPos.y,
                     left: panelPos.x,
@@ -4298,14 +4648,14 @@ const Backtest = () => {
                   <div className="flex flex-shrink-0" style={{ borderBottom: `1px solid ${theme.border}` }}>
                     <button
                       onClick={() => setOrderSide("sell")}
-                      className="flex-1 p-3 text-left transition-colors"
+                      className="flex-1 py-1.5 px-3 text-left transition-colors"
                       style={{
                         background: orderSide === "sell" ? "#f23645" : theme.bg,
                         color: orderSide === "sell" ? "#fff" : theme.text,
                       }}
                     >
-                      <div className="text-xs font-medium mb-0.5">Sell</div>
-                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? trimPrice(activeChartPrice - (activeChartInstrument?.tickSize || 0.25)) : "—"}</div>
+                      <div className="text-xs font-medium">Sell</div>
+                      <div className="text-base font-bold font-mono">{activeChartPrice > 0 ? trimPrice(activeChartPrice - (activeChartInstrument?.tickSize || 0.25)) : "—"}</div>
                     </button>
                     <div className="flex flex-col items-center justify-center px-2" style={{ background: isDark ? "#131722" : "#e8e8e8", minWidth: 40 }}>
                       <span className="text-xs font-medium" style={{ color: theme.textMuted }}>
@@ -4314,14 +4664,14 @@ const Backtest = () => {
                     </div>
                     <button
                       onClick={() => setOrderSide("buy")}
-                      className="flex-1 p-3 text-right transition-colors"
+                      className="flex-1 py-1.5 px-3 text-right transition-colors"
                       style={{
                         background: orderSide === "buy" ? "#1E53E5" : theme.bg,
                         color: orderSide === "buy" ? "#fff" : "#1E53E5",
                       }}
                     >
-                      <div className="text-xs font-medium mb-0.5">Buy</div>
-                      <div className="text-lg font-bold font-mono">{activeChartPrice > 0 ? trimPrice(activeChartPrice + (activeChartInstrument?.tickSize || 0.25)) : "—"}</div>
+                      <div className="text-xs font-medium">Buy</div>
+                      <div className="text-base font-bold font-mono">{activeChartPrice > 0 ? trimPrice(activeChartPrice + (activeChartInstrument?.tickSize || 0.25)) : "—"}</div>
                     </button>
                   </div>
 
@@ -4344,12 +4694,83 @@ const Backtest = () => {
                   </div>
 
                   <div className="flex-1 p-3 space-y-4 overflow-y-auto">
+                    {/* Risk per trade — percentage-based risk budget */}
+                    <div
+                      data-testid="order-risk-card"
+                      className="rounded-lg border p-3"
+                      style={{
+                        borderColor: riskOn ? "#1E53E5" : theme.border,
+                        background: theme.bg,
+                        opacity: riskOn ? 1 : 0.55,
+                      }}
+                    >
+                      <div className="flex items-center justify-end mb-2">
+                        <button
+                          data-testid="order-risk-toggle"
+                          onClick={() => setRiskOn((v) => !v)}
+                          className="w-10 h-5 rounded-full transition-colors relative flex-shrink-0"
+                          style={{ background: riskOn ? "#1E53E5" : (isDark ? "#363c4e" : "#d1d4dc") }}
+                        >
+                          <span
+                            className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                            style={{ left: riskOn ? "calc(100% - 18px)" : 2 }}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex items-baseline gap-2 mb-2.5">
+                        <span
+                          data-testid="order-risk-pct-value"
+                          className="text-2xl font-extrabold tabular-nums leading-none"
+                          style={{ color: "#1E53E5" }}
+                        >
+                          {riskPct.toFixed(2)}%
+                        </span>
+                        <span className="text-xs font-medium" style={{ color: theme.textMuted }}>
+                          = <b style={{ color: theme.text }}>${Math.round(orderCalc.riskAmt).toLocaleString()}</b> at risk
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-1.5 mb-2.5">
+                        {[0.25, 0.5, 1, 2].map((p) => (
+                          <button
+                            key={p}
+                            data-testid={`order-risk-preset-${p}`}
+                            onClick={() => setRiskPct(p)}
+                            disabled={!riskOn}
+                            className="py-1 text-xs font-bold rounded border tabular-nums transition-colors disabled:cursor-not-allowed"
+                            style={
+                              riskPct === p
+                                ? { background: "#1E53E5", borderColor: "#1E53E5", color: "#fff" }
+                                : { background: theme.surface, borderColor: theme.border, color: theme.textMuted }
+                            }
+                          >
+                            {p}%
+                          </button>
+                        ))}
+                      </div>
+
+                      <input
+                        type="range"
+                        data-testid="order-risk-slider"
+                        min="0.1"
+                        max="5"
+                        step="0.05"
+                        value={riskPct}
+                        disabled={!riskOn}
+                        onChange={(e) => setRiskPct(parseFloat(e.target.value))}
+                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer disabled:cursor-not-allowed"
+                        style={{ accentColor: "#1E53E5" }}
+                      />
+                    </div>
+
                     {/* Size input */}
                     <div>
                       <label className="block text-xs mb-1.5 font-medium" style={{ color: theme.textMuted }}>Units</label>
                       <div className="flex rounded border" style={{ borderColor: "#1E53E5", background: theme.bg }}>
                         <input
                           type="number"
+                          data-testid="order-units-input"
                           value={orderSize}
                           onChange={(e) => setOrderSize(Math.max(1, Number(e.target.value)))}
                           min="1"
@@ -4498,10 +4919,34 @@ const Backtest = () => {
                           {activeChartInstrument?.tickValue?.toFixed(2) || "—"} USD
                         </span>
                       </div>
+                      {useStopLoss && orderCalc.riskOnStop > 0 && (
+                        <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
+                          <span>Risk on stop</span>
+                          <span className="font-semibold" data-testid="order-risk-on-stop" style={{ color: "#1E53E5" }}>
+                            ${Math.round(orderCalc.riskOnStop).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {useTakeProfit && orderCalc.rewardAtTgt > 0 && (
+                        <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
+                          <span>Reward at target</span>
+                          <span className="font-semibold" data-testid="order-reward-at-target" style={{ color: "#089981" }}>
+                            ${Math.round(orderCalc.rewardAtTgt).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {orderCalc.rr != null && (
+                        <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
+                          <span>Risk / reward</span>
+                          <span className="font-semibold" data-testid="order-rr" style={{ color: theme.text }}>
+                            1 : {orderCalc.rr.toFixed(1)}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
                         <span>Est. value</span>
                         <span className="font-semibold" style={{ color: theme.text }}>
-                          ${(activeChartPrice * orderSize).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          ${(activeChartPrice * orderCalc.units).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
@@ -4519,9 +4964,12 @@ const Backtest = () => {
                       onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
                       onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                     >
-                      {orderSide === "buy" ? "Buy" : "Sell"}<br />
+                      {orderSide === "buy" ? "Buy" : "Sell"} {orderCalc.units} {activeChartInstrument?.symbol ?? currentSession?.instrument?.symbol}<br />
                       <span className="text-xs font-normal opacity-90">
-                        {orderSize} {activeChartInstrument?.symbol ?? currentSession?.instrument?.symbol} {orderType.toUpperCase()}
+                        {orderType.toUpperCase()}
+                        {useStopLoss && orderCalc.riskOnStop > 0
+                          ? ` · risking $${Math.round(orderCalc.riskOnStop).toLocaleString()}`
+                          : ""}
                       </span>
                     </button>
                   </div>
@@ -4997,74 +5445,15 @@ const Backtest = () => {
                   </p>
                 ) : (
                   positions.map((pos) => (
-                    <div
+                    <PositionCard
                       key={pos.id}
-                      className="rounded p-2 text-xs border"
-                      style={{ background: theme.bg, borderColor: theme.border }}
-                    >
-                      <div className="flex justify-between mb-1">
-                        <span className="font-semibold" style={{ color: pos.side === "buy" ? "#089981" : "#f23645" }}>
-                          {pos.side.toUpperCase()} ×{pos.size}
-                        </span>
-                        <span style={{ color: pos.currentPnL >= 0 ? "#089981" : "#f23645" }}>
-                          {pos.currentPnL >= 0 ? "+" : ""}${trimPrice(pos.currentPnL)}
-                        </span>
-                      </div>
-                      <div className="mb-1" style={{ color: theme.textMuted }}>
-                        Entry ${trimPrice(pos.entryPrice)}
-                      </div>
-                      {/* Editable TP */}
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <span className="w-5 text-center font-bold" style={{ color: "#089981", fontSize: 9 }}>TP</span>
-                        <input
-                          type="number"
-                          value={pos.takeProfit ?? ""}
-                          onChange={(e) => updatePosition(pos.id, "takeProfit", e.target.value)}
-                          placeholder="—"
-                          step={currentSession?.instrument?.tickSize || 0.25}
-                          className="flex-1 px-1 py-0.5 rounded border outline-none text-xs"
-                          style={{ background: theme.surface, borderColor: pos.takeProfit !== null ? "#089981" : theme.border, color: "#089981", minWidth: 0 }}
-                        />
-                      </div>
-                      {/* Editable SL */}
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="w-5 text-center font-bold" style={{ color: "#f23645", fontSize: 9 }}>SL</span>
-                        <input
-                          type="number"
-                          value={pos.stopLoss ?? ""}
-                          onChange={(e) => updatePosition(pos.id, "stopLoss", e.target.value)}
-                          placeholder="—"
-                          step={currentSession?.instrument?.tickSize || 0.25}
-                          className="flex-1 px-1 py-0.5 rounded border outline-none text-xs"
-                          style={{ background: theme.surface, borderColor: pos.stopLoss !== null ? "#f23645" : theme.border, color: "#f23645", minWidth: 0 }}
-                        />
-                      </div>
-                      <button
-                        onClick={() => {
-                          // Close against the position's own window's candle
-                          const cn = pos.chartNum ?? 1;
-                          const candle = cn === 2 ? chartData2[currentCandle2]
-                            : cn === 3 ? chartData3[currentCandle3]
-                            : chartData[currentCandle];
-                          const exitPrice = candle?.close || currentPrice;
-                          const pnl = pos.side === "buy"
-                            ? (exitPrice - pos.entryPrice) * pos.size * pos.tickRatio
-                            : (pos.entryPrice - exitPrice) * pos.size * pos.tickRatio;
-                          setPositions((prev) => prev.filter((p) => p.id !== pos.id));
-                          setBalance((b) => b + pnl);
-                          setTrades((t) => [...t, {
-                            ...pos, exitPrice, pnl, exitReason: "Manual",
-                            exitTime: candle?.time,
-                            balanceAfter: balance + pnl,
-                            rAchieved: rAchievedOf(pos, pnl),
-                          }]);
-                        }}
-                        className="text-xs w-full text-center py-0.5 rounded"
-                        style={{ background: theme.border, color: "#787b86" }}
-                      >
-                        Close at Market
-                      </button>
-                    </div>
+                      pos={pos}
+                      theme={theme}
+                      tickSize={currentSession?.instrument?.tickSize || 0.25}
+                      onUpdateField={updatePosition}
+                      onClose={closePositionManually}
+                      trimPrice={trimPrice}
+                    />
                   ))
                 )}
               </div>
