@@ -50,6 +50,21 @@ export const DEFAULT_FIB_LEVELS = [
 // Builds a smoothed SVG path through raw stroke points (quadratic curves
 // through segment midpoints) so brush strokes render as curves, not jagged
 // polylines. `pts` = [{x, y}, ...].
+// Font used for on-chart text labels (drawing tool + inline editor).
+export const TEXT_LABEL_FONT = "'Trebuchet MS', Roboto, sans-serif";
+
+// Measures the exact pixel width of a label at a given font size using canvas
+// metrics. Reliable and layout-independent (unlike SVG getBBox, which returns 0
+// before the element is laid out), so the label box and inline editor can hug
+// the text with no dead space. Reuses a single offscreen canvas context.
+let _labelMeasureCtx = null;
+export function measureLabelWidth(text, fontSize) {
+  if (typeof document === "undefined") return String(text || "").length * fontSize * 0.6;
+  if (!_labelMeasureCtx) _labelMeasureCtx = document.createElement("canvas").getContext("2d");
+  _labelMeasureCtx.font = `600 ${fontSize}px ${TEXT_LABEL_FONT}`;
+  return _labelMeasureCtx.measureText(text || "").width;
+}
+
 export function buildSmoothPath(pts) {
   if (pts.length < 2) return "";
   let d = `M ${pts[0].x} ${pts[0].y}`;

@@ -8,7 +8,7 @@ import {
   createSeriesMarkers,
 } from "lightweight-charts";
 import { timeToLogical, shiftTimeByBars } from "../timeScaleMath";
-import { DEFAULT_FIB_LEVELS, buildSmoothPath, applyChartSettings, trimPrice } from "../chartConfig";
+import { DEFAULT_FIB_LEVELS, buildSmoothPath, applyChartSettings, trimPrice, measureLabelWidth } from "../chartConfig";
 import { getToolDefaults } from "../drawingDefaults";
 
 // TradingView light theme — exact values from TradingView's default "White" theme
@@ -175,6 +175,7 @@ export function useChartSetup({
   brushSvgRef,
   chartSettingsRef,
   onEditTextRef,
+  inlineEditIdRef,
 }) {
 
   // ── Chart creation — runs only when candleData changes (new session / new timeframe) ──
@@ -351,6 +352,12 @@ export function useChartSetup({
       createSeriesMarkers(main, markers);
     }
 
+    // Tracks the last click on a text label so two quick clicks open the inline
+    // editor. A native dblclick listener is unreliable here: selecting on the
+    // first click rebuilds the SVG, so the second click lands on a fresh node.
+    // This lives in the effect scope so it survives those rebuilds.
+    let lastTextClick = null; // { id, time }
+
     // ── SVG drawing layer — recomputed on every scroll/zoom ──
     const updateSvgDrawings = () => {
       const svg = svgRef.current;
@@ -424,6 +431,20 @@ export function useChartSetup({
         });
       };
 
+      // Opens the inline editor positioned exactly over a text label's box.
+      // Reads geometry from the box's SVG attributes (not getBoundingClientRect,
+      // which can be {0,0} on a node React just detached) + the stable SVG root.
+      const openTextEditor = (boxEl, drawing) => {
+        const svgRect = boxEl.ownerSVGElement?.getBoundingClientRect();
+        if (!svgRect) return;
+        const bx = parseFloat(boxEl.getAttribute("x")) || 0;
+        const by = parseFloat(boxEl.getAttribute("y")) || 0;
+        const bh = parseFloat(boxEl.getAttribute("height")) || 24;
+        onEditTextRef?.current?.(drawing.id, {
+          left: svgRect.left + bx, top: svgRect.top + by, height: bh,
+        });
+      };
+
       // Helper: attach delete/select click to any SVG element
       const attachInteraction = (el, drawing) => {
         el.addEventListener("click", (e) => {
@@ -432,6 +453,19 @@ export function useChartSetup({
           if (drawingModeRef.current === "eraser") {
             onDrawingDeleteRef.current?.(drawing.id);
           } else if (!drawingModeRef.current || drawingModeRef.current === "selector") {
+            // Two quick clicks on a text label open the inline editor. We detect
+            // this by timing instead of a native dblclick because the first
+            // click selects the label and rebuilds the SVG, so the second click
+            // lands on a brand-new node that never receives a dblclick.
+            if (drawing.type === "text") {
+              const now = Date.now();
+              if (lastTextClick && lastTextClick.id === drawing.id && now - lastTextClick.time < 400) {
+                lastTextClick = null;
+                openTextEditor(el, drawing);
+                return;
+              }
+              lastTextClick = { id: drawing.id, time: now };
+            }
             onSelectionChangeRef.current?.(drawing.id, e.ctrlKey || e.metaKey || e.shiftKey);
           }
         });
@@ -551,18 +585,25 @@ export function useChartSetup({
         // Text label — rendered as a box (rect + text). The rect is the event
         // target so the full visible area is clickable/draggable.
         if (drawing.type === "text") {
+          // While this label is being edited inline, the dashed input overlays
+          // it — skip the SVG box so its solid border doesn't double up.
+          if (inlineEditIdRef?.current === drawing.id) return;
           const x = timeToCoord(drawing.time);
           const y = mn.priceToCoordinate(drawing.price);
           if (x == null || y == null) return;
           const label = drawing.label || "Label";
           const fs = drawing.fontSize || 14;
           const color = isSelected(drawing.id) ? "#60a5fa" : (drawing.color || "#f7a600");
-          const textW = Math.max(label.length * fs * 0.6 + 16, 40);
+          // Box hugs the measured text (6px padding each side) — no dead space.
+          const textW = Math.max(measureLabelWidth(label, fs) + 12, 30);
           const textH = fs + 10;
           const isDark = isDarkRef.current;
 
-          // Group for glow — events live on the rect, not the group
+          // Group for glow — events live on the rect, not the group.
+          // Tagged with the drawing id so inline editing can hide just this box
+          // (via a display toggle) without rebuilding the whole SVG layer.
           const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.setAttribute("data-text-id", String(drawing.id));
           g.style.userSelect = "none";
           applyGlow(g, drawing.id);
 
@@ -589,31 +630,17 @@ export function useChartSetup({
           textEl.style.userSelect = "none";
           textEl.textContent = label;
           g.appendChild(textEl);
+          svg.appendChild(g);
 
           const dragState = { startP1: { time: drawing.time, price: drawing.price }, startP2: { time: drawing.time, price: drawing.price } };
           attachInteraction(box, drawing);
           attachMoveDrag(box, drawing, dragState);
+          // Native dblclick fallback (fires when selection didn't rebuild the node)
           box.addEventListener("dblclick", (e) => {
             e.stopPropagation();
             e.preventDefault();
-            // Compute position from the SVG root (stable in DOM) + box SVG attributes.
-            // getBoundingClientRect() on the box itself can return {0,0} if React has
-            // already re-rendered and detached this element between the two clicks.
-            const svgEl = box.ownerSVGElement;
-            const svgRect = svgEl?.getBoundingClientRect();
-            if (!svgRect) return;
-            const bx = parseFloat(box.getAttribute("x")) || 0;
-            const by = parseFloat(box.getAttribute("y")) || 0;
-            const bw = parseFloat(box.getAttribute("width")) || 80;
-            const bh = parseFloat(box.getAttribute("height")) || 24;
-            onEditTextRef?.current?.(drawing.id, {
-              left: svgRect.left + bx,
-              top: svgRect.top + by,
-              width: bw,
-              height: bh,
-            });
+            openTextEditor(box, drawing);
           });
-          svg.appendChild(g);
           return;
         }
 
@@ -1547,14 +1574,24 @@ export function useChartSetup({
         } else if (mode === "vline") {
           onDrawingAddRef.current?.({ type: "vline", time: t, color: "#f7a600", ...(getToolDefaults("vline") || {}) });
         } else if (mode === "text") {
-          // Place the label immediately and open the properties panel for it —
-          // no blocking window.prompt dialog
+          // Place the label and open the in-place editor on the chart right away,
+          // so the user can type the text directly instead of only via the panel.
           const id = Date.now();
+          const textDefaults = getToolDefaults("text") || {};
           onDrawingAddRef.current?.({
             id, type: "text", time: t, price, label: "Text",
-            color: "#f7a600", ...(getToolDefaults("text") || {}),
+            color: "#f7a600", ...textDefaults,
           });
           onSelectionChangeRef.current?.(id);
+          const svgRect = svgRef.current?.getBoundingClientRect();
+          if (svgRect) {
+            const fs = textDefaults.fontSize || 14;
+            onEditTextRef?.current?.(
+              id,
+              { left: svgRect.left + param.point.x, top: svgRect.top + param.point.y, height: fs + 10 },
+              { fontSize: fs, color: textDefaults.color || "#f7a600", value: "Text", selectOnFocus: true },
+            );
+          }
         } else if (mode === "buy_marker" || mode === "sell_marker") {
           onDrawingAddRef.current?.({
             type: mode, time: t, price,

@@ -7,7 +7,7 @@ import {
   LineSeries,
   createSeriesMarkers,
 } from "lightweight-charts";
-import { TV_LIGHT, TV_DARK, calcEMAIndexed, defaultWindow, applyChartSettings } from './BacktestChart/chartConfig';
+import { TV_LIGHT, TV_DARK, calcEMAIndexed, defaultWindow, applyChartSettings, measureLabelWidth } from './BacktestChart/chartConfig';
 import DrawingPropertiesPanel from './BacktestChart/DrawingPropertiesPanel';
 import { useDrawingTools } from './BacktestChart/hooks/useDrawingTools';
 import { useChartSetup } from './BacktestChart/hooks/useChartSetup';
@@ -93,6 +93,9 @@ const BacktestChart = ({
   const previewPointRef = useRef(null);   // current mouse position for trendline preview
   const userDrawingsRef = useRef([]);
   const updateSvgDrawingsRef = useRef(() => {});
+  // Id of the text drawing currently being edited inline. The SVG renderer
+  // skips its box while editing so only the dashed input shows (no double border).
+  const inlineEditIdRef = useRef(null);
   const propsPanelRef = useRef(null); // floating properties panel DOM node
   const wasDraggedRef = useRef(false);
   const candleDataRef = useRef([]);
@@ -104,20 +107,35 @@ const BacktestChart = ({
   // Inline text editing — double-click on a text drawing opens an in-place input
   const [inlineEdit, setInlineEdit] = useState(null); // { id, x, y, fontSize, color, value }
   const onEditTextRef = useRef(null);
-  onEditTextRef.current = (id, rect) => {
+  // `overrides` lets a just-created label (not yet in userDrawingsRef) open the
+  // editor immediately with known font/color/value instead of looking them up.
+  onEditTextRef.current = (id, rect, overrides) => {
     const drawing = userDrawingsRef.current.find((d) => d.id === id);
-    if (!drawing) return;
+    if (!drawing && !overrides) return;
     setInlineEdit({
       id,
       x: rect.left,
       y: rect.top,
-      width: rect.width,
       height: rect.height,
-      fontSize: drawing.fontSize || 14,
-      color: drawing.color || "#f7a600",
-      value: drawing.label || "",
+      fontSize: overrides?.fontSize ?? drawing?.fontSize ?? 14,
+      color: overrides?.color ?? drawing?.color ?? "#f7a600",
+      value: overrides?.value ?? drawing?.label ?? "",
+      selectOnFocus: overrides?.selectOnFocus ?? false,
     });
   };
+  // Hide the underlying SVG box while its label is being edited inline, so the
+  // solid box border never shows above/around the dashed editor border. Toggle
+  // the single group's visibility directly — calling updateSvgDrawings here
+  // would wipe and rebuild the whole layer, making every drawing flash.
+  useEffect(() => {
+    const id = inlineEdit?.id ?? null;
+    inlineEditIdRef.current = id;
+    const svg = svgRef.current;
+    if (!svg) return;
+    svg.querySelectorAll("[data-text-id]").forEach((el) => {
+      el.style.display = id != null && el.getAttribute("data-text-id") === String(id) ? "none" : "";
+    });
+  }, [inlineEdit?.id]);
 
   // OHLCV bar — direct DOM writes for 60fps crosshair, no React re-render
   const ohlcBarRef = useRef();
@@ -914,6 +932,7 @@ const BacktestChart = ({
     brushSvgRef,
     chartSettingsRef,
     onEditTextRef,
+    inlineEditIdRef,
   });
 
   // ── Timezone + attribution logo — re-applied after every chart rebuild ──
@@ -1148,7 +1167,9 @@ const BacktestChart = ({
         <input
           type="text"
           autoFocus
+          data-testid="text-label-inline-input"
           value={inlineEdit.value}
+          onFocus={(e) => { if (inlineEdit.selectOnFocus) e.target.select(); }}
           onChange={(e) => setInlineEdit((prev) => ({ ...prev, value: e.target.value }))}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -1166,12 +1187,14 @@ const BacktestChart = ({
             position: "fixed",
             left: inlineEdit.x,
             top: inlineEdit.y,
-            width: inlineEdit.width,
+            // Width tracks the measured text width + padding (6px each side +
+            // caret room) so the box hugs the content — no dead space on the right.
+            width: Math.max(measureLabelWidth(inlineEdit.value, inlineEdit.fontSize) + 16, 30),
             height: inlineEdit.height,
             zIndex: 9999,
             background: isDark ? "rgba(19,23,34,0.96)" : "rgba(255,255,248,0.96)",
-            // Blue border signals edit mode — matches selection highlight colour
-            border: "2px solid #60a5fa",
+            // Dashed blue border signals edit mode — matches selection highlight colour
+            border: "2px dashed #60a5fa",
             borderRadius: 3,
             outline: "none",
             boxSizing: "border-box",
