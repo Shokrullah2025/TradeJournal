@@ -23,12 +23,14 @@ import OAuthCallback from "./pages/OAuthCallback";
 const Profile = React.lazy(() => import("./pages/Profile"));
 import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { FeatureFlagProvider } from "./context/FeatureFlagContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { BillingProvider } from "./context/BillingContext";
 import { BrokerProvider } from "./context/BrokerContext";
 import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import FeatureGate from "./components/common/FeatureGate";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -43,6 +45,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <FeatureFlagProvider>
         <NotificationProvider>
           <BillingProvider>
             <TradeProvider>
@@ -108,7 +111,11 @@ function App() {
                                   <Route path="/trades" element={<Trades />} />
                                   <Route
                                     path="/backtest"
-                                    element={<Backtest />}
+                                    element={
+                                      <FeatureGate feature="backtesting" title="Backtesting unavailable">
+                                        <Backtest />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/trade-entry"
@@ -116,15 +123,27 @@ function App() {
                                   />
                                   <Route
                                     path="/brokers"
-                                    element={<BrokerSelection />}
+                                    element={
+                                      <FeatureGate feature="broker_sync" title="Broker Sync unavailable">
+                                        <BrokerSelection />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/analytics"
-                                    element={<Analytics />}
+                                    element={
+                                      <FeatureGate feature="advanced_analytics" title="Advanced Analytics unavailable">
+                                        <Analytics />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/risk-calculator"
-                                    element={<RiskCalculator />}
+                                    element={
+                                      <FeatureGate feature="risk_calculator" title="Risk Calculator unavailable">
+                                        <RiskCalculator />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/settings"
@@ -186,6 +205,7 @@ function App() {
             </TradeProvider>
           </BillingProvider>
         </NotificationProvider>
+        </FeatureFlagProvider>
       </AuthProvider>
     </ThemeProvider>
   );
