@@ -1114,9 +1114,9 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row border border-gray-200 dark:border-gray-700 overflow-y-auto md:overflow-hidden">
         {/* Left: scrollable form */}
-        <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
+        <div className="flex-1 flex flex-col md:overflow-y-auto min-w-0">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center">
             <Calendar className="w-6 h-6 mr-2 text-blue-600" />
@@ -1857,7 +1857,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
         {/* Right: always-visible named screenshot slots */}
         <div
-          className="w-52 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col"
+          className="w-full md:w-52 flex-shrink-0 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col"
           data-testid="trade-form-images-panel"
         >
           {/* Header */}

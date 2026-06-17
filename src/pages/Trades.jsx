@@ -97,7 +97,7 @@ const Trades = () => {
           </h1>
         </div>
 
-        <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+        <div className="mt-4 sm:mt-0 flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Broker Connection Status Button */}
           <button
             onClick={() => setShowBrokerModal(true)}
@@ -148,15 +148,15 @@ const Trades = () => {
 
       {/* Search and Filters — compact inline row, no card wrapper */}
       <div>
-        <div className="flex items-center space-x-3">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search trades..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full sm:w-64 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
 

@@ -102,7 +102,7 @@ function App() {
                                 onMenuClick={() => setSidebarOpen(true)}
                               />
 
-                              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
+                              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 transition-colors duration-300">
                                 <Routes>
                                   <Route path="/" element={<Dashboard />} />
                                   <Route path="/trades" element={<Trades />} />
