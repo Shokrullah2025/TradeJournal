@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 const StrategyAnalysis = ({ trades, detailed = false }) => {
-  const analyzeStrategies = () => {
+  const strategyData = useMemo(() => {
     const completedTrades = trades.filter((trade) => trade.status === "closed");
     const strategyStats = {};
 
@@ -81,9 +81,7 @@ const StrategyAnalysis = ({ trades, detailed = false }) => {
     });
 
     return Object.values(strategyStats).sort((a, b) => b.totalPnL - a.totalPnL);
-  };
-
-  const strategyData = analyzeStrategies();
+  }, [trades]);
 
   const COLORS = [
     "#0ea5e9", // Primary blue

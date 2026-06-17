@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 const PerformanceMetrics = ({ trades }) => {
-  const calculateMetrics = () => {
+  const metrics = useMemo(() => {
     const completedTrades = trades.filter((trade) => trade.status === "closed");
 
     if (completedTrades.length === 0) {
@@ -71,17 +71,26 @@ const PerformanceMetrics = ({ trades }) => {
     });
 
     // Simple Sharpe ratio calculation (assuming 0% risk-free rate)
-    const returns = pnls.map(
-      (pnl) =>
-        (pnl / (completedTrades[0].entryPrice * completedTrades[0].quantity)) *
-        100
-    );
+    // Each trade's return is its pnl relative to its OWN notional; skip
+    // trades whose notional is 0 or non-finite to avoid divide-by-zero.
+    const returns = completedTrades.reduce((acc, trade) => {
+      const notional = trade.entryPrice * trade.quantity;
+      if (Number.isFinite(notional) && notional !== 0) {
+        acc.push((trade.pnl / notional) * 100);
+      }
+      return acc;
+    }, []);
     const avgReturn =
-      returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
-    const returnStdDev = Math.sqrt(
-      returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) /
-        returns.length
-    );
+      returns.length > 0
+        ? returns.reduce((sum, ret) => sum + ret, 0) / returns.length
+        : 0;
+    const returnStdDev =
+      returns.length > 0
+        ? Math.sqrt(
+            returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) /
+              returns.length
+          )
+        : 0;
     const sharpeRatio = returnStdDev > 0 ? avgReturn / returnStdDev : 0;
 
     return {
@@ -97,9 +106,7 @@ const PerformanceMetrics = ({ trades }) => {
       expectancy: Math.round(expectancy * 100) / 100,
       sharpeRatio: Math.round(sharpeRatio * 100) / 100,
     };
-  };
-
-  const metrics = calculateMetrics();
+  }, [trades]);
 
   const metricCards = [
     {

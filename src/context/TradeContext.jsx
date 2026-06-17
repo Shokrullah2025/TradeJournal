@@ -16,6 +16,9 @@ import { getMilestoneCandidates } from "../utils/milestones";
 
 const TradeContext = createContext();
 
+// Default number of trades fetched per page (see engineering standards §3).
+const DEFAULT_PAGE_SIZE = 50;
+
 // ── Field mapping helpers ──────────────────────────────────────────────────
 
 const INSTRUMENT_TYPE_TO_DB = {
@@ -235,13 +238,16 @@ export const TradeProvider = ({ children }) => {
   }, []);
 
   // Fetch all trades for the current user (with images)
-  const fetchTrades = useCallback(async (userId) => {
+  const fetchTrades = useCallback(async (userId, page = 0, pageSize = DEFAULT_PAGE_SIZE) => {
     dispatch({ type: ACTIONS.SET_LOADING, payload: true });
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
     const { data, error } = await supabase
       .from("trades")
       .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at")
       .eq("user_id", userId)
-      .order("entry_date", { ascending: false });
+      .order("entry_date", { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error("[Trades] fetch error:", error);

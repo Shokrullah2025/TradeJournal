@@ -1,23 +1,29 @@
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
-import Dashboard from "./pages/Dashboard";
-import Trades from "./pages/Trades";
-import Backtest from "./pages/Backtest";
-import Analytics from "./pages/Analytics";
-import RiskCalculator from "./pages/RiskCalculator";
-import Settings from "./pages/Settings_new";
-import Login from "./pages/Login";
-import MultiStepRegistration from "./pages/MultiStepRegistration";
-import ResetPassword from "./pages/ResetPassword";
-import EmailVerification from "./components/auth/EmailVerification";
-import Admin from "./pages/Admin";
-import Billing from "./pages/Billing";
-import BrokerSelection from "./pages/BrokerSelection";
-import TradeEntry from "./pages/TradeEntry";
-import OAuthCallback from "./pages/OAuthCallback";
+
+// Page-level components are lazy-loaded (code-split) per engineering standards.
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const Trades = React.lazy(() => import("./pages/Trades"));
+const Backtest = React.lazy(() => import("./pages/Backtest"));
+const Analytics = React.lazy(() => import("./pages/Analytics"));
+const RiskCalculator = React.lazy(() => import("./pages/RiskCalculator"));
+const Settings = React.lazy(() => import("./pages/Settings_new"));
+const Login = React.lazy(() => import("./pages/Login"));
+const MultiStepRegistration = React.lazy(() =>
+  import("./pages/MultiStepRegistration")
+);
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const EmailVerification = React.lazy(() =>
+  import("./components/auth/EmailVerification")
+);
+const Admin = React.lazy(() => import("./pages/Admin"));
+const Billing = React.lazy(() => import("./pages/Billing"));
+const BrokerSelection = React.lazy(() => import("./pages/BrokerSelection"));
+const TradeEntry = React.lazy(() => import("./pages/TradeEntry"));
+const OAuthCallback = React.lazy(() => import("./pages/OAuthCallback"));
 
 // Lazy — keeps the bundled country/state dataset out of the initial load.
 const Profile = React.lazy(() => import("./pages/Profile"));
@@ -49,6 +55,17 @@ function App() {
               <BrokerProvider>
                 <BacktestProvider>
                 <Router>
+                  <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <div
+                        className="flex items-center justify-center h-screen"
+                        data-testid="app-loading-spinner"
+                      >
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                      </div>
+                    }
+                  >
                   <Routes>
                     {/* Public routes */}
                     <Route
@@ -132,17 +149,7 @@ function App() {
                                   />
                                   <Route
                                     path="/profile"
-                                    element={
-                                      <Suspense
-                                        fallback={
-                                          <div className="flex items-center justify-center h-64">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
-                                          </div>
-                                        }
-                                      >
-                                        <Profile />
-                                      </Suspense>
-                                    }
+                                    element={<Profile />}
                                   />
                                   <Route
                                     path="/admin"
@@ -165,6 +172,8 @@ function App() {
                       }
                     />
                   </Routes>
+                  </Suspense>
+                  </ErrorBoundary>
 
                   <Toaster
                     position="top-right"

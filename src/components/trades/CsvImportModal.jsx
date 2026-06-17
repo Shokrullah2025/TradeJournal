@@ -154,7 +154,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
         if (typeof onImported === "function") onImported();
         toast.success(`Imported ${count} trade${count !== 1 ? "s" : ""}`);
       } else {
-        toast.info("All trades already existed — nothing new to import.");
+        toast("All trades already existed — nothing new to import.", { icon: "ℹ️" });
       }
     } catch (err) {
       setError(err.message || "Import failed.");

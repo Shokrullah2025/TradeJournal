@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useId } from "react";
 
 // Mini Line Chart for trends
 export const MiniLineChart = ({ data, color = "blue", positive = true }) => {
+  const gradientId = useId();
   if (!data || data.length === 0) return null;
-  
+
   const points = data.map((value, index) => {
     const x = (index / (data.length - 1)) * 100;
     const max = Math.max(...data);
@@ -31,14 +32,14 @@ export const MiniLineChart = ({ data, color = "blue", positive = true }) => {
           className="drop-shadow-sm"
         />
         <defs>
-          <linearGradient id={`gradient-${color}-${Math.random()}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" style={{stopColor: colorClasses[color], stopOpacity: 0.25}} />
             <stop offset="100%" style={{stopColor: colorClasses[color], stopOpacity: 0}} />
           </linearGradient>
         </defs>
         <polygon
           points={`0,100 ${points} 100,100`}
-          fill={`url(#gradient-${color}-${Math.random()})`}
+          fill={`url(#${gradientId})`}
         />
       </svg>
     </div>
@@ -121,8 +122,9 @@ export const MiniDonutChart = ({ percentage, color = "blue" }) => {
 
 // Mini Area Chart for cumulative data
 export const MiniAreaChart = ({ data, color = "blue", positive = true }) => {
+  const gradientId = useId();
   if (!data || data.length === 0) return null;
-  
+
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
@@ -144,14 +146,14 @@ export const MiniAreaChart = ({ data, color = "blue", positive = true }) => {
     <div className="w-16 h-8">
       <svg viewBox="0 0 100 100" className="w-full h-full">
         <defs>
-          <linearGradient id={`area-gradient-${color}-${Math.random()}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" style={{stopColor: colorClasses[color], stopOpacity: 0.35}} />
             <stop offset="100%" style={{stopColor: colorClasses[color], stopOpacity: 0.08}} />
           </linearGradient>
         </defs>
         <polygon
           points={`0,100 ${points} 100,100`}
-          fill={`url(#area-gradient-${color}-${Math.random()})`}
+          fill={`url(#${gradientId})`}
         />
         <polyline
           points={points}
@@ -210,8 +212,9 @@ export const MiniRiskRewardChart = ({ winAmount, lossAmount, color = "blue" }) =
 
 // Drawdown Chart showing underwater curve
 export const MiniDrawdownChart = ({ drawdownData, color = "red" }) => {
+  const gradientId = useId();
   if (!drawdownData || drawdownData.length === 0) return null;
-  
+
   const max = Math.max(...drawdownData);
   const min = Math.min(...drawdownData);
   const range = max - min || 1;
@@ -229,14 +232,14 @@ export const MiniDrawdownChart = ({ drawdownData, color = "red" }) => {
         {/* Zero line */}
         <line x1="0" y1="100" x2="100" y2="100" stroke="#374151" strokeWidth="1" opacity="0.3" />
         <defs>
-          <linearGradient id={`drawdown-gradient-${Math.random()}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" style={{stopColor: '#ef4444', stopOpacity: 0.4}} />
             <stop offset="100%" style={{stopColor: '#ef4444', stopOpacity: 0.1}} />
           </linearGradient>
         </defs>
         <polygon
           points={`0,100 ${points} 100,100`}
-          fill={`url(#drawdown-gradient-${Math.random()})`}
+          fill={`url(#${gradientId})`}
         />
         <polyline
           points={points}

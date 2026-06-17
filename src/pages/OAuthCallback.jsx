@@ -9,6 +9,8 @@ const OAuthCallback = () => {
   const [message, setMessage] = useState("Processing OAuth callback...");
 
   useEffect(() => {
+    let redirectTimer;
+
     const handleCallback = async () => {
       try {
         // Get parameters from URL
@@ -68,7 +70,7 @@ const OAuthCallback = () => {
         setMessage(`Successfully authenticated with ${brokerInfo.broker}!`);
 
         // Redirect after 2 seconds
-        setTimeout(() => {
+        redirectTimer = setTimeout(() => {
           navigate("/trades", {
             state: {
               oauthSuccess: true,
@@ -85,6 +87,10 @@ const OAuthCallback = () => {
     };
 
     handleCallback();
+
+    return () => {
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
   }, [searchParams, navigate]);
 
   const getStatusIcon = () => {

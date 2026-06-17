@@ -51,6 +51,7 @@ import BacktestChart from "../components/trades/BacktestChart";
 import { TrendlineIcon, RayIcon, SegmentIcon } from "../components/trades/BacktestChart/toolIcons";
 import EdgeAnalyticsPanel, { EquityCurve } from "../components/backtest/EdgeAnalyticsPanel";
 import { computeEdgeStats, withBalanceSnapshots } from "../utils/edgeStats";
+import { calculatePnL } from "../utils/pnl";
 import { TZ_OPTIONS } from "../utils/chartTimezone";
 import { fetchMarketCandles, clearCandleCache } from "../utils/marketData";
 import { useTemplates } from "../hooks/useTemplates";
@@ -1815,15 +1816,17 @@ const Backtest = () => {
       }
 
       if (closed) {
-        const pnl = pos.side === "buy"
-          ? (exitPrice - pos.entryPrice) * pos.size * pos.tickRatio
-          : (pos.entryPrice - exitPrice) * pos.size * pos.tickRatio;
+        const pnl = calculatePnL({
+          direction: pos.side, entryPrice: pos.entryPrice, exitPrice,
+          size: pos.size, tickRatio: pos.tickRatio,
+        });
         balanceDelta += pnl;
         closedTrades.push({ ...pos, exitPrice, pnl, exitReason, exitTime: candle.time });
       } else {
-        const currentPnL = pos.side === "buy"
-          ? (candle.close - pos.entryPrice) * pos.size * pos.tickRatio
-          : (pos.entryPrice - candle.close) * pos.size * pos.tickRatio;
+        const currentPnL = calculatePnL({
+          direction: pos.side, entryPrice: pos.entryPrice, exitPrice: candle.close,
+          size: pos.size, tickRatio: pos.tickRatio,
+        });
         stillOpen.push({ ...pos, currentPnL });
       }
     });
@@ -2551,9 +2554,10 @@ const Backtest = () => {
       : chartData[currentCandle];
     const exitPrice = candle?.close || currentPrice;
     const qty = Math.max(1, Math.min(Math.round(closeQty), pos.size));
-    const pnl = pos.side === "buy"
-      ? (exitPrice - pos.entryPrice) * qty * pos.tickRatio
-      : (pos.entryPrice - exitPrice) * qty * pos.tickRatio;
+    const pnl = calculatePnL({
+      direction: pos.side, entryPrice: pos.entryPrice, exitPrice,
+      size: qty, tickRatio: pos.tickRatio,
+    });
     const remaining = pos.size - qty;
 
     if (remaining > 0) {

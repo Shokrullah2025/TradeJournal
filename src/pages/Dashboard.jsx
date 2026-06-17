@@ -31,7 +31,7 @@ import CumulativePnLChart from "../components/dashboard/CumulativePnLChart";
 import WhenYouWinChart from "../components/dashboard/WhenYouWinChart";
 import PreMarketBriefing from "../components/dashboard/PreMarketBriefing";
 import TradeScatterChart from "../components/dashboard/TradeScatterChart";
-import { MiniLineChart, MiniBarChart, MiniDonutChart, MiniAreaChart, MiniRiskRewardChart, MiniDrawdownChart } from "../components/dashboard/MiniCharts";
+import { MiniDonutChart, MiniAreaChart, MiniRiskRewardChart, MiniDrawdownChart } from "../components/dashboard/MiniCharts";
 
 const Dashboard = () => {
   const { trades, stats } = useTrades();
@@ -84,7 +84,7 @@ const Dashboard = () => {
     return { cumData, cumDates, sessionCount };
   }, [trades, cumulativeRange]);
 
-  const recentTrades = trades
+  const recentTrades = [...trades]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
 

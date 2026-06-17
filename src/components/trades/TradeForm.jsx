@@ -453,26 +453,12 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       console.log("Using first available profile:", riskRewardToApply);
     }
 
-    // Fallback to 1:1.5 if still no value and create a default profile for this session
+    // Fallback to 1:1.5 if still no value. (settingsRiskProfiles comes from the
+    // read-only useUserSettings hook — there is no in-component setter, so we
+    // only apply the ratio here; persisting a profile is done in Settings.)
     if (!riskRewardToApply) {
       riskRewardToApply = "1:1.5";
       console.log("Using fallback 1:1.5");
-
-      // Create a temporary risk profile for this session if none exist
-      if (settingsRiskProfiles.length === 0) {
-        const tempProfile = {
-          id: Date.now(),
-          name: "Default (1:1.5)",
-          riskRatio: 1,
-          rewardRatio: 1.5,
-          pointRisk: 50,
-          pointProfit: 75,
-          usePercentage: true,
-          accountPercentage: 2,
-        };
-        setSettingsRiskProfiles([tempProfile]);
-        console.log("Created temporary risk profile");
-      }
     }
 
     // Always apply the risk/reward ratio

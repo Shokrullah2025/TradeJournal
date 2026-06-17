@@ -100,18 +100,36 @@ class BrokerService {
     this.oauthPopup = null;
     this.oauthResolve = null;
     this.oauthReject = null;
-    this.setupOAuthCallback();
-  }
-
-  setupOAuthCallback() {
-    window.addEventListener("message", (event) => {
+    this.checkClosedInterval = null;
+    // Keep a stable handler reference so it can be removed on teardown.
+    this.messageHandler = (event) => {
       if (event.origin !== window.location.origin) return;
       if (event.data.type === "OAUTH_SUCCESS") {
         this.handleOAuthSuccess(event.data.broker, event.data.code, event.data.accountType);
       } else if (event.data.type === "OAUTH_ERROR") {
         this.handleOAuthError(event.data.error);
       }
-    });
+    };
+    this.setupOAuthCallback();
+  }
+
+  setupOAuthCallback() {
+    window.addEventListener("message", this.messageHandler);
+  }
+
+  // Stop the popup-closed watcher started in startOAuthFlow.
+  clearCheckClosed() {
+    if (this.checkClosedInterval) {
+      clearInterval(this.checkClosedInterval);
+      this.checkClosedInterval = null;
+    }
+  }
+
+  // Tear down all listeners/timers — called from BrokerProvider cleanup.
+  destroy() {
+    window.removeEventListener("message", this.messageHandler);
+    this.clearCheckClosed();
+    this.stopAutoSync();
   }
 
   getBrokers() {
@@ -182,9 +200,10 @@ class BrokerService {
       this.oauthResolve = resolve;
       this.oauthReject = reject;
 
-      const checkClosed = setInterval(() => {
+      this.clearCheckClosed();
+      this.checkClosedInterval = setInterval(() => {
         if (this.oauthPopup && this.oauthPopup.closed) {
-          clearInterval(checkClosed);
+          this.clearCheckClosed();
           this.oauthReject(new Error("OAuth popup was closed"));
         }
       }, 1000);
@@ -289,6 +308,9 @@ class BrokerService {
   }
 
   handleOAuthSuccess(brokerKey, authCode, accountType = "demo") {
+    // Settle the flow — stop watching the popup so it can't later reject a
+    // promise that already resolved.
+    this.clearCheckClosed();
     if (this.oauthPopup) {
       this.oauthPopup.close();
     }
@@ -299,6 +321,7 @@ class BrokerService {
   }
 
   handleOAuthError(error) {
+    this.clearCheckClosed();
     if (this.oauthPopup) {
       this.oauthPopup.close();
     }
@@ -486,6 +509,12 @@ export const BrokerProvider = ({ children }) => {
   const [state, setState] = useState(initialState);
   const [brokerService] = useState(() => new BrokerService());
 
+  // Tear down the service's window 'message' listener, auto-sync timer, and
+  // popup watcher on unmount (CLAUDE.md §3 — listeners/timers must be cleaned up).
+  useEffect(() => {
+    return () => brokerService.destroy();
+  }, [brokerService]);
+
   // Restore non-sensitive connection state from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("brokerConfig");
@@ -615,7 +644,7 @@ export const BrokerProvider = ({ children }) => {
         if (typeof onTradesImported === "function") onTradesImported();
         toast.success(`Imported ${imported} trade${imported !== 1 ? "s" : ""} (${skipped} skipped)`);
       } else {
-        toast.info("No new trades found");
+        toast("No new trades found", { icon: "ℹ️" });
       }
     } catch (error) {
       setState((prev) => ({ ...prev, syncStatus: "error" }));

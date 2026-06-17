@@ -112,7 +112,7 @@ const MultiStepRegistration = () => {
   };
 
   const handleResendEmail = () => {
-    toast.info("Verification email resent. Please check your inbox.");
+    toast.success("Verification email resent. Please check your inbox.");
   };
 
   // Step 1: Account Creation

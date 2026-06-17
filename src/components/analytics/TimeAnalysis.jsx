@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -13,7 +13,7 @@ import {
 import { format, getHours, getDay } from "date-fns";
 
 const TimeAnalysis = ({ trades, detailed = false }) => {
-  const analyzeByHour = () => {
+  const hourlyData = useMemo(() => {
     const completedTrades = trades.filter(
       (trade) => trade.status === "closed" && trade.entryTime
     );
@@ -52,9 +52,9 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
     });
 
     return Object.values(hourlyStats).filter((stat) => stat.totalTrades > 0);
-  };
+  }, [trades]);
 
-  const analyzeByDayOfWeek = () => {
+  const dailyData = useMemo(() => {
     const completedTrades = trades.filter((trade) => trade.status === "closed");
     const dayStats = {};
     const dayNames = [
@@ -98,9 +98,9 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
     });
 
     return Object.values(dayStats).filter((stat) => stat.totalTrades > 0);
-  };
+  }, [trades]);
 
-  const analyzeByMonth = () => {
+  const monthlyData = useMemo(() => {
     const completedTrades = trades.filter((trade) => trade.status === "closed");
     const monthlyStats = {};
 
@@ -139,11 +139,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
     return Object.values(monthlyStats).sort((a, b) =>
       a.month.localeCompare(b.month)
     );
-  };
-
-  const hourlyData = analyzeByHour();
-  const dailyData = analyzeByDayOfWeek();
-  const monthlyData = analyzeByMonth();
+  }, [trades]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {

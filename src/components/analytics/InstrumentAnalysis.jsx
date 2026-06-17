@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -12,6 +12,29 @@ import {
 } from "recharts";
 
 const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
+  // Group trades by instrument (memoized — only recomputes when trades change).
+  const instrumentData = useMemo(() => {
+    return trades.reduce((acc, trade) => {
+      const instrument = trade.instrument || "Unknown";
+      if (!acc[instrument]) {
+        acc[instrument] = {
+          name: instrument,
+          totalTrades: 0,
+          totalPnL: 0,
+          winningTrades: 0,
+        };
+      }
+
+      acc[instrument].totalTrades += 1;
+      acc[instrument].totalPnL += trade.pnl || 0;
+      if (trade.pnl > 0) {
+        acc[instrument].winningTrades += 1;
+      }
+
+      return acc;
+    }, {});
+  }, [trades]);
+
   if (trades.length === 0) {
     return (
       <div className="card">
@@ -26,27 +49,6 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
       </div>
     );
   }
-
-  // Group trades by instrument
-  const instrumentData = trades.reduce((acc, trade) => {
-    const instrument = trade.instrument || "Unknown";
-    if (!acc[instrument]) {
-      acc[instrument] = {
-        name: instrument,
-        totalTrades: 0,
-        totalPnL: 0,
-        winningTrades: 0,
-      };
-    }
-
-    acc[instrument].totalTrades += 1;
-    acc[instrument].totalPnL += trade.pnl || 0;
-    if (trade.pnl > 0) {
-      acc[instrument].winningTrades += 1;
-    }
-
-    return acc;
-  }, {});
 
   const chartData = Object.values(instrumentData)
     .map((item) => ({

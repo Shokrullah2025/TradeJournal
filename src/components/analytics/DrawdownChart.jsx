@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -13,6 +13,44 @@ import {
 import { format, parseISO } from "date-fns";
 
 const DrawdownChart = ({ trades = [] }) => {
+  // Calculate running P&L and drawdown series (memoized on trades).
+  const { drawdownData, maxDrawdown, peak } = useMemo(() => {
+    const sortedTrades = [...trades]
+      .filter((trade) => trade.exitDate)
+      .sort((a, b) => new Date(a.exitDate) - new Date(b.exitDate));
+
+    let runningPnL = 0;
+    let peak = 0;
+    let maxDrawdown = 0;
+
+    const drawdownData = sortedTrades.map((trade, index) => {
+      runningPnL += trade.pnl || 0;
+
+      if (runningPnL > peak) {
+        peak = runningPnL;
+      }
+
+      const currentDrawdown = peak - runningPnL;
+      if (currentDrawdown > maxDrawdown) {
+        maxDrawdown = currentDrawdown;
+      }
+
+      const drawdownPercent = peak !== 0 ? (currentDrawdown / peak) * 100 : 0;
+
+      return {
+        date: trade.exitDate,
+        displayDate: format(new Date(trade.exitDate), "MMM dd"),
+        runningPnL: runningPnL,
+        peak: peak,
+        drawdown: currentDrawdown,
+        drawdownPercent: drawdownPercent,
+        tradeIndex: index + 1,
+      };
+    });
+
+    return { drawdownData, maxDrawdown, peak };
+  }, [trades]);
+
   if (trades.length === 0) {
     return (
       <div className="card">
@@ -27,40 +65,6 @@ const DrawdownChart = ({ trades = [] }) => {
       </div>
     );
   }
-
-  // Calculate running P&L and drawdown
-  const sortedTrades = [...trades]
-    .filter((trade) => trade.exitDate)
-    .sort((a, b) => new Date(a.exitDate) - new Date(b.exitDate));
-
-  let runningPnL = 0;
-  let peak = 0;
-  let maxDrawdown = 0;
-
-  const drawdownData = sortedTrades.map((trade, index) => {
-    runningPnL += trade.pnl || 0;
-
-    if (runningPnL > peak) {
-      peak = runningPnL;
-    }
-
-    const currentDrawdown = peak - runningPnL;
-    if (currentDrawdown > maxDrawdown) {
-      maxDrawdown = currentDrawdown;
-    }
-
-    const drawdownPercent = peak !== 0 ? (currentDrawdown / peak) * 100 : 0;
-
-    return {
-      date: trade.exitDate,
-      displayDate: format(new Date(trade.exitDate), "MMM dd"),
-      runningPnL: runningPnL,
-      peak: peak,
-      drawdown: currentDrawdown,
-      drawdownPercent: drawdownPercent,
-      tradeIndex: index + 1,
-    };
-  });
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {

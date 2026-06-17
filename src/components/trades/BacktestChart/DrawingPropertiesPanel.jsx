@@ -339,9 +339,10 @@ const DrawingPropertiesPanel = ({
   propsPanelRef,
 }) => {
   const sel = panelDrawing;
-  if (!sel) return null;
 
-  // Drag state — allows the user to reposition the panel freely
+  // Drag state — allows the user to reposition the panel freely.
+  // Hooks must run unconditionally on every render (rules of hooks), so the
+  // null guards below live AFTER all hook calls.
   const [drag, setDrag] = useState(null); // { startX, startY, initLeft, initTop }
 
   const handleHeaderDown = (e) => {
@@ -370,6 +371,8 @@ const DrawingPropertiesPanel = ({
       window.removeEventListener("mouseup", onUp);
     };
   }, [drag]); // eslint-disable-line
+
+  if (!sel) return null;
 
   const PANEL_TYPES = ["segment", "trendline", "extline", "ray", "hline", "vline", "text", "rectangle", "fibonacci", "rr"];
   if (!PANEL_TYPES.includes(sel.type)) return null;

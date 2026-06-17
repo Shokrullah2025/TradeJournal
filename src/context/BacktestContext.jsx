@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 const BacktestContext = createContext();
@@ -16,29 +16,10 @@ export const BacktestProvider = ({ children }) => {
   // Loading state for simulations
   const [isSimulating, setIsSimulating] = useState(false);
 
-  // Load saved sessions from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedSessions = localStorage.getItem("backtestSessions");
-      if (savedSessions) {
-        setBacktestSessions(JSON.parse(savedSessions));
-      }
-    } catch (error) {
-      console.error("Failed to load backtest sessions:", error);
-    }
-  }, []);
-
-  // Save sessions to localStorage when they change
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "backtestSessions",
-        JSON.stringify(backtestSessions)
-      );
-    } catch (error) {
-      console.error("Failed to save backtest sessions:", error);
-    }
-  }, [backtestSessions]);
+  // NOTE: Backtest sessions are intentionally NOT persisted to localStorage.
+  // Trade/session data must live in Supabase with RLS (CLAUDE.md §1) — the
+  // Backtest page persists real sessions to the `backtest_sessions` table.
+  // This context holds in-memory session state only.
 
   /**
    * Create a new backtesting session

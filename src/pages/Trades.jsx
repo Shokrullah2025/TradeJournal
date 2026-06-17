@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Plus,
@@ -86,6 +86,39 @@ const Trades = () => {
       trade.tags?.some((tag) => tag.toLowerCase().includes(searchLower))
     );
   });
+
+  // P&L summary stats for the calendar panel — memoized so they are not
+  // recomputed by repeated filter/reduce passes on every render.
+  const summaryStats = useMemo(() => {
+    const totalPnL = filteredAndSearchedTrades.reduce(
+      (sum, trade) => sum + (trade.pnl || 0),
+      0
+    );
+    const winningTrades = filteredAndSearchedTrades.filter((t) => t.pnl > 0);
+    const losingTrades = filteredAndSearchedTrades.filter((t) => t.pnl < 0);
+    const tradeCount = filteredAndSearchedTrades.length;
+    const winRate =
+      tradeCount > 0 ? (winningTrades.length / tradeCount) * 100 : 0;
+    const avgWin =
+      winningTrades.length > 0
+        ? winningTrades.reduce((sum, t) => sum + t.pnl, 0) /
+          winningTrades.length
+        : 0;
+    const avgLoss =
+      losingTrades.length > 0
+        ? losingTrades.reduce((sum, t) => sum + t.pnl, 0) / losingTrades.length
+        : 0;
+
+    return {
+      totalPnL,
+      winningCount: winningTrades.length,
+      losingCount: losingTrades.length,
+      tradeCount,
+      winRate,
+      avgWin,
+      avgLoss,
+    };
+  }, [filteredAndSearchedTrades]);
 
   return (
     <div className="space-y-6">
@@ -242,18 +275,12 @@ const Trades = () => {
                 <div className="text-center">
                   <div
                     className={`text-2xl font-bold ${
-                      filteredAndSearchedTrades.reduce(
-                        (sum, trade) => sum + (trade.pnl || 0),
-                        0
-                      ) >= 0
+                      summaryStats.totalPnL >= 0
                         ? "text-success-600 dark:text-success-400"
                         : "text-danger-600 dark:text-danger-400"
                     }`}
                   >
-                    $
-                    {filteredAndSearchedTrades
-                      .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
-                      .toFixed(2)}
+                    ${summaryStats.totalPnL.toFixed(2)}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Total P&L
@@ -270,13 +297,8 @@ const Trades = () => {
                       Win Rate
                     </span>
                     <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {filteredAndSearchedTrades.length > 0
-                        ? `${(
-                            (filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                              .length /
-                              filteredAndSearchedTrades.length) *
-                            100
-                          ).toFixed(1)}%`
+                      {summaryStats.tradeCount > 0
+                        ? `${summaryStats.winRate.toFixed(1)}%`
                         : "0%"}
                     </span>
                   </div>
@@ -286,10 +308,7 @@ const Trades = () => {
                       Winning Trades
                     </span>
                     <span className="font-semibold text-success-600 dark:text-success-400">
-                      {
-                        filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                          .length
-                      }
+                      {summaryStats.winningCount}
                     </span>
                   </div>
 
@@ -298,10 +317,7 @@ const Trades = () => {
                       Losing Trades
                     </span>
                     <span className="font-semibold text-danger-600 dark:text-danger-400">
-                      {
-                        filteredAndSearchedTrades.filter((t) => t.pnl < 0)
-                          .length
-                      }
+                      {summaryStats.losingCount}
                     </span>
                   </div>
 
@@ -311,15 +327,8 @@ const Trades = () => {
                     </span>
                     <span className="font-semibold text-success-600 dark:text-success-400">
                       $
-                      {filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                        .length > 0
-                        ? (
-                            filteredAndSearchedTrades
-                              .filter((t) => t.pnl > 0)
-                              .reduce((sum, t) => sum + t.pnl, 0) /
-                            filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                              .length
-                          ).toFixed(2)
+                      {summaryStats.winningCount > 0
+                        ? summaryStats.avgWin.toFixed(2)
                         : "0.00"}
                     </span>
                   </div>
@@ -330,15 +339,8 @@ const Trades = () => {
                     </span>
                     <span className="font-semibold text-danger-600 dark:text-danger-400">
                       $
-                      {filteredAndSearchedTrades.filter((t) => t.pnl < 0)
-                        .length > 0
-                        ? (
-                            filteredAndSearchedTrades
-                              .filter((t) => t.pnl < 0)
-                              .reduce((sum, t) => sum + t.pnl, 0) /
-                            filteredAndSearchedTrades.filter((t) => t.pnl < 0)
-                              .length
-                          ).toFixed(2)
+                      {summaryStats.losingCount > 0
+                        ? summaryStats.avgLoss.toFixed(2)
                         : "0.00"}
                     </span>
                   </div>
@@ -349,13 +351,8 @@ const Trades = () => {
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
                     <span>Win Rate</span>
                     <span>
-                      {filteredAndSearchedTrades.length > 0
-                        ? `${(
-                            (filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                              .length /
-                              filteredAndSearchedTrades.length) *
-                            100
-                          ).toFixed(1)}%`
+                      {summaryStats.tradeCount > 0
+                        ? `${summaryStats.winRate.toFixed(1)}%`
                         : "0%"}
                     </span>
                   </div>
@@ -364,13 +361,7 @@ const Trades = () => {
                       className="bg-gradient-to-r from-success-500 to-success-600 h-2 rounded-full transition-all duration-300"
                       style={{
                         width: `${
-                          filteredAndSearchedTrades.length > 0
-                            ? (filteredAndSearchedTrades.filter(
-                                (t) => t.pnl > 0
-                              ).length /
-                                filteredAndSearchedTrades.length) *
-                              100
-                            : 0
+                          summaryStats.tradeCount > 0 ? summaryStats.winRate : 0
                         }%`,
                       }}
                     ></div>
@@ -385,7 +376,7 @@ const Trades = () => {
                   <div className="space-y-2">
                     <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        {filteredAndSearchedTrades.length}
+                        {summaryStats.tradeCount}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Total Trades
@@ -394,24 +385,13 @@ const Trades = () => {
                     <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <div
                         className={`text-xl font-bold ${
-                          filteredAndSearchedTrades.reduce(
-                            (sum, trade) => sum + (trade.pnl || 0),
-                            0
-                          ) >= 0
+                          summaryStats.totalPnL >= 0
                             ? "text-success-600 dark:text-success-400"
                             : "text-danger-600 dark:text-danger-400"
                         }`}
                       >
-                        {filteredAndSearchedTrades.reduce(
-                          (sum, trade) => sum + (trade.pnl || 0),
-                          0
-                        ) >= 0
-                          ? "+"
-                          : ""}
-                        $
-                        {filteredAndSearchedTrades
-                          .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
-                          .toFixed(0)}
+                        {summaryStats.totalPnL >= 0 ? "+" : ""}$
+                        {summaryStats.totalPnL.toFixed(0)}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Monthly P&L
