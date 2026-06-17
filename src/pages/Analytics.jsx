@@ -85,7 +85,7 @@ const Analytics = () => {
       {/* Filters */}
       <div className="card bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-primary-200 dark:border-primary-800">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center space-x-2">
               <Calendar className="w-4 h-4 text-primary-600 dark:text-primary-400" />
               <select

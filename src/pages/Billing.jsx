@@ -155,10 +155,10 @@ const Billing = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Admin Billing Overview Sidebar */}
       {user?.role === "admin" && (
-        <div className="w-80 bg-white dark:bg-gray-800 shadow-lg border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <div className="w-full lg:w-80 bg-white dark:bg-gray-800 shadow-lg border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
           <div className="p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
               Billing Overview
@@ -295,7 +295,7 @@ const Billing = () => {
       )}
 
       {/* Main Content */}
-      <div className={`flex-1 ${user?.role === "admin" ? "pl-6" : ""} p-6`}>
+      <div className={`flex-1 ${user?.role === "admin" ? "lg:pl-6" : ""} p-4 lg:p-6`}>
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center">

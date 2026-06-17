@@ -1012,9 +1012,9 @@ const Settings = () => {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col lg:flex-row lg:h-full">
       {/* Vertical Tab Navigation */}
-      <div className="w-80 bg-white border-r border-gray-200 p-6">
+      <div className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 p-4 lg:p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
           <p className="text-gray-600 mt-1">
@@ -1067,7 +1067,7 @@ const Settings = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
+      <div className="flex-1 p-4 lg:p-6 lg:overflow-y-auto bg-gray-50">
         {/*tab content area*/}
         <div className="mt-6">
           {/* Profile Tab — reuses the full Profile page */}
