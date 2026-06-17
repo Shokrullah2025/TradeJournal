@@ -32,3 +32,31 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// jsdom does not implement ResizeObserver — the dashboard charts use it to
+// measure their container, so provide a no-op stub. Components fall back to
+// their default dimensions when no real measurement arrives.
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// jsdom does not implement IntersectionObserver either (used for deferred
+// chart rendering per the project performance guidelines).
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+};
+
+// Some charts schedule a double requestAnimationFrame for layout settling.
+// jsdom usually provides rAF, but guard for environments that don't.
+if (typeof global.requestAnimationFrame !== "function") {
+  global.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
+  global.cancelAnimationFrame = (id) => clearTimeout(id);
+}
