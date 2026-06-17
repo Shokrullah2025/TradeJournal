@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { X, User, Shield, CreditCard, TrendingUp, Clock, Loader2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -19,35 +19,78 @@ const Field = ({ label, value }) => (
   </div>
 );
 
+Field.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+};
+
 const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [profile, setProfile] = useState(null);
   const [perf, setPerf] = useState(null);
   const [activity, setActivity] = useState([]);
+  // Tracks mount status so async role/status select handlers don't setState
+  // after the drawer has been closed/unmounted.
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Escape-to-close + lock background scroll while the drawer is open.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     setLoading(true);
+    setError(null);
 
     const load = async () => {
       try {
         const [profileRes, perfRes, activityRes] = await Promise.all([
-          supabase.from("user_complete_profile").select("*").eq("id", userId).maybeSingle(),
-          supabase.from("trading_performance_summary").select("*").eq("user_id", userId).maybeSingle(),
+          supabase
+            .from("user_complete_profile")
+            .select(
+              "id, role, status, created_at, first_name, last_name, display_name, avatar_url, phone, timezone, currency, trading_experience, subscription_plan, subscription_status"
+            )
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("trading_performance_summary")
+            .select("user_id, total_trades, win_rate, net_pnl")
+            .eq("user_id", userId)
+            .maybeSingle(),
           supabase
             .from("user_activity_log")
-            .select("action, created_at")
+            .select("id, action, created_at")
             .eq("user_id", userId)
             .order("created_at", { ascending: false })
             .limit(8),
         ]);
         if (cancelled) return;
+        if (profileRes.error) throw profileRes.error;
         setProfile(profileRes.data ?? null);
         setPerf(perfRes.data ?? null);
         setActivity(activityRes.data ?? []);
       } catch (err) {
         console.error("[UserDetailDrawer] load error:", err.message);
+        if (!cancelled) setError("Could not load this user's details.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -69,13 +112,23 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex" data-testid="admin-user-detail-modal">
-      <div className="flex-1 bg-gray-900/50" onClick={onClose} data-testid="admin-user-detail-backdrop" />
-      <aside className="w-full max-w-md bg-white dark:bg-gray-800 shadow-xl h-full overflow-y-auto">
+      <div
+        className="flex-1 bg-gray-900/60 backdrop-blur-sm"
+        onClick={onClose}
+        data-testid="admin-user-detail-backdrop"
+      />
+      <aside
+        className="w-screen max-w-md bg-white dark:bg-gray-800 shadow-xl h-full overflow-y-auto animate-slide-up"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-user-detail-title"
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-5 py-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Detail</h2>
+          <h2 id="admin-user-detail-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Detail</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            autoFocus
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             data-testid="admin-user-detail-close-btn"
             aria-label="Close"
           >
@@ -86,6 +139,12 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
         {loading ? (
           <div className="flex items-center justify-center py-20" data-testid="admin-user-detail-loading-spinner">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+          </div>
+        ) : error ? (
+          <div className="p-5" data-testid="admin-user-detail-error">
+            <div className="rounded-lg bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 px-4 py-3 text-sm text-danger-700 dark:text-danger-300">
+              {error}
+            </div>
           </div>
         ) : (
           <div className="p-5 space-y-6">
@@ -115,7 +174,12 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
                   value={profile?.role ?? "user"}
                   disabled={saving}
                   data-testid="admin-user-role-select"
-                  onChange={(e) => onUpdate(userId, { role: e.target.value }).then((ok) => ok && setProfile((p) => ({ ...p, role: e.target.value })))}
+                  onChange={(e) => {
+                    const role = e.target.value;
+                    onUpdate(userId, { role }).then((ok) => {
+                      if (ok && mountedRef.current) setProfile((p) => ({ ...p, role }));
+                    });
+                  }}
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>{r}</option>
@@ -129,7 +193,12 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
                   value={profile?.status ?? "active"}
                   disabled={saving}
                   data-testid="admin-user-status-select"
-                  onChange={(e) => onUpdate(userId, { status: e.target.value }).then((ok) => ok && setProfile((p) => ({ ...p, status: e.target.value })))}
+                  onChange={(e) => {
+                    const status = e.target.value;
+                    onUpdate(userId, { status }).then((ok) => {
+                      if (ok && mountedRef.current) setProfile((p) => ({ ...p, status }));
+                    });
+                  }}
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>{s}</option>
@@ -179,8 +248,8 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
                 <p className="text-sm text-gray-500 dark:text-gray-400">No recorded activity.</p>
               ) : (
                 <ul className="space-y-2" data-testid="admin-user-activity-list">
-                  {activity.map((a, i) => (
-                    <li key={i} className="flex items-center justify-between text-sm">
+                  {activity.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between text-sm">
                       <span className="text-gray-900 dark:text-gray-100">{a.action}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {new Date(a.created_at).toLocaleString()}

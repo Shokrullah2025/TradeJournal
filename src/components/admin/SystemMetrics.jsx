@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -37,7 +38,7 @@ const AXIS = "#6b7280";
 const ChartCard = ({ title, subtitle, children, testId }) => (
   <div className="card flex flex-col" data-testid={testId}>
     <div className="mb-3">
-      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
       {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
     </div>
     <div className="h-64">
@@ -48,12 +49,24 @@ const ChartCard = ({ title, subtitle, children, testId }) => (
   </div>
 );
 
+ChartCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  subtitle: PropTypes.string,
+  children: PropTypes.element.isRequired,
+  testId: PropTypes.string,
+};
+
+// Read colors from the same CSS vars the toast/theme use so the tooltip is
+// legible in both light and dark mode (recharts colors item/label text
+// separately, hence itemStyle/labelStyle below).
 const tooltipStyle = {
   backgroundColor: "var(--toast-bg, #fff)",
-  border: "1px solid #e5e7eb",
+  color: "var(--toast-color, #111827)",
+  border: "1px solid var(--toast-border, #e5e7eb)",
   borderRadius: 8,
   fontSize: 12,
 };
+const tooltipItemStyle = { color: "var(--toast-color, #111827)" };
 
 const SystemMetrics = () => {
   const [days, setDays] = useState(30);
@@ -187,7 +200,7 @@ const SystemMetrics = () => {
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} opacity={0.5} />
               <XAxis dataKey="label" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} minTickGap={20} />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipItemStyle} itemStyle={tooltipItemStyle} />
               <Area type="monotone" dataKey="requests" stroke="#3b82f6" strokeWidth={2} fill="url(#reqGradient)" name="Requests" />
             </AreaChart>
           </ChartCard>
@@ -197,7 +210,7 @@ const SystemMetrics = () => {
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} opacity={0.5} />
               <XAxis dataKey="label" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} minTickGap={20} />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} unit="%" />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, "Error rate"]} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipItemStyle} itemStyle={tooltipItemStyle} formatter={(v) => [`${v}%`, "Error rate"]} />
               <Line type="monotone" dataKey="errorRate" stroke="#ef4444" strokeWidth={2} dot={false} name="Error rate" />
             </LineChart>
           </ChartCard>
@@ -213,7 +226,7 @@ const SystemMetrics = () => {
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} opacity={0.5} />
               <XAxis dataKey="label" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} minTickGap={20} />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipItemStyle} itemStyle={tooltipItemStyle} />
               <Area type="monotone" dataKey="activeUsers" stroke="#10b981" strokeWidth={2} fill="url(#auGradient)" name="Active users" />
             </AreaChart>
           </ChartCard>
@@ -223,7 +236,7 @@ const SystemMetrics = () => {
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} opacity={0.5} />
               <XAxis dataKey="label" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} minTickGap={20} />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipItemStyle} itemStyle={tooltipItemStyle} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="signups" fill="#6366f1" name="Signups" radius={[2, 2, 0, 0]} />
               <Bar dataKey="trades" fill="#f59e0b" name="Trades" radius={[2, 2, 0, 0]} />

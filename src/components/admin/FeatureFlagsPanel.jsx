@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import PropTypes from "prop-types";
 import { Flag, Save, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
@@ -33,6 +34,14 @@ const Toggle = ({ checked, disabled, onChange, testId, label }) => (
     />
   </button>
 );
+
+Toggle.propTypes = {
+  checked: PropTypes.bool,
+  disabled: PropTypes.bool,
+  onChange: PropTypes.func.isRequired,
+  testId: PropTypes.string,
+  label: PropTypes.string,
+};
 
 const FeatureFlagsPanel = () => {
   const { user } = useAuth();
@@ -184,10 +193,10 @@ const FeatureFlagsPanel = () => {
       )}
 
       <div className="card overflow-x-auto p-0">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table className="min-w-[760px] w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Feature
               </th>
               <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -207,8 +216,8 @@ const FeatureFlagsPanel = () => {
             {rows.map((row) => {
               const masterOff = row.enabled === false;
               return (
-                <tr key={row.key} data-testid={`admin-flag-row-${row.key}`}>
-                  <td className="px-4 py-3 max-w-xs">
+                <tr key={row.key} data-testid={`admin-flag-row-${row.key}`} className="bg-white dark:bg-gray-800">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-gray-800 px-4 py-3 max-w-xs">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{row.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{row.description}</div>
                   </td>
@@ -245,9 +254,9 @@ const FeatureFlagsPanel = () => {
                       disabled={tableMissing || !dirty[row.key] || savingKey === row.key}
                       onClick={() => save(row)}
                       data-testid={`admin-flag-save-${row.key}`}
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                         dirty[row.key] && !tableMissing
-                          ? "bg-primary-600 text-white hover:bg-primary-700"
+                          ? "bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600"
                           : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                       }`}
                     >

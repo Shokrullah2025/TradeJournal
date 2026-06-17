@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Activity, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import { isFailureEvent } from "../../utils/adminMetrics";
+import { isFailureEvent, FAILURE_HINTS } from "../../utils/adminMetrics";
 
 // ── Activity / audit log ───────────────────────────────────────────────────
 // Paginated, filterable feed of user_activity_log entries (admin-scoped by
@@ -16,33 +16,44 @@ const ActivityLog = () => {
   const [page, setPage] = useState(0);
   const [onlyFailures, setOnlyFailures] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const from = page * PAGE_SIZE;
-      const { data, error, count } = await supabase
+      let query = supabase
         .from("user_activity_log")
-        .select("id, action, details, user_id, created_at", { count: "exact" })
+        .select("id, action, details, user_id, created_at", { count: "exact" });
+
+      // Filter failures server-side (on the action name) so the count and
+      // pagination stay consistent with what's shown. Detail-only failures are
+      // still highlighted per-row via isFailureEvent.
+      if (onlyFailures) {
+        query = query.or(FAILURE_HINTS.map((h) => `action.ilike.%${h}%`).join(","));
+      }
+
+      const { data, error: qErr, count } = await query
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
-      if (error) throw error;
+      if (qErr) throw qErr;
       setRows(data ?? []);
       setTotal(count ?? 0);
     } catch (err) {
       console.error("[ActivityLog] load error:", err.message);
+      setError("Could not load activity. Please try again.");
       setRows([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, onlyFailures]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const visible = onlyFailures ? rows.filter(isFailureEvent) : rows;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
@@ -55,7 +66,7 @@ const ActivityLog = () => {
           <input
             type="checkbox"
             checked={onlyFailures}
-            onChange={(e) => setOnlyFailures(e.target.checked)}
+            onChange={(e) => { setOnlyFailures(e.target.checked); setPage(0); }}
             data-testid="admin-activity-failures-only"
             className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
           />
@@ -77,10 +88,12 @@ const ActivityLog = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-activity-loading-spinner">Loading…</td></tr>
-            ) : visible.length === 0 ? (
+            ) : error ? (
+              <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-danger-600 dark:text-danger-400" data-testid="admin-activity-error">{error}</td></tr>
+            ) : rows.length === 0 ? (
               <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-activity-empty-state">No activity to show.</td></tr>
             ) : (
-              visible.map((row) => {
+              rows.map((row) => {
                 const failed = isFailureEvent(row);
                 return (
                   <tr key={row.id} className={failed ? "bg-danger-50/50 dark:bg-danger-900/10" : ""} data-testid={`admin-activity-row-${row.id}`}>

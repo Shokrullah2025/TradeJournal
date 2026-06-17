@@ -3,7 +3,7 @@
 // SystemMetrics board charts. Kept side-effect free so they are unit-testable
 // without a Supabase mock.
 
-const FAILURE_HINTS = ["fail", "error", "denied", "locked", "invalid", "reject"];
+export const FAILURE_HINTS = ["fail", "error", "denied", "locked", "invalid", "reject"];
 
 // An activity row counts as a failure if its action name hints at one, or its
 // details payload carries an error field.

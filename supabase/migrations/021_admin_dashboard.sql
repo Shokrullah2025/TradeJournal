@@ -14,8 +14,22 @@
 --                             derives live figures from user_activity_log when a
 --                             given day has no snapshot yet.
 --
--- Forward-only, additive. Safe to run on an existing database.
+-- Forward-only, additive. Re-runnable: policies/triggers are dropped first.
 -- ============================================================
+
+-- ============================================================
+-- ADMIN UPDATE POLICY ON public.users
+-- 002_rls_policies.sql only granted users_update_own (id = auth.uid()), so an
+-- admin's UPDATE of another user's row matched no policy and silently affected
+-- zero rows — the admin user-management screen reported success while changing
+-- nothing. This adds the missing admin path so suspend/activate/role edits
+-- actually persist.
+-- ============================================================
+DROP POLICY IF EXISTS "users_update_admin" ON public.users;
+CREATE POLICY "users_update_admin"
+  ON public.users FOR UPDATE
+  USING (is_admin())
+  WITH CHECK (is_admin());
 
 -- ============================================================
 -- FEATURE FLAGS
@@ -42,17 +56,20 @@ CREATE TABLE IF NOT EXISTS public.feature_flags (
 CREATE INDEX IF NOT EXISTS idx_feature_flags_key  ON public.feature_flags (key);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_sort ON public.feature_flags (sort_order);
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.feature_flags;
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.feature_flags
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 ALTER TABLE public.feature_flags ENABLE ROW LEVEL SECURITY;
 
 -- Every authenticated user can read flags so the client can gate features.
+DROP POLICY IF EXISTS "feature_flags_select_all" ON public.feature_flags;
 CREATE POLICY "feature_flags_select_all"
   ON public.feature_flags FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
 -- Only admins may create / change / delete flags.
+DROP POLICY IF EXISTS "feature_flags_write_admin" ON public.feature_flags;
 CREATE POLICY "feature_flags_write_admin"
   ON public.feature_flags FOR ALL
   USING (is_admin())
@@ -79,27 +96,32 @@ CREATE TABLE IF NOT EXISTS public.admin_metrics_daily (
 
 CREATE INDEX IF NOT EXISTS idx_admin_metrics_date ON public.admin_metrics_daily (date DESC);
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.admin_metrics_daily;
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.admin_metrics_daily
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 ALTER TABLE public.admin_metrics_daily ENABLE ROW LEVEL SECURITY;
 
 -- Operational metrics are admin-only.
+DROP POLICY IF EXISTS "admin_metrics_select_admin" ON public.admin_metrics_daily;
 CREATE POLICY "admin_metrics_select_admin"
   ON public.admin_metrics_daily FOR SELECT
   USING (is_admin());
 
+DROP POLICY IF EXISTS "admin_metrics_write_admin" ON public.admin_metrics_daily;
 CREATE POLICY "admin_metrics_write_admin"
   ON public.admin_metrics_daily FOR ALL
   USING (is_admin())
   WITH CHECK (is_admin());
 
 -- ============================================================
--- GRANTS — service_role (Edge Functions) writes telemetry; the
--- authenticated role reads/writes under the RLS policies above.
+-- GRANTS — least privilege. feature_flags: admins write under RLS, so the
+-- authenticated role needs write grants (RLS still gates to is_admin()).
+-- admin_metrics_daily is admin-read-only from the client; writes come from a
+-- scheduled Edge Function via service_role, so authenticated gets SELECT only.
 -- ============================================================
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.feature_flags       TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_metrics_daily TO authenticated;
+GRANT SELECT                         ON public.admin_metrics_daily TO authenticated;
 GRANT ALL ON public.feature_flags       TO service_role;
 GRANT ALL ON public.admin_metrics_daily TO service_role;
 

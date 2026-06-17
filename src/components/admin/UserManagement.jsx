@@ -31,6 +31,7 @@ const UserManagement = () => {
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [savingId, setSavingId] = useState(null);
 
@@ -45,6 +46,7 @@ const UserManagement = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       let query = supabase
         .from("user_complete_profile")
@@ -71,7 +73,7 @@ const UserManagement = () => {
       setTotal(count ?? 0);
     } catch (err) {
       console.error("[UserManagement] load error:", err.message);
-      toast.error("Failed to load users.");
+      setError("Failed to load users. Please try again.");
       setRows([]);
       setTotal(0);
     } finally {
@@ -162,6 +164,8 @@ const UserManagement = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-users-loading-spinner">Loading…</td></tr>
+            ) : error ? (
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-danger-600 dark:text-danger-400" data-testid="admin-users-error">{error}</td></tr>
             ) : rows.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-users-empty-state">No users found.</td></tr>
             ) : (
@@ -197,20 +201,20 @@ const UserManagement = () => {
                         <button
                           onClick={() => handleUpdate(u.id, { status: "suspended" })}
                           disabled={savingId === u.id}
-                          className="text-danger-600 dark:text-danger-400 hover:underline text-xs disabled:opacity-50"
+                          className="text-danger-600 dark:text-danger-400 hover:underline text-xs disabled:opacity-50 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                           data-testid={`admin-suspend-btn-${u.id}`}
                         >Suspend</button>
                       ) : (
                         <button
                           onClick={() => handleUpdate(u.id, { status: "active" })}
                           disabled={savingId === u.id}
-                          className="text-success-600 dark:text-success-400 hover:underline text-xs disabled:opacity-50"
+                          className="text-success-600 dark:text-success-400 hover:underline text-xs disabled:opacity-50 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                           data-testid={`admin-activate-btn-${u.id}`}
                         >Activate</button>
                       )}
                       <button
                         onClick={() => setSelectedId(u.id)}
-                        className="text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1 text-xs"
+                        className="text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1 text-xs rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         data-testid={`admin-view-user-btn-${u.id}`}
                       >
                         <Eye className="w-3.5 h-3.5" /> View

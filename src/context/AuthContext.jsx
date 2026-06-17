@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../utils/logActivity";
 import { emitNotification } from "../utils/notifications";
+import { validateAdminUserUpdate } from "../lib/schemas/adminUser";
 
 // Fire-and-forget security notification on sign-in. Fetches the user's channel
 // prefs so the email decision is honored, then emits. Never blocks login.
@@ -388,9 +389,19 @@ export const AuthProvider = ({ children }) => {
   }, [state.user]);
 
   // ── Admin: update another user's role/status ─────────────────────────────
-  // RLS allows this only for admins (is_admin() policy on public.users)
+  // Persisted only for admins via the users_update_admin RLS policy
+  // (021_admin_dashboard.sql). Input is whitelist-validated with Zod so a
+  // caller can never write columns other than role/status, and only to the
+  // CHECK-constraint-allowed values.
   const updateUser = useCallback(async (userId, updates) => {
-    const { error } = await supabase.from("users").update(updates).eq("id", userId);
+    let clean;
+    try {
+      clean = validateAdminUserUpdate(updates);
+    } catch (err) {
+      toast.error(err.message);
+      throw err;
+    }
+    const { error } = await supabase.from("users").update(clean).eq("id", userId);
     if (error) {
       toast.error("Failed to update user.");
       throw error;

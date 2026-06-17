@@ -18,14 +18,14 @@ const AdminStatCard = ({ title, value, icon: Icon, tone = "primary", hint, testI
   <div className="card hover:shadow-md transition-shadow duration-200 p-4" data-testid={testId}>
     <div className="flex items-center space-x-3">
       <div className={`p-2 rounded-lg flex-shrink-0 ${TONES[tone] ?? TONES.primary}`}>
-        <Icon className="w-5 h-5" />
+        <Icon className="w-4 h-4" />
       </div>
       <div className="min-w-0">
         <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
           {title}
         </p>
         <p
-          className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate"
+          className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate"
           data-testid={testId ? `${testId}-value` : undefined}
         >
           {value}

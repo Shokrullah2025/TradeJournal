@@ -13,7 +13,6 @@ import Login from "./pages/Login";
 import MultiStepRegistration from "./pages/MultiStepRegistration";
 import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./components/auth/EmailVerification";
-import Admin from "./pages/Admin";
 import Billing from "./pages/Billing";
 import BrokerSelection from "./pages/BrokerSelection";
 import TradeEntry from "./pages/TradeEntry";
@@ -21,6 +20,8 @@ import OAuthCallback from "./pages/OAuthCallback";
 
 // Lazy — keeps the bundled country/state dataset out of the initial load.
 const Profile = React.lazy(() => import("./pages/Profile"));
+// Lazy — admin bundle (charts, tables) only loads for admins who open it.
+const Admin = React.lazy(() => import("./pages/Admin"));
 import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { FeatureFlagProvider } from "./context/FeatureFlagContext";
@@ -167,7 +168,15 @@ function App() {
                                     path="/admin"
                                     element={
                                       <AdminRoute>
-                                        <Admin />
+                                        <Suspense
+                                          fallback={
+                                            <div className="flex items-center justify-center h-64">
+                                              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                                            </div>
+                                          }
+                                        >
+                                          <Admin />
+                                        </Suspense>
                                       </AdminRoute>
                                     }
                                   />

@@ -39,7 +39,6 @@ const AdminOverview = () => {
     activeSubs: 0,
     trialUsers: 0,
     lockedUsers: 0,
-    mrr: 0,
     revenue30d: 0,
   });
   const [recentSignups, setRecentSignups] = useState([]);
@@ -80,6 +79,17 @@ const AdminOverview = () => {
 
         if (cancelled) return;
 
+        // Supabase returns errors in the result object rather than throwing, so
+        // inspect each response and surface a banner if any query failed.
+        const responses = [
+          usersRes, activeRes, suspendedRes, new7dRes, lockedRes,
+          activeSubsRes, trialRes, paidInvoicesRes, recentRes,
+        ];
+        if (responses.some((r) => r.error)) {
+          console.error("[AdminOverview] query error:", responses.find((r) => r.error)?.error?.message);
+          setError("Some admin data could not be loaded. Counts may be incomplete.");
+        }
+
         const revenue30d = (paidInvoicesRes.data ?? []).reduce(
           (sum, inv) => sum + Number(inv.total_amount || 0),
           0
@@ -93,7 +103,6 @@ const AdminOverview = () => {
           activeSubs: activeSubsRes.count ?? 0,
           trialUsers: trialRes.count ?? 0,
           lockedUsers: lockedRes.count ?? 0,
-          mrr: 0,
           revenue30d,
         });
         setRecentSignups(recentRes.data ?? []);
