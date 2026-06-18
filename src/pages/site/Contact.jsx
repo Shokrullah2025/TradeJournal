@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,11 +6,17 @@ import { toast } from "react-hot-toast";
 import { Mail, MessageSquare, Clock, Send } from "lucide-react";
 import { contactSchema } from "../../lib/schemas/contact";
 import { supabase } from "../../lib/supabase";
+import TurnstileWidget from "../../components/site/TurnstileWidget";
+
+// Public Turnstile site key (safe to expose — verified server-side). When unset
+// (e.g. local dev), the captcha is skipped entirely. (CLAUDE.md §2)
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 /**
- * Contact page (route "/contact"). Public form validated with Zod, submitted to
- * the `contact-submit` Edge Function which persists it to `contact_submissions`
- * and emails the team. Shows a success/error toast and resets on success.
+ * Contact page (route "/contact"). Public form validated with Zod, protected by
+ * a Cloudflare Turnstile CAPTCHA, and submitted to the `contact-submit` Edge
+ * Function which verifies the captcha, persists to `contact_submissions`, and
+ * emails the team. Shows a success/error toast and resets on success.
  */
 const Contact = () => {
   const {
@@ -23,18 +29,32 @@ const Contact = () => {
     defaultValues: { name: "", email: "", subject: "", message: "" },
   });
 
+  // Captcha token + a key we bump to remount the widget for a fresh challenge.
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const handleVerify = useCallback((token) => setCaptchaToken(token), []);
+  const handleExpire = useCallback(() => setCaptchaToken(""), []);
+
   const onSubmit = async (values) => {
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast.error("Please complete the captcha to continue.");
+      return;
+    }
     try {
       const { data, error } = await supabase.functions.invoke("contact-submit", {
-        body: values,
+        body: { ...values, captchaToken },
       });
       if (error || !data?.success) {
         throw new Error(error?.message ?? "send_failed");
       }
       toast.success("Thanks! Your message has been sent. We'll be in touch.");
       reset();
+      setCaptchaToken("");
+      setCaptchaKey((k) => k + 1); // remount widget → fresh challenge
     } catch {
       toast.error("Something went wrong. Please try again.");
+      setCaptchaToken("");
+      setCaptchaKey((k) => k + 1);
     }
   };
 
@@ -209,6 +229,13 @@ const Contact = () => {
                   </p>
                 )}
               </div>
+
+              <TurnstileWidget
+                key={captchaKey}
+                siteKey={TURNSTILE_SITE_KEY}
+                onVerify={handleVerify}
+                onExpire={handleExpire}
+              />
 
               <button
                 type="submit"
