@@ -19,7 +19,10 @@ const registrationSchema = z
     confirmPassword: z.string(),
     agreeToTerms: z
       .boolean()
-      .refine((val) => val === true, "You must agree to the terms"),
+      .refine((val) => val === true, "You must agree to the Terms of Service and Privacy Policy"),
+    agreeToRefundPolicy: z
+      .boolean()
+      .refine((val) => val === true, "You must acknowledge the no-refund and auto-renewal policy"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -393,30 +396,73 @@ const MultiStepRegistration = () => {
                   )}
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-start">
                   <input
                     {...register("agreeToTerms")}
                     id="agreeToTerms"
                     type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    data-testid="register-form-terms-checkbox"
                   />
                   <label
                     htmlFor="agreeToTerms"
-                    className="ml-2 block text-sm text-gray-900"
+                    className="ml-2 block text-sm text-gray-900 dark:text-gray-200"
                   >
                     I agree to the{" "}
-                    <a href="#" className="text-blue-600 hover:text-blue-500">
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-500 underline"
+                    >
                       Terms of Service
-                    </a>{" "}
+                    </Link>{" "}
                     and{" "}
-                    <a href="#" className="text-blue-600 hover:text-blue-500">
+                    <Link
+                      to="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-500 underline"
+                    >
                       Privacy Policy
-                    </a>
+                    </Link>
                   </label>
                 </div>
                 {errors.agreeToTerms && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-1 text-sm text-red-600" data-testid="register-form-terms-error">
                     {errors.agreeToTerms.message}
+                  </p>
+                )}
+
+                <div className="flex items-start">
+                  <input
+                    {...register("agreeToRefundPolicy")}
+                    id="agreeToRefundPolicy"
+                    type="checkbox"
+                    className="h-4 w-4 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    data-testid="register-form-refund-ack-checkbox"
+                  />
+                  <label
+                    htmlFor="agreeToRefundPolicy"
+                    className="ml-2 block text-sm text-gray-900 dark:text-gray-200"
+                  >
+                    I understand that all subscription charges are{" "}
+                    <strong>final and non-refundable</strong> under any circumstances, and that my subscription{" "}
+                    <strong>auto-renews</strong> until cancelled. I have read the{" "}
+                    <Link
+                      to="/refund"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-500 underline"
+                    >
+                      Refund & Billing Policy
+                    </Link>
+                    .
+                  </label>
+                </div>
+                {errors.agreeToRefundPolicy && (
+                  <p className="mt-1 text-sm text-red-600" data-testid="register-form-refund-error">
+                    {errors.agreeToRefundPolicy.message}
                   </p>
                 )}
 

@@ -32,6 +32,15 @@ const Features = React.lazy(() => import("./pages/site/Features"));
 const Pricing = React.lazy(() => import("./pages/site/Pricing"));
 const About = React.lazy(() => import("./pages/site/About"));
 const Contact = React.lazy(() => import("./pages/site/Contact"));
+
+// Legal pages — lazy loaded, public routes
+const TermsOfService = React.lazy(() => import("./pages/legal/TermsOfService"));
+const PrivacyPolicy = React.lazy(() => import("./pages/legal/PrivacyPolicy"));
+const Disclaimer = React.lazy(() => import("./pages/legal/Disclaimer"));
+const CookiePolicy = React.lazy(() => import("./pages/legal/CookiePolicy"));
+const RefundPolicy = React.lazy(() => import("./pages/legal/RefundPolicy"));
+const AcceptableUsePolicy = React.lazy(() => import("./pages/legal/AcceptableUsePolicy"));
+const DMCAPolicy = React.lazy(() => import("./pages/legal/DMCAPolicy"));
 import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { FeatureFlagProvider } from "./context/FeatureFlagContext";
@@ -42,6 +51,7 @@ import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import FeatureGate from "./components/common/FeatureGate";
+import Footer from "./components/layout/Footer";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -106,6 +116,15 @@ function App() {
                       <Route path="/contact" element={<Contact />} />
                     </Route>
 
+                    {/* Legal pages — public, no auth required */}
+                    <Route path="/terms" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><TermsOfService /></Suspense>} />
+                    <Route path="/privacy" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><PrivacyPolicy /></Suspense>} />
+                    <Route path="/disclaimer" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><Disclaimer /></Suspense>} />
+                    <Route path="/cookies" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><CookiePolicy /></Suspense>} />
+                    <Route path="/refund" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><RefundPolicy /></Suspense>} />
+                    <Route path="/aup" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><AcceptableUsePolicy /></Suspense>} />
+                    <Route path="/dmca" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><DMCAPolicy /></Suspense>} />
+
                     {/* Protected routes */}
                     <Route
                       path="/*"
@@ -127,7 +146,8 @@ function App() {
                                 onMenuClick={() => setSidebarOpen(true)}
                               />
 
-                              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
+                              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+                                <div className="flex-1 p-6">
                                 <Routes>
                                   <Route
                                     path="/dashboard"
@@ -217,6 +237,8 @@ function App() {
                                     element={<Billing />}
                                   />
                                 </Routes>
+                                </div>
+                                <Footer />
                               </main>
                             </div>
                           </div>
