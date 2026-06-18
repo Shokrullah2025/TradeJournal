@@ -23,6 +23,18 @@ import {
 } from "date-fns";
 import DayDetailModal from "./DayDetailModal";
 
+// Daily P&L formatters for the calendar cells.
+// Full value (e.g. +$140) is shown where there's room (>=sm); a compact form
+// (e.g. -$1.2k) is used on phones so 4–5 digit values don't overflow the
+// ~46px-wide cells.
+const fmtPnLFull = (v) => `${v >= 0 ? "+" : "-"}$${Math.abs(v).toFixed(0)}`;
+const fmtPnLCompact = (v) => {
+  const a = Math.abs(v);
+  const sign = v >= 0 ? "+" : "-";
+  if (a >= 1000) return `${sign}$${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k`;
+  return `${sign}$${a.toFixed(0)}`;
+};
+
 const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hoveredDate, setHoveredDate] = useState(null);
@@ -211,19 +223,28 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
                   <div className="trade-calendar__indicators flex flex-col items-center justify-center h-full">
                     {/* Daily P&L - Center */}
                     <div className="flex items-center justify-center mb-0 sm:mb-11">
-                      {dailyPnL === 0 ? (
-                        <div className="text-[11px] sm:text-lg font-bold leading-tight text-gray-500 dark:text-gray-400">
-                          $0
-                        </div>
-                      ) : dailyPnL > 0 ? (
-                        <div className="text-[11px] sm:text-lg font-bold leading-tight text-green-700 dark:text-green-400">
-                          +${Math.abs(dailyPnL).toFixed(0)}
-                        </div>
-                      ) : (
-                        <div className="text-[11px] sm:text-lg font-bold leading-tight text-red-700 dark:text-red-400">
-                          -${Math.abs(dailyPnL).toFixed(0)}
-                        </div>
-                      )}
+                      {(() => {
+                        const colorCls =
+                          dailyPnL === 0
+                            ? "text-gray-500 dark:text-gray-400"
+                            : dailyPnL > 0
+                            ? "text-green-700 dark:text-green-400"
+                            : "text-red-700 dark:text-red-400";
+                        return (
+                          <div
+                            className={`text-[11px] sm:text-lg font-bold leading-tight text-center ${colorCls}`}
+                          >
+                            {/* Compact (e.g. -$1.2k) on phones where cells are ~46px wide */}
+                            <span className="sm:hidden">
+                              {dailyPnL === 0 ? "$0" : fmtPnLCompact(dailyPnL)}
+                            </span>
+                            {/* Full value on >=sm where there is room */}
+                            <span className="hidden sm:inline">
+                              {dailyPnL === 0 ? "$0" : fmtPnLFull(dailyPnL)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Trade count - Bottom Right (hidden on phones to keep tiny cells legible) */}
