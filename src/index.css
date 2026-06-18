@@ -148,3 +148,20 @@
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }
+
+/* Restore list markers inside the rich-text note editor / rendered notes —
+   Tailwind's preflight strips ul/ol styling globally. */
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+.rich-text-content ul {
+  list-style: disc outside;
+}
+.rich-text-content ol {
+  list-style: decimal outside;
+}
+.rich-text-content li {
+  margin: 0.125rem 0;
+}
