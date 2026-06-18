@@ -61,17 +61,22 @@ const Analytics = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-            📊 Analytics Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Comprehensive analysis of your trading performance, patterns, and insights
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-primary-600 dark:bg-primary-700 text-white flex-shrink-0">
+            <BarChart3 className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
+              Analytics Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Comprehensive analysis of your trading performance, patterns, and insights
+            </p>
+          </div>
         </div>
 
-        <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+        <div className="flex items-center">
           <button
             onClick={handleExportReport}
             className="btn btn-secondary flex items-center space-x-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30"
