@@ -21,7 +21,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const { user } = useAuth();
   
   const navigation = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Trades", href: "/trades", icon: BookOpen },
     { name: "Backtest", href: "/backtest", icon: Activity },
     { name: "Brokers", href: "/brokers", icon: Link },

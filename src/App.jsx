@@ -21,6 +21,15 @@ import OAuthCallback from "./pages/OAuthCallback";
 
 // Lazy — keeps the bundled country/state dataset out of the initial load.
 const Profile = React.lazy(() => import("./pages/Profile"));
+
+// Public product website — lazy-loaded so the marketing-free landing pages
+// stay out of the authenticated app bundle (CLAUDE.md §3).
+import SiteLayout from "./components/site/SiteLayout";
+const Home = React.lazy(() => import("./pages/site/Home"));
+const Features = React.lazy(() => import("./pages/site/Features"));
+const Pricing = React.lazy(() => import("./pages/site/Pricing"));
+const About = React.lazy(() => import("./pages/site/About"));
+const Contact = React.lazy(() => import("./pages/site/Contact"));
 import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
@@ -81,6 +90,17 @@ function App() {
                       element={<OAuthCallback />}
                     />
 
+                    {/* Public product website (no auth guard).
+                        Declared explicitly so these out-rank the protected
+                        "/*" matcher below by route specificity. */}
+                    <Route element={<SiteLayout />}>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/features" element={<Features />} />
+                      <Route path="/pricing" element={<Pricing />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/contact" element={<Contact />} />
+                    </Route>
+
                     {/* Protected routes */}
                     <Route
                       path="/*"
@@ -104,7 +124,10 @@ function App() {
 
                               <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
                                 <Routes>
-                                  <Route path="/" element={<Dashboard />} />
+                                  <Route
+                                    path="/dashboard"
+                                    element={<Dashboard />}
+                                  />
                                   <Route path="/trades" element={<Trades />} />
                                   <Route
                                     path="/backtest"
