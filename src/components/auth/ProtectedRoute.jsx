@@ -33,7 +33,7 @@ export const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) return <LoadingScreen />;
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return children;
 };
 
@@ -59,7 +59,7 @@ export const AdminRoute = ({ children }) => {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             You don't have permission to access this page.
           </p>
-          <Navigate to="/" replace />
+          <Navigate to="/dashboard" replace />
         </div>
       </div>
     );

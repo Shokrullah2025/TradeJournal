@@ -26,7 +26,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   // feature for the current user's audience (plan/role/trial), the item is
   // hidden. Items with no `feature` are always available.
   const navigation = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Trades", href: "/trades", icon: BookOpen },
     { name: "Backtest", href: "/backtest", icon: Activity, feature: "backtesting" },
     { name: "Brokers", href: "/brokers", icon: Link, feature: "broker_sync" },
