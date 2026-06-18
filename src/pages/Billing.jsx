@@ -3,13 +3,10 @@ import {
   CreditCard,
   Check,
   Shield,
-  Zap,
-  Star,
   Download,
   Calendar,
   DollarSign,
   Users,
-  BarChart3,
   TrendingUp,
   AlertCircle,
   User,
@@ -311,8 +308,8 @@ const Billing = () => {
             </p>
           </div>
 
-          {/* Current Subscription Status */}
-          {user && (
+          {/* Current Subscription Status — admins only at top; users see it inside the Payment tab */}
+          {user?.role === "admin" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -388,6 +385,37 @@ const Billing = () => {
               {/* Payment Information Tab */}
               {activeTab === "payment" && (
                 <div className="space-y-8">
+                  {/* Current Subscription Status */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-blue-900 dark:text-blue-200">
+                          Current Subscription
+                        </h3>
+                        <p className="text-blue-700 dark:text-blue-300">
+                          You're currently on the{" "}
+                          <span className="font-semibold capitalize">
+                            {currentPlanSlug}
+                          </span>{" "}
+                          plan
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">
+                          $
+                          {currentPlanSlug === "basic"
+                            ? "0"
+                            : currentPlanSlug === "premium"
+                            ? "29"
+                            : "99"}
+                        </div>
+                        <div className="text-sm text-blue-600 dark:text-blue-300">
+                          per month
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Saved Payment Methods */}
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
@@ -907,95 +935,6 @@ const Billing = () => {
               </div>
             </div>
           )}
-
-          {/* Features Comparison */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8">
-            <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-8">
-              Why Choose Trade Journal Pro?
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="bg-blue-100 dark:bg-blue-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BarChart3 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  Advanced Analytics
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Get detailed insights into your trading performance with
-                  comprehensive analytics and reporting.
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="bg-green-100 dark:bg-green-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  Secure & Reliable
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Your data is protected with enterprise-grade security and
-                  backed up automatically.
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="bg-purple-100 dark:bg-purple-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  Lightning Fast
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Experience blazing-fast performance with real-time updates and
-                  instant sync across devices.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* FAQ Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
-            <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-8">
-              Frequently Asked Questions
-            </h2>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  Can I change my plan at any time?
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Yes, you can upgrade or downgrade your plan at any time.
-                  Changes take effect immediately, and you'll be charged or
-                  credited proportionally.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  Is there a free trial?
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Yes, all new users get a 30-day free trial of our Premium
-                  plan. No credit card required to start.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  What payment methods do you accept?
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  We accept all major credit cards (Visa, MasterCard, American
-                  Express) and PayPal. Enterprise customers can also pay by
-                  invoice.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

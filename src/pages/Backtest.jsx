@@ -48,11 +48,15 @@ import {
 } from "lucide-react";
 import { useBacktest } from "../context/BacktestContext";
 import BacktestChart from "../components/trades/BacktestChart";
+import HistorySessionChart from "../components/trades/HistorySessionChart";
+import RichTextEditor from "../components/common/RichTextEditor";
+import NoteView from "../components/common/NoteView";
 import { TrendlineIcon, RayIcon, SegmentIcon } from "../components/trades/BacktestChart/toolIcons";
 import EdgeAnalyticsPanel, { EquityCurve } from "../components/backtest/EdgeAnalyticsPanel";
 import { computeEdgeStats, withBalanceSnapshots } from "../utils/edgeStats";
 import { TZ_OPTIONS } from "../utils/chartTimezone";
 import { fetchMarketCandles, clearCandleCache } from "../utils/marketData";
+import { tagColor } from "../utils/tagColor";
 import { useTemplates } from "../hooks/useTemplates";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useAuth } from "../context/AuthContext";
@@ -367,36 +371,37 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3" data-testid="history-modal-meta-editor">
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</label>
-            <textarea
-              data-testid="history-modal-note-input"
+            <RichTextEditor
+              testId="history-modal-note-input"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              maxLength={2000}
+              onChange={setNote}
               placeholder="What did you learn from this session?"
-              className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tags</label>
             <div className="flex flex-wrap items-center gap-1.5">
-              {tags.map((tag) => (
+              {tags.map((tag) => {
+                const c = tagColor(tag);
+                return (
                 <span
                   key={tag}
                   data-testid={`history-modal-tag-${tag}`}
-                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium"
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium"
+                  style={{ background: c.bg, color: c.text }}
                 >
                   {tag}
                   <button
                     data-testid={`history-modal-remove-tag-${tag}`}
                     onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                    className="hover:text-blue-900 dark:hover:text-blue-100"
+                    className="hover:opacity-70"
                     aria-label={`Remove tag ${tag}`}
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
-              ))}
+                );
+              })}
               <input
                 data-testid="history-modal-tag-input"
                 value={tagInput}
@@ -499,6 +504,117 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Per-window setup-tag bar — chips shown at the top-left of a chart window plus
+// a picker to add an existing custom tag or create a new one. Tagging is scoped
+// to the single window it's rendered in.
+function WindowTagBar({ tags = [], suggestions = [], onToggle, onAdd, theme, testIdPrefix = "window", readOnly = false }) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  if (readOnly && tags.length === 0) return null;
+
+  const q = input.trim().toLowerCase();
+  const available = suggestions.filter(
+    (s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase()) && s.toLowerCase().includes(q)
+  );
+  const canCreate = input.trim() && !suggestions.some((s) => s.toLowerCase() === q);
+
+  return (
+    <div
+      ref={ref}
+      data-testid={`${testIdPrefix}-tag-bar`}
+      className="absolute top-2 left-2 z-20 flex items-center gap-1 flex-wrap"
+      style={{ maxWidth: "60%" }}
+    >
+      {tags.map((tag) => {
+        const c = tagColor(tag);
+        return (
+        <span
+          key={tag}
+          data-testid={`${testIdPrefix}-tag-${tag}`}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-sm"
+          style={{ background: c.bg, color: c.text }}
+        >
+          {tag}
+          {!readOnly && (
+            <button onClick={() => onToggle(tag)} aria-label={`Remove ${tag}`} className="hover:opacity-70">
+              <X style={{ width: 11, height: 11 }} />
+            </button>
+          )}
+        </span>
+        );
+      })}
+      {!readOnly && (
+        <div className="relative">
+          <button
+            data-testid={`${testIdPrefix}-tag-add-btn`}
+            onClick={() => setOpen((o) => !o)}
+            title="Tag this window"
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full shadow-sm"
+            style={{ background: theme.surface, color: theme.textMuted, border: `1px solid ${theme.border}` }}
+          >
+            <Plus style={{ width: 12, height: 12 }} />
+          </button>
+          {open && (
+            <div
+              className="absolute top-7 left-0 w-52 rounded-lg shadow-xl p-2 z-30"
+              style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+            >
+              <input
+                data-testid={`${testIdPrefix}-tag-input`}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && input.trim()) { onAdd(input.trim()); setInput(""); } }}
+                placeholder="Create or search…"
+                maxLength={30}
+                autoFocus
+                className="w-full text-xs px-2 py-1 rounded mb-1 outline-none"
+                style={{ background: theme.bg, border: `1px solid ${theme.border}`, color: theme.text }}
+              />
+              <div className="max-h-40 overflow-y-auto">
+                {canCreate && (
+                  <button
+                    onClick={() => { onAdd(input.trim()); setInput(""); }}
+                    className="w-full text-left text-xs px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
+                    style={{ color: theme.text }}
+                  >
+                    Create “{input.trim()}”
+                  </button>
+                )}
+                {available.map((s) => (
+                  <button
+                    key={s}
+                    data-testid={`${testIdPrefix}-tag-option-${s}`}
+                    onClick={() => onToggle(s)}
+                    className="w-full flex items-center gap-2 text-left text-xs px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
+                    style={{ color: theme.text }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: tagColor(s).text, flexShrink: 0 }} />
+                    {s}
+                  </button>
+                ))}
+                {available.length === 0 && !canCreate && (
+                  <p className="text-[11px] px-2 py-1" style={{ color: theme.textMuted }}>
+                    {suggestions.length === 0 ? "No saved tags yet" : "No matches"}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1006,7 +1122,12 @@ const Backtest = () => {
   const [sessionHistory, setSessionHistory] = useState([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [historyModal, setHistoryModal] = useState(null); // session obj with .trades when open
+  const [chartModalSession, setChartModalSession] = useState(null); // session whose chart-replay modal is open
   const [tagSuggestions, setTagSuggestions] = useState([]); // user's saved custom tags
+  // Per-window setup tags shown at the top of each chart window. Keyed by chart
+  // number (1–3); each window's tags are independent and never auto-apply to the
+  // others. Chart 1's tags are carried into the session's replay.
+  const [windowTags, setWindowTags] = useState({ 1: [], 2: [], 3: [] });
 
   useEffect(() => {
     if (!user?.id) { setIsLoadingSessions(false); return; }
@@ -1057,6 +1178,8 @@ const Backtest = () => {
           initialBalance:  row.parameters?.initialBalance,
           endingBalance:   row.results?.endingBalance ?? null,
           trades:          row.results?.trades ?? [],
+          drawings:        row.results?.drawings ?? [],
+          windowTags:      row.results?.windowTags ?? { 1: [], 2: [], 3: [] },
           // Older sessions stored a setup note inside parameters
           note:            row.note ?? row.parameters?.notes ?? "",
           tags:            Array.isArray(row.tags) ? row.tags : [],
@@ -1289,6 +1412,8 @@ const Backtest = () => {
   const balanceRef = useRef(balance);
   const currentSessionRef = useRef(null);
   const userIdRef = useRef(null);
+  const drawingsRef = useRef([]); // chart-1 drawings, snapshotted into the session on save
+  const windowTagsRef = useRef({ 1: [], 2: [], 3: [] }); // per-window tags, snapshotted on save
 
   // Drawing tools
   const [drawingMode, setDrawingMode] = useState(null);
@@ -1316,6 +1441,10 @@ const Backtest = () => {
   const [userDrawings2, setUserDrawings2] = useState([]);
   const [userDrawings3, setUserDrawings3] = useState([]);
   const [selectedDrawingIds, setSelectedDrawingIds] = useState([]);
+  // Copied drawings (Ctrl+C → Ctrl+P), shared across all chart windows.
+  // Stored without ids — fresh ids are minted on paste so copies are independent
+  // and individually deletable.
+  const drawingClipboardRef = useRef([]);
 
   // Bar replay mode — when active, clicking the chart seeks to that candle
   const [barReplayMode, setBarReplayMode] = useState(false);
@@ -1555,6 +1684,65 @@ const Backtest = () => {
         if (userDrawings.length > 0) setSelectedDrawingIds(userDrawings.map((d) => d.id));
         return;
       }
+      // Ctrl+C — copy the selected drawing(s) to the shared clipboard. The
+      // selection set spans all windows, so gather from every window's array.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (selectedDrawingIds.length === 0) return;
+        const byId = new Map();
+        [...userDrawings, ...userDrawings2, ...userDrawings3].forEach((d) => byId.set(d.id, d));
+        const picked = selectedDrawingIds.map((id) => byId.get(id)).filter(Boolean);
+        if (picked.length === 0) return;
+        e.preventDefault();
+        // Clone without the id — paste mints fresh ones
+        drawingClipboardRef.current = picked.map(({ id, ...rest }) => JSON.parse(JSON.stringify(rest)));
+        return;
+      }
+      // Ctrl+P — paste the copied drawing(s) into the active window. preventDefault
+      // also suppresses the browser print dialog this shortcut normally triggers.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        if (drawingClipboardRef.current.length === 0) return;
+        // Offset each paste so the copy sits a little up-and-right of the original
+        // instead of exactly overlapping. Up = +price (a slice of the visible
+        // range), right = +a couple of bars. Shape preserved (same delta on every
+        // point of a drawing).
+        const data = activeChart === 2 ? chartData2 : activeChart === 3 ? chartData3 : chartData;
+        const interval = data.length > 1 ? data[1].time - data[0].time : 3600;
+        let lo = Infinity, hi = -Infinity;
+        for (const c of data) { if (c.low < lo) lo = c.low; if (c.high > hi) hi = c.high; }
+        const dt = interval * 2;
+        const dp = hi > lo ? (hi - lo) * 0.05 : 0;
+        const shiftGeom = (o) => {
+          if (typeof o.time === "number") o.time += dt;
+          if (typeof o.endTime === "number") o.endTime += dt;
+          if (typeof o.price === "number") o.price += dp;
+          ["entry", "sl", "tp"].forEach((k) => { if (typeof o[k] === "number") o[k] += dp; });
+          if (o.p1) o.p1 = { ...o.p1, time: o.p1.time + dt, price: o.p1.price + dp };
+          if (o.p2) o.p2 = { ...o.p2, time: o.p2.time + dt, price: o.p2.price + dp };
+          if (Array.isArray(o.points)) {
+            o.points = o.points.map((pt) => {
+              if ("xFrac" in pt) return { ...pt, xFrac: pt.xFrac + 0.02, yFrac: pt.yFrac - 0.05 };
+              if ("logicalIdx" in pt) return { ...pt, logicalIdx: pt.logicalIdx + 2, price: pt.price + dp };
+              return { ...pt, time: pt.time + dt, price: pt.price + dp };
+            });
+          }
+          return o;
+        };
+        const base = Date.now();
+        const clones = drawingClipboardRef.current.map((d, i) => ({
+          ...shiftGeom(JSON.parse(JSON.stringify(d))),
+          id: base + i,
+        }));
+        const newIds = clones.map((d) => d.id);
+        if (activeChart === 2) setUserDrawings2((prev) => [...prev, ...clones]);
+        else if (activeChart === 3) setUserDrawings3((prev) => [...prev, ...clones]);
+        else pushDrawings([...userDrawings, ...clones]);
+        setSelectedDrawingIds(newIds);
+        // Cascade: keep the pasted positions so a repeated paste steps further
+        // up-right instead of stacking on the previous copy.
+        drawingClipboardRef.current = clones.map(({ id, ...rest }) => rest);
+        return;
+      }
       if (e.key !== "Backspace" && e.key !== "Delete") return;
       if (selectedDrawingIds.length > 0) {
         const toDelete = new Set(selectedDrawingIds);
@@ -1566,7 +1754,7 @@ const Backtest = () => {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [selectedDrawingIds, userDrawings]); // eslint-disable-line
+  }, [selectedDrawingIds, userDrawings, userDrawings2, userDrawings3, activeChart, chartData, chartData2, chartData3]); // eslint-disable-line
 
   // Column resize — global mouse move/up so dragging outside the panel still works.
   // Updates are coalesced to one per animation frame so the charts resize smoothly.
@@ -1878,7 +2066,12 @@ const Backtest = () => {
     supabase
       .from("backtest_sessions")
       .update({
-        results: { trades: tradesRef.current, endingBalance: balanceRef.current },
+        results: {
+          trades: tradesRef.current,
+          endingBalance: balanceRef.current,
+          drawings: drawingsRef.current,
+          windowTags: windowTagsRef.current,
+        },
         status,
       })
       .eq("id", session.id)
@@ -1934,6 +2127,53 @@ const Backtest = () => {
       console.error("[Backtest] session meta save error:", err.message);
       toast.error("Could not save your changes. Please try again.");
     }
+  };
+
+  // Remember a freshly-created custom tag so it shows up as a suggestion later.
+  // Shared by the history modal and the per-window tag pickers.
+  const persistCustomTag = async (name) => {
+    if (!user?.id) return;
+    if (tagSuggestions.some((s) => s.toLowerCase() === name.toLowerCase())) return;
+    const { error } = await supabase
+      .from("backtest_setup_tags")
+      .upsert([{ user_id: user.id, name }], { onConflict: "user_id,name", ignoreDuplicates: true });
+    if (error) {
+      console.error("[Backtest] tag save error:", error.message);
+    } else {
+      setTagSuggestions((prev) => [...new Set([...prev, name])].sort());
+    }
+  };
+
+  // Toggle a tag on a single chart window — never touches the other windows.
+  const toggleWindowTag = (win, tag) => {
+    setWindowTags((prev) => {
+      const current = prev[win] || [];
+      const exists = current.some((t) => t.toLowerCase() === tag.toLowerCase());
+      return {
+        ...prev,
+        [win]: exists
+          ? current.filter((t) => t.toLowerCase() !== tag.toLowerCase())
+          : [...current, tag],
+      };
+    });
+  };
+
+  // Validate + add a (possibly new) tag to a window, persisting it for reuse.
+  const addWindowTag = (win, raw) => {
+    const parsed = sessionTagSchema.safeParse(raw);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Invalid tag");
+      return;
+    }
+    const tag = parsed.data;
+    const current = windowTags[win] || [];
+    if (current.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+    if (current.length >= MAX_SESSION_TAGS) {
+      toast.error(`A window can have at most ${MAX_SESSION_TAGS} tags`);
+      return;
+    }
+    toggleWindowTag(win, tag);
+    persistCustomTag(tag);
   };
 
   const handleCreateSession = async () => {
@@ -1998,7 +2238,7 @@ const Backtest = () => {
             startDate,
             endDate,
           },
-          results: { trades: [], endingBalance: null },
+          results: { trades: [], endingBalance: null, drawings: [], windowTags: { 1: [], 2: [], 3: [] } },
           status: "running",
         })
         .select("id")
@@ -2014,11 +2254,13 @@ const Backtest = () => {
       }
     }
 
-    // Fresh session — clear any trades/positions left from a previous one
+    // Fresh session — clear any trades/positions/tags left from a previous one
     setTrades([]);
     setPositions([]);
     positionsRef.current = [];
     tradesRef.current = [];
+    setWindowTags({ 1: [], 2: [], 3: [] });
+    windowTagsRef.current = { 1: [], 2: [], 3: [] };
 
     setCurrentSession(newSession);
     currentSessionRef.current = newSession;
@@ -2105,6 +2347,8 @@ const Backtest = () => {
   useEffect(() => { positionsRef.current = positions; }, [positions]);
   useEffect(() => { tradesRef.current = trades; }, [trades]);
   useEffect(() => { balanceRef.current = balance; }, [balance]);
+  useEffect(() => { drawingsRef.current = userDrawings; }, [userDrawings]);
+  useEffect(() => { windowTagsRef.current = windowTags; }, [windowTags]);
   useEffect(() => { currentSessionRef.current = currentSession; }, [currentSession]);
   useEffect(() => { userIdRef.current = user?.id ?? null; }, [user?.id]);
 
@@ -3038,6 +3282,7 @@ const Backtest = () => {
                   const sessionPnl = s.endingBalance != null ? s.endingBalance - s.initialBalance : null;
                   const pnlPositive = sessionPnl != null && sessionPnl >= 0;
                   const completed = s.endingBalance != null;
+                  const hasTrades = (s.trades?.length ?? 0) > 0;
                   return (
                     <div
                       key={s.id}
@@ -3064,17 +3309,29 @@ const Backtest = () => {
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {[s.instrumentName, s.timeframe?.toUpperCase(), s.strategy, s.setup].filter(Boolean).join(" · ")}
                         </p>
+                        {s.note && (
+                          <NoteView
+                            html={s.note}
+                            clamp={2}
+                            className="mt-1 text-xs"
+                            testId={`session-card-note-${s.id}`}
+                          />
+                        )}
                         {s.tags?.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
-                            {s.tags.slice(0, 4).map((tag) => (
+                            {s.tags.slice(0, 4).map((tag) => {
+                              const c = tagColor(tag);
+                              return (
                               <span
                                 key={tag}
                                 data-testid={`session-card-tag-${s.id}-${tag}`}
-                                className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 font-medium"
+                                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ background: c.bg, color: c.text }}
                               >
                                 {tag}
                               </span>
-                            ))}
+                              );
+                            })}
                             {s.tags.length > 4 && (
                               <span className="text-[10px] px-1.5 py-0.5 text-gray-400 dark:text-gray-500">
                                 +{s.tags.length - 4}
@@ -3108,6 +3365,22 @@ const Backtest = () => {
                         )}
                       </div>
 
+                      {/* Play — opens the static chart replay in a modal */}
+                      {hasTrades && (
+                        <button
+                          data-testid={`session-card-play-btn-${s.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setChartModalSession(s);
+                          }}
+                          className="flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60 transition-colors"
+                          aria-label="Play session chart"
+                          title="Replay session"
+                        >
+                          <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
+                        </button>
+                      )}
+
                       <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 flex-shrink-0 transition-colors" />
                     </div>
                   );
@@ -3125,6 +3398,48 @@ const Backtest = () => {
           onSave={handleSaveSessionMeta}
           tagSuggestions={tagSuggestions}
         />
+      )}
+      {chartModalSession && (
+        <div
+          data-testid="history-chart-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setChartModalSession(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[92vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{chartModalSession.name}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {[chartModalSession.instrumentName, chartModalSession.strategy, chartModalSession.setup]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+                {chartModalSession.note && (
+                  <NoteView
+                    html={chartModalSession.note}
+                    clamp={3}
+                    className="mt-2 max-w-2xl"
+                    testId="history-chart-modal-note"
+                  />
+                )}
+              </div>
+              <button
+                data-testid="history-chart-modal-close-btn"
+                onClick={() => setChartModalSession(null)}
+                className="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+                aria-label="Close chart"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto">
+              <HistorySessionChart key={chartModalSession.id} session={chartModalSession} autoOpen />
+            </div>
+          </div>
+        </div>
       )}
       </>
     );
@@ -4397,6 +4712,18 @@ const Backtest = () => {
                 onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
               >
 
+              {/* Per-window setup tags */}
+              {currentSession && chartData.length > 0 && (
+                <WindowTagBar
+                  tags={windowTags[1]}
+                  suggestions={tagSuggestions}
+                  onToggle={(t) => toggleWindowTag(1, t)}
+                  onAdd={(t) => addWindowTag(1, t)}
+                  theme={theme}
+                  testIdPrefix="window-1"
+                />
+              )}
+
               {/* Floating favourite tools — hovers over the chart.
                   Single grip on the left drags the entire bar to reposition it.
                   Selecting a tool here does NOT highlight the left panel button. */}
@@ -4575,6 +4902,7 @@ const Backtest = () => {
                         );
                       }
                     }}
+                    onSelectMany={(ids) => setSelectedDrawingIds(ids)}
                     onRangeChange={syncDrag ? (r) => {
                       rangeSettersRef.current[2]?.(r);
                       rangeSettersRef.current[3]?.(r);
@@ -4987,6 +5315,17 @@ const Backtest = () => {
                   onMouseDown={() => setActiveChart(2)}
                   onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
                 >
+                  {/* Per-window setup tags */}
+                  {chart2Symbol && chartData2.length > 0 && (
+                    <WindowTagBar
+                      tags={windowTags[2]}
+                      suggestions={tagSuggestions}
+                      onToggle={(t) => toggleWindowTag(2, t)}
+                      onAdd={(t) => addWindowTag(2, t)}
+                      theme={theme}
+                      testIdPrefix="window-2"
+                    />
+                  )}
                   {/* Resize zone — left edge of chart 2 (left of price axis), resizes chart 1 ↔ chart 2 */}
                   <div
                     className="absolute top-0 bottom-0 left-0 z-30 group flex items-center justify-center"
@@ -5067,6 +5406,7 @@ const Backtest = () => {
                             setSelectedDrawingIds([id]);
                           }
                         }}
+                        onSelectMany={(ids) => setSelectedDrawingIds(ids)}
                         panelDrawing={
                           selectedDrawingIds.length === 1
                             ? userDrawings2.find((d) => d.id === selectedDrawingIds[0]) ?? null
@@ -5111,6 +5451,17 @@ const Backtest = () => {
                   onMouseDown={() => setActiveChart(3)}
                   onContextMenu={(e) => { e.preventDefault(); setContextMenuPos({ x: e.clientX, y: e.clientY }); }}
                 >
+                  {/* Per-window setup tags */}
+                  {chart3Symbol && chartData3.length > 0 && (
+                    <WindowTagBar
+                      tags={windowTags[3]}
+                      suggestions={tagSuggestions}
+                      onToggle={(t) => toggleWindowTag(3, t)}
+                      onAdd={(t) => addWindowTag(3, t)}
+                      theme={theme}
+                      testIdPrefix="window-3"
+                    />
+                  )}
                   {/* Resize zone — left edge of chart 3, resizes chart 2 ↔ chart 3 */}
                   <div
                     className="absolute top-0 bottom-0 left-0 z-30 group flex items-center justify-center"
@@ -5191,6 +5542,7 @@ const Backtest = () => {
                             setSelectedDrawingIds([id]);
                           }
                         }}
+                        onSelectMany={(ids) => setSelectedDrawingIds(ids)}
                         panelDrawing={
                           selectedDrawingIds.length === 1
                             ? userDrawings3.find((d) => d.id === selectedDrawingIds[0]) ?? null

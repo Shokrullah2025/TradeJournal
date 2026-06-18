@@ -3,6 +3,7 @@ import {
   sessionMetaSchema,
   sessionTagSchema,
   MAX_SESSION_TAGS,
+  MAX_NOTE_HTML_LENGTH,
 } from "./backtest";
 
 describe("sessionTagSchema", () => {
@@ -50,14 +51,14 @@ describe("sessionMetaSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects a note longer than 2,000 characters", () => {
+  it("rejects a note longer than the HTML limit", () => {
     const result = sessionMetaSchema.safeParse({
-      note: "a".repeat(2001),
+      note: "a".repeat(MAX_NOTE_HTML_LENGTH + 1),
       tags: [],
     });
     expect(result.success).toBe(false);
     expect(result.error.issues[0].message).toBe(
-      "Note must be 2,000 characters or fewer"
+      "Note is too long — please shorten it"
     );
   });
 

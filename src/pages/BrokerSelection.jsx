@@ -1,33 +1,122 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useBroker } from "../context/BrokerContext";
+import { useTrades } from "../context/TradeContext";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   RefreshCw,
   CheckCircle,
-  Wifi,
-  DollarSign,
-  Shield,
   Key,
   Clock,
   AlertCircle,
   ChevronDown,
+  ChevronRight,
   Upload,
   ExternalLink,
   Settings,
-  TrendingUp,
+  Plus,
+  Shield,
+  Lock,
+  RotateCcw,
 } from "lucide-react";
 import TradovateSetupStatus from "../components/trades/TradovateSetupStatus";
 import CsvImportModal from "../components/trades/CsvImportModal";
 
+// Each firm carries the Tailwind badge classes for its colored initials tile.
+// Class strings are written out in full so Tailwind's JIT can detect them.
 const PROP_FIRMS = [
-  { id: "apex",    name: "Apex Trader Funding", logo: "🏆", brokerKey: "tradovate" },
-  { id: "mff",     name: "MyFundedFutures",      logo: "💰", brokerKey: "tradovate" },
-  { id: "bulenox", name: "Bulenox",              logo: "📊", brokerKey: "tradovate" },
-  { id: "tpt",     name: "Take Profit Trader",   logo: "🎯", brokerKey: "tradovate" },
-  { id: "topstep", name: "Topstep",              logo: "🔝", brokerKey: "tradovate" },
-  { id: "other",   name: "Other / Not listed",   logo: "📋", brokerKey: "tradovate" },
+  {
+    id: "apex",
+    name: "Apex Trader Funding",
+    initials: "A",
+    brokerKey: "tradovate",
+    badge: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+  },
+  {
+    id: "mff",
+    name: "MyFundedFutures",
+    initials: "MF",
+    brokerKey: "tradovate",
+    badge: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30",
+  },
+  {
+    id: "bulenox",
+    name: "Bulenox",
+    initials: "B",
+    brokerKey: "tradovate",
+    badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+  },
+  {
+    id: "tpt",
+    name: "Take Profit Trader",
+    initials: "TP",
+    brokerKey: "tradovate",
+    badge: "bg-rose-500/10 text-rose-400 border-rose-500/30",
+  },
+  {
+    id: "topstep",
+    name: "Topstep",
+    initials: "TS",
+    brokerKey: "tradovate",
+    badge: "bg-violet-500/10 text-violet-400 border-violet-500/30",
+  },
+  {
+    id: "other",
+    name: "Other / Not listed",
+    initials: "+",
+    brokerKey: "tradovate",
+    badge: "bg-slate-500/10 text-slate-400 border-slate-500/30",
+  },
 ];
+
+const DEFAULT_BADGE = "bg-emerald-500/10 text-emerald-500 border-emerald-500/30";
+
+// Resolve the colored badge (initials + classes) for a connected account by
+// matching its firm name against the known prop firms; falls back to initials
+// derived from the name.
+const getFirmVisual = (name) => {
+  if (!name) return { initials: "?", badge: DEFAULT_BADGE };
+  const match = PROP_FIRMS.find(
+    (f) => f.id !== "other" && f.name.toLowerCase() === name.toLowerCase(),
+  );
+  if (match) return { initials: match.initials, badge: match.badge };
+  const initials = name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w.charAt(0))
+    .join("")
+    .toUpperCase();
+  return { initials: initials || "?", badge: DEFAULT_BADGE };
+};
+
+// Map a series of numbers to an SVG polyline `points` string within the given
+// box. Returns "" for fewer than two points so callers can skip rendering.
+const buildSparkPoints = (values, width = 104, height = 38, pad = 4) => {
+  if (!Array.isArray(values) || values.length < 2) return "";
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = width / (values.length - 1);
+  return values
+    .map((v, i) => {
+      const x = i * stepX;
+      const y = height - pad - ((v - min) / range) * (height - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+};
+
+// Short relative time label, e.g. "2m", "1h", "3d".
+const formatRelative = (date) => {
+  if (!date) return null;
+  const diff = Date.now() - new Date(date).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+};
 
 const BrokerSelection = () => {
   const {
@@ -47,11 +136,15 @@ const BrokerSelection = () => {
     setSyncInterval,
   } = useBroker();
 
+  const { trades, stats } = useTrades();
+
   const navigate = useNavigate();
+  const [view, setView] = useState("accounts"); // "accounts" | "connect"
   const [accountTypes, setAccountTypes] = useState({});
   const [connectingFirm, setConnectingFirm] = useState(null);
   const [showSetupStatus, setShowSetupStatus] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
+  const [showManage, setShowManage] = useState(false);
   const [tradesSynced, setTradesSynced] = useState(false);
 
   const getAccountType = (firmId) => accountTypes[firmId] ?? "demo";
@@ -62,10 +155,11 @@ const BrokerSelection = () => {
   const handleConnect = async (firm) => {
     setConnectingFirm(firm.id);
     try {
-      await connectBroker(firm.brokerKey, {
+      const ok = await connectBroker(firm.brokerKey, {
         accountType: getAccountType(firm.id),
         propFirm: firm.id === "other" ? null : firm.name,
       });
+      if (ok) setView("accounts");
     } finally {
       setConnectingFirm(null);
     }
@@ -84,129 +178,347 @@ const BrokerSelection = () => {
     }).format(amount);
   };
 
+  const formatPnL = (amount) => {
+    if (amount == null) return "—";
+    const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
+    return `${sign}${formatBalance(Math.abs(amount))}`;
+  };
+
   const formatLastSync = (date) => {
     if (!date) return "Never";
     return new Date(date).toLocaleString();
   };
 
-  const connectedAccount = accounts[0] ?? null;
+  // Sum balances across every connected account for the summary header.
+  const totalBalance = useMemo(
+    () => accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0),
+    [accounts],
+  );
+
+  // Performance derived from imported/synced trades. Win rate and trade count
+  // reuse the context-computed stats; 30-day P&L and the equity sparkline are
+  // derived here from the closed-trade series.
+  const performance = useMemo(() => {
+    const closed = trades.filter((t) => t.status === "closed");
+    const ordered = [...closed].sort((a, b) => {
+      const da = new Date(a.exitDate || a.entryDate).getTime();
+      const db = new Date(b.exitDate || b.entryDate).getTime();
+      return da - db;
+    });
+
+    const cutoff = Date.now() - 30 * 86400000;
+    const net30dPnL = ordered.reduce((sum, t) => {
+      const when = new Date(t.exitDate || t.entryDate).getTime();
+      return when >= cutoff ? sum + (t.pnl ?? 0) : sum;
+    }, 0);
+
+    let running = 0;
+    const equity = ordered.map((t) => (running += t.pnl ?? 0));
+
+    return {
+      net30dPnL,
+      totalPnL: stats.totalPnL ?? 0,
+      sparkPoints: buildSparkPoints(equity.slice(-40)),
+      sparkPositive: equity.length === 0 || equity[equity.length - 1] >= 0,
+    };
+  }, [trades, stats.totalPnL]);
+
+  // Build a per-account view-model. Account-level P&L / sparkline data isn't
+  // tracked per broker account yet, so the primary account falls back to the
+  // trade-derived aggregate; additional accounts use any data carried on the
+  // account object (populated as richer sync data arrives).
+  const displayAccounts = useMemo(() => {
+    return accounts.map((account, index) => {
+      const name = account.propFirm ?? (index === 0 ? propFirm : null) ?? account.name;
+      const visual = getFirmVisual(name);
+      const isFunded = account.type === "live" || account.type === "funded";
+
+      const pnl = account.pnl ?? (index === 0 ? performance.totalPnL : null);
+      const pnlPct =
+        account.pnlPct ??
+        (account.balance > 0 && pnl != null ? (pnl / account.balance) * 100 : null);
+      const sparkPoints =
+        (Array.isArray(account.equity) ? buildSparkPoints(account.equity.slice(-40)) : null) ??
+        (index === 0 ? performance.sparkPoints : "");
+      const sparkPositive = account.equity
+        ? account.equity[account.equity.length - 1] >= 0
+        : index === 0
+          ? performance.sparkPositive
+          : (pnl ?? 0) >= 0;
+
+      return {
+        id: account.id ?? `account-${index}`,
+        name: name ?? "Connected Account",
+        ...visual,
+        typeLabel: isFunded ? "FUNDED" : "EVALUATION",
+        typeClass: isFunded
+          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+          : "bg-amber-500/10 text-amber-500 border-amber-500/30",
+        subtitle: `${account.size ? formatBalance(account.size) + " · " : ""}via Tradovate`,
+        balance: account.balance ?? null,
+        pnl,
+        pnlPct,
+        sparkPoints,
+        sparkPositive,
+        syncedLabel: formatRelative(account.lastSync ?? lastSync),
+      };
+    });
+  }, [accounts, propFirm, performance, lastSync]);
+
+  const headerSync = formatRelative(lastSync);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Page header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {isConnected ? "Broker Connection" : "Connect Your Account"}
-            </h1>
-            <p className="mt-1 text-gray-500 dark:text-gray-400">
-              {isConnected
-                ? "Manage your connected prop firm and sync trades"
-                : "Select your prop firm to automatically import your trades"}
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/trades")}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-            data-testid="back-to-trades-btn"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Trades
-          </button>
-        </div>
+        {view === "accounts" ? (
+          /* ── ACCOUNTS DASHBOARD ─────────────────────────────────── */
+          <div className="space-y-8">
 
-        {/* ── CONNECTED STATE ─────────────────────────────────────── */}
-        {isConnected ? (
-          <div className="space-y-4">
-
-            {/* Account card */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-gray-200 dark:border-gray-700 px-6 py-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                      <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <div
-                        className="font-bold text-gray-900 dark:text-gray-100 text-xl"
-                        data-testid="connected-firm-name"
-                      >
-                        {propFirm ?? connectedAccount?.name ?? "Connected Account"}
-                      </div>
-                      <div className="flex items-center space-x-1.5 text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        <Key className="w-3.5 h-3.5" />
-                        <span>via Tradovate · OAuth 2.0 Secured</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span
-                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                    data-testid="connected-status-badge"
-                  >
-                    <Wifi className="w-4 h-4 mr-1.5" />
-                    Connected
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">
+                  Accounts
+                </h1>
+                <div className="mt-2 flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]" />
+                  <span data-testid="connected-summary">
+                    {accounts.length} connected
+                    {headerSync ? ` · synced ${headerSync === "just now" ? "just now" : headerSync + " ago"}` : " · not synced yet"}
                   </span>
                 </div>
               </div>
+              <button
+                onClick={() => setView("connect")}
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/25 transition-colors whitespace-nowrap"
+                data-testid="connect-account-btn"
+              >
+                <Plus className="w-4 h-4" />
+                Connect account
+              </button>
+            </div>
 
-              <div className="px-6 py-5 space-y-5">
+            {/* Summary stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2.5">
+                  Total balance
+                </div>
+                <div
+                  className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50"
+                  data-testid="summary-total-balance"
+                >
+                  {formatBalance(totalBalance)}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2.5">
+                  Net P&amp;L · 30d
+                </div>
+                <div
+                  className={`text-2xl font-bold tracking-tight ${
+                    performance.net30dPnL > 0
+                      ? "text-emerald-500"
+                      : performance.net30dPnL < 0
+                        ? "text-rose-500"
+                        : "text-gray-900 dark:text-gray-50"
+                  }`}
+                  data-testid="summary-net-pnl-30d"
+                >
+                  {formatPnL(performance.net30dPnL)}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2.5">
+                  Avg win rate
+                </div>
+                <div
+                  className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50"
+                  data-testid="summary-win-rate"
+                >
+                  {Math.round(stats.winRate ?? 0)}%
+                </div>
+              </div>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2.5">
+                  Total trades
+                </div>
+                <div
+                  className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50"
+                  data-testid="summary-trade-count"
+                >
+                  {(stats.totalTrades ?? 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
 
-                {/* Balance */}
-                {connectedAccount?.balance != null && (
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                      <DollarSign className="w-4 h-4 text-green-500" />
-                      <span>Account Balance</span>
-                    </div>
-                    <span
-                      className="font-semibold text-gray-900 dark:text-gray-100 text-lg"
-                      data-testid="connected-balance"
-                    >
-                      {formatBalance(connectedAccount.balance)}
-                    </span>
-                  </div>
-                )}
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              Connected accounts
+            </div>
 
-                {/* Error */}
-                {connectionError && (
+            {/* Connection error */}
+            {connectionError && (
+              <div
+                className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl text-sm text-red-700 dark:text-red-400"
+                data-testid="broker-connection-error"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{connectionError}</span>
+              </div>
+            )}
+
+            {/* Account rows */}
+            <div className="space-y-3.5" data-testid="connected-accounts-list">
+              {displayAccounts.map((account) => (
+                <div
+                  key={account.id}
+                  className="flex items-center gap-5 px-6 py-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
+                  data-testid={`account-row-${account.id}`}
+                >
                   <div
-                    className="flex items-center space-x-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400"
-                    data-testid="broker-connection-error"
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-base border shrink-0 ${account.badge}`}
                   >
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{connectionError}</span>
+                    {account.initials}
                   </div>
-                )}
 
-                {/* Sync row */}
-                <div className="flex items-center justify-between">
+                  <div className="min-w-0 sm:w-56 shrink-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className="font-bold text-base text-gray-900 dark:text-gray-50 truncate"
+                        data-testid={`account-row-name-${account.id}`}
+                      >
+                        {account.name}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide border ${account.typeClass}`}
+                      >
+                        {account.typeLabel}
+                      </span>
+                    </div>
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
+                      {account.subtitle}
+                    </div>
+                  </div>
+
+                  {/* Sparkline */}
+                  {account.sparkPoints ? (
+                    <svg
+                      width="104"
+                      height="38"
+                      viewBox="0 0 104 38"
+                      fill="none"
+                      className={`hidden md:block shrink-0 ${account.sparkPositive ? "text-emerald-500" : "text-rose-500"}`}
+                      data-testid={`account-row-sparkline-${account.id}`}
+                      aria-hidden="true"
+                    >
+                      <polyline
+                        points={account.sparkPoints}
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    <div className="hidden md:block w-[104px] shrink-0" />
+                  )}
+
+                  <div className="flex-1" />
+
+                  {/* Balance + P&L */}
+                  <div className="text-right shrink-0">
+                    <div
+                      className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-50"
+                      data-testid={`account-row-balance-${account.id}`}
+                    >
+                      {formatBalance(account.balance)}
+                    </div>
+                    {account.pnl != null && (
+                      <div
+                        className={`text-xs font-semibold ${
+                          account.pnl > 0
+                            ? "text-emerald-500"
+                            : account.pnl < 0
+                              ? "text-rose-500"
+                              : "text-gray-500 dark:text-gray-400"
+                        }`}
+                        data-testid={`account-row-pnl-${account.id}`}
+                      >
+                        {formatPnL(account.pnl)}
+                        {account.pnlPct != null && (
+                          <> · {account.pnlPct > 0 ? "+" : ""}{account.pnlPct.toFixed(1)}%</>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sync status */}
+                  <div className="hidden sm:flex items-center gap-1.5 shrink-0 w-24 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {account.syncedLabel ? `Synced ${account.syncedLabel}` : "—"}
+                  </div>
+
+                  <button
+                    onClick={() => setShowManage((v) => !v)}
+                    className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    aria-label="Manage account"
+                    data-testid={`account-row-manage-${account.id}`}
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Connect another account */}
+              <button
+                onClick={() => setView("connect")}
+                className="w-full flex items-center gap-4 px-6 py-5 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 text-left hover:border-emerald-500/50 transition-colors group"
+                data-testid="connect-another-btn"
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shrink-0">
+                  <Plus className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-gray-900 dark:text-gray-50">
+                    Connect another account
+                  </div>
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+                    Link a prop firm via Tradovate, or import a CSV
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Manage panel — sync controls + disconnect for the connection */}
+            {isConnected && showManage && (
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-5 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                       Trade Sync
                     </div>
-                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       <Clock className="w-3 h-3" />
                       <span>Last synced: {formatLastSync(lastSync)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     {tradesSynced && (
                       <button
                         onClick={() => navigate("/trades")}
-                        className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                        className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                         data-testid="view-trades-btn"
                       >
-                        <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
                         View Trades
                       </button>
                     )}
                     <button
                       onClick={handleSync}
                       disabled={syncStatus === "syncing"}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
                       data-testid="sync-now-btn"
                     >
                       <RefreshCw
@@ -217,14 +529,13 @@ const BrokerSelection = () => {
                   </div>
                 </div>
 
-                {/* Auto-sync */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-                  <label className="flex items-center space-x-2 cursor-pointer select-none">
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={autoSync}
                       onChange={(e) => toggleAutoSync(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"
                       data-testid="autosync-toggle"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -235,7 +546,7 @@ const BrokerSelection = () => {
                     <select
                       value={syncInterval}
                       onChange={(e) => setSyncInterval(parseInt(e.target.value))}
-                      className="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg px-2 py-1"
+                      className="text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-2 py-1.5"
                       data-testid="sync-interval-select"
                     >
                       <option value={300000}>Every 5 min</option>
@@ -245,152 +556,177 @@ const BrokerSelection = () => {
                     </select>
                   )}
                 </div>
+
+                <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    onClick={() => disconnectBroker()}
+                    className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline"
+                    data-testid="disconnect-btn"
+                  >
+                    Disconnect broker
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Security note */}
-            <div className="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm">
-              <Shield className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-              <p className="text-blue-800 dark:text-blue-300">
-                <span className="font-medium">Your credentials are never stored in the browser.</span>
-                {" "}Tokens are kept encrypted on our servers. Revoke access anytime from your Tradovate account settings.
-              </p>
-            </div>
-
-            {/* Disconnect */}
-            <div className="flex justify-end">
-              <button
-                onClick={() => disconnectBroker()}
-                className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline"
-                data-testid="disconnect-btn"
-              >
-                Disconnect broker
-              </button>
-            </div>
+            )}
           </div>
 
         ) : (
           /* ── CONNECT FLOW ───────────────────────────────────────── */
           <div className="space-y-8">
 
+            <button
+              onClick={() => setView("accounts")}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              data-testid="back-to-accounts-btn"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Accounts
+            </button>
+
+            <div className="max-w-xl">
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50 mb-2.5">
+                Connect an account
+              </h1>
+              <p className="text-base font-medium leading-relaxed text-gray-500 dark:text-gray-400">
+                Pick your prop firm to securely import trades and sync performance
+                automatically — no passwords shared.
+              </p>
+            </div>
+
             {/* Prop firm cards */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Futures Prop Firms
-                </h2>
-                <span className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-1">
-                  <Key className="w-3 h-3" />
-                  <span>Powered by Tradovate OAuth</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                  Futures prop firms
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500">
+                  <Key className="w-3.5 h-3.5" />
+                  Powered by Tradovate OAuth
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {PROP_FIRMS.map((firm) => (
-                  <div
-                    key={firm.id}
-                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-md dark:hover:shadow-xl transition-shadow flex flex-col"
-                    data-testid={`firm-card-${firm.id}`}
-                  >
-                    {/* Firm identity */}
-                    <div className="flex items-center space-x-3 mb-4">
-                      <span className="text-3xl">{firm.logo}</span>
-                      <div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-tight">
-                          {firm.name}
+                {PROP_FIRMS.map((firm) => {
+                  const isConnectingFirm = connectingFirm === firm.id;
+                  return (
+                    <div
+                      key={firm.id}
+                      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col hover:border-gray-300 dark:hover:border-gray-700 hover:-translate-y-0.5 transition-all"
+                      data-testid={`firm-card-${firm.id}`}
+                    >
+                      <div className="flex items-center gap-3 mb-5">
+                        <div
+                          className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-base border shrink-0 ${firm.badge}`}
+                        >
+                          {firm.initials}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          via Tradovate
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm leading-tight text-gray-900 dark:text-gray-50">
+                            {firm.name}
+                          </div>
+                          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 mt-0.5">
+                            via Tradovate
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Evaluation / Funded toggle */}
-                    <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-3 text-xs">
-                      {[
-                        { value: "demo", label: "Evaluation" },
-                        { value: "live", label: "Funded" },
-                      ].map(({ value, label }) => (
-                        <button
-                          key={value}
-                          onClick={() => setFirmAccountType(firm.id, value)}
-                          className={`flex-1 py-1.5 font-medium transition-colors ${
-                            getAccountType(firm.id) === value
-                              ? "bg-blue-600 text-white"
-                              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                          }`}
-                          data-testid={`firm-${firm.id}-${value}-btn`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+                      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-3.5">
+                        {[
+                          { value: "demo", label: "Evaluation" },
+                          { value: "live", label: "Funded" },
+                        ].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onClick={() => setFirmAccountType(firm.id, value)}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${
+                              getAccountType(firm.id) === value
+                                ? "bg-emerald-500 text-white shadow-sm"
+                                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                            }`}
+                            data-testid={`firm-${firm.id}-${value}-btn`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
 
-                    {/* Connect button */}
-                    <button
-                      onClick={() => handleConnect(firm)}
-                      disabled={isConnecting || Boolean(connectingFirm)}
-                      className="mt-auto w-full flex items-center justify-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
-                      data-testid={`firm-connect-${firm.id}-btn`}
-                    >
-                      {connectingFirm === firm.id ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <ExternalLink className="w-4 h-4" />
-                      )}
-                      <span>
-                        {connectingFirm === firm.id ? "Connecting…" : "Connect"}
-                      </span>
-                    </button>
-                  </div>
-                ))}
+                      <button
+                        onClick={() => handleConnect(firm)}
+                        disabled={isConnecting || Boolean(connectingFirm)}
+                        className={`mt-auto w-full flex items-center justify-center gap-2 px-3 py-3 text-sm font-bold rounded-xl transition-colors ${
+                          isConnectingFirm
+                            ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
+                            : "bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-60"
+                        }`}
+                        data-testid={`firm-connect-${firm.id}-btn`}
+                      >
+                        {isConnectingFirm ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Connecting…</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Connect</span>
+                            <ExternalLink className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* CSV import alternative */}
-            <div className="flex items-center justify-between p-5 bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                  No broker connection? Import via CSV
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0">
+                  <Upload className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Supports NinjaTrader, Tradovate, Rithmic, and TopstepX exports.
+                <div>
+                  <div className="font-bold text-sm text-gray-900 dark:text-gray-50">
+                    No broker connection? Import via CSV
+                  </div>
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+                    Supports NinjaTrader, Tradovate, Rithmic, and TopstepX exports.
+                  </div>
                 </div>
               </div>
               <button
                 onClick={() => setShowCsvModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors whitespace-nowrap ml-4"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap shrink-0"
                 data-testid="csv-import-btn"
               >
-                <Upload className="w-4 h-4 mr-2" />
+                <Upload className="w-4 h-4" />
                 Import CSV
               </button>
             </div>
 
-            {/* Security notice */}
-            <div className="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-              <Shield className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
-                  How your connection is secured
-                </div>
-                <ul className="text-xs text-blue-800 dark:text-blue-300 space-y-1">
-                  <li>• OAuth 2.0 — your broker password is never sent to us</li>
-                  <li>• Access tokens are encrypted in our database, never stored in your browser</li>
-                  <li>• Trade sync runs on our servers — your token never leaves it</li>
-                  <li>• Revoke access anytime from your broker's app settings</li>
-                </ul>
+            {/* Trust strip */}
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <Shield className="w-4 h-4 text-emerald-500" />
+                OAuth 2.0 — password never shared
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <Lock className="w-4 h-4 text-emerald-500" />
+                Tokens encrypted at rest
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <RotateCcw className="w-4 h-4 text-emerald-500" />
+                Revoke access anytime
               </div>
             </div>
 
             {/* Developer setup — collapsible */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
               <button
                 onClick={() => setShowSetupStatus((v) => !v)}
-                className="w-full flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-800/50 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-3.5 bg-gray-50 dark:bg-gray-900/60 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 data-testid="toggle-setup-status-btn"
               >
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <Settings className="w-4 h-4" />
                   <span>Developer Setup Status</span>
                 </div>
@@ -399,7 +735,7 @@ const BrokerSelection = () => {
                 />
               </button>
               {showSetupStatus && (
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="p-4 border-t border-gray-200 dark:border-gray-800">
                   <TradovateSetupStatus />
                 </div>
               )}
