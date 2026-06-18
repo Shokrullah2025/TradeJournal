@@ -35,6 +35,7 @@ const BacktestChart = ({
   barReplayActive = false,
   selectedDrawingIds = [],
   onSelectionChange,
+  onSelectMany,
   onRangeChange,
   onRegisterRangeSetter,
   onDrawingUpdate,
@@ -48,6 +49,7 @@ const BacktestChart = ({
   symbol = null,
   isActiveChart = true,
   onPriceScaleWidth,
+  locked = false,
 }) => {
   const wrapperRef = useRef();
   const chartRef = useRef(null);
@@ -56,6 +58,7 @@ const BacktestChart = ({
   const ema50Ref = useRef([]);
   const lastRef = useRef(0);
   const windowRef = useRef(50);
+  const lockedRef = useRef(locked);
   const indicatorsRef = useRef(indicators);
   const onCandleSeekRef = useRef(onCandleSeek);
   const isDarkRef = useRef(isDark);
@@ -68,6 +71,7 @@ const BacktestChart = ({
   const onBarReplayDeactivateRef = useRef(onBarReplayDeactivate);
   const selectedDrawingIdsRef = useRef(selectedDrawingIds);
   const onSelectionChangeRef = useRef(onSelectionChange);
+  const onSelectManyRef = useRef(onSelectMany);
   // { line, posId, field } — tracks each drawn position price line
   const positionLineRefs = useRef([]);
   // { line, field } — tracks order-panel preview price lines (shown before order is placed)
@@ -146,6 +150,7 @@ const BacktestChart = ({
   const ohlcChangeRef = useRef();
 
   // Keep refs current without adding to chart creation deps
+  useEffect(() => { lockedRef.current = locked; });
   useEffect(() => { indicatorsRef.current = indicators; });
   useEffect(() => { onCandleSeekRef.current = onCandleSeek; });
   useEffect(() => { isDarkRef.current = isDark; });
@@ -163,6 +168,7 @@ const BacktestChart = ({
     updateSvgDrawingsRef.current(); // redraws glow and repositions the properties panel
   }, [selectedDrawingIds]); // eslint-disable-line
   useEffect(() => { onSelectionChangeRef.current = onSelectionChange; });
+  useEffect(() => { onSelectManyRef.current = onSelectMany; });
   useEffect(() => { chartSettingsRef.current = chartSettings; });
   useEffect(() => { onCrosshairMoveRef.current = onCrosshairMove; });
   useEffect(() => { onRangeChangeRef.current = onRangeChange; });
@@ -367,6 +373,21 @@ const BacktestChart = ({
         return data[lastIdx].time + (idx - lastIdx) * itvl;
       };
 
+      // Shift-drag snapping: project the cursor onto the nearest axis through
+      // an anchor point (horizontal / vertical / 45°) so the line stays straight.
+      // Snapping is done in screen space so 45° looks 45° on the chart.
+      const snapEndpoint = (anchor) => {
+        const ax = chart.timeScale().timeToCoordinate(anchor.time);
+        const ay = main.priceToCoordinate(anchor.price);
+        if (ax == null || ay == null) return { x, y };
+        const dx = x - ax, dy = y - ay;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.5) return { x, y };
+        const step = Math.PI / 4;
+        const ang = Math.round(Math.atan2(dy, dx) / step) * step;
+        return { x: ax + Math.cos(ang) * dist, y: ay + Math.sin(ang) * dist };
+      };
+
       // R/R handle: SL or TP price line
       if (drag.field === "sl" || drag.field === "tp") {
         const p = main.coordinateToPrice(y);
@@ -387,25 +408,39 @@ const BacktestChart = ({
 
       // Multi-point trendline: drag a single vertex of the path
       } else if (drag.field === "point_resize") {
-        const rawT = getTimeFromX(x);
-        const p = main.coordinateToPrice(y);
-        if (rawT != null && p != null) {
-          const d = userDrawingsRef.current.find((dd) => dd.id === drag.drawingId);
-          if (d?.points?.length) {
-            onDrawingUpdateRef.current?.(drag.drawingId, {
-              points: d.points.map((pt, i) =>
-                i === drag.pointIndex ? { time: rawT, price: p } : pt
-              ),
-            });
-          }
+        const d = userDrawingsRef.current.find((dd) => dd.id === drag.drawingId);
+        let sx = x, sy = y;
+        // Shift snaps the vertex to a straight line through its neighbour
+        if (shiftKeyRef.current && d?.points?.length > 1) {
+          const neighbor = d.points[drag.pointIndex - 1] ?? d.points[drag.pointIndex + 1];
+          if (neighbor) { const s = snapEndpoint(neighbor); sx = s.x; sy = s.y; }
+        }
+        const rawT = getTimeFromX(sx);
+        const p = main.coordinateToPrice(sy);
+        if (rawT != null && p != null && d?.points?.length) {
+          onDrawingUpdateRef.current?.(drag.drawingId, {
+            points: d.points.map((pt, i) =>
+              i === drag.pointIndex ? { time: rawT, price: p } : pt
+            ),
+          });
         }
 
       // Resize handles: drag individual endpoint of segment/trendline/ray/rectangle
       } else if (drag.field === "p1_resize" || drag.field === "p2_resize") {
-        const rawT = getTimeFromX(x);
-        const p = main.coordinateToPrice(y);
+        const key = drag.field === "p1_resize" ? "p1" : "p2";
+        let sx = x, sy = y;
+        // Shift snaps the line straight (horizontal/vertical/45°) about the
+        // opposite endpoint — only for line tools, not boxes.
+        if (shiftKeyRef.current) {
+          const d = userDrawingsRef.current.find((dd) => dd.id === drag.drawingId);
+          if (d && ["segment", "ray", "trendline", "extline"].includes(d.type) && d.p1 && d.p2) {
+            const s = snapEndpoint(key === "p1" ? d.p2 : d.p1);
+            sx = s.x; sy = s.y;
+          }
+        }
+        const rawT = getTimeFromX(sx);
+        const p = main.coordinateToPrice(sy);
         if (rawT != null && p != null) {
-          const key = drag.field === "p1_resize" ? "p1" : "p2";
           onDrawingUpdateRef.current?.(drag.drawingId, { [key]: { time: rawT, price: p } });
         }
 
@@ -566,15 +601,24 @@ const BacktestChart = ({
   // ── Trade arrows — blue arrow where the entry filled; exit arrow blue when
   // TP (or manual close) ended the trade, red when the stop loss was hit ──
   const tradeMarkersRef = useRef(null); // { main, primitive }
+  // Stored so useChartSetup can redraw markers right after it (re)creates the
+  // series. Without this, a static chart (no replay, constant visibleCount)
+  // would skip drawing: this effect runs before the series exists and never
+  // re-fires, so the entry/exit arrows never appear.
+  const drawTradeMarkersRef = useRef(() => {});
   useEffect(() => {
+    const drawTradeMarkers = () => {
     const main = seriesRef.current.main;
     if (!main || !candleData?.length) return;
+    // Snap a trade time to the candle that *contains* it — the last bar whose
+    // time is <= t. Using the containing bar (not the nearest) keeps the arrow on
+    // the correct candle on higher timeframes, where a 15m-resolution trade time
+    // falls partway through an e.g. 1h bar and "nearest" would jump one ahead.
     const nearestTime = (t) => {
-      let best = candleData[0].time, diff = Infinity;
+      let best = candleData[0].time;
       for (let i = 0; i < candleData.length; i++) {
-        const d = Math.abs(candleData[i].time - t);
-        if (d < diff) { diff = d; best = candleData[i].time; }
-        if (candleData[i].time > t) break; // ascending — no closer match ahead
+        if (candleData[i].time <= t) best = candleData[i].time;
+        else break; // ascending — every later bar is also > t
       }
       return best;
     };
@@ -615,6 +659,9 @@ const BacktestChart = ({
     } else {
       tradeMarkersRef.current = { main, primitive: createSeriesMarkers(main, markers) };
     }
+    };
+    drawTradeMarkersRef.current = drawTradeMarkers;
+    drawTradeMarkers();
   }, [trades, positions, candleData, visibleCount]);
 
   // ── Order preview line name labels — DOM pills pinned to each line's Y, so
@@ -895,6 +942,7 @@ const BacktestChart = ({
     ema50Ref,
     lastRef,
     windowRef,
+    lockedRef,
     isDarkRef,
     indicatorsRef,
     onCandleSeekRef,
@@ -908,7 +956,9 @@ const BacktestChart = ({
     onDrawingAddRef,
     onDrawingDeleteRef,
     onSelectionChangeRef,
+    onSelectManyRef,
     selectedDrawingIdsRef,
+    drawTradeMarkersRef,
     userDrawingsRef,
     updateSvgDrawingsRef,
     svgRef,
