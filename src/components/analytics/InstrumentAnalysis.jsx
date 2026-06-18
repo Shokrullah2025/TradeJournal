@@ -122,7 +122,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
             barCategoryGap="30%"
             margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#eef1f6" vertical={false} />
             <XAxis
               dataKey="name"
               stroke="#9ca3af"

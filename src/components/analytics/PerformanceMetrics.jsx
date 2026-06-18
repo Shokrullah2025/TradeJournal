@@ -5,9 +5,18 @@ import {
   DollarSign,
   Target,
   Activity,
-  Calendar,
-  BarChart3,
+  ArrowUpRight,
+  ArrowDownRight,
+  Gauge,
 } from "lucide-react";
+
+const formatMoney = (value) => {
+  const sign = value < 0 ? "-" : "";
+  return `${sign}$${Math.abs(value).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 const PerformanceMetrics = ({ trades }) => {
   const calculateMetrics = () => {
@@ -16,15 +25,13 @@ const PerformanceMetrics = ({ trades }) => {
     if (completedTrades.length === 0) {
       return {
         totalTrades: 0,
+        winningCount: 0,
         winRate: 0,
         totalPnL: 0,
         avgWin: 0,
         avgLoss: 0,
         profitFactor: 0,
         maxDrawdown: 0,
-        largestWin: 0,
-        largestLoss: 0,
-        avgHoldTime: 0,
         expectancy: 0,
         sharpeRatio: 0,
       };
@@ -46,9 +53,6 @@ const PerformanceMetrics = ({ trades }) => {
         : 0;
     const profitFactor =
       avgLoss > 0 ? (avgWin * wins.length) / (avgLoss * losses.length) : 0;
-
-    const largestWin = wins.length > 0 ? Math.max(...wins) : 0;
-    const largestLoss = losses.length > 0 ? Math.min(...losses) : 0;
 
     // Calculate expectancy
     const expectancy =
@@ -86,14 +90,13 @@ const PerformanceMetrics = ({ trades }) => {
 
     return {
       totalTrades: completedTrades.length,
+      winningCount: wins.length,
       winRate: Math.round(winRate * 100) / 100,
       totalPnL: Math.round(totalPnL * 100) / 100,
       avgWin: Math.round(avgWin * 100) / 100,
       avgLoss: Math.round(avgLoss * 100) / 100,
       profitFactor: Math.round(profitFactor * 100) / 100,
       maxDrawdown: Math.round(maxDrawdown * 100) / 100,
-      largestWin: Math.round(largestWin * 100) / 100,
-      largestLoss: Math.round(largestLoss * 100) / 100,
       expectancy: Math.round(expectancy * 100) / 100,
       sharpeRatio: Math.round(sharpeRatio * 100) / 100,
     };
@@ -104,116 +107,150 @@ const PerformanceMetrics = ({ trades }) => {
   const metricCards = [
     {
       title: "Total P&L",
-      value: `$${metrics.totalPnL.toLocaleString()}`,
+      value: formatMoney(metrics.totalPnL),
       icon: DollarSign,
-      color: metrics.totalPnL >= 0 ? "success" : "danger",
+      tone: metrics.totalPnL >= 0 ? "pos" : "neg",
       subtitle: `${metrics.totalTrades} completed trades`,
+      testid: "stats-total-pnl-value",
     },
     {
       title: "Win Rate",
       value: `${metrics.winRate}%`,
       icon: Target,
-      color:
-        metrics.winRate >= 60
-          ? "success"
-          : metrics.winRate >= 40
-          ? "warning"
-          : "danger",
-      subtitle: `${Math.round(
-        (metrics.winRate / 100) * metrics.totalTrades
-      )} winning trades`,
+      tone: "neutral",
+      subtitle: `${metrics.winningCount} of ${metrics.totalTrades} winning`,
+      bar: metrics.winRate,
+      testid: "stats-win-rate-value",
     },
     {
       title: "Profit Factor",
       value: metrics.profitFactor.toFixed(2),
       icon: TrendingUp,
-      color:
-        metrics.profitFactor >= 1.5
-          ? "success"
-          : metrics.profitFactor >= 1
-          ? "warning"
-          : "danger",
-      subtitle: "Gross profit / Gross loss",
+      tone: metrics.profitFactor >= 1 ? "pos" : "neg",
+      subtitle: "Gross profit / loss",
+      testid: "stats-profit-factor-value",
     },
     {
       title: "Max Drawdown",
-      value: `$${metrics.maxDrawdown.toLocaleString()}`,
+      value: formatMoney(-metrics.maxDrawdown),
       icon: TrendingDown,
-      color: "danger",
-      subtitle: "Peak to trough decline",
+      tone: "neg",
+      subtitle: "Peak to trough",
+      testid: "stats-max-drawdown-value",
     },
     {
       title: "Average Win",
-      value: `$${metrics.avgWin.toLocaleString()}`,
-      icon: TrendingUp,
-      color: "success",
+      value: formatMoney(metrics.avgWin),
+      icon: ArrowUpRight,
+      tone: "pos",
       subtitle: "Per winning trade",
+      testid: "stats-avg-win-value",
     },
     {
       title: "Average Loss",
-      value: `$${metrics.avgLoss.toLocaleString()}`,
-      icon: TrendingDown,
-      color: "danger",
+      value: formatMoney(-metrics.avgLoss),
+      icon: ArrowDownRight,
+      tone: "neg",
       subtitle: "Per losing trade",
+      testid: "stats-avg-loss-value",
     },
     {
       title: "Expectancy",
-      value: `$${metrics.expectancy.toLocaleString()}`,
+      value: formatMoney(metrics.expectancy),
       icon: Activity,
-      color: metrics.expectancy >= 0 ? "success" : "danger",
-      subtitle: "Expected value per trade",
+      tone: metrics.expectancy >= 0 ? "pos" : "neg",
+      subtitle: "Expected value / trade",
+      testid: "stats-expectancy-value",
     },
     {
       title: "Sharpe Ratio",
       value: metrics.sharpeRatio.toFixed(2),
-      icon: Activity,
-      color:
+      icon: Gauge,
+      tone:
         metrics.sharpeRatio >= 1
-          ? "success"
+          ? "pos"
           : metrics.sharpeRatio >= 0.5
-          ? "warning"
-          : "danger",
+          ? "neutral"
+          : "neg",
       subtitle: "Risk-adjusted return",
+      testid: "stats-sharpe-ratio-value",
     },
   ];
 
-  const colorClasses = {
-    success:
-      "bg-success-50 dark:bg-success-900/20 text-success-600 dark:text-success-400 border-success-200 dark:border-success-800",
-    danger:
-      "bg-danger-50 dark:bg-danger-900/20 text-danger-600 dark:text-danger-400 border-danger-200 dark:border-danger-800",
-    warning:
-      "bg-warning-50 dark:bg-warning-900/20 text-warning-600 dark:text-warning-400 border-warning-200 dark:border-warning-800",
-    primary:
-      "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-primary-200 dark:border-primary-800",
+  const toneStyles = {
+    pos: {
+      value: "text-success-600 dark:text-success-400",
+      chip: "bg-success-50 dark:bg-success-900/20 text-success-600 dark:text-success-400",
+      hoverBorder: "hover:border-success-400 dark:hover:border-success-500",
+    },
+    neg: {
+      value: "text-danger-600 dark:text-danger-400",
+      chip: "bg-danger-50 dark:bg-danger-900/20 text-danger-600 dark:text-danger-400",
+      hoverBorder: "hover:border-danger-400 dark:hover:border-danger-500",
+    },
+    neutral: {
+      value: "text-primary-600 dark:text-primary-400",
+      chip: "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400",
+      hoverBorder: "hover:border-primary-400 dark:hover:border-primary-500",
+    },
   };
 
   return (
-    <div className="space-y-6">
-      <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
+    <div data-testid="performance-metrics">
+      <div className="flex items-baseline justify-between mb-3.5 px-0.5">
+        <h2 className="text-base font-bold tracking-tight text-gray-900 dark:text-gray-100">
           Performance Metrics
         </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metricCards.map((metric, index) => (
-            <div
-              key={index}
-              className={`p-4 rounded-lg border ${colorClasses[metric.color]}`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <metric.icon className="w-5 h-5" />
-                <span className="text-2xl font-bold">{metric.value}</span>
-              </div>
-              <div>
-                <h3 className="font-medium text-sm">{metric.title}</h3>
-                <p className="text-xs opacity-75 mt-1">{metric.subtitle}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+          {metricCards.length} key indicators
+        </span>
       </div>
 
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(218px,1fr))] gap-3.5">
+        {metricCards.map((metric) => {
+          const tone = toneStyles[metric.tone];
+          return (
+            <div
+              key={metric.title}
+              data-testid={`stats-${metric.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-|-$/g, "")}-card`}
+              className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[14px] p-4 flex flex-col gap-3 shadow-sm transition-all duration-150 hover:-translate-y-[3px] ${tone.hoverBorder}`}
+            >
+              <div className="flex items-center justify-between">
+                <div
+                  className={`w-[34px] h-[34px] rounded-[9px] grid place-items-center ${tone.chip}`}
+                >
+                  <metric.icon className="w-[17px] h-[17px]" />
+                </div>
+                <div
+                  data-testid={metric.testid}
+                  className={`font-mono text-[23px] font-bold tracking-tight ${tone.value}`}
+                >
+                  {metric.value}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-[12.5px] font-semibold uppercase tracking-wide text-gray-900 dark:text-gray-100">
+                  {metric.title}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {metric.subtitle}
+                </p>
+              </div>
+              {metric.bar != null && (
+                <div className="h-[5px] rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary-500"
+                    style={{ width: `${Math.min(Math.max(metric.bar, 0), 100)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

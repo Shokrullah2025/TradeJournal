@@ -225,7 +225,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                 barCategoryGap="15%"
                 margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#eef1f6" vertical={false} />
                 <XAxis
                   dataKey="displayHour"
                   stroke="#9ca3af"
@@ -260,63 +260,6 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
         </div>
       )}
 
-      {/* Daily Analysis */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-              📅 Day of Week Performance
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Analyze performance patterns across different days of the week
-            </p>
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {dailyData.length} trading days
-          </div>
-        </div>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={dailyData}
-              barCategoryGap="28%"
-              margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
-              <XAxis
-                dataKey="name"
-                stroke="#9ca3af"
-                fontSize={11}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(name) => name.slice(0, 3)}
-                tick={{ fill: "#6b7280" }}
-              />
-              <YAxis
-                stroke="#9ca3af"
-                fontSize={11}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                tick={{ fill: "#6b7280" }}
-                width={48}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(156,163,175,0.08)" }} />
-              <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1.5} />
-              <Bar dataKey="totalPnL" radius={[5, 5, 0, 0]} maxBarSize={36}>
-                {dailyData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.totalPnL >= 0 ? "#0ea5e9" : "#ef4444"}
-                    fillOpacity={0.8}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
       {detailed && (
         <>
           {/* Monthly Analysis */}
@@ -342,7 +285,7 @@ const TimeAnalysis = ({ trades, detailed = false }) => {
                     barCategoryGap="22%"
                     margin={{ top: 8, right: 16, left: 8, bottom: 60 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eef1f6" vertical={false} />
                     <XAxis
                       dataKey="displayMonth"
                       stroke="#9ca3af"

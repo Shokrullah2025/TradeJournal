@@ -137,7 +137,7 @@ const DrawdownChart = ({ trades = [] }) => {
                 <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.6} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#eef1f6" />
             <XAxis
               dataKey="displayDate"
               stroke="#6b7280"
