@@ -96,9 +96,9 @@ const BrokerSelection = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Page header */}
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
               {isConnected ? "Broker Connection" : "Connect Your Account"}
             </h1>
             <p className="mt-1 text-gray-500 dark:text-gray-400">
@@ -109,7 +109,7 @@ const BrokerSelection = () => {
           </div>
           <button
             onClick={() => navigate("/trades")}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+            className="self-start sm:self-auto inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
             data-testid="back-to-trades-btn"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -275,7 +275,7 @@ const BrokerSelection = () => {
 
             {/* Prop firm cards */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Futures Prop Firms
                 </h2>
@@ -348,7 +348,7 @@ const BrokerSelection = () => {
             </div>
 
             {/* CSV import alternative */}
-            <div className="flex items-center justify-between p-5 bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-5 bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
               <div>
                 <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                   No broker connection? Import via CSV
@@ -359,7 +359,7 @@ const BrokerSelection = () => {
               </div>
               <button
                 onClick={() => setShowCsvModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors whitespace-nowrap ml-4"
+                className="self-start sm:self-auto inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors whitespace-nowrap sm:ml-4"
                 data-testid="csv-import-btn"
               >
                 <Upload className="w-4 h-4 mr-2" />
