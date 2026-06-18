@@ -138,6 +138,7 @@ export function useChartSetup({
   ema50Ref,
   lastRef,
   windowRef,
+  lockedRef,
   isDarkRef,
   indicatorsRef,
   onCandleSeekRef,
@@ -151,7 +152,9 @@ export function useChartSetup({
   onDrawingAddRef,
   onDrawingDeleteRef,
   onSelectionChangeRef,
+  onSelectManyRef,
   selectedDrawingIdsRef,
+  drawTradeMarkersRef,
   userDrawingsRef,
   updateSvgDrawingsRef,
   svgRef,
@@ -183,6 +186,7 @@ export function useChartSetup({
     if (!wrapperRef.current || !candleData?.length) return;
 
     const T = isDarkRef.current ? TV_DARK : TV_LIGHT;
+    const isLocked = !!lockedRef?.current;
 
     ema20Ref.current = calcEMAIndexed(candleData, 20);
     ema50Ref.current = calcEMAIndexed(candleData, 50);
@@ -217,11 +221,20 @@ export function useChartSetup({
         secondsVisible: false,
         barSpacing: 4,
         minBarSpacing: 2,
-        rightOffset: 3,
+        rightOffset: isLocked ? 0 : 3,
+        // Locked viewer: clamp scrolling to the loaded window — no empty past/future
+        fixLeftEdge: isLocked,
+        fixRightEdge: isLocked,
+        lockVisibleTimeRangeOnResize: isLocked,
         textColor: T.textMuted,
       },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+      // Locked viewer (history replay): freeze horizontal pan + time zoom so the
+      // window and candle width stay static, but allow dragging the price axis to
+      // scale candle height up/down.
+      handleScroll: isLocked ? false : { mouseWheel: true, pressedMouseMove: true },
+      handleScale: isLocked
+        ? { axisPressedMouseMove: { time: false, price: true }, mouseWheel: false, pinch: false }
+        : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
     });
     chartRef.current = chart;
 
@@ -265,7 +278,10 @@ export function useChartSetup({
     // empty right-hand area gets grid columns, time labels, and real time
     // coordinates. Without it, timeToCoordinate() returns null right of the
     // last bar and drawings (R:R, segments) fall back to full-width stretch.
-    const FUTURE_BARS = 500;
+    // Locked viewer shows a static window with no future room, so it can clamp to
+    // the last candle (fixRightEdge). The live chart needs future bars so drawings
+    // and replay have room to the right.
+    const FUTURE_BARS = isLocked ? 0 : 500;
     const wsInterval =
       candleData.length > 1 ? candleData[1].time - candleData[0].time : 3600;
     const wsLastTime = candleData[candleData.length - 1].time;
@@ -308,13 +324,21 @@ export function useChartSetup({
     ema50s.setData(ema50Ref.current.slice(0, count).filter(Boolean));
     lastRef.current = count;
 
-    // Zoom to show an appropriate time window instead of squishing all candles
+    // Zoom to show an appropriate time window instead of squishing all candles.
+    // Locked viewer frames the entire sliced window (no replay cursor, no future
+    // whitespace) so it sits static on exactly where the user traded.
     const win = defaultWindow(candleData);
     windowRef.current = win;
-    chart.timeScale().setVisibleLogicalRange({
-      from: count - 1 - win,
-      to:   count - 1 + 3, // 3 bars right padding — keeps the last candle near the right edge
-    });
+    if (isLocked) {
+      // Fit every loaded candle into the viewport (no whitespace exists in locked
+      // mode), so the window is full and there is nothing to scroll to.
+      chart.timeScale().fitContent();
+    } else {
+      chart.timeScale().setVisibleLogicalRange({
+        from: count - 1 - win,
+        to:   count - 1 + 3, // 3 bars right padding — keeps the last candle near the right edge
+      });
+    }
 
     // Trade markers — v5 uses createSeriesMarkers(series, markers).
     // Only journal-style trades carry entryDate/exitDate; live backtest trades
@@ -351,6 +375,11 @@ export function useChartSetup({
         .sort((a, b) => a.time - b.time);
       createSeriesMarkers(main, markers);
     }
+
+    // Draw live-trade (timestamp/exitTime) entry/exit arrows now that the series
+    // exists. BacktestChart's own markers effect runs before this chart is
+    // created, so on a static chart it would otherwise never paint them.
+    drawTradeMarkersRef?.current?.();
 
     // Tracks the last click on a text label so two quick clicks open the inline
     // editor. A native dblclick listener is unreliable here: selecting on the
@@ -591,6 +620,16 @@ export function useChartSetup({
           const x = timeToCoord(drawing.time);
           const y = mn.priceToCoordinate(drawing.price);
           if (x == null || y == null) return;
+          // Hide the label once its anchor time is scrolled outside the visible
+          // range. timeToCoord's logical fallback can otherwise clamp an
+          // off-screen time to the chart edge, piling every distant label on the
+          // left. Render each label only where it actually sits.
+          const textVisRange = ts.getVisibleLogicalRange();
+          if (textVisRange) {
+            const textLogical = timeToLogical(candleDataRef.current, drawing.time);
+            if (textLogical != null &&
+                (textLogical < textVisRange.from - 1 || textLogical > textVisRange.to + 1)) return;
+          }
           const label = drawing.label || "Label";
           const fs = drawing.fontSize || 14;
           const color = isSelected(drawing.id) ? "#60a5fa" : (drawing.color || "#f7a600");
@@ -1544,6 +1583,156 @@ export function useChartSetup({
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
 
+    // ── Ctrl/Cmd + drag marquee — rubber-band multi-select ──
+    // Hold Ctrl (or Cmd) and drag across empty chart space to select every
+    // drawing the box touches. The capture-phase mousedown runs before the
+    // chart canvas, so calling stopPropagation suppresses the chart pan once a
+    // marquee begins. Starting the drag on a drawing element hits the SVG
+    // overlay (a sibling of the chart), not this listener, so the marquee only
+    // ever starts on the background — exactly the standard behaviour.
+    const marquee = { active: false, startX: 0, startY: 0, rectEl: null };
+    const ptIn = (x, y, R) => x >= R.x1 && x <= R.x2 && y >= R.y1 && y <= R.y2;
+    // Screen coords for a time/price (svg overlay shares the chart pane's box)
+    const xOfTime = (t) => {
+      if (t == null) return null;
+      const tsm = chart.timeScale();
+      const direct = tsm.timeToCoordinate(t);
+      if (direct != null) return direct;
+      const data = candleDataRef.current;
+      if (!data?.length) return null;
+      const c = tsm.logicalToCoordinate(timeToLogical(data, t));
+      return c == null ? null : c;
+    };
+    const yOfPrice = (p) => {
+      const mn = seriesRef.current.main;
+      if (!mn || p == null) return null;
+      const c = mn.priceToCoordinate(p);
+      return c == null ? null : c;
+    };
+    // Standard segment-segment intersection (orientation test)
+    const segSeg = (ax, ay, bx, by, cx, cy, dx, dy) => {
+      const o = (px, py, qx, qy, rx, ry) =>
+        Math.sign((qy - py) * (rx - qx) - (qx - px) * (ry - qy));
+      const o1 = o(ax, ay, bx, by, cx, cy);
+      const o2 = o(ax, ay, bx, by, dx, dy);
+      const o3 = o(cx, cy, dx, dy, ax, ay);
+      const o4 = o(cx, cy, dx, dy, bx, by);
+      return o1 !== o2 && o3 !== o4;
+    };
+    const segHitsRect = (ax, ay, bx, by, R) => {
+      if (ptIn(ax, ay, R) || ptIn(bx, by, R)) return true;
+      const E = [
+        [R.x1, R.y1, R.x2, R.y1], [R.x2, R.y1, R.x2, R.y2],
+        [R.x2, R.y2, R.x1, R.y2], [R.x1, R.y2, R.x1, R.y1],
+      ];
+      return E.some(([x1, y1, x2, y2]) => segSeg(ax, ay, bx, by, x1, y1, x2, y2));
+    };
+    const boxHitsRect = (x1, y1, x2, y2, R) =>
+      x1 <= R.x2 && x2 >= R.x1 && y1 <= R.y2 && y2 >= R.y1;
+    // True if the drawing's geometry touches the marquee rect R
+    const drawingHitsRect = (d, R) => {
+      if (d.type === "hline") {
+        const y = yOfPrice(d.price);
+        return y != null && y >= R.y1 && y <= R.y2; // spans full width
+      }
+      if (d.type === "vline") {
+        const x = xOfTime(d.time);
+        return x != null && x >= R.x1 && x <= R.x2; // spans full height
+      }
+      if (d.type === "text" || d.type === "buy_marker" || d.type === "sell_marker") {
+        const x = xOfTime(d.time), y = yOfPrice(d.price);
+        return x != null && y != null && ptIn(x, y, R);
+      }
+      if (d.type === "trendline" && Array.isArray(d.points)) {
+        const pts = d.points
+          .map((p) => [xOfTime(p.time), yOfPrice(p.price)])
+          .filter(([x, y]) => x != null && y != null);
+        if (pts.some(([x, y]) => ptIn(x, y, R))) return true;
+        for (let i = 0; i < pts.length - 1; i++) {
+          if (segHitsRect(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], R)) return true;
+        }
+        return false;
+      }
+      if (d.type === "rr") {
+        const x1 = xOfTime(d.time), x2 = xOfTime(d.endTime);
+        const ys = [d.entry, d.sl, d.tp].map(yOfPrice).filter((v) => v != null);
+        if (x1 == null || x2 == null || !ys.length) return false;
+        return boxHitsRect(Math.min(x1, x2), Math.min(...ys), Math.max(x1, x2), Math.max(...ys), R);
+      }
+      if (d.p1 && d.p2) {
+        const ax = xOfTime(d.p1.time), ay = yOfPrice(d.p1.price);
+        const bx = xOfTime(d.p2.time), by = yOfPrice(d.p2.price);
+        if (ax == null || ay == null || bx == null || by == null) return false;
+        if (d.type === "rectangle" || d.type === "fibonacci") {
+          return boxHitsRect(Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by), R);
+        }
+        return segHitsRect(ax, ay, bx, by, R); // segment, ray
+      }
+      return false;
+    };
+    const onMarqueeMove = (e) => {
+      if (!marquee.active) return;
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const cx = e.clientX - svgRect.left, cy = e.clientY - svgRect.top;
+      const x = Math.min(marquee.startX, cx), y = Math.min(marquee.startY, cy);
+      const w = Math.abs(cx - marquee.startX), h = Math.abs(cy - marquee.startY);
+      if (marquee.rectEl) {
+        marquee.rectEl.setAttribute("x", x);
+        marquee.rectEl.setAttribute("y", y);
+        marquee.rectEl.setAttribute("width", w);
+        marquee.rectEl.setAttribute("height", h);
+      }
+    };
+    const onMarqueeUp = (e) => {
+      document.removeEventListener("mousemove", onMarqueeMove, true);
+      document.removeEventListener("mouseup", onMarqueeUp, true);
+      if (!marquee.active) return;
+      marquee.active = false;
+      if (marquee.rectEl?.parentNode) marquee.rectEl.parentNode.removeChild(marquee.rectEl);
+      marquee.rectEl = null;
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const cx = e.clientX - svgRect.left, cy = e.clientY - svgRect.top;
+      const R = {
+        x1: Math.min(marquee.startX, cx), x2: Math.max(marquee.startX, cx),
+        y1: Math.min(marquee.startY, cy), y2: Math.max(marquee.startY, cy),
+      };
+      // A near-zero drag is a click, not a selection — leave selection untouched
+      if (R.x2 - R.x1 < 4 && R.y2 - R.y1 < 4) return;
+      const hits = (userDrawingsRef.current || [])
+        .filter((d) => d.id !== "__pending__" && drawingHitsRect(d, R))
+        .map((d) => d.id);
+      onSelectManyRef?.current?.(hits);
+    };
+    const onMarqueeDown = (e) => {
+      if (e.button !== 0 || !(e.ctrlKey || e.metaKey)) return;
+      const mode = drawingModeRef.current;
+      if (mode && mode !== "selector") return; // only in cursor/selector mode
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      // Take over from the chart's pan handler
+      e.preventDefault();
+      e.stopPropagation();
+      marquee.active = true;
+      marquee.startX = e.clientX - svgRect.left;
+      marquee.startY = e.clientY - svgRect.top;
+      const brush = brushSvgRef.current;
+      if (brush) {
+        const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        r.setAttribute("fill", "rgba(96,165,250,0.12)");
+        r.setAttribute("stroke", "#60a5fa");
+        r.setAttribute("stroke-width", "1");
+        r.setAttribute("stroke-dasharray", "4 3");
+        r.setAttribute("pointer-events", "none");
+        brush.appendChild(r);
+        marquee.rectEl = r;
+      }
+      document.addEventListener("mousemove", onMarqueeMove, true);
+      document.addEventListener("mouseup", onMarqueeUp, true);
+    };
+    wrapperRef.current?.addEventListener("mousedown", onMarqueeDown, true);
+
     // Click-to-draw or click-to-seek (seek only when bar replay mode is active)
     chart.subscribeClick((param) => {
       const mode = drawingModeRef.current;
@@ -1781,6 +1970,9 @@ export function useChartSetup({
       document.removeEventListener("keydown", onEscKey);
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
+      wrapperRef.current?.removeEventListener("mousedown", onMarqueeDown, true);
+      document.removeEventListener("mousemove", onMarqueeMove, true);
+      document.removeEventListener("mouseup", onMarqueeUp, true);
       chart.remove();
       chartRef.current = null;
       seriesRef.current = {};
