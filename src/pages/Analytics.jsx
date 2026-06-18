@@ -1,22 +1,41 @@
 import React, { useState } from "react";
 import {
   BarChart3,
-  TrendingUp,
   Calendar,
-  Filter,
+  Layers,
+  RefreshCw,
   Download,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
+import PnLOverviewHero from "../components/analytics/PnLOverviewHero";
 import PerformanceMetrics from "../components/analytics/PerformanceMetrics";
 import StrategyAnalysis from "../components/analytics/StrategyAnalysis";
 import TimeAnalysis from "../components/analytics/TimeAnalysis";
 import InstrumentAnalysis from "../components/analytics/InstrumentAnalysis";
+import DistributionAnalysis from "../components/analytics/DistributionAnalysis";
 import DrawdownChart from "../components/analytics/DrawdownChart";
 import { exportAnalyticsReport } from "../utils/exportUtils";
 import toast from "react-hot-toast";
 
+const TIME_OPTIONS = [
+  { value: "all", label: "All Time" },
+  { value: "1y", label: "This Year" },
+  { value: "90d", label: "Last 90 Days" },
+  { value: "30d", label: "Last 30 Days" },
+  { value: "7d", label: "Last 7 Days" },
+];
+
+const VIEW_OPTIONS = [
+  { value: "overview", label: "Overview" },
+  { value: "strategy", label: "By Strategy" },
+  { value: "instrument", label: "By Instrument" },
+  { value: "time", label: "By Time" },
+  { value: "distribution", label: "Distribution" },
+  { value: "drawdown", label: "Drawdown" },
+];
+
 const Analytics = () => {
-  const { filteredTrades, trades, stats } = useTrades();
+  const { trades, stats, refreshTrades } = useTrades();
   const [timeRange, setTimeRange] = useState("all");
   const [analysisType, setAnalysisType] = useState("overview");
 
@@ -27,6 +46,16 @@ const Analytics = () => {
     } catch (error) {
       toast.error("Failed to export report");
       console.error("Export error:", error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await refreshTrades();
+      toast.success("Analytics refreshed");
+    } catch (error) {
+      toast.error("Failed to refresh");
+      console.error("Refresh error:", error);
     }
   };
 
@@ -57,83 +86,97 @@ const Analytics = () => {
   };
 
   const timeFilteredTrades = getFilteredTradesByTime();
+  const timeLabel =
+    TIME_OPTIONS.find((o) => o.value === timeRange)?.label || "All Time";
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-            📊 Analytics Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Comprehensive analysis of your trading performance, patterns, and insights
-          </p>
-        </div>
-
-        <div className="mt-4 sm:mt-0 flex items-center space-x-3">
-          <button
-            onClick={handleExportReport}
-            className="btn btn-secondary flex items-center space-x-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30"
+    <div className="space-y-[18px]">
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Time range */}
+        <label className="relative inline-flex items-center">
+          <span className="absolute left-3 text-gray-500 dark:text-gray-400 pointer-events-none flex">
+            <Calendar className="w-4 h-4" />
+          </span>
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+            data-testid="analytics-timerange-select"
+            className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm font-semibold pl-10 pr-9 py-2.5 rounded-lg cursor-pointer outline-none focus:border-primary-500"
           >
-            <Download className="w-4 h-4" />
-            <span>Export Report</span>
-          </button>
+            {TIME_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <span className="absolute right-3 text-gray-400 pointer-events-none text-[11px]">
+            ▼
+          </span>
+        </label>
+
+        {/* View */}
+        <label className="relative inline-flex items-center">
+          <span className="absolute left-3 text-gray-500 dark:text-gray-400 pointer-events-none flex">
+            <Layers className="w-4 h-4" />
+          </span>
+          <select
+            value={analysisType}
+            onChange={(e) => setAnalysisType(e.target.value)}
+            data-testid="analytics-view-select"
+            className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm font-semibold pl-10 pr-9 py-2.5 rounded-lg cursor-pointer outline-none focus:border-primary-500"
+          >
+            {VIEW_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <span className="absolute right-3 text-gray-400 pointer-events-none text-[11px]">
+            ▼
+          </span>
+        </label>
+
+        <div className="flex-1" />
+
+        {/* Trades analyzed pill */}
+        <div className="flex items-center gap-2 bg-primary-50 dark:bg-primary-900/20 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-lg">
+          <Layers className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+          <span className="text-[12.5px] font-semibold font-mono text-gray-900 dark:text-gray-100">
+            {timeFilteredTrades.length} trades
+          </span>
+          <span className="text-[12.5px] text-gray-500 dark:text-gray-400">
+            analyzed
+          </span>
         </div>
+
+        {/* Export */}
+        <button
+          onClick={handleExportReport}
+          title="Export report"
+          data-testid="analytics-export-btn"
+          className="w-[38px] h-[38px] rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 grid place-items-center cursor-pointer hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+        >
+          <Download className="w-[15px] h-[15px]" />
+        </button>
+
+        {/* Refresh */}
+        <button
+          onClick={handleRefresh}
+          title="Refresh"
+          data-testid="analytics-refresh-btn"
+          className="w-[38px] h-[38px] rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 grid place-items-center cursor-pointer hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+        >
+          <RefreshCw className="w-[15px] h-[15px]" />
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="card bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-primary-200 dark:border-primary-800">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="border border-primary-300 dark:border-primary-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              >
-                <option value="all">All Time</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="30d">Last 30 Days</option>
-                <option value="90d">Last 90 Days</option>
-                <option value="1y">Last Year</option>
-              </select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-              <select
-                value={analysisType}
-                onChange={(e) => setAnalysisType(e.target.value)}
-                className="border border-primary-300 dark:border-primary-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              >
-                <option value="overview">📈 Overview</option>
-                <option value="strategy">🎯 Strategy Analysis</option>
-                <option value="time">⏰ Time Analysis</option>
-                <option value="instrument">🎯 Instrument Analysis</option>
-                <option value="drawdown">📉 Drawdown Analysis</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="text-sm text-primary-700 dark:text-primary-300 font-medium">
-            📊 Analyzing {timeFilteredTrades.length} trades
-          </div>
-        </div>
-      </div>
-
-      {/* Analytics Content */}
+      {/* Overview — matches the mockup layout */}
       {analysisType === "overview" && (
-        <div className="space-y-6">
+        <div className="space-y-[18px]">
+          <PnLOverviewHero trades={timeFilteredTrades} timeLabel={timeLabel} />
           <PerformanceMetrics trades={timeFilteredTrades} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <StrategyAnalysis trades={timeFilteredTrades} />
-            <InstrumentAnalysis trades={timeFilteredTrades} />
-          </div>
-
-          <TimeAnalysis trades={timeFilteredTrades} />
+          <DistributionAnalysis trades={timeFilteredTrades} />
         </div>
       )}
 
@@ -149,28 +192,25 @@ const Analytics = () => {
         <InstrumentAnalysis trades={timeFilteredTrades} detailed={true} />
       )}
 
+      {analysisType === "distribution" && (
+        <DistributionAnalysis trades={timeFilteredTrades} />
+      )}
+
       {analysisType === "drawdown" && (
         <DrawdownChart trades={timeFilteredTrades} />
       )}
 
-      {timeFilteredTrades.length === 0 && (
-        <div className="card text-center py-16">
+      {timeFilteredTrades.length === 0 && analysisType !== "overview" && (
+        <div className="card text-center py-16" data-testid="analytics-empty-state">
           <div className="max-w-md mx-auto">
             <BarChart3 className="w-24 h-24 text-gray-300 dark:text-gray-600 mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
-              📊 No Trading Data Available
+              No Trading Data Available
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6">
-              No trades found for the selected time period. Start trading or adjust your filters to view analytics.
+              No trades found for the selected time period. Start trading or
+              adjust your filters to view analytics.
             </p>
-            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <p>💡 Tips to get started:</p>
-              <ul className="list-disc list-inside space-y-1 text-left">
-                <li>Record your first trade in the Trade Entry section</li>
-                <li>Try selecting "All Time" for a broader view</li>
-                <li>Import historical trades if available</li>
-              </ul>
-            </div>
           </div>
         </div>
       )}
