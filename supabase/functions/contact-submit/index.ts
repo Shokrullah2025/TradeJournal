@@ -52,6 +52,20 @@ Deno.serve(async (req: Request) => {
       .trim() || "unknown";
     const userAgent = req.headers.get("user-agent") ?? "unknown";
 
+    // CAPTCHA: verify the Cloudflare Turnstile token. Enforced only when the
+    // secret is configured, so dev/local without keys still works.
+    const turnstileSecret = Deno.env.get("TURNSTILE_SECRET_KEY");
+    if (turnstileSecret) {
+      const token = (body as { captchaToken?: unknown }).captchaToken;
+      if (typeof token !== "string" || !token) {
+        return errorResponse("Please complete the captcha and try again.", 400);
+      }
+      const ok = await verifyTurnstile(turnstileSecret, token, ip);
+      if (!ok) {
+        return errorResponse("Captcha verification failed. Please try again.", 400);
+      }
+    }
+
     // Per-IP rate limit: count this IP's submissions in the last hour.
     if (ip !== "unknown") {
       const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
@@ -105,6 +119,30 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Internal server error", 500);
   }
 });
+
+// Verifies a Cloudflare Turnstile token against the siteverify endpoint.
+// Returns true only when Cloudflare confirms the challenge passed.
+async function verifyTurnstile(
+  secret: string,
+  token: string,
+  ip: string,
+): Promise<boolean> {
+  try {
+    const form = new URLSearchParams({ secret, response: token });
+    if (ip && ip !== "unknown") form.append("remoteip", ip);
+
+    const res = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      { method: "POST", body: form },
+    );
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data?.success === true;
+  } catch (err) {
+    console.error("contact-submit turnstile verify failed:", err);
+    return false;
+  }
+}
 
 // Emails the support inbox via Resend, with reply-to set to the submitter so the
 // team can respond directly. Mirrors the fetch pattern in _shared/notify.ts.

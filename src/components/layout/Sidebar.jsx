@@ -9,6 +9,7 @@ import {
   TrendingUp,
   X,
   Shield,
+  Mail,
   Link,
   Activity,
   ChevronLeft,
@@ -37,6 +38,12 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
 
   const adminNavigation = [
     { name: "Admin Panel", href: "/admin", icon: Shield, adminOnly: true },
+    {
+      name: "Contact Inbox",
+      href: "/admin/contact-submissions",
+      icon: Mail,
+      adminOnly: true,
+    },
   ];
 
   return (

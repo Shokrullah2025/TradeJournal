@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import MultiStepRegistration from "./pages/MultiStepRegistration";
 import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./components/auth/EmailVerification";
+import ContactMessages from "./pages/ContactMessages";
 import Billing from "./pages/Billing";
 import BrokerSelection from "./pages/BrokerSelection";
 import TradeEntry from "./pages/TradeEntry";
@@ -200,6 +201,14 @@ function App() {
                                         >
                                           <Admin />
                                         </Suspense>
+                                      </AdminRoute>
+                                    }
+                                  />
+                                  <Route
+                                    path="/admin/contact-submissions"
+                                    element={
+                                      <AdminRoute>
+                                        <ContactMessages />
                                       </AdminRoute>
                                     }
                                   />
