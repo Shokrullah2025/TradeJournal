@@ -15,7 +15,6 @@ import {
   Copy,
   Star,
   StarOff,
-  User,
   Database,
   BarChart,
   Target,
@@ -508,40 +507,53 @@ const Settings = () => {
 
       {/* Main Content with Sidebar Layout */}
       <div className="settings__content flex gap-8">
-        {/* Left Sidebar - Tab Navigation */}
-        <div className="settings__nav w-64 flex-shrink-0">
-          <nav className="space-y-2" aria-label="Settings Navigation">
+        {/* Left Sidebar - Tab Navigation (Option D) */}
+        <div className="settings__nav w-72 flex-shrink-0">
+          <nav
+            className="flex flex-col gap-1 bg-gray-50/70 dark:bg-gray-800/40 rounded-2xl p-3"
+            aria-label="Settings Navigation"
+            data-testid="settings-nav"
+          >
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full group flex items-start p-4 text-left text-sm font-medium rounded-lg transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-l-4 border-primary-600 dark:border-primary-400"
-                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 border-l-4 border-transparent"
+                  data-testid={`settings-nav-${tab.id}-link`}
+                  className={`relative w-full group flex items-start gap-3 p-3 text-left rounded-xl transition-all duration-150 ${
+                    isActive
+                      ? "bg-primary-50 dark:bg-primary-900/30"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-700/60"
                   }`}
                 >
+                  <span
+                    className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
+                      isActive ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
+                    }`}
+                  />
                   <Icon
-                    className={`h-5 w-5 mr-3 mt-0.5 flex-shrink-0 ${
-                      activeTab === tab.id
+                    className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
+                      isActive
                         ? "text-primary-600 dark:text-primary-400"
                         : "text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400"
                     }`}
                   />
-                  <div className="flex-1">
-                    <div className="font-medium">{tab.name}</div>
-                    <p
-                      className={`mt-1 text-xs leading-4 ${
-                        activeTab === tab.id
-                          ? "text-primary-600 dark:text-primary-400"
-                          : "text-gray-500 dark:text-gray-400"
+                  <span className="min-w-0">
+                    <span
+                      className={`block text-sm font-bold ${
+                        isActive
+                          ? "text-primary-700 dark:text-primary-300"
+                          : "text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100"
                       }`}
                     >
+                      {tab.name}
+                    </span>
+                    <span className="block mt-0.5 text-xs leading-snug text-gray-500 dark:text-gray-400">
                       {tab.description}
-                    </p>
-                  </div>
+                    </span>
+                  </span>
                 </button>
               );
             })}
@@ -550,87 +562,162 @@ const Settings = () => {
 
         {/* Right Content Area */}
         <div className="flex-1 min-w-0">
-          {/* General Tab */}
+          {/* General Tab (Option A row content) */}
           {activeTab === "general" && (
-            <div className="space-y-6">
-              {/* Trading Preferences */}
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <User className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                    Trading Preferences
+            <div className="space-y-6" data-testid="settings-general-panel">
+              {/* Header + Save */}
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    General
                   </h2>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                    Trading preferences &amp; display settings
+                  </p>
+                </div>
+                <button
+                  onClick={handleSavePreferences}
+                  className="btn btn-primary flex items-center space-x-2 flex-shrink-0"
+                  data-testid="settings-save-preferences-btn"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save</span>
+                </button>
+              </div>
+
+              {/* Stats strip */}
+              <div
+                className="flex flex-wrap rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                data-testid="settings-stats-strip"
+              >
+                {[
+                  { id: "total", label: "Total Trades", value: trades.length },
+                  {
+                    id: "completed",
+                    label: "Completed",
+                    value: trades.filter((t) => t.status === "closed").length,
+                  },
+                  {
+                    id: "instruments",
+                    label: "Instruments",
+                    value: new Set(trades.map((t) => t.instrument)).size,
+                  },
+                  {
+                    id: "strategies",
+                    label: "Strategies",
+                    value: new Set(trades.map((t) => t.strategy)).size,
+                  },
+                ].map((stat) => (
+                  <div
+                    key={stat.id}
+                    className="flex-1 min-w-[120px] px-5 py-4 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-700 last:border-r-0"
+                  >
+                    <div
+                      className="text-2xl font-extrabold tabular-nums text-gray-900 dark:text-gray-100"
+                      data-testid={`settings-stat-${stat.id}-value`}
+                    >
+                      {stat.value}
+                    </div>
+                    <div className="mt-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Preference rows */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70">
+                {/* Default currency */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Default currency
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Used across journals and reports
+                    </div>
+                  </div>
+                  <select
+                    value={preferences.currency}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, currency: e.target.value })
+                    }
+                    className="input w-64 flex-shrink-0"
+                    data-testid="settings-currency-select"
+                  >
+                    <option value="USD">USD — US Dollar</option>
+                    <option value="EUR">EUR — Euro</option>
+                    <option value="GBP">GBP — British Pound</option>
+                    <option value="JPY">JPY — Japanese Yen</option>
+                    <option value="CAD">CAD — Canadian Dollar</option>
+                    <option value="AUD">AUD — Australian Dollar</option>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Timezone */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <label className="label">Default Currency</label>
-                    <select
-                      value={preferences.currency}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          currency: e.target.value,
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="GBP">GBP - British Pound</option>
-                      <option value="JPY">JPY - Japanese Yen</option>
-                      <option value="CAD">CAD - Canadian Dollar</option>
-                      <option value="AUD">AUD - Australian Dollar</option>
-                    </select>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Timezone
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Timestamps on every trade
+                    </div>
                   </div>
+                  <select
+                    value={preferences.timezone}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, timezone: e.target.value })
+                    }
+                    className="input w-64 flex-shrink-0"
+                    data-testid="settings-timezone-select"
+                  >
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    <option value="Europe/London">London (GMT)</option>
+                    <option value="Europe/Berlin">Berlin (CET)</option>
+                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    <option value="Asia/Singapore">Singapore (SGT)</option>
+                  </select>
+                </div>
 
+                {/* Date format */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <label className="label">Timezone</label>
-                    <select
-                      value={preferences.timezone}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          timezone: e.target.value,
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="America/New_York">
-                        Eastern Time (ET)
-                      </option>
-                      <option value="America/Chicago">Central Time (CT)</option>
-                      <option value="America/Denver">Mountain Time (MT)</option>
-                      <option value="America/Los_Angeles">
-                        Pacific Time (PT)
-                      </option>
-                      <option value="Europe/London">London (GMT)</option>
-                      <option value="Europe/Berlin">Berlin (CET)</option>
-                      <option value="Asia/Tokyo">Tokyo (JST)</option>
-                      <option value="Asia/Singapore">Singapore (SGT)</option>
-                    </select>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Date format
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      How dates display in the app
+                    </div>
                   </div>
+                  <select
+                    value={preferences.dateFormat}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, dateFormat: e.target.value })
+                    }
+                    className="input w-64 flex-shrink-0"
+                    data-testid="settings-date-format-select"
+                  >
+                    <option value="MM/dd/yyyy">MM/DD/YYYY (US)</option>
+                    <option value="dd/MM/yyyy">DD/MM/YYYY (EU)</option>
+                    <option value="yyyy-MM-dd">YYYY-MM-DD (ISO)</option>
+                  </select>
+                </div>
 
+                {/* Default risk percentage */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <label className="label">Date Format</label>
-                    <select
-                      value={preferences.dateFormat}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          dateFormat: e.target.value,
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="MM/dd/yyyy">MM/DD/YYYY (US)</option>
-                      <option value="dd/MM/yyyy">DD/MM/YYYY (EU)</option>
-                      <option value="yyyy-MM-dd">YYYY-MM-DD (ISO)</option>
-                    </select>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Default risk percentage
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Used for position sizing calculations
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="label">Default Risk Percentage (%)</label>
+                  <div className="relative w-64 flex-shrink-0">
                     <input
                       type="number"
                       min="0.1"
@@ -643,135 +730,94 @@ const Settings = () => {
                           defaultRiskPercentage: parseFloat(e.target.value),
                         })
                       }
-                      className="input"
+                      className="input pr-9"
+                      data-testid="settings-risk-percentage-input"
                     />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Default risk percentage for position sizing calculations
-                    </p>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 dark:text-gray-500 pointer-events-none">
+                      %
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="label mb-0">Enable Notifications</label>
-                      <p className="text-sm text-gray-500">
-                        Get alerts for important trade events
-                      </p>
+                {/* Enable notifications */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Enable notifications
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={preferences.notifications}
-                        onChange={(e) =>
-                          setPreferences({
-                            ...preferences,
-                            notifications: e.target.checked,
-                          })
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="label mb-0">Auto Backup</label>
-                      <p className="text-sm text-gray-500">
-                        Automatically backup your data weekly
-                      </p>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Get alerts for important trade events
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={preferences.autoBackup}
-                        onChange={(e) =>
-                          setPreferences({
-                            ...preferences,
-                            autoBackup: e.target.checked,
-                          })
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="label mb-0">Screenshots &amp; Attachments</label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Attach up to 4 chart screenshots per trade (stored in cloud)
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={preferences.screenshotsEnabled ?? false}
-                        onChange={(e) => {
-                          setPreferences((prev) => ({ ...prev, screenshotsEnabled: e.target.checked }));
-                        }}
-                        className="sr-only peer"
-                        data-testid="settings-screenshots-toggle"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
-                    </label>
-                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={preferences.notifications}
+                      onChange={(e) =>
+                        setPreferences({
+                          ...preferences,
+                          notifications: e.target.checked,
+                        })
+                      }
+                      className="sr-only peer"
+                      data-testid="settings-notifications-toggle"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
+                  </label>
                 </div>
 
-                <div className="mt-6">
-                  <button
-                    onClick={handleSavePreferences}
-                    className="btn btn-primary flex items-center space-x-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Save Preferences</span>
-                  </button>
+                {/* Auto backup */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Auto backup
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Automatically back up your data weekly
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={preferences.autoBackup}
+                      onChange={(e) =>
+                        setPreferences({
+                          ...preferences,
+                          autoBackup: e.target.checked,
+                        })
+                      }
+                      className="sr-only peer"
+                      data-testid="settings-auto-backup-toggle"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
+                  </label>
                 </div>
-              </div>
 
-              {/* Account Statistics */}
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <BarChart className="w-5 h-5 text-primary-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Account Statistics
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {trades.length}
+                {/* Screenshots & attachments */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Screenshots &amp; attachments
                     </div>
-                    <div className="text-sm text-gray-600">Total Trades</div>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {trades.filter((t) => t.status === "closed").length}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Completed Trades
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Attach up to 4 chart screenshots per trade (stored in cloud)
                     </div>
                   </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {new Set(trades.map((t) => t.instrument)).size}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Instruments Traded
-                    </div>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {new Set(trades.map((t) => t.strategy)).size}
-                    </div>
-                    <div className="text-sm text-gray-600">Strategies Used</div>
-                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={preferences.screenshotsEnabled ?? false}
+                      onChange={(e) =>
+                        setPreferences((prev) => ({
+                          ...prev,
+                          screenshotsEnabled: e.target.checked,
+                        }))
+                      }
+                      className="sr-only peer"
+                      data-testid="settings-screenshots-toggle"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
+                  </label>
                 </div>
               </div>
             </div>

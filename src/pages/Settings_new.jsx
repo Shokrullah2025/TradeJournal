@@ -13,7 +13,6 @@ import {
   Copy,
   Star,
   StarOff,
-  User,
   Database,
   BarChart,
   Eye,
@@ -1014,52 +1013,59 @@ const Settings = () => {
   return (
     <div className="flex h-full">
       {/* Vertical Tab Navigation */}
-      <div className="w-80 bg-white border-r border-gray-200 p-6">
+      <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Manage your preferences, templates, and data
           </p>
         </div>
 
-        <nav className="space-y-2" aria-label="Settings Navigation">
+        <nav
+          className="flex flex-col gap-1"
+          aria-label="Settings Navigation"
+          data-testid="settings-nav"
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full text-left p-4 rounded-lg transition-all duration-200 group ${
-                  activeTab === tab.id
-                    ? "bg-blue-50 border-l-4 border-blue-600 text-blue-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-4 border-transparent"
+                data-testid={`settings-nav-${tab.id}-link`}
+                className={`relative w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all duration-150 group ${
+                  isActive
+                    ? "bg-primary-50 dark:bg-primary-900/30"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-700/60"
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <Icon
-                    className={`h-5 w-5 ${
-                      activeTab === tab.id
-                        ? "text-blue-600"
-                        : "text-gray-400 group-hover:text-gray-600"
+                <span
+                  className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
+                    isActive ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
+                  }`}
+                />
+                <Icon
+                  className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
+                    isActive
+                      ? "text-primary-600 dark:text-primary-400"
+                      : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-400"
+                  }`}
+                />
+                <span className="min-w-0">
+                  <span
+                    className={`block text-sm font-bold ${
+                      isActive
+                        ? "text-primary-700 dark:text-primary-300"
+                        : "text-gray-900 dark:text-gray-200"
                     }`}
-                  />
-                  <div className="flex-1">
-                    <div
-                      className={`font-medium ${
-                        activeTab === tab.id ? "text-blue-700" : "text-gray-900"
-                      }`}
-                    >
-                      {tab.name}
-                    </div>
-                    <div
-                      className={`text-sm mt-1 ${
-                        activeTab === tab.id ? "text-blue-600" : "text-gray-500"
-                      }`}
-                    >
-                      {tab.description}
-                    </div>
-                  </div>
-                </div>
+                  >
+                    {tab.name}
+                  </span>
+                  <span className="block mt-0.5 text-xs leading-snug text-gray-500 dark:text-gray-400">
+                    {tab.description}
+                  </span>
+                </span>
               </button>
             );
           })}
@@ -1067,7 +1073,7 @@ const Settings = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
+      <div className="flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900">
         {/*tab content area*/}
         <div className="mt-6">
           {/* Profile Tab — reuses the full Profile page */}
@@ -1077,87 +1083,162 @@ const Settings = () => {
             </Suspense>
           )}
 
-          {/* General Tab */}
+          {/* General Tab (Option A row content) */}
           {activeTab === "general" && (
-            <div className="max-w-3xl space-y-6">
-              {/* Trading Preferences */}
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <User className="w-5 h-5 text-primary-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Trading Preferences
+            <div className="max-w-3xl space-y-6" data-testid="settings-general-panel">
+              {/* Header + Save */}
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    General
                   </h2>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                    Trading preferences &amp; display settings
+                  </p>
+                </div>
+                <button
+                  onClick={handleSavePreferences}
+                  className="btn btn-primary flex items-center space-x-2 flex-shrink-0"
+                  data-testid="settings-save-preferences-btn"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save</span>
+                </button>
+              </div>
+
+              {/* Stats strip */}
+              <div
+                className="flex flex-wrap rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                data-testid="settings-stats-strip"
+              >
+                {[
+                  { id: "total", label: "Total Trades", value: trades.length },
+                  {
+                    id: "completed",
+                    label: "Completed",
+                    value: trades.filter((t) => t.status === "closed").length,
+                  },
+                  {
+                    id: "instruments",
+                    label: "Instruments",
+                    value: new Set(trades.map((t) => t.instrument)).size,
+                  },
+                  {
+                    id: "strategies",
+                    label: "Strategies",
+                    value: new Set(trades.map((t) => t.strategy)).size,
+                  },
+                ].map((stat) => (
+                  <div
+                    key={stat.id}
+                    className="flex-1 min-w-[120px] px-5 py-4 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-700 last:border-r-0"
+                  >
+                    <div
+                      className="text-2xl font-extrabold tabular-nums text-gray-900 dark:text-gray-100"
+                      data-testid={`settings-stat-${stat.id}-value`}
+                    >
+                      {stat.value}
+                    </div>
+                    <div className="mt-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Preference rows */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70">
+                {/* Default currency */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Default currency
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Used across journals and reports
+                    </div>
+                  </div>
+                  <select
+                    value={preferences.currency}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, currency: e.target.value })
+                    }
+                    className="input w-64 flex-shrink-0"
+                    data-testid="settings-currency-select"
+                  >
+                    <option value="USD">USD — US Dollar</option>
+                    <option value="EUR">EUR — Euro</option>
+                    <option value="GBP">GBP — British Pound</option>
+                    <option value="JPY">JPY — Japanese Yen</option>
+                    <option value="CAD">CAD — Canadian Dollar</option>
+                    <option value="AUD">AUD — Australian Dollar</option>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Timezone */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <label className="label">Default Currency</label>
-                    <select
-                      value={preferences.currency}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          currency: e.target.value,
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="GBP">GBP - British Pound</option>
-                      <option value="JPY">JPY - Japanese Yen</option>
-                      <option value="CAD">CAD - Canadian Dollar</option>
-                      <option value="AUD">AUD - Australian Dollar</option>
-                    </select>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Timezone
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Timestamps on every trade
+                    </div>
                   </div>
+                  <select
+                    value={preferences.timezone}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, timezone: e.target.value })
+                    }
+                    className="input w-64 flex-shrink-0"
+                    data-testid="settings-timezone-select"
+                  >
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    <option value="Europe/London">London (GMT)</option>
+                    <option value="Europe/Berlin">Berlin (CET)</option>
+                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    <option value="Asia/Singapore">Singapore (SGT)</option>
+                  </select>
+                </div>
 
+                {/* Date format */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <label className="label">Timezone</label>
-                    <select
-                      value={preferences.timezone}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          timezone: e.target.value,
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="America/New_York">
-                        Eastern Time (ET)
-                      </option>
-                      <option value="America/Chicago">Central Time (CT)</option>
-                      <option value="America/Denver">Mountain Time (MT)</option>
-                      <option value="America/Los_Angeles">
-                        Pacific Time (PT)
-                      </option>
-                      <option value="Europe/London">London (GMT)</option>
-                      <option value="Europe/Berlin">Berlin (CET)</option>
-                      <option value="Asia/Tokyo">Tokyo (JST)</option>
-                      <option value="Asia/Singapore">Singapore (SGT)</option>
-                    </select>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Date format
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      How dates display in the app
+                    </div>
                   </div>
+                  <select
+                    value={preferences.dateFormat}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, dateFormat: e.target.value })
+                    }
+                    className="input w-64 flex-shrink-0"
+                    data-testid="settings-date-format-select"
+                  >
+                    <option value="MM/dd/yyyy">MM/DD/YYYY (US)</option>
+                    <option value="dd/MM/yyyy">DD/MM/YYYY (EU)</option>
+                    <option value="yyyy-MM-dd">YYYY-MM-DD (ISO)</option>
+                  </select>
+                </div>
 
+                {/* Default risk percentage */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <label className="label">Date Format</label>
-                    <select
-                      value={preferences.dateFormat}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          dateFormat: e.target.value,
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="MM/dd/yyyy">MM/DD/YYYY (US)</option>
-                      <option value="dd/MM/yyyy">DD/MM/YYYY (EU)</option>
-                      <option value="yyyy-MM-dd">YYYY-MM-DD (ISO)</option>
-                    </select>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Default risk percentage
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Used for position sizing calculations
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="label">Default Risk Percentage (%)</label>
+                  <div className="relative w-64 flex-shrink-0">
                     <input
                       type="number"
                       min="0.1"
@@ -1170,91 +1251,40 @@ const Settings = () => {
                           defaultRiskPercentage: parseFloat(e.target.value),
                         })
                       }
-                      className="input"
+                      className="input pr-9"
+                      data-testid="settings-risk-percentage-input"
                     />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Default risk percentage for position sizing calculations
-                    </p>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 dark:text-gray-500 pointer-events-none">
+                      %
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="label mb-0">Auto Backup</label>
-                      <p className="text-sm text-gray-500">
-                        Automatically backup your data weekly
-                      </p>
+                {/* Auto backup */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
+                  <div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Auto backup
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={preferences.autoBackup}
-                        onChange={(e) =>
-                          setPreferences({
-                            ...preferences,
-                            autoBackup: e.target.checked,
-                          })
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <button
-                    onClick={handleSavePreferences}
-                    className="btn btn-primary flex items-center space-x-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Save Preferences</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Account Statistics */}
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <BarChart className="w-5 h-5 text-primary-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Account Statistics
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {trades.length}
-                    </div>
-                    <div className="text-sm text-gray-600">Total Trades</div>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {trades.filter((t) => t.status === "closed").length}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Completed Trades
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Automatically back up your data weekly
                     </div>
                   </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {new Set(trades.map((t) => t.instrument)).size}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Instruments Traded
-                    </div>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {new Set(trades.map((t) => t.strategy)).size}
-                    </div>
-                    <div className="text-sm text-gray-600">Strategies Used</div>
-                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={preferences.autoBackup}
+                      onChange={(e) =>
+                        setPreferences({
+                          ...preferences,
+                          autoBackup: e.target.checked,
+                        })
+                      }
+                      className="sr-only peer"
+                      data-testid="settings-auto-backup-toggle"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
+                  </label>
                 </div>
               </div>
             </div>
@@ -1262,44 +1292,48 @@ const Settings = () => {
 
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
-            <div className="max-w-3xl" data-testid="notifications-settings-tab">
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Bell className="w-5 h-5 text-primary-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Notification Preferences
+            <div className="max-w-3xl space-y-6" data-testid="notifications-settings-tab">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    Notification preferences
                   </h2>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400 max-w-xl">
+                    Choose which alerts appear in your notification bell and which
+                    are also sent to your email. Email requires the in-app channel
+                    to be on.
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 mb-6">
-                  Choose which alerts appear in your notification bell and which
-                  are also sent to your email. Email requires the in-app channel
-                  to be on.
-                </p>
+              </div>
 
-                {notificationPrefsLoading ? (
-                  <div
-                    data-testid="notifications-settings-loading"
-                    className="flex items-center justify-center py-10"
-                  >
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+              {notificationPrefsLoading ? (
+                <div
+                  data-testid="notifications-settings-loading"
+                  className="flex items-center justify-center py-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                >
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                </div>
+              ) : (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+                  <div className="hidden sm:flex items-center justify-end gap-8 px-5 py-3 border-b border-gray-100 dark:border-gray-700/70 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    <span className="w-12 text-center">In-App</span>
+                    <span className="w-12 text-center">Email</span>
                   </div>
-                ) : (
-                  <div className="divide-y divide-gray-200">
-                    <div className="hidden sm:flex items-center justify-end gap-8 pb-2 pr-1 text-xs font-medium text-gray-500">
-                      <span className="w-12 text-center">In-App</span>
-                      <span className="w-12 text-center">Email</span>
-                    </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700/70">
                     {NOTIFICATION_CATEGORY_META.map((cat) => {
                       const channel = notificationPrefs[cat.id];
                       return (
                         <div
                           key={cat.id}
-                          className="flex items-center justify-between py-4"
+                          className="flex items-center justify-between gap-6 px-5 py-4"
                           data-testid={`notifications-settings-row-${cat.id}`}
                         >
-                          <div className="pr-4">
-                            <label className="label mb-0">{cat.label}</label>
-                            <p className="text-sm text-gray-500">
+                          <div>
+                            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              {cat.label}
+                            </div>
+                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                               {cat.description}
                             </p>
                           </div>
@@ -1318,7 +1352,7 @@ const Settings = () => {
                                 }
                                 className="sr-only peer"
                               />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
                             </label>
                             <label
                               className={`relative inline-flex items-center w-12 justify-center ${
@@ -1346,226 +1380,239 @@ const Settings = () => {
                                 }
                                 className="sr-only peer"
                               />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 peer-disabled:opacity-40"></div>
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 peer-disabled:opacity-40 dark:bg-gray-700"></div>
                             </label>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Templates Tab */}
           {activeTab === "templates" && (
-            <div className="max-w-6xl">
-              {" "}
-              {/* Made larger */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <Layout className="w-5 h-5 text-primary-600" />
-                    <div>
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        Trade Templates
-                      </h2>
-                      <p className="text-sm text-gray-600">
-                        Create reusable templates to speed up trade entry
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleCreateNewTemplate}
-                    className="btn btn-primary flex items-center space-x-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>New Template</span>
-                  </button>
+            <div className="max-w-6xl space-y-6">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    Trade Templates
+                  </h2>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                    Create reusable templates to speed up trade entry
+                  </p>
                 </div>
+                <button
+                  onClick={handleCreateNewTemplate}
+                  className="btn btn-primary flex items-center space-x-2 flex-shrink-0"
+                  data-testid="settings-new-template-btn"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>New Template</span>
+                </button>
+              </div>
 
-                {/* Templates List */}
-                <div className="space-y-3">
+              {/* Templates List */}
+              {templates.length === 0 && !isCreatingTemplate && !templatesLoading ? (
+                <div
+                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center py-12"
+                  data-testid="settings-templates-empty"
+                >
+                  <Layout className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                  <h3 className="mt-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+                    No templates yet
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Get started by creating your first trade template.
+                  </p>
+                  <div className="mt-4">
+                    <button
+                      onClick={handleCreateNewTemplate}
+                      className="btn btn-primary inline-flex items-center space-x-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Template</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70"
+                  data-testid="settings-templates-list"
+                >
                   {templates.map((template) => (
                     <div
                       key={template.id}
-                      className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+                      className="flex items-start justify-between gap-4 px-5 py-4"
+                      data-testid={`settings-template-row-${template.id}`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-medium text-gray-900">
-                              {template.name}
-                            </h3>
-                            {template.isDefault && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <Star className="w-3 h-3 mr-1" />
-                                Default
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {template.description}
-                          </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                            {template.name}
+                          </h3>
+                          {template.isDefault && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                              <Star className="w-3 h-3 mr-1" />
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                          {template.description}
+                        </p>
 
-                          {/* Template Preview */}
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {Object.entries(template.fields)
-                              .slice(0, 4)
-                              .map(([key, value]) => {
-                                if (!value) return null;
-                                return (
-                                  <span
-                                    key={key}
-                                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800"
-                                  >
-                                    {value}
-                                  </span>
-                                );
-                              })}
-                          </div>
-
-                          <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-                            <span>Used {template.usageCount} times</span>
-                            <span>Created {template.createdAt}</span>
-                          </div>
+                        {/* Template Preview */}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {Object.entries(template.fields)
+                            .slice(0, 4)
+                            .map(([key, value]) => {
+                              if (!value) return null;
+                              return (
+                                <span
+                                  key={key}
+                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                                >
+                                  {value}
+                                </span>
+                              );
+                            })}
                         </div>
 
-                        <div className="flex items-center space-x-2 ml-4">
-                          <button
-                            onClick={() => toggleTemplateDefault(template.id)}
-                            className="text-gray-400 hover:text-yellow-500"
-                            title="Toggle default"
-                          >
-                            {template.isDefault ? (
-                              <Star className="w-4 h-4 fill-current" />
-                            ) : (
-                              <StarOff className="w-4 h-4" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleEditTemplate(template)}
-                            className="text-gray-400 hover:text-blue-600"
-                            title="Edit template"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDuplicateTemplate(template)}
-                            className="text-gray-400 hover:text-green-600"
-                            title="Duplicate template"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTemplate(template.id)}
-                            className="text-gray-400 hover:text-red-600"
-                            title="Delete template"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <div className="mt-2 flex items-center space-x-4 text-xs text-gray-400 dark:text-gray-500">
+                          <span>Used {template.usageCount} times</span>
+                          <span>Created {template.createdAt}</span>
                         </div>
                       </div>
-                    </div>
-                  ))}
 
-                  {templates.length === 0 && !isCreatingTemplate && !templatesLoading && (
-                    <div className="text-center py-12">
-                      <Layout className="mx-auto h-12 w-12 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">
-                        No templates yet
-                      </h3>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Get started by creating your first trade template.
-                      </p>
-                      <div className="mt-4">
+                      <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
                         <button
-                          onClick={handleCreateNewTemplate}
-                          className="btn btn-primary flex items-center space-x-2"
+                          onClick={() => toggleTemplateDefault(template.id)}
+                          className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400"
+                          title="Toggle default"
+                          data-testid={`settings-template-default-btn-${template.id}`}
                         >
-                          <Plus className="w-4 h-4" />
-                          <span>Create Template</span>
+                          {template.isDefault ? (
+                            <Star className="w-4 h-4 fill-current" />
+                          ) : (
+                            <StarOff className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleEditTemplate(template)}
+                          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
+                          title="Edit template"
+                          data-testid={`settings-template-edit-btn-${template.id}`}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDuplicateTemplate(template)}
+                          className="text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400"
+                          title="Duplicate template"
+                          data-testid={`settings-template-duplicate-btn-${template.id}`}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTemplate(template.id)}
+                          className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"
+                          title="Delete template"
+                          data-testid={`settings-template-delete-btn-${template.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
           {/* Data Management Tab */}
           {activeTab === "data" && (
-            <div className="max-w-2xl">
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <Database className="w-5 h-5 text-primary-600" />
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Data Management
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      Import, export, and manage your trading data
-                    </p>
-                  </div>
-                </div>
+            <div className="max-w-2xl space-y-6">
+              {/* Header */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Data Management
+                </h2>
+                <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                  Import, export, and manage your trading data
+                </p>
+              </div>
 
-                <div className="space-y-6">
+              {/* Rows */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70">
+                {/* Export */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">
-                      Export Data
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Export data
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                       Download your complete trading data as an Excel file for
                       backup or analysis in other tools.
-                    </p>
-                    <button
-                      onClick={handleExportData}
-                      disabled={trades.length === 0}
-                      className="btn btn-secondary flex items-center space-x-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Export to Excel</span>
-                    </button>
+                    </div>
                   </div>
+                  <button
+                    onClick={handleExportData}
+                    disabled={trades.length === 0}
+                    className="btn btn-secondary flex items-center space-x-2 flex-shrink-0"
+                    data-testid="settings-export-data-btn"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export to Excel</span>
+                  </button>
+                </div>
 
+                {/* Import */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">
-                      Import Data
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      Import data
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                       Import trade data from a CSV or Excel file. Make sure your
                       file includes the required columns.
-                    </p>
-                    <label className="btn btn-secondary flex items-center space-x-2 cursor-pointer">
-                      <Upload className="w-4 h-4" />
-                      <span>Import from File</span>
-                      <input
-                        type="file"
-                        accept=".csv,.xlsx,.xls"
-                        onChange={handleImportData}
-                        className="hidden"
-                      />
-                    </label>
+                    </div>
                   </div>
+                  <label className="btn btn-secondary flex items-center space-x-2 cursor-pointer flex-shrink-0">
+                    <Upload className="w-4 h-4" />
+                    <span>Import from File</span>
+                    <input
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={handleImportData}
+                      className="hidden"
+                      data-testid="settings-import-data-input"
+                    />
+                  </label>
+                </div>
 
-                  <div className="pt-6 border-t border-gray-200">
-                    <h3 className="font-medium text-red-600 mb-2">
-                      Danger Zone
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3">
+                {/* Danger zone */}
+                <div className="flex items-center justify-between gap-6 px-5 py-4">
+                  <div>
+                    <div className="text-sm font-bold text-red-600 dark:text-red-400">
+                      Danger zone
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                       Permanently delete all your trading data. This action
                       cannot be undone.
-                    </p>
-                    <button
-                      onClick={handleClearData}
-                      className="btn btn-danger flex items-center space-x-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Clear All Data</span>
-                    </button>
+                    </div>
                   </div>
+                  <button
+                    onClick={handleClearData}
+                    className="btn btn-danger flex items-center space-x-2 flex-shrink-0"
+                    data-testid="settings-clear-data-btn"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Clear All Data</span>
+                  </button>
                 </div>
               </div>
             </div>
