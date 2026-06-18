@@ -6,15 +6,12 @@ import TradeImageUploader from "./TradeImageUploader";
 import { useForm } from "react-hook-form";
 import {
   X,
-  Calendar,
-  DollarSign,
   TrendingUp,
   TrendingDown,
   Plus,
   BarChart3,
   Zap,
   Settings,
-  Target,
   Clock,
   ChevronDown,
   Check,
@@ -53,6 +50,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [lastAppliedTemplate, setLastAppliedTemplate] = useState(null);
   const [exitPriceMode, setExitPriceMode] = useState("stopLoss"); // "stopLoss", "takeProfit", "custom"
+  const [rrUnit, setRrUnit] = useState("points"); // Risk/Reward hub display unit: "points" | "ticks"
   const [rrMode, setRrMode] = useState(() => getDefaultModeForInstrument("stocks"));
   const [rrListsByMode, setRrListsByMode] = useState(() =>
     Object.fromEntries(Object.keys(RR_MODES).map((m) => [m, getUserRRList(m)]))
@@ -129,6 +127,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   const watchedEntryPrice = watch("entryPrice");
   const watchedQuantity = watch("quantity");
   const watchedTradeType = watch("tradeType");
+  const watchedExitPrice = watch("exitPrice");
 
   // Instrument combobox state
   const [instrumentOpen, setInstrumentOpen] = useState(false);
@@ -195,6 +194,14 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     CL: 1000, GC: 100, SI: 5000, NG: 10000,
     // Micro commodities
     MCL: 100, MGC: 10,
+  };
+
+  // Smallest price increment per futures contract — powers the Ticks/Points toggle
+  const FUTURES_TICK_SIZES = {
+    ES: 0.25, NQ: 0.25, YM: 1, RTY: 0.1,
+    MES: 0.25, MNQ: 0.25, MYM: 1, M2K: 0.1,
+    CL: 0.01, GC: 0.1, SI: 0.005, NG: 0.001,
+    MCL: 0.01, MGC: 0.1,
   };
 
   // Use strategies and setups from settings by default, with fallback to localStorage and hardcoded defaults
@@ -868,6 +875,110 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     return { slUnits, tpUnits, slDollar, tpDollar, slArrow, tpArrow, actualRR, futuresLabel, isQtyDefaulted };
   })();
 
+  // ── Risk / Reward hub (right hero panel) ──────────────────────────────
+  // Live ratio, dollar values, verdict, and ladder proportions derived from
+  // the entry / stop / target the user is editing. Pure render-time compute.
+  const rrHub = (() => {
+    const entry = parseFloat(watchedEntryPrice);
+    const stop = parseFloat(watchedStopLoss);
+    const tp = parseFloat(watchedTakeProfit);
+    const qty = parseFloat(watchedQuantity);
+    const inst = (watchedInstrument || "").toUpperCase();
+    const type = selectedInstrumentType;
+    const isLong = watchedTradeType !== "short";
+
+    const hasEntry = !isNaN(entry) && entry > 0;
+    const hasStop = !isNaN(stop) && stop > 0;
+    const hasTP = !isNaN(tp) && tp > 0;
+
+    const pipSize = inst.includes("JPY") ? 0.01 : 0.0001;
+    const tickSize = FUTURES_TICK_SIZES[inst] || null;
+
+    const riskRaw = hasEntry && hasStop ? Math.abs(entry - stop) : 0;
+    const rewardRaw = hasEntry && hasTP ? Math.abs(tp - entry) : 0;
+
+    const toDisplay = (raw) => {
+      if (type === "forex") return raw / pipSize;
+      if (type === "futures" && rrUnit === "ticks" && tickSize) return raw / tickSize;
+      return raw;
+    };
+    const unitLabel =
+      type === "forex"
+        ? "pips"
+        : type === "futures" && rrUnit === "ticks"
+          ? "ticks"
+          : "pts";
+
+    const rr = riskRaw ? rewardRaw / riskRaw : 0;
+    const rrText =
+      riskRaw && rewardRaw
+        ? Number.isInteger(rr)
+          ? String(rr)
+          : rr.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")
+        : "—";
+
+    let verdict = "Balanced";
+    if (rr >= 2) verdict = "Excellent";
+    else if (rr >= 1.5) verdict = "Strong";
+    else if (rr > 0 && rr < 1) verdict = "Poor";
+
+    const total = riskRaw + rewardRaw || 1;
+    const rewardPct = Math.round((rewardRaw / total) * 100);
+
+    const fmtMoney = (v) =>
+      v == null || isNaN(v) ? null : `$${Math.round(Math.abs(v)).toLocaleString("en-US")}`;
+
+    const pv = type === "futures" ? FUTURES_POINT_VALUES[inst] ?? null : null;
+
+    return {
+      isLong,
+      hasStop,
+      hasTP,
+      riskDisp: toDisplay(riskRaw),
+      rewardDisp: toDisplay(rewardRaw),
+      unitLabel,
+      rrText,
+      rrValue: riskRaw && rewardRaw ? rr : null,
+      verdict,
+      rewardPct,
+      riskPct: 100 - rewardPct,
+      riskUsdStr: fmtMoney(slTpMetrics?.slDollar),
+      rewardUsdStr: fmtMoney(slTpMetrics?.tpDollar),
+      entry: hasEntry ? entry : null,
+      stop: hasStop ? stop : null,
+      tp: hasTP ? tp : null,
+      qty: !isNaN(qty) && qty > 0 ? qty : null,
+      inst,
+      ptLabel: pv ? `${inst} = $${pv}/pt` : type === "forex" ? "$10 / pip" : "",
+    };
+  })();
+
+  // Apply a target R-multiple to take-profit, based on entry & stop distance.
+  const applyTargetRatio = (R) => {
+    const entry = parseFloat(watchedEntryPrice);
+    const stop = parseFloat(watchedStopLoss);
+    if (isNaN(entry) || entry <= 0 || isNaN(stop) || stop <= 0) {
+      toast.error("Enter an entry price and stop loss first");
+      return;
+    }
+    const isLong = watchedTradeType !== "short";
+    const risk = Math.abs(entry - stop);
+    const target = isLong ? entry + R * risk : entry - R * risk;
+    setValue("takeProfit", target.toFixed(2), { shouldValidate: true });
+    toast.success(`Target set to 1:${R}`);
+  };
+
+  // Live realized P&L preview for the optional Exit section — mirrors the
+  // save-time formula so the chip matches what gets stored.
+  const exitPnlPreview = (() => {
+    const entry = parseFloat(watchedEntryPrice);
+    const exit = parseFloat(watchedExitPrice);
+    const qty = parseFloat(watchedQuantity);
+    if (isNaN(entry) || isNaN(exit) || !exit || isNaN(qty)) return null;
+    const isLong = watchedTradeType !== "short";
+    return isLong ? (exit - entry) * qty : (entry - exit) * qty;
+  })();
+
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
@@ -1114,411 +1225,307 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {/* Left: scrollable form */}
-        <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-            <Calendar className="w-6 h-6 mr-2 text-blue-600" />
-            {isEditing ? "Edit Trade" : "Add New Trade"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <div className="p-6">
-          {/* Tab Navigation */}
-          <div className="flex space-x-1 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setActiveTab("quick")}
-              className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "quick"
-                  ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-600"
-                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-              }`}
-            >
-              <Zap className="w-4 h-4 mr-2" />
-              Quick Entry
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("advanced")}
-              className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "advanced"
-                  ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-600"
-                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-              }`}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Advanced
-            </button>
+      <div
+        data-testid="trade-entry-modal"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden"
+      >
+        {/* HEADER */}
+        <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <TrendingUp className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
+              {isEditing ? "Edit Trade" : "Add New Trade"}
+            </h2>
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 truncate">
+              {watchedInstrument || "—"} ·{" "}
+              {selectedInstrumentType
+                ? selectedInstrumentType[0].toUpperCase() + selectedInstrumentType.slice(1)
+                : "—"}{" "}
+              · {watchedTradeType === "short" ? "Short" : "Long"}
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="ml-auto flex items-center gap-3">
+            {/* Tab switch */}
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1 gap-0.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab("quick")}
+                data-testid="trade-form-tab-quick"
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                  activeTab === "quick"
+                    ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+                Quick Entry
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("advanced")}
+                data-testid="trade-form-tab-advanced"
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                  activeTab === "advanced"
+                    ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                Advanced
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              data-testid="modal-close-btn"
+              className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* BODY */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* LEFT: form fields */}
+          <form
+            id="trade-entry-form"
+            data-testid="trade-entry-form"
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex-1 min-w-0 overflow-y-auto p-6 space-y-6"
+          >
             {activeTab === "quick" && (
               <div className="space-y-6">
-                {/* Template / Trade Setup panel + Entry Date */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Left: template picker (new trade) OR setup summary (editing) */}
-                  <div>
-                    {isEditing ? (
-                      /* ── Edit mode: simple template re-selector ── */
-                      <div className="bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-lg p-4 h-full">
-                        <div className="flex items-center text-gray-700 dark:text-gray-200 mb-3">
-                          <Target className="w-5 h-5 mr-2 text-blue-500" />
-                          <h4 className="font-semibold text-sm">Template</h4>
-                        </div>
-                        {settingsTemplates.length > 0 ? (
-                          <select
-                            className="input text-sm"
-                            value={selectedTemplateId}
-                            onChange={(e) => {
-                              const templateId = e.target.value;
-                              setSelectedTemplateId(templateId);
-                              if (templateId) applyTemplate(templateId);
-                              else setSelectedTemplateId("");
-                            }}
-                          >
-                            <option value="">No template</option>
-                            {settingsTemplates.map((t) => (
-                              <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            No templates yet. Create one in Settings.
-                          </p>
+                {/* ── 1 · Setup ── */}
+                <section>
+                  <div className="flex items-center gap-2 mb-3 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                    <span className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      1
+                    </span>
+                    Setup
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Type */}
+                    <div>
+                      <label className="label">Type *</label>
+                      <select
+                        {...register("instrumentType", { required: "Type is required" })}
+                        className="input"
+                        data-testid="trade-form-type-select"
+                      >
+                        <option value="stocks">Stocks</option>
+                        <option value="forex">Forex</option>
+                        <option value="crypto">Crypto</option>
+                        <option value="futures">Futures</option>
+                        <option value="options">Options</option>
+                      </select>
+                    </div>
+
+                    {/* Instrument (searchable combobox) */}
+                    <div>
+                      <label className="label">Instrument *</label>
+                      <input
+                        type="hidden"
+                        {...register("instrument", { required: "Instrument is required" })}
+                      />
+                      <div ref={instrumentRef} className="relative">
+                        <button
+                          type="button"
+                          data-testid="trade-form-instrument-btn"
+                          onClick={() => setInstrumentOpen((o) => !o)}
+                          className={`input w-full flex items-center justify-between text-left ${
+                            !watchedInstrument
+                              ? "text-gray-400 dark:text-gray-500"
+                              : "text-gray-900 dark:text-gray-100"
+                          }`}
+                        >
+                          <span>{watchedInstrument || "Select instrument…"}</span>
+                          <ChevronDown
+                            className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${
+                              instrumentOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {instrumentOpen && (
+                          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-hidden">
+                            <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+                              <input
+                                autoFocus
+                                type="text"
+                                data-testid="trade-form-instrument-search"
+                                value={instrumentSearch}
+                                onChange={(e) => setInstrumentSearch(e.target.value)}
+                                placeholder="Search or type instrument…"
+                                className="w-full text-sm px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") {
+                                    setInstrumentOpen(false);
+                                    setInstrumentSearch("");
+                                  }
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    if (filteredInstrumentOptions.length > 0) {
+                                      handleSelectInstrument(filteredInstrumentOptions[0]);
+                                    } else if (canAddInstrument) {
+                                      handleAddInstrument(instrumentSearch.trim().toUpperCase());
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filteredInstrumentOptions.map((inst) => (
+                                <button
+                                  key={inst}
+                                  type="button"
+                                  data-testid={`trade-form-instrument-option-${inst}`}
+                                  onClick={() => handleSelectInstrument(inst)}
+                                  className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
+                                    watchedInstrument === inst
+                                      ? "bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-medium"
+                                      : "text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                  }`}
+                                >
+                                  {inst}
+                                  {watchedInstrument === inst && <Check className="w-3.5 h-3.5" />}
+                                </button>
+                              ))}
+                              {canAddInstrument && (
+                                <button
+                                  type="button"
+                                  data-testid="trade-form-instrument-add-btn"
+                                  onClick={() => handleAddInstrument(instrumentSearch.trim().toUpperCase())}
+                                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 border-t border-gray-100 dark:border-gray-700 transition-colors"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  <span>Add "{instrumentSearch.trim().toUpperCase()}"</span>
+                                </button>
+                              )}
+                              {filteredInstrumentOptions.length === 0 && !canAddInstrument && (
+                                <p className="px-3 py-4 text-sm text-center text-gray-400">
+                                  No instruments found
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-                    ) : settingsTemplates.length > 0 ? (
-                      /* ── New trade: template picker ── */
-                      <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="flex items-center text-green-800 dark:text-green-200">
-                            <Target className="w-5 h-5 mr-2" />
-                            <h4 className="font-semibold">Use Template</h4>
-                          </div>
-                          <span className="text-xs text-green-600 dark:text-green-300 bg-green-100 dark:bg-green-800 px-2 py-1 rounded">
-                            Recommended
-                          </span>
-                        </div>
-                        <select
-                          className="input mb-2"
-                          value={selectedTemplateId}
-                          onChange={(e) => {
-                            const templateId = e.target.value;
-                            setSelectedTemplateId(templateId);
-                            if (templateId === "clear") {
-                              setSelectedTemplateId("");
-                            } else if (templateId) {
-                              applyTemplate(templateId);
-                            }
-                          }}
-                        >
-                          <option value="">Select a trading template...</option>
-                          {selectedTemplateId && (
-                            <option value="clear">✕ Clear Template Selection</option>
-                          )}
-                          {settingsTemplates.map((template) => (
-                            <option key={template.id} value={template.id}>
-                              {template.name}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-green-600">
-                          Templates auto-fill strategy, risk settings, and trade parameters
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                        <div className="flex items-center text-gray-600 dark:text-gray-400 mb-2">
-                          <Target className="w-5 h-5 mr-2" />
-                          <h4 className="font-semibold">Templates</h4>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          No templates available. Create templates in Settings for faster trade entry.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Side - Entry Date */}
-                  <div>
-                    <label className="label">Entry Date *</label>
-                    <input
-                      type="date"
-                      {...register("entryDate", {
-                        required: "Entry date is required",
-                      })}
-                      className="input"
-                    />
-                    {errors.entryDate && (
-                      <p className="text-danger-600 text-xs mt-1">
-                        {errors.entryDate.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Risk Unit — instrument-specific options only */}
-                <div>
-                  <label className="label">Risk / Reward Unit</label>
-
-                  {/* Mode pills — only modes valid for this instrument in Quick Entry */}
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {(QUICK_MODES[selectedInstrumentType] || ["dollar"]).map((key) => {
-                      const mode = RR_MODES[key];
-                      if (!mode) return null;
-                      return (
-                        <button key={key} type="button"
-                          onClick={() => setRrMode(key)}
-                          className={`px-2 py-0.5 text-xs rounded-full border font-medium transition-colors ${
-                            rrMode === key
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
-                          }`}
-                        >{mode.label}</button>
-                      );
-                    })}
-                  </div>
-
-                  <select
-                    {...register("riskReward")}
-                    value={watch("riskReward") || ""}
-                    className="input"
-                    onChange={(e) => {
-                      setValue("riskReward", e.target.value);
-                      if (e.target.value && !isApplyingTemplate) {
-                        const parsed = parseRRValue(e.target.value);
-                        const entryPrice = parseFloat(watch("entryPrice"));
-                        const tradeType = watch("tradeType");
-                        if (parsed && entryPrice > 0) {
-                          const { risk: riskRatio, reward: rewardRatio } = parsed;
-                          const riskAmount = entryPrice * 0.02;
-                          let stopLoss, takeProfit;
-                          if (tradeType === "long") {
-                            stopLoss = entryPrice - riskAmount;
-                            takeProfit = entryPrice + riskAmount * (rewardRatio / riskRatio);
-                          } else {
-                            stopLoss = entryPrice + riskAmount;
-                            takeProfit = entryPrice - riskAmount * (rewardRatio / riskRatio);
-                          }
-                          setValue("stopLoss", stopLoss.toFixed(2));
-                          setValue("takeProfit", takeProfit.toFixed(2));
-                          toast.success(`Risk levels set: ${e.target.value}`);
-                        }
-                      }
-                    }}
-                  >
-                    <option value="">Select {RR_MODES[rrMode].label} ratio</option>
-                    {/* Keep any existing stored value selectable */}
-                    {watch("riskReward") && !(rrListsByMode[rrMode] || []).includes(watch("riskReward")) && (
-                      <option value={watch("riskReward")}>{watch("riskReward")}</option>
-                    )}
-                    {(rrListsByMode[rrMode] || []).map((v) => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {RR_MODES[rrMode].hint} · Auto-calculates stop &amp; target
-                  </p>
-                </div>
-
-                {/* Type and Instrument - Swapped positions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Type *</label>
-                    <select
-                      {...register("instrumentType", {
-                        required: "Type is required",
-                      })}
-                      className="input"
-                    >
-                      <option value="stocks">Stocks</option>
-                      <option value="forex">Forex</option>
-                      <option value="crypto">Crypto</option>
-                      <option value="futures">Futures</option>
-                      <option value="options">Options</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="label">Instrument *</label>
-                    {/* Hidden input registers the field with react-hook-form for validation */}
-                    <input
-                      type="hidden"
-                      {...register("instrument", { required: "Instrument is required" })}
-                    />
-                    <div ref={instrumentRef} className="relative">
-                      <button
-                        type="button"
-                        data-testid="trade-form-instrument-btn"
-                        onClick={() => setInstrumentOpen((o) => !o)}
-                        className={`input w-full flex items-center justify-between text-left ${
-                          !watchedInstrument ? "text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"
-                        }`}
-                      >
-                        <span>{watchedInstrument || "Select instrument…"}</span>
-                        <ChevronDown className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${instrumentOpen ? "rotate-180" : ""}`} />
-                      </button>
-
-                      {instrumentOpen && (
-                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-hidden">
-                          {/* Search */}
-                          <div className="p-2 border-b border-gray-100 dark:border-gray-700">
-                            <input
-                              autoFocus
-                              type="text"
-                              data-testid="trade-form-instrument-search"
-                              value={instrumentSearch}
-                              onChange={(e) => setInstrumentSearch(e.target.value)}
-                              placeholder="Search or type instrument…"
-                              className="w-full text-sm px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                              onKeyDown={(e) => {
-                                if (e.key === "Escape") { setInstrumentOpen(false); setInstrumentSearch(""); }
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  if (filteredInstrumentOptions.length > 0) {
-                                    handleSelectInstrument(filteredInstrumentOptions[0]);
-                                  } else if (canAddInstrument) {
-                                    handleAddInstrument(instrumentSearch.trim().toUpperCase());
-                                  }
-                                }
-                              }}
-                            />
-                          </div>
-                          {/* Options */}
-                          <div className="max-h-48 overflow-y-auto">
-                            {filteredInstrumentOptions.map((inst) => (
-                              <button
-                                key={inst}
-                                type="button"
-                                data-testid={`trade-form-instrument-option-${inst}`}
-                                onClick={() => handleSelectInstrument(inst)}
-                                className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
-                                  watchedInstrument === inst
-                                    ? "bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-medium"
-                                    : "text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
-                                }`}
-                              >
-                                {inst}
-                                {watchedInstrument === inst && <Check className="w-3.5 h-3.5" />}
-                              </button>
-                            ))}
-                            {canAddInstrument && (
-                              <button
-                                type="button"
-                                data-testid="trade-form-instrument-add-btn"
-                                onClick={() => handleAddInstrument(instrumentSearch.trim().toUpperCase())}
-                                className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 border-t border-gray-100 dark:border-gray-700 transition-colors"
-                              >
-                                <Plus className="w-4 h-4" />
-                                <span>Add "{instrumentSearch.trim().toUpperCase()}"</span>
-                              </button>
-                            )}
-                            {filteredInstrumentOptions.length === 0 && !canAddInstrument && (
-                              <p className="px-3 py-4 text-sm text-center text-gray-400">No instruments found</p>
-                            )}
-                          </div>
-                        </div>
+                      {errors.instrument && (
+                        <p className="text-danger-600 text-xs mt-1">{errors.instrument.message}</p>
                       )}
                     </div>
-                    {errors.instrument && (
-                      <p className="text-danger-600 text-xs mt-1">
-                        {errors.instrument.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
 
-                {/* Direction Selection - Made smaller (50% width max) */}
-                <div className="max-w-md mx-auto">
-                  <label className="label">Direction *</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="flex items-center justify-center p-2 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 has-[:checked]:bg-green-100 dark:has-[:checked]:bg-green-900/40 has-[:checked]:border-green-300 dark:has-[:checked]:border-green-600">
+                    {/* Direction */}
+                    <div>
+                      <label className="label">Direction *</label>
                       <input
-                        type="radio"
-                        value="long"
-                        {...register("tradeType", {
-                          required: "Direction is required",
-                        })}
-                        className="sr-only"
+                        type="hidden"
+                        {...register("tradeType", { required: "Direction is required" })}
                       />
-                      <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
-                      <span className="font-medium text-green-700 text-sm">
-                        Long
-                      </span>
-                    </label>
-                    <label className="flex items-center justify-center p-2 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 has-[:checked]:bg-red-100 dark:has-[:checked]:bg-red-900/40 has-[:checked]:border-red-300 dark:has-[:checked]:border-red-600">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          data-testid="trade-form-direction-long-btn"
+                          onClick={() => setValue("tradeType", "long", { shouldValidate: true })}
+                          className={`flex items-center justify-center gap-1.5 h-11 rounded-xl text-sm font-bold border transition-colors ${
+                            watchedTradeType !== "short"
+                              ? "bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-600 text-green-600 dark:text-green-400"
+                              : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 hover:border-green-300"
+                          }`}
+                        >
+                          <TrendingUp className="w-4 h-4" />
+                          Long
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="trade-form-direction-short-btn"
+                          onClick={() => setValue("tradeType", "short", { shouldValidate: true })}
+                          className={`flex items-center justify-center gap-1.5 h-11 rounded-xl text-sm font-bold border transition-colors ${
+                            watchedTradeType === "short"
+                              ? "bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-600 text-red-600 dark:text-red-400"
+                              : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 hover:border-red-300"
+                          }`}
+                        >
+                          <TrendingDown className="w-4 h-4" />
+                          Short
+                        </button>
+                      </div>
+                      {errors.tradeType && (
+                        <p className="text-danger-600 text-xs mt-1">{errors.tradeType.message}</p>
+                      )}
+                    </div>
+
+                    {/* Entry Date */}
+                    <div>
+                      <label className="label">Entry Date *</label>
                       <input
-                        type="radio"
-                        value="short"
-                        {...register("tradeType", {
-                          required: "Direction is required",
-                        })}
-                        className="sr-only"
+                        type="date"
+                        {...register("entryDate", { required: "Entry date is required" })}
+                        className="input"
                       />
-                      <TrendingDown className="w-4 h-4 text-red-600 mr-1" />
-                      <span className="font-medium text-red-700 dark:text-red-300 text-sm">
-                        Short
-                      </span>
-                    </label>
+                      {errors.entryDate && (
+                        <p className="text-danger-600 text-xs mt-1">{errors.entryDate.message}</p>
+                      )}
+                    </div>
                   </div>
-                  {errors.tradeType && (
-                    <p className="text-danger-600 text-xs mt-1">
-                      {errors.tradeType.message}
-                    </p>
-                  )}
-                </div>
+                </section>
 
-                {/* Entry Price and Quantity - Moved below Direction */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Entry Price *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register("entryPrice", {
-                        required: "Entry price is required",
-                      })}
-                      className="input"
-                      placeholder="0.00"
-                    />
-                    {errors.entryPrice && (
-                      <p className="text-danger-600 text-xs mt-1">
-                        {errors.entryPrice.message}
-                      </p>
-                    )}
+                {/* ── 2 · Position ── */}
+                <section>
+                  <div className="flex items-center gap-2 mb-3 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                    <span className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      2
+                    </span>
+                    Position
                   </div>
-
-                  <div>
-                    <label className="label">Quantity *</label>
-                    <input
-                      type="number"
-                      {...register("quantity", {
-                        required: "Quantity is required",
-                      })}
-                      className="input"
-                      placeholder="100"
-                    />
-                    {errors.quantity && (
-                      <p className="text-danger-600 text-xs mt-1">
-                        {errors.quantity.message}
-                      </p>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Entry Price *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        data-testid="trade-form-entry-price-input"
+                        {...register("entryPrice", { required: "Entry price is required" })}
+                        className="input"
+                        placeholder="0.00"
+                      />
+                      {errors.entryPrice && (
+                        <p className="text-danger-600 text-xs mt-1">{errors.entryPrice.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="label">Quantity *</label>
+                      <input
+                        type="number"
+                        data-testid="trade-form-quantity-input"
+                        {...register("quantity", { required: "Quantity is required" })}
+                        className="input"
+                        placeholder="100"
+                      />
+                      {errors.quantity && (
+                        <p className="text-danger-600 text-xs mt-1">{errors.quantity.message}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </section>
 
-
-                {/* Exit Info - Only if trade is being edited as closed */}
+                {/* ── 3 · Exit (optional) ── */}
                 {watchedStatus === "closed" && (
-                  <div className="border-t pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <section>
+                    <div className="flex items-center gap-2 mb-3 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                      <span className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        3
+                      </span>
+                      Exit
+                      <span className="font-semibold normal-case tracking-normal text-gray-300 dark:text-gray-600">
+                        — optional
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                       <div>
                         <label className="label">Exit Date</label>
                         <input
@@ -1527,72 +1534,170 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                           className="input"
                           defaultValue={watchedEntryDate || ""}
                         />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Defaults to entry date
-                        </p>
                       </div>
                       <div>
                         <label className="label">Exit Price</label>
-                        <div className="space-y-2">
-                          <select
-                            value={exitPriceMode}
-                            onChange={(e) => {
-                              const mode = e.target.value;
-                              setExitPriceMode(mode);
-
-                              // Auto-populate exit price based on selection
-                              if (mode === "stopLoss" && watchedStopLoss) {
-                                setValue(
-                                  "exitPrice",
-                                  parseFloat(watchedStopLoss)
-                                );
-                              } else if (
-                                mode === "takeProfit" &&
-                                watchedTakeProfit
-                              ) {
-                                setValue(
-                                  "exitPrice",
-                                  parseFloat(watchedTakeProfit)
-                                );
-                              }
-                            }}
-                            className="input"
-                          >
-                            <option value="stopLoss">
-                              Stop Loss ({watchedStopLoss || "0.00"})
-                            </option>
-                            <option value="takeProfit">
-                              Take Profit ({watchedTakeProfit || "0.00"})
-                            </option>
-                            <option value="custom">Custom Price</option>
-                          </select>
-                          <input
-                            type="number"
-                            step="0.01"
-                            {...register("exitPrice")}
-                            className="input"
-                            placeholder="0.00"
-                            disabled={exitPriceMode !== "custom"}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Select preset or enter custom exit price
-                        </p>
-                      </div>
-                      <div>
-                        <label className="label">P&L</label>
+                        <select
+                          value={exitPriceMode}
+                          onChange={(e) => {
+                            const mode = e.target.value;
+                            setExitPriceMode(mode);
+                            if (mode === "stopLoss" && watchedStopLoss)
+                              setValue("exitPrice", parseFloat(watchedStopLoss));
+                            else if (mode === "takeProfit" && watchedTakeProfit)
+                              setValue("exitPrice", parseFloat(watchedTakeProfit));
+                            else if (mode === "breakeven" && watchedEntryPrice)
+                              setValue("exitPrice", parseFloat(watchedEntryPrice));
+                          }}
+                          className="input mb-2"
+                        >
+                          <option value="stopLoss">Stop Loss ({watchedStopLoss || "0.00"})</option>
+                          <option value="takeProfit">Take Profit ({watchedTakeProfit || "0.00"})</option>
+                          <option value="breakeven">Breakeven</option>
+                          <option value="custom">Custom</option>
+                        </select>
                         <input
                           type="number"
                           step="0.01"
-                          {...register("pnl")}
-                          className="input bg-gray-50 dark:bg-gray-700"
-                          placeholder="Auto-calculated"
-                          readOnly
+                          {...register("exitPrice")}
+                          className="input"
+                          placeholder="0.00"
+                          disabled={exitPriceMode !== "custom"}
                         />
                       </div>
+                      <div>
+                        <label className="label">Realized P&amp;L</label>
+                        <div
+                          data-testid="trade-form-realized-pnl"
+                          className={`h-11 rounded-xl flex items-center px-4 font-mono text-base font-bold border ${
+                            exitPnlPreview == null
+                              ? "bg-gray-50 dark:bg-gray-700 text-gray-400 border-gray-200 dark:border-gray-600"
+                              : exitPnlPreview >= 0
+                                ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-700"
+                                : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700"
+                          }`}
+                        >
+                          {exitPnlPreview == null
+                            ? "—"
+                            : `${exitPnlPreview >= 0 ? "+" : "−"}$${Math.abs(exitPnlPreview).toLocaleString("en-US", { maximumFractionDigits: 2 })}`}
+                        </div>
+                        <input type="hidden" {...register("pnl")} />
+                      </div>
                     </div>
-                  </div>
+                  </section>
                 )}
+
+                {/* ── Attachments ── */}
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                      <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
+                      Screenshots
+                      <span className="font-semibold normal-case tracking-normal text-gray-300 dark:text-gray-600">
+                        {visibleImages.length} / 4
+                      </span>
+                    </div>
+                    {settingsTemplates.length > 0 && (
+                      <select
+                        className="input !h-9 !py-0 text-xs max-w-[180px]"
+                        value={selectedTemplateId}
+                        onChange={(e) => {
+                          const templateId = e.target.value;
+                          setSelectedTemplateId(templateId);
+                          if (templateId === "clear") setSelectedTemplateId("");
+                          else if (templateId) applyTemplate(templateId);
+                        }}
+                        data-testid="trade-form-template-select"
+                      >
+                        <option value="">No template</option>
+                        {selectedTemplateId && <option value="clear">✕ Clear template</option>}
+                        {settingsTemplates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2.5" data-testid="trade-form-images-panel">
+                    {SLOT_LABELS.map((label, slotIndex) => {
+                      const img = visibleImages.find(
+                        (i) => (i.sortOrder ?? slotIndex) === slotIndex
+                      );
+                      const isDragOver = dragOverSlot === slotIndex;
+                      return (
+                        <div key={label} className="flex flex-col items-center gap-1.5">
+                          <div
+                            className={`w-full h-20 flex flex-col items-center justify-center border-2 border-dashed rounded-xl overflow-hidden relative cursor-pointer group transition-colors ${
+                              isDragOver
+                                ? "border-blue-400 ring-2 ring-blue-400"
+                                : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
+                            }`}
+                            draggable={!!img?.previewUrl}
+                            onClick={() => handleSlotClick(slotIndex, img)}
+                            onDragStart={(e) => handleSlotDragStart(e, slotIndex, img)}
+                            onDragOver={(e) => {
+                              handleSlotDragOver(e);
+                              setDragOverSlot(slotIndex);
+                            }}
+                            onDragLeave={() => setDragOverSlot(null)}
+                            onDrop={(e) => {
+                              setDragOverSlot(null);
+                              handleSlotDropEvent(e, slotIndex);
+                            }}
+                            data-testid={`screenshot-slot-${slotIndex}`}
+                          >
+                            {img?.previewUrl && !brokenSlots.has(slotIndex) ? (
+                              <>
+                                <img
+                                  src={img.previewUrl}
+                                  alt={label}
+                                  draggable={false}
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  onError={() =>
+                                    setBrokenSlots((prev) => {
+                                      const s = new Set(prev);
+                                      s.add(slotIndex);
+                                      return s;
+                                    })
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleSlotDeleteClick(e, img)}
+                                  className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  data-testid={`screenshot-slot-delete-${slotIndex}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </>
+                            ) : (
+                              <ImageIcon className="w-5 h-5 text-gray-300 dark:text-gray-600" />
+                            )}
+                          </div>
+                          <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <input
+                    ref={slotFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleSlotFileChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowImageUploader(true)}
+                    className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    data-testid="screenshot-manage-btn"
+                  >
+                    Manage screenshots
+                  </button>
+                </section>
               </div>
             )}
 
@@ -1820,193 +1925,250 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               </div>
             )}
 
-            {/* Form Actions */}
-            <div className="flex justify-between items-center pt-6 border-t">
-              <div className="flex items-center space-x-2 text-xs text-gray-400 dark:text-gray-500">
-                <Camera className="w-4 h-4" />
-                <span data-testid="trade-form-photo-count">Photos {visibleImages.length}/4</span>
-              </div>
-              <div className="flex space-x-3">
+          </form>
+
+          {/* RIGHT: Risk / Reward hero */}
+          <div className="w-[360px] flex-shrink-0 bg-gradient-to-b from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black p-5 flex flex-col gap-4 overflow-y-auto">
+            {/* header row */}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+                Risk / Reward
+              </span>
+              <div className="flex bg-white/5 border border-white/10 rounded-lg p-0.5 gap-0.5">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="btn btn-secondary text-sm px-4 py-1.5"
-                  disabled={isSubmitting}
+                  onClick={() => setRrUnit("ticks")}
+                  data-testid="rr-unit-ticks-btn"
+                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
+                    rrUnit === "ticks" ? "bg-white/15 text-white" : "text-slate-400 hover:text-slate-200"
+                  }`}
                 >
-                  Cancel
+                  Ticks
                 </button>
                 <button
-                  type="submit"
-                  className="btn btn-primary text-sm px-4 py-1.5 flex items-center space-x-1.5"
-                  disabled={isSubmitting}
-                  data-testid="trade-form-submit-btn"
+                  type="button"
+                  onClick={() => setRrUnit("points")}
+                  data-testid="rr-unit-points-btn"
+                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
+                    rrUnit === "points" ? "bg-white/15 text-white" : "text-slate-400 hover:text-slate-200"
+                  }`}
                 >
-                  {isSubmitting ? (
-                    "Saving..."
-                  ) : isEditing ? (
-                    <><BarChart3 className="w-4 h-4" /><span>Update Trade</span></>
-                  ) : (
-                    "Add Trade"
-                  )}
+                  Points
                 </button>
               </div>
             </div>
-          </form>
-        </div>
+
+            {/* Big ratio */}
+            <div className="flex items-baseline gap-2.5">
+              <div
+                className="font-mono text-5xl font-bold text-white leading-none tracking-tight"
+                data-testid="rr-ratio-value"
+              >
+                {rrHub.rrText}
+                <span className="text-2xl text-slate-500 font-semibold"> : 1</span>
+              </div>
+              {rrHub.rrValue != null && (
+                <span
+                  className={`text-[11px] font-bold px-2 py-1 rounded-md border ${
+                    rrHub.verdict === "Excellent" || rrHub.verdict === "Strong"
+                      ? "text-green-400 bg-green-500/10 border-green-500/25"
+                      : rrHub.verdict === "Poor"
+                        ? "text-red-400 bg-red-500/10 border-red-500/25"
+                        : "text-amber-400 bg-amber-500/10 border-amber-500/25"
+                  }`}
+                >
+                  {rrHub.verdict}
+                </span>
+              )}
+            </div>
+
+            {/* Target ratio chips */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-slate-400">Target ratio</span>
+                <span className="text-[11px] text-slate-500">auto-sets take profit</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[1, 1.5, 2, 3].map((R) => {
+                  const active = rrHub.rrValue != null && Math.abs(rrHub.rrValue - R) < 0.05;
+                  return (
+                    <button
+                      key={R}
+                      type="button"
+                      onClick={() => applyTargetRatio(R)}
+                      data-testid={`rr-ratio-${R}-btn`}
+                      className={`h-8 rounded-lg font-mono text-xs font-bold border transition-colors ${
+                        active
+                          ? "bg-blue-500/20 text-blue-300 border-blue-500/50"
+                          : "bg-white/5 text-slate-400 border-white/10 hover:border-blue-400/40 hover:text-blue-300"
+                      }`}
+                    >
+                      1:{R}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* SL / TP inputs + ladder */}
+            <div className="flex gap-4">
+              <div className="flex-1 flex flex-col gap-3">
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-red-400 mb-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                    Stop Loss
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={watchedStopLoss || ""}
+                    onChange={(e) => setValue("stopLoss", e.target.value, { shouldValidate: true })}
+                    placeholder="0.00"
+                    data-testid="rr-stop-loss-input"
+                    className="w-full h-10 px-3 rounded-lg border border-red-500/30 bg-red-500/10 font-mono text-base font-semibold text-white placeholder-slate-500 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20"
+                  />
+                  {rrHub.hasStop && (
+                    <div className="font-mono text-[11px] text-red-400 font-semibold mt-1">
+                      −{rrHub.riskDisp.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                      {rrHub.unitLabel}
+                      {rrHub.riskUsdStr && <span> · −{rrHub.riskUsdStr}</span>}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-green-400 mb-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                    Take Profit
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={watchedTakeProfit || ""}
+                    onChange={(e) => setValue("takeProfit", e.target.value, { shouldValidate: true })}
+                    placeholder="0.00"
+                    data-testid="rr-take-profit-input"
+                    className="w-full h-10 px-3 rounded-lg border border-green-500/30 bg-green-500/10 font-mono text-base font-semibold text-white placeholder-slate-500 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/20"
+                  />
+                  {rrHub.hasTP && (
+                    <div className="font-mono text-[11px] text-green-400 font-semibold mt-1">
+                      +{rrHub.rewardDisp.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                      {rrHub.unitLabel}
+                      {rrHub.rewardUsdStr && <span> · +{rrHub.rewardUsdStr}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Ladder */}
+              <div className="w-24 flex-shrink-0 flex gap-2">
+                <div className="w-3 h-[176px] rounded-full overflow-hidden flex flex-col bg-white/5">
+                  <div
+                    className="bg-gradient-to-b from-green-400 to-green-500"
+                    style={{ height: `${rrHub.rewardPct}%` }}
+                  />
+                  <div
+                    className="bg-gradient-to-b from-red-400 to-red-500"
+                    style={{ height: `${rrHub.riskPct}%` }}
+                  />
+                </div>
+                <div className="flex-1 relative h-[176px] font-mono">
+                  <div className="absolute top-0 left-0 -translate-y-1">
+                    <div className="text-[9px] text-green-400 font-bold tracking-wide">TARGET</div>
+                    <div className="text-xs text-white font-bold">{rrHub.tp ?? "—"}</div>
+                  </div>
+                  <div
+                    className="absolute left-0 -translate-y-1/2"
+                    style={{ top: `${rrHub.rewardPct}%` }}
+                  >
+                    <div className="text-[9px] text-slate-500 font-bold tracking-wide">ENTRY</div>
+                    <div className="text-xs text-slate-300 font-bold">{rrHub.entry ?? "—"}</div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 translate-y-1">
+                    <div className="text-[9px] text-red-400 font-bold tracking-wide">STOP</div>
+                    <div className="text-xs text-white font-bold">{rrHub.stop ?? "—"}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Reward / Risk $ cards */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3">
+                <div className="text-[11px] font-bold text-green-400 uppercase tracking-wide mb-1">
+                  Reward
+                </div>
+                <div
+                  className="font-mono text-xl font-bold text-white leading-none"
+                  data-testid="rr-reward-value"
+                >
+                  {rrHub.rewardUsdStr ? `+${rrHub.rewardUsdStr}` : "—"}
+                </div>
+                <div className="font-mono text-[11px] text-green-300 font-semibold mt-1.5">
+                  {rrHub.hasTP
+                    ? `+${rrHub.rewardDisp.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${rrHub.unitLabel}`
+                    : ""}
+                </div>
+              </div>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                <div className="text-[11px] font-bold text-red-400 uppercase tracking-wide mb-1">
+                  Risk
+                </div>
+                <div
+                  className="font-mono text-xl font-bold text-white leading-none"
+                  data-testid="rr-risk-value"
+                >
+                  {rrHub.riskUsdStr ? `−${rrHub.riskUsdStr}` : "—"}
+                </div>
+                <div className="font-mono text-[11px] text-red-300 font-semibold mt-1.5">
+                  {rrHub.hasStop
+                    ? `−${rrHub.riskDisp.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${rrHub.unitLabel}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+
+            {/* footer line */}
+            <div className="mt-auto flex items-center justify-between text-[11px] text-slate-500 font-medium pt-3 border-t border-white/5">
+              <span className="font-mono">
+                {rrHub.qty ?? "—"} × {rrHub.inst || "—"}
+              </span>
+              <span className="font-mono">{rrHub.ptLabel}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Right: always-visible named screenshot slots */}
-        <div
-          className="w-52 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col"
-          data-testid="trade-form-images-panel"
-        >
-          {/* Header */}
-          <div className="px-3 pt-3 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div className="flex items-center space-x-1.5">
-              <ImageIcon className="w-4 h-4 text-purple-500 dark:text-purple-400" />
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Screenshots
-              </span>
-            </div>
+        {/* FOOTER */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 font-medium">
+            <Camera className="w-4 h-4" />
+            <span data-testid="trade-form-photo-count">Photos {visibleImages.length}/4</span>
+          </div>
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowImageUploader(true)}
-              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-              data-testid="screenshot-manage-btn"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="h-11 px-5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-60"
+              data-testid="trade-form-cancel-btn"
             >
-              Manage
+              Cancel
             </button>
-          </div>
-
-          {/* Stop Loss + Take Profit in sidebar */}
-          <div className="px-3 pt-3 pb-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1">Stop Loss</label>
-              <input
-                type="number"
-                step="0.01"
-                value={watchedStopLoss || ""}
-                onChange={(e) => setValue("stopLoss", e.target.value, { shouldValidate: true })}
-                className="input text-sm py-1.5"
-                placeholder="0.00"
-                data-testid="sidebar-stop-loss-input"
-              />
-              {slTpMetrics?.slUnits && (
-                <div className="mt-0.5 flex items-center flex-wrap gap-x-1 text-xs text-red-600 dark:text-red-400">
-                  <span className="font-medium">
-                    {slTpMetrics.slArrow} {slTpMetrics.slUnits.value.toFixed(1)} {slTpMetrics.slUnits.label}
-                  </span>
-                  {slTpMetrics.futuresLabel && (
-                    <span className="text-gray-400 dark:text-gray-500">({slTpMetrics.futuresLabel})</span>
-                  )}
-                  {slTpMetrics.slDollar !== null && (
-                    <span className="font-semibold">
-                      · −${slTpMetrics.slDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                      {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500">/ct</span>}
-                    </span>
-                  )}
-                </div>
+            <button
+              type="submit"
+              form="trade-entry-form"
+              disabled={isSubmitting}
+              className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-colors disabled:opacity-60"
+              data-testid="trade-form-submit-btn"
+            >
+              {isSubmitting ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  {isEditing ? "Update Trade" : "Add Trade"}
+                </>
               )}
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1">Take Profit</label>
-              <input
-                type="number"
-                step="0.01"
-                value={watchedTakeProfit || ""}
-                onChange={(e) => setValue("takeProfit", e.target.value, { shouldValidate: true })}
-                className="input text-sm py-1.5"
-                placeholder="0.00"
-                data-testid="sidebar-take-profit-input"
-              />
-              {slTpMetrics?.tpUnits && (
-                <div className="mt-0.5 flex items-center flex-wrap gap-x-1 text-xs text-green-600 dark:text-green-400">
-                  <span className="font-medium">
-                    {slTpMetrics.tpArrow} {slTpMetrics.tpUnits.value.toFixed(1)} {slTpMetrics.tpUnits.label}
-                  </span>
-                  {slTpMetrics.tpDollar !== null && (
-                    <span className="font-semibold">
-                      · +${slTpMetrics.tpDollar.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                      {slTpMetrics.isQtyDefaulted && <span className="font-normal text-gray-400 dark:text-gray-500">/ct</span>}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Spacer — pushes image grid to the bottom */}
-          <div className="flex-1" />
-
-          {/* 2×2 named slots — pinned to bottom */}
-          <div className="grid grid-cols-2 gap-2 p-3 border-t border-gray-200 dark:border-gray-700">
-            {SLOT_LABELS.map((label, slotIndex) => {
-              const img = visibleImages.find((i) => (i.sortOrder ?? slotIndex) === slotIndex);
-              const isDragOver = dragOverSlot === slotIndex;
-              return (
-                <div
-                  key={label}
-                  className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg overflow-hidden relative cursor-pointer group transition-colors ${isDragOver ? "border-blue-400 ring-2 ring-blue-400 dark:border-blue-400" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"}`}
-                  style={{ aspectRatio: "1" }}
-                  draggable={!!img?.previewUrl}
-                  onClick={() => handleSlotClick(slotIndex, img)}
-                  onDragStart={(e) => handleSlotDragStart(e, slotIndex, img)}
-                  onDragOver={(e) => { handleSlotDragOver(e); setDragOverSlot(slotIndex); }}
-                  onDragLeave={() => setDragOverSlot(null)}
-                  onDrop={(e) => { setDragOverSlot(null); handleSlotDropEvent(e, slotIndex); }}
-                  data-testid={`screenshot-slot-${slotIndex}`}
-                >
-                  {img?.previewUrl && !brokenSlots.has(slotIndex) ? (
-                    <>
-                      <img
-                        src={img.previewUrl}
-                        alt={label}
-                        draggable={false}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        onError={() => setBrokenSlots((prev) => { const s = new Set(prev); s.add(slotIndex); return s; })}
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex flex-col items-end justify-start p-1">
-                        <span className="text-white text-xs font-semibold bg-black/50 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          {label}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => handleSlotDeleteClick(e, img)}
-                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        data-testid={`screenshot-slot-delete-${slotIndex}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-5 h-5 text-gray-300 dark:text-gray-600 mb-1" />
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</span>
-                      <span className="text-xs text-blue-500 dark:text-blue-400 underline mt-0.5">or browse files</span>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Hidden file input for per-slot upload */}
-          <input
-            ref={slotFileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            onChange={handleSlotFileChange}
-          />
-
-          {/* Footer */}
-          <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-start space-x-1.5">
-              <Camera className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-              <span>Drag chart screenshots onto a slot — up to 4 per trade.</span>
-            </p>
+            </button>
           </div>
         </div>
       </div>
