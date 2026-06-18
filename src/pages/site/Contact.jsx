@@ -5,11 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
 import { Mail, MessageSquare, Clock, Send } from "lucide-react";
 import { contactSchema } from "../../lib/schemas/contact";
+import { supabase } from "../../lib/supabase";
 
 /**
- * Contact page (route "/contact"). Front-end-only form validated with Zod —
- * on submit it shows a success toast and resets. No database write (keeps the
- * site frontend-only); can be wired to an Edge Function later.
+ * Contact page (route "/contact"). Public form validated with Zod, submitted to
+ * the `contact-submit` Edge Function which persists it to `contact_submissions`
+ * and emails the team. Shows a success/error toast and resets on success.
  */
 const Contact = () => {
   const {
@@ -22,10 +23,14 @@ const Contact = () => {
     defaultValues: { name: "", email: "", subject: "", message: "" },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (values) => {
     try {
-      // Simulate a send. Persisting leads is intentionally out of scope here.
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      const { data, error } = await supabase.functions.invoke("contact-submit", {
+        body: values,
+      });
+      if (error || !data?.success) {
+        throw new Error(error?.message ?? "send_failed");
+      }
       toast.success("Thanks! Your message has been sent. We'll be in touch.");
       reset();
     } catch {
