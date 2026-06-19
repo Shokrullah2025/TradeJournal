@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page-app fallback: serve index.html for any path so client-side
+# React Router handles routing (e.g. /trades, /analytics) on hard refresh.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

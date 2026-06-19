@@ -11,6 +11,9 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Listen on all network interfaces so the dev server is reachable from
+    // other devices on the same network (e.g. a phone for mobile testing).
+    host: true,
     // Don't crash if 3000 is still bound from a previous run — use next free port
     strictPort: false,
     // inotify (the Linux file-watch mechanism) does not work on NTFS drives

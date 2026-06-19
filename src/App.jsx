@@ -147,7 +147,7 @@ function App() {
                               />
 
                               <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-                                <div className="flex-1 p-6">
+                                <div className="flex-1 p-4 sm:p-6">
                                 <Routes>
                                   <Route
                                     path="/dashboard"

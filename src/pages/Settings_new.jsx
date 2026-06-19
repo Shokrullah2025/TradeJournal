@@ -1011,9 +1011,9 @@ const Settings = () => {
   };
 
   return (
-    <div className="flex h-full">
-      {/* Vertical Tab Navigation */}
-      <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-6">
+    <div className="flex flex-col lg:flex-row lg:h-full">
+      {/* Vertical Tab Navigation — stacks on top on mobile, sidebar on lg+ */}
+      <div className="w-full lg:w-80 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -1073,7 +1073,7 @@ const Settings = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 p-4 lg:p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900">
         {/*tab content area*/}
         <div className="mt-6">
           {/* Profile Tab — reuses the full Profile page */}
