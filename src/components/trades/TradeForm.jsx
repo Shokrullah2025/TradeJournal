@@ -1289,13 +1289,13 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
         </div>
 
         {/* BODY */}
-        <div className="flex-1 flex min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-y-auto md:overflow-hidden">
           {/* LEFT: form fields */}
           <form
             id="trade-entry-form"
             data-testid="trade-entry-form"
             onSubmit={handleSubmit(onSubmit)}
-            className="flex-1 min-w-0 overflow-y-auto p-6 space-y-6"
+            className="flex-1 min-w-0 md:overflow-y-auto p-4 md:p-6 space-y-6"
           >
             {activeTab === "quick" && (
               <div className="space-y-6">
@@ -1928,7 +1928,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
           </form>
 
           {/* RIGHT: Risk / Reward hero */}
-          <div className="w-[360px] flex-shrink-0 bg-gradient-to-b from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black p-5 flex flex-col gap-4 overflow-y-auto">
+          <div className="w-full md:w-[360px] flex-shrink-0 bg-gradient-to-b from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black p-5 flex flex-col gap-4 md:overflow-y-auto">
             {/* header row */}
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
