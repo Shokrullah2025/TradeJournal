@@ -23,6 +23,18 @@ import {
 } from "date-fns";
 import DayDetailModal from "./DayDetailModal";
 
+// Daily P&L formatters for the calendar cells.
+// Full value (e.g. +$140) is shown where there's room (>=sm); a compact form
+// (e.g. -$1.2k) is used on phones so 4–5 digit values don't overflow the
+// ~46px-wide cells.
+const fmtPnLFull = (v) => `${v >= 0 ? "+" : "-"}$${Math.abs(v).toFixed(0)}`;
+const fmtPnLCompact = (v) => {
+  const a = Math.abs(v);
+  const sign = v >= 0 ? "+" : "-";
+  if (a >= 1000) return `${sign}$${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k`;
+  return `${sign}$${a.toFixed(0)}`;
+};
+
 const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hoveredDate, setHoveredDate] = useState(null);
@@ -156,7 +168,7 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
               <div
                 key={index}
                 className={`
-                  trade-calendar__day relative min-h-28 p-2 border-2 rounded-lg cursor-pointer
+                  trade-calendar__day relative min-h-16 sm:min-h-28 p-1 sm:p-2 border-2 rounded-lg cursor-pointer
                   transition-all duration-300 ease-out
                   ${
                     isCurrentMonth
@@ -197,7 +209,7 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
                 )}
                 {/* Date number */}
                 <div
-                  className={`trade-calendar__date text-sm font-medium mb-1 ${
+                  className={`trade-calendar__date text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${
                     isCurrentMonth
                       ? "text-gray-900 dark:text-gray-100"
                       : "text-gray-400 dark:text-gray-500"
@@ -210,24 +222,33 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
                 {hasTrades && (
                   <div className="trade-calendar__indicators flex flex-col items-center justify-center h-full">
                     {/* Daily P&L - Center */}
-                    <div className="flex items-center justify-center mb-11">
-                      {dailyPnL === 0 ? (
-                        <div className="text-lg font-bold text-gray-500 dark:text-gray-400">
-                          $0
-                        </div>
-                      ) : dailyPnL > 0 ? (
-                        <div className="text-lg font-bold text-green-700 dark:text-green-400">
-                          +${Math.abs(dailyPnL).toFixed(0)}
-                        </div>
-                      ) : (
-                        <div className="text-lg font-bold text-red-700 dark:text-red-400">
-                          -${Math.abs(dailyPnL).toFixed(0)}
-                        </div>
-                      )}
+                    <div className="flex items-center justify-center mb-0 sm:mb-11">
+                      {(() => {
+                        const colorCls =
+                          dailyPnL === 0
+                            ? "text-gray-500 dark:text-gray-400"
+                            : dailyPnL > 0
+                            ? "text-green-700 dark:text-green-400"
+                            : "text-red-700 dark:text-red-400";
+                        return (
+                          <div
+                            className={`text-[11px] sm:text-lg font-bold leading-tight text-center ${colorCls}`}
+                          >
+                            {/* Compact (e.g. -$1.2k) on phones where cells are ~46px wide */}
+                            <span className="sm:hidden">
+                              {dailyPnL === 0 ? "$0" : fmtPnLCompact(dailyPnL)}
+                            </span>
+                            {/* Full value on >=sm where there is room */}
+                            <span className="hidden sm:inline">
+                              {dailyPnL === 0 ? "$0" : fmtPnLFull(dailyPnL)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
-                    {/* Trade count - Bottom Right */}
-                    <div className="absolute bottom-2 right-2">
+                    {/* Trade count - Bottom Right (hidden on phones to keep tiny cells legible) */}
+                    <div className="hidden sm:block absolute bottom-2 right-2">
                       <span className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 px-1 py-0.5 rounded shadow-sm">
                         {dayTrades.length} trade
                         {dayTrades.length !== 1 ? "s" : ""}
@@ -243,7 +264,7 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
 
       {/* Calendar Footer with Summary */}
       <div className="trade-calendar__footer bg-gray-50 dark:bg-gray-900 px-4 py-3 border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
-        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
           <div>
             Total trades this month:{" "}
             {(() => {
