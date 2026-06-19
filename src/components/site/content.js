@@ -1,0 +1,435 @@
+// Single source of truth for the public product website copy & data.
+// Keeping it here lets Home, Features, Pricing, and Footer stay DRY and
+// guarantees the same wording is reused across pages (CLAUDE.md §5).
+import {
+  BookOpen,
+  BarChart3,
+  Link2,
+  Activity,
+  Calculator,
+  Moon,
+  Calendar,
+  Camera,
+  Tags,
+  FileSpreadsheet,
+  LineChart,
+  Target,
+  Clock,
+  PieChart,
+  ShieldCheck,
+  Bell,
+  Smartphone,
+  Zap,
+  TrendingUp,
+} from "lucide-react";
+
+// ── Top feature highlights shown on the Home page ─────────────────────────
+export const HIGHLIGHT_FEATURES = [
+  {
+    icon: BookOpen,
+    title: "Effortless journaling",
+    description:
+      "Log every trade in seconds — manual entry or auto-sync — with screenshots, rich notes, and tags so no setup is ever forgotten.",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics that matter",
+    description:
+      "Win rate, profit factor, expectancy, Sharpe, and drawdown calculated automatically and visualised on a live equity curve.",
+  },
+  {
+    icon: Link2,
+    title: "Broker auto-sync",
+    description:
+      "Connect Tradovate and popular prop firms to import fills automatically. No more copy-pasting from statements.",
+  },
+  {
+    icon: Activity,
+    title: "Backtesting studio",
+    description:
+      "Replay historical price action bar-by-bar, draw your setups, and measure a strategy before risking a cent.",
+  },
+  {
+    icon: Calculator,
+    title: "Risk calculator",
+    description:
+      "Size every position to a fixed percentage of account risk. Know your stop, your R-multiple, and your exposure up front.",
+  },
+  {
+    icon: Moon,
+    title: "Built for focus",
+    description:
+      "A fast, responsive interface with a beautiful dark mode that works everywhere — desktop, tablet, and phone.",
+  },
+];
+
+// ── Full feature catalogue (Features page), grouped by category ───────────
+export const FEATURE_CATEGORIES = [
+  {
+    id: "journaling",
+    eyebrow: "Journaling",
+    title: "Capture every trade, exactly how it happened",
+    subtitle:
+      "A frictionless journal that adapts to how you trade — from a quick scribble to a fully documented setup.",
+    features: [
+      {
+        icon: BookOpen,
+        title: "Quick & advanced entry",
+        description:
+          "Log a trade in seconds with Quick mode, or use Advanced risk-reward entry to capture stops, targets, and R-multiples.",
+      },
+      {
+        icon: Camera,
+        title: "Trade screenshots",
+        description:
+          "Attach chart screenshots to any trade. Images are optimised on upload so your journal stays fast.",
+      },
+      {
+        icon: Tags,
+        title: "Tags & templates",
+        description:
+          "Label trades by setup, session, or mistake. Save reusable templates so recurring strategies log instantly.",
+      },
+      {
+        icon: Calendar,
+        title: "Calendar view",
+        description:
+          "See profit and loss laid out day-by-day on a colour-coded calendar to spot streaks and weak sessions.",
+      },
+      {
+        icon: FileSpreadsheet,
+        title: "CSV & Excel import / export",
+        description:
+          "Bring history in from a spreadsheet, or export your full journal anytime — your data is always yours.",
+      },
+      {
+        icon: BookOpen,
+        title: "Rich notes",
+        description:
+          "Document your thesis, emotions, and lessons with a rich-text editor attached to every position.",
+      },
+    ],
+  },
+  {
+    id: "analytics",
+    eyebrow: "Analytics",
+    title: "Understand your edge at a glance",
+    subtitle:
+      "Every metric a serious trader tracks, computed automatically and updated the moment a trade closes.",
+    features: [
+      {
+        icon: LineChart,
+        title: "Equity curve",
+        description:
+          "Watch your account grow over time and instantly see the impact of drawdowns and winning runs.",
+      },
+      {
+        icon: Target,
+        title: "Win rate & profit factor",
+        description:
+          "Core performance stats front-and-centre, broken down by account, strategy, and instrument.",
+      },
+      {
+        icon: BarChart3,
+        title: "Risk-adjusted metrics",
+        description:
+          "Sharpe ratio, expectancy, and maximum drawdown reveal whether your returns are worth the risk.",
+      },
+      {
+        icon: Clock,
+        title: "Time analysis",
+        description:
+          "Discover which days, sessions, and hours are actually profitable for you — and which to avoid.",
+      },
+      {
+        icon: PieChart,
+        title: "Distribution insights",
+        description:
+          "Analyse R-multiple distribution, win/loss spread, and instrument performance to find your real edge.",
+      },
+      {
+        icon: TrendingUp,
+        title: "Strategy comparison",
+        description:
+          "Compare strategies side-by-side to double down on what works and retire what doesn't.",
+      },
+    ],
+  },
+  {
+    id: "auto-sync",
+    eyebrow: "Broker auto-sync",
+    title: "Your fills, imported automatically",
+    subtitle:
+      "Connect your broker or prop firm once and let trades flow into your journal in real time.",
+    features: [
+      {
+        icon: Link2,
+        title: "Tradovate integration",
+        description:
+          "Securely connect Tradovate to sync executions automatically — no manual entry required.",
+      },
+      {
+        icon: ShieldCheck,
+        title: "Prop firm support",
+        description:
+          "Works with popular futures prop firms including Apex, Topstep, and MyFundedFutures evaluation accounts.",
+      },
+      {
+        icon: Zap,
+        title: "Real-time sync",
+        description:
+          "New fills appear in your journal as they happen, with duplicate-safe imports that never double-count.",
+      },
+      {
+        icon: Bell,
+        title: "Connection status",
+        description:
+          "Always know your sync health with clear connection indicators and notifications when attention is needed.",
+      },
+    ],
+  },
+  {
+    id: "backtesting",
+    eyebrow: "Backtesting",
+    title: "Prove a strategy before you trade it",
+    subtitle:
+      "A built-in replay studio so you can validate setups against real historical price action.",
+    features: [
+      {
+        icon: Activity,
+        title: "Historical replay",
+        description:
+          "Step through past market data bar-by-bar to practise execution without the risk.",
+      },
+      {
+        icon: LineChart,
+        title: "Drawing tools",
+        description:
+          "Mark up charts with trendlines, zones, and levels to plan and document your setups.",
+      },
+      {
+        icon: Target,
+        title: "Simulated entries & exits",
+        description:
+          "Place hypothetical entries, stops, and targets and watch how they would have played out.",
+      },
+      {
+        icon: BarChart3,
+        title: "Performance review",
+        description:
+          "Every backtest feeds the same analytics engine, so simulated results are measured like live trades.",
+      },
+    ],
+  },
+  {
+    id: "platform",
+    eyebrow: "Platform",
+    title: "Fast, secure, and a joy to use",
+    subtitle:
+      "The details that make Trade Journal Pro something you'll actually open every day.",
+    features: [
+      {
+        icon: Calculator,
+        title: "Risk calculator",
+        description:
+          "Size positions to a fixed account-risk percentage and know your R-multiple before you click buy.",
+      },
+      {
+        icon: Moon,
+        title: "Light & dark mode",
+        description:
+          "A carefully crafted theme for any time of day that remembers your preference across devices.",
+      },
+      {
+        icon: Smartphone,
+        title: "Fully responsive",
+        description:
+          "Designed mobile-first — review your performance on the train and journal from anywhere.",
+      },
+      {
+        icon: ShieldCheck,
+        title: "Secure by design",
+        description:
+          "Built on Supabase Auth with row-level security, so your trading data is private and only ever yours.",
+      },
+    ],
+  },
+];
+
+// ── How it works (Home page) ──────────────────────────────────────────────
+export const STEPS = [
+  {
+    number: "01",
+    title: "Connect or log",
+    description:
+      "Link your broker for automatic sync, or log trades by hand in seconds. Import existing history from a spreadsheet.",
+  },
+  {
+    number: "02",
+    title: "Document the setup",
+    description:
+      "Add screenshots, notes, and tags while the trade is fresh so every lesson is captured.",
+  },
+  {
+    number: "03",
+    title: "Analyse performance",
+    description:
+      "Let the analytics engine surface your win rate, profit factor, and the patterns behind your results.",
+  },
+  {
+    number: "04",
+    title: "Refine & improve",
+    description:
+      "Double down on your edge, cut the leaks, and watch your equity curve respond over time.",
+  },
+];
+
+// ── Headline metrics strip (Home page) ────────────────────────────────────
+export const STATS_BAND = [
+  { value: "Win rate", label: "tracked automatically" },
+  { value: "Profit factor", label: "per strategy" },
+  { value: "Sharpe", label: "risk-adjusted returns" },
+  { value: "Drawdown", label: "always in view" },
+];
+
+// ── Pricing tiers — mirrors src/pages/Billing.jsx plan definitions ────────
+export const PRICING_TIERS = [
+  {
+    id: "basic",
+    name: "Basic",
+    description: "For individual traders getting started.",
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    features: [
+      "Up to 50 trades per month",
+      "Basic analytics dashboard",
+      "Export to CSV",
+      "Email support",
+      "Mobile app access",
+    ],
+    popular: false,
+    cta: "Start free",
+  },
+  {
+    id: "premium",
+    name: "Premium",
+    description: "For serious traders and small teams.",
+    monthlyPrice: 29,
+    yearlyPrice: 290,
+    features: [
+      "Unlimited trades",
+      "Advanced analytics & insights",
+      "Risk management tools",
+      "Custom reports",
+      "Priority email support",
+      "API access",
+      "Real-time broker sync",
+    ],
+    popular: true,
+    cta: "Start Premium",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    description: "For trading firms and large organizations.",
+    monthlyPrice: 99,
+    yearlyPrice: 990,
+    features: [
+      "Everything in Premium",
+      "Team management",
+      "Advanced security features",
+      "Custom integrations",
+      "24/7 phone support",
+      "Dedicated account manager",
+      "White-label options",
+    ],
+    popular: false,
+    cta: "Contact sales",
+  },
+];
+
+// ── Frequently asked questions (Pricing page) ─────────────────────────────
+export const FAQS = [
+  {
+    question: "Is there a free plan?",
+    answer:
+      "Yes. The Basic plan is free forever and includes up to 50 trades a month with the core analytics dashboard — no credit card required.",
+  },
+  {
+    question: "Can I cancel anytime?",
+    answer:
+      "Absolutely. Plans are month-to-month and you can cancel or downgrade at any time from your billing settings. You keep access until the end of the period.",
+  },
+  {
+    question: "Which brokers can I connect?",
+    answer:
+      "Trade Journal Pro syncs with Tradovate and popular futures prop firms such as Apex, Topstep, and MyFundedFutures. You can also import any history via CSV or Excel.",
+  },
+  {
+    question: "Is my trading data secure?",
+    answer:
+      "Your data is protected with Supabase Auth and row-level security, meaning every record is scoped to your account and never visible to other users.",
+  },
+  {
+    question: "Do you offer annual billing?",
+    answer:
+      "Yes — switch to annual billing to save roughly two months compared to paying monthly. The discount is applied automatically at checkout.",
+  },
+];
+
+// ── Testimonials (Home page) — representative, generic examples ───────────
+export const TESTIMONIALS = [
+  {
+    quote:
+      "I finally see which setups actually make money. My win rate climbed once I started cutting the trades the analytics flagged as losers.",
+    name: "Jordan M.",
+    role: "Futures day trader",
+  },
+  {
+    quote:
+      "The broker sync alone saves me an hour a day. Everything lands in the journal automatically and the numbers just add up.",
+    name: "Priya S.",
+    role: "Prop firm trader",
+  },
+  {
+    quote:
+      "Backtesting in the same place I journal changed how I prepare. I validate a setup, then trade it with confidence.",
+    name: "Alex T.",
+    role: "Swing trader",
+  },
+];
+
+// ── Footer link columns ───────────────────────────────────────────────────
+export const FOOTER_LINKS = [
+  {
+    heading: "Product",
+    links: [
+      { label: "Features", to: "/features" },
+      { label: "Pricing", to: "/pricing" },
+      { label: "Sign in", to: "/login" },
+      { label: "Get started", to: "/register" },
+    ],
+  },
+  {
+    heading: "Company",
+    links: [
+      { label: "About", to: "/about" },
+      { label: "Contact", to: "/contact" },
+    ],
+  },
+  {
+    heading: "Legal",
+    links: [
+      { label: "Privacy", to: "/about" },
+      { label: "Terms", to: "/about" },
+    ],
+  },
+];
+
+// ── Primary nav links (navbar) ────────────────────────────────────────────
+export const NAV_LINKS = [
+  { label: "Features", to: "/features" },
+  { label: "Pricing", to: "/pricing" },
+  { label: "About", to: "/about" },
+  { label: "Contact", to: "/contact" },
+];

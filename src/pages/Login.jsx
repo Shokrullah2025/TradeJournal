@@ -22,7 +22,7 @@ const Login = () => {
   const { login, sendPasswordReset, loading } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
-  const from      = location.state?.from?.pathname || "/";
+  const from      = location.state?.from?.pathname || "/dashboard";
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(loginSchema),
