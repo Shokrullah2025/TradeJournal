@@ -110,7 +110,10 @@ describe("Registration & Trial Flow", () => {
       fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
         target: { value: "Test1234" },
       });
-      fireEvent.click(screen.getByRole("checkbox"));
+      // The form requires BOTH the Terms and the refund/auto-renewal
+      // acknowledgment — register() must not fire unless both are checked.
+      fireEvent.click(screen.getByTestId("register-form-terms-checkbox"));
+      fireEvent.click(screen.getByTestId("register-form-refund-ack-checkbox"));
 
       fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
