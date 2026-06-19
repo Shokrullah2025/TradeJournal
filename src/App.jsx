@@ -13,7 +13,6 @@ import Login from "./pages/Login";
 import MultiStepRegistration from "./pages/MultiStepRegistration";
 import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./components/auth/EmailVerification";
-import Admin from "./pages/Admin";
 import Billing from "./pages/Billing";
 import BrokerSelection from "./pages/BrokerSelection";
 import TradeEntry from "./pages/TradeEntry";
@@ -21,14 +20,18 @@ import OAuthCallback from "./pages/OAuthCallback";
 
 // Lazy — keeps the bundled country/state dataset out of the initial load.
 const Profile = React.lazy(() => import("./pages/Profile"));
+// Lazy — admin bundle (charts, tables) only loads for admins who open it.
+const Admin = React.lazy(() => import("./pages/Admin"));
 import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { FeatureFlagProvider } from "./context/FeatureFlagContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { BillingProvider } from "./context/BillingContext";
 import { BrokerProvider } from "./context/BrokerContext";
 import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import FeatureGate from "./components/common/FeatureGate";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -43,6 +46,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <FeatureFlagProvider>
         <NotificationProvider>
           <BillingProvider>
             <TradeProvider>
@@ -108,7 +112,11 @@ function App() {
                                   <Route path="/trades" element={<Trades />} />
                                   <Route
                                     path="/backtest"
-                                    element={<Backtest />}
+                                    element={
+                                      <FeatureGate feature="backtesting" title="Backtesting unavailable">
+                                        <Backtest />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/trade-entry"
@@ -116,15 +124,27 @@ function App() {
                                   />
                                   <Route
                                     path="/brokers"
-                                    element={<BrokerSelection />}
+                                    element={
+                                      <FeatureGate feature="broker_sync" title="Broker Sync unavailable">
+                                        <BrokerSelection />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/analytics"
-                                    element={<Analytics />}
+                                    element={
+                                      <FeatureGate feature="advanced_analytics" title="Advanced Analytics unavailable">
+                                        <Analytics />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/risk-calculator"
-                                    element={<RiskCalculator />}
+                                    element={
+                                      <FeatureGate feature="risk_calculator" title="Risk Calculator unavailable">
+                                        <RiskCalculator />
+                                      </FeatureGate>
+                                    }
                                   />
                                   <Route
                                     path="/settings"
@@ -148,7 +168,15 @@ function App() {
                                     path="/admin"
                                     element={
                                       <AdminRoute>
-                                        <Admin />
+                                        <Suspense
+                                          fallback={
+                                            <div className="flex items-center justify-center h-64">
+                                              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                                            </div>
+                                          }
+                                        >
+                                          <Admin />
+                                        </Suspense>
                                       </AdminRoute>
                                     }
                                   />
@@ -186,6 +214,7 @@ function App() {
             </TradeProvider>
           </BillingProvider>
         </NotificationProvider>
+        </FeatureFlagProvider>
       </AuthProvider>
     </ThemeProvider>
   );

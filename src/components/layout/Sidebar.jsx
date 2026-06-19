@@ -16,19 +16,24 @@ import {
   Menu,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useFeatureFlags } from "../../context/FeatureFlagContext";
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const { user } = useAuth();
-  
+  const { isFeatureEnabled } = useFeatureFlags();
+
+  // `feature` ties a nav item to a feature flag — when an admin disables that
+  // feature for the current user's audience (plan/role/trial), the item is
+  // hidden. Items with no `feature` are always available.
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Trades", href: "/trades", icon: BookOpen },
-    { name: "Backtest", href: "/backtest", icon: Activity },
-    { name: "Brokers", href: "/brokers", icon: Link },
-    { name: "Analytics", href: "/analytics", icon: BarChart3 },
-    { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator },
+    { name: "Backtest", href: "/backtest", icon: Activity, feature: "backtesting" },
+    { name: "Brokers", href: "/brokers", icon: Link, feature: "broker_sync" },
+    { name: "Analytics", href: "/analytics", icon: BarChart3, feature: "advanced_analytics" },
+    { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator, feature: "risk_calculator" },
     { name: "Settings", href: "/settings", icon: Settings },
-  ];
+  ].filter((item) => !item.feature || isFeatureEnabled(item.feature));
 
   const adminNavigation = [
     { name: "Admin Panel", href: "/admin", icon: Shield, adminOnly: true },
@@ -122,6 +127,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   key={item.name}
                   to={item.href}
                   onClick={() => onClose()}
+                  data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                   className={({ isActive }) =>
                     `group flex items-center text-sm font-medium rounded-lg transition-all duration-200 ${
                       isCollapsed ? "px-3 py-2" : "px-3 py-2"
@@ -162,6 +168,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       key={item.name}
                       to={item.href}
                       onClick={() => onClose()}
+                      data-testid="sidebar-admin-link"
                       className={({ isActive }) =>
                         `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                           isActive
@@ -191,6 +198,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                     key={item.name}
                     to={item.href}
                     onClick={() => onClose()}
+                    data-testid="sidebar-admin-link-collapsed"
                     className={({ isActive }) =>
                       `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive
