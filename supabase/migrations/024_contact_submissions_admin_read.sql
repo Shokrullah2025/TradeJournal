@@ -1,5 +1,5 @@
 -- Migration: let admins read & triage contact submissions
--- 021 created contact_submissions with RLS enabled and no policies (write-only
+-- 023 created contact_submissions with RLS enabled and no policies (write-only
 -- via the service_role Edge Function). The admin inbox UI needs authenticated
 -- admins to read submissions and update their status (new/read/archived/spam).
 -- We reuse the existing public.is_admin() helper (see migration 005), matching
