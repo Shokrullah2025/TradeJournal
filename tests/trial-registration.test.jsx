@@ -159,10 +159,12 @@ describe("Registration & Trial Flow", () => {
       expect(screen.getByTestId("payment-method-loading")).toBeInTheDocument();
     });
 
-    it("renders the Stripe payment form once the setup intent is ready", async () => {
+    it("requests a setup intent from the stripe-setup-intent Edge Function", async () => {
       renderWithRouter(<PaymentMethodForm />);
 
-      expect(await screen.findByTestId("payment-method-form")).toBeInTheDocument();
+      await screen.findByTestId("payment-method-form");
+      // Pins the exact Edge Function the component depends on — not the stub.
+      expect(supabaseApi.functions.invoke).toHaveBeenCalledWith("stripe-setup-intent");
       expect(screen.getByText("Save Payment Method")).toBeInTheDocument();
     });
 
@@ -218,6 +220,27 @@ describe("Registration & Trial Flow", () => {
       ).toBeInTheDocument();
       expect(screen.getByText("7 Days Remaining")).toBeInTheDocument();
       expect(onTrialActivated).toHaveBeenCalled();
+    });
+
+    it("refuses to activate (no API call) when there is no session (edge case)", async () => {
+      // Without a session the component must NOT fire a `Bearer undefined`
+      // request — it should stop and prompt the user to sign in.
+      supabaseApi.auth.getSession.mockResolvedValue({ data: { session: null } });
+      renderWithRouter(<TrialActivation />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: /activate 7-day free trial/i })
+      );
+
+      await waitFor(() => {
+        expect(toastMock.error).toHaveBeenCalledWith(
+          "Please sign in to activate your trial."
+        );
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText("Welcome to Trade Journal Pro!")
+      ).not.toBeInTheDocument();
     });
 
     it("shows an error toast when activation fails (error state)", async () => {
