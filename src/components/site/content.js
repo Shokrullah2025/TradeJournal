@@ -420,8 +420,13 @@ export const FOOTER_LINKS = [
   {
     heading: "Legal",
     links: [
-      { label: "Privacy", to: "/about" },
-      { label: "Terms", to: "/about" },
+      { label: "Terms of Service", to: "/terms" },
+      { label: "Privacy Policy", to: "/privacy" },
+      { label: "Financial Disclaimer", to: "/disclaimer" },
+      { label: "Cookie Policy", to: "/cookies" },
+      { label: "Refund & Billing", to: "/refund" },
+      { label: "Acceptable Use", to: "/aup" },
+      { label: "DMCA / Copyright", to: "/dmca" },
     ],
   },
 ];
