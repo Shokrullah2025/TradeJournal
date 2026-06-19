@@ -15,6 +15,13 @@ const TrialActivation = ({ onTrialActivated }) => {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      // Never POST with a malformed `Bearer undefined` header — without a valid
+      // session the request can't be authorized, so stop and tell the user.
+      if (!session?.access_token) {
+        setTrialStatus("error");
+        toast.error("Please sign in to activate your trial.");
+        return;
+      }
       const response = await fetch("/api/user/start-trial", {
         method: "POST",
         headers: {

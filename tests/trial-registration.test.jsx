@@ -1,207 +1,192 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "../src/context/AuthContext";
+
+// The registration / trial flow was migrated off the old REST API:
+//   • MultiStepRegistration + EmailVerification now use Supabase Auth (useAuth)
+//   • PaymentMethodForm is now Stripe Elements (no manual card inputs)
+//   • TrialActivation still POSTs /api/user/start-trial, but with a Supabase
+//     session access token in the Authorization header.
+// These tests cover the current implementations. Auth, the supabase singleton,
+// Stripe, toast and fetch are all mocked so nothing hits the network.
+const { authApi, supabaseApi, toastMock, fetchMock } = vi.hoisted(() => ({
+  authApi: {
+    register: vi.fn(),
+    sendEmailVerification: vi.fn(),
+    verifyEmail: vi.fn(),
+  },
+  supabaseApi: {
+    auth: { getSession: vi.fn() },
+    functions: { invoke: vi.fn() },
+  },
+  toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+  fetchMock: vi.fn(),
+}));
+
+vi.mock("../src/context/AuthContext", () => ({ useAuth: () => authApi }));
+vi.mock("../src/lib/supabase", () => ({ supabase: supabaseApi }));
+vi.mock("react-hot-toast", () => ({ toast: toastMock, default: toastMock }));
+vi.mock("@stripe/stripe-js", () => ({ loadStripe: vi.fn(() => Promise.resolve({})) }));
+vi.mock("@stripe/react-stripe-js", () => ({
+  Elements: ({ children }) => <div>{children}</div>,
+  PaymentElement: () => <div data-testid="stripe-payment-element" />,
+  useStripe: () => ({}),
+  useElements: () => ({}),
+}));
+
+global.fetch = fetchMock;
+
 import MultiStepRegistration from "../src/pages/MultiStepRegistration";
 import EmailVerification from "../src/components/auth/EmailVerification";
 import PaymentMethodForm from "../src/components/auth/PaymentMethodForm";
 import TrialActivation from "../src/components/auth/TrialActivation";
 
-// Mock fetch globally
-global.fetch = vi.fn();
+const renderWithRouter = (component) =>
+  render(<BrowserRouter>{component}</BrowserRouter>);
 
-const renderWithProviders = (component) => {
-  return render(
-    <BrowserRouter>
-      <AuthProvider>{component}</AuthProvider>
-    </BrowserRouter>
-  );
-};
-
-describe("7-Day Trial Registration Flow", () => {
+describe("Registration & Trial Flow", () => {
   beforeEach(() => {
-    fetch.mockClear();
+    vi.clearAllMocks();
+    authApi.register.mockResolvedValue({ user_id: "u1" });
+    authApi.sendEmailVerification.mockResolvedValue(undefined);
+    authApi.verifyEmail.mockResolvedValue(undefined);
+    supabaseApi.auth.getSession.mockResolvedValue({
+      data: { session: { access_token: "tok_123" } },
+    });
+    supabaseApi.functions.invoke.mockResolvedValue({
+      data: { success: true, data: { clientSecret: "seti_secret_123" } },
+      error: null,
+    });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
   });
 
+  // ── MultiStepRegistration ──────────────────────────────────────────────────
   describe("MultiStepRegistration", () => {
-    it("renders the account creation step by default", () => {
-      renderWithProviders(<MultiStepRegistration />);
+    it("renders the account creation step by default (happy path)", () => {
+      renderWithRouter(<MultiStepRegistration />);
 
       expect(screen.getByText("Create your account")).toBeInTheDocument();
-      expect(screen.getByLabelText("First Name")).toBeInTheDocument();
-      expect(screen.getByLabelText("Last Name")).toBeInTheDocument();
-      expect(screen.getByLabelText("Email address")).toBeInTheDocument();
-      expect(screen.getByLabelText("Password")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("John")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Doe")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("john@example.com")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Create a password")).toBeInTheDocument();
     });
 
-    it("shows password strength indicator", async () => {
-      renderWithProviders(<MultiStepRegistration />);
+    it("shows the password strength indicator", async () => {
+      renderWithRouter(<MultiStepRegistration />);
 
-      const passwordInput = screen.getByLabelText("Password");
-      fireEvent.change(passwordInput, { target: { value: "Test123!" } });
-
-      await waitFor(() => {
-        expect(screen.getByText(/Strong/i)).toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText("Create a password"), {
+        target: { value: "Test123!" },
       });
+
+      expect(await screen.findByText("Strong")).toBeInTheDocument();
     });
 
-    it("validates form fields", async () => {
-      renderWithProviders(<MultiStepRegistration />);
+    it("shows validation errors for empty fields (edge case)", async () => {
+      renderWithRouter(<MultiStepRegistration />);
 
-      const submitButton = screen.getByRole("button", {
-        name: /create account/i,
-      });
-      fireEvent.click(submitButton);
+      fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
-      await waitFor(() => {
-        expect(screen.getByText("First name is required")).toBeInTheDocument();
-      });
+      expect(
+        await screen.findByText("First name must be at least 2 characters")
+      ).toBeInTheDocument();
     });
 
-    it("submits registration form successfully", async () => {
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          user_id: "123",
-          token: "test-token",
-        }),
-      });
+    it("calls register() with the form data on valid submit", async () => {
+      renderWithRouter(<MultiStepRegistration />);
 
-      renderWithProviders(<MultiStepRegistration />);
-
-      fireEvent.change(screen.getByLabelText("First Name"), {
+      fireEvent.change(screen.getByPlaceholderText("John"), {
         target: { value: "John" },
       });
-      fireEvent.change(screen.getByLabelText("Last Name"), {
+      fireEvent.change(screen.getByPlaceholderText("Doe"), {
         target: { value: "Doe" },
       });
-      fireEvent.change(screen.getByLabelText("Email address"), {
+      fireEvent.change(screen.getByPlaceholderText("john@example.com"), {
         target: { value: "john@example.com" },
       });
-      fireEvent.change(screen.getByLabelText("Password"), {
-        target: { value: "Test123!" },
+      fireEvent.change(screen.getByPlaceholderText("Create a password"), {
+        target: { value: "Test1234" },
       });
-      fireEvent.change(screen.getByLabelText("Confirm Password"), {
-        target: { value: "Test123!" },
+      fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
+        target: { value: "Test1234" },
       });
       fireEvent.click(screen.getByRole("checkbox"));
 
-      const submitButton = screen.getByRole("button", {
-        name: /create account/i,
-      });
-      fireEvent.click(submitButton);
+      fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
       await waitFor(() => {
-        expect(fetch).toHaveBeenCalledWith(
-          "/api/auth/register",
-          expect.objectContaining({
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              first_name: "John",
-              last_name: "Doe",
-              email: "john@example.com",
-              password: "Test123!",
-            }),
-          })
-        );
+        expect(authApi.register).toHaveBeenCalledWith({
+          first_name: "John",
+          last_name: "Doe",
+          email: "john@example.com",
+          password: "Test1234",
+        });
       });
+      expect(authApi.sendEmailVerification).toHaveBeenCalledWith("john@example.com");
     });
   });
 
+  // ── EmailVerification ──────────────────────────────────────────────────────
   describe("EmailVerification", () => {
-    it("renders email verification screen", () => {
-      renderWithProviders(<EmailVerification email="john@example.com" />);
+    it("renders the pending verification screen (happy path)", () => {
+      renderWithRouter(<EmailVerification email="john@example.com" />);
 
       expect(screen.getByText("Check your email")).toBeInTheDocument();
       expect(screen.getByText("john@example.com")).toBeInTheDocument();
-      expect(
-        screen.getByText(/Click the link in the email/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Click the link in the email/)).toBeInTheDocument();
     });
 
-    it("allows resending verification email", async () => {
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, message: "Email sent" }),
-      });
+    it("resends the verification email via Supabase Auth", async () => {
+      renderWithRouter(<EmailVerification email="john@example.com" />);
 
-      renderWithProviders(<EmailVerification email="john@example.com" />);
-
-      const resendButton = screen.getByRole("button", {
-        name: /resend email/i,
-      });
-      fireEvent.click(resendButton);
+      fireEvent.click(screen.getByRole("button", { name: /resend email/i }));
 
       await waitFor(() => {
-        expect(fetch).toHaveBeenCalledWith(
-          "/api/auth/send-verification",
-          expect.objectContaining({
-            method: "POST",
-            body: JSON.stringify({ email: "john@example.com" }),
-          })
-        );
+        expect(authApi.sendEmailVerification).toHaveBeenCalledWith("john@example.com");
       });
     });
   });
 
+  // ── PaymentMethodForm (Stripe Elements) ────────────────────────────────────
   describe("PaymentMethodForm", () => {
-    it("renders payment method form", () => {
-      renderWithProviders(<PaymentMethodForm />);
+    it("shows the loading state while the setup intent initializes", () => {
+      // Never-resolving invoke keeps the component in its initializing state.
+      supabaseApi.functions.invoke.mockReturnValue(new Promise(() => {}));
+      renderWithRouter(<PaymentMethodForm />);
 
       expect(screen.getByText("Add Payment Method")).toBeInTheDocument();
-      expect(screen.getByLabelText("Card Number")).toBeInTheDocument();
-      expect(screen.getByLabelText("Expiry Date")).toBeInTheDocument();
-      expect(screen.getByLabelText("CVC")).toBeInTheDocument();
-      expect(screen.getByLabelText("Cardholder Name")).toBeInTheDocument();
+      expect(screen.getByText("Secured by Stripe")).toBeInTheDocument();
+      expect(screen.getByTestId("payment-method-loading")).toBeInTheDocument();
     });
 
-    it("validates card number format", async () => {
-      renderWithProviders(<PaymentMethodForm />);
+    it("requests a setup intent from the stripe-setup-intent Edge Function", async () => {
+      renderWithRouter(<PaymentMethodForm />);
 
-      const cardInput = screen.getByLabelText("Card Number");
-      fireEvent.change(cardInput, { target: { value: "4111111111111111" } });
-
-      await waitFor(() => {
-        expect(cardInput.value).toBe("4111 1111 1111 1111");
-      });
+      await screen.findByTestId("payment-method-form");
+      // Pins the exact Edge Function the component depends on — not the stub.
+      expect(supabaseApi.functions.invoke).toHaveBeenCalledWith("stripe-setup-intent");
+      expect(screen.getByText("Save Payment Method")).toBeInTheDocument();
     });
 
-    it("validates expiry date format", async () => {
-      renderWithProviders(<PaymentMethodForm />);
-
-      const expiryInput = screen.getByLabelText("Expiry Date");
-      fireEvent.change(expiryInput, { target: { value: "1225" } });
-
-      await waitFor(() => {
-        expect(expiryInput.value).toBe("12/25");
+    it("shows an error when the setup intent fails (error state)", async () => {
+      supabaseApi.functions.invoke.mockResolvedValueOnce({
+        data: { success: false, error: "Failed to initialize payment form." },
+        error: null,
       });
-    });
+      renderWithRouter(<PaymentMethodForm />);
 
-    it("shows form validation errors", async () => {
-      renderWithProviders(<PaymentMethodForm />);
-
-      const submitButton = screen.getByRole("button", {
-        name: /verify payment method/i,
-      });
-      fireEvent.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText("Card number is required")).toBeInTheDocument();
-        expect(screen.getByText("Expiry date is required")).toBeInTheDocument();
-        expect(screen.getByText("CVC is required")).toBeInTheDocument();
-      });
+      expect(await screen.findByTestId("payment-method-error")).toHaveTextContent(
+        "Failed to initialize payment form."
+      );
     });
   });
 
+  // ── TrialActivation ────────────────────────────────────────────────────────
   describe("TrialActivation", () => {
-    it("renders trial activation screen", () => {
-      renderWithProviders(<TrialActivation />);
+    it("renders the trial activation screen (happy path)", () => {
+      renderWithRouter(<TrialActivation />);
 
-      expect(
-        screen.getByText("Ready to Start Your Trial?")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Ready to Start Your Trial?")).toBeInTheDocument();
       expect(screen.getByText("7-Day Free Trial")).toBeInTheDocument();
       expect(screen.getByText("$0")).toBeInTheDocument();
       expect(
@@ -209,170 +194,72 @@ describe("7-Day Trial Registration Flow", () => {
       ).toBeInTheDocument();
     });
 
-    it("activates trial successfully", async () => {
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, message: "Trial activated" }),
-      });
+    it("activates the trial with the Supabase session token and shows success", async () => {
+      const onTrialActivated = vi.fn();
+      renderWithRouter(<TrialActivation onTrialActivated={onTrialActivated} />);
 
-      const mockOnTrialActivated = vi.fn();
-      renderWithProviders(
-        <TrialActivation onTrialActivated={mockOnTrialActivated} />
+      fireEvent.click(
+        screen.getByRole("button", { name: /activate 7-day free trial/i })
       );
 
-      const activateButton = screen.getByRole("button", {
-        name: /activate 7-day free trial/i,
-      });
-      fireEvent.click(activateButton);
-
       await waitFor(() => {
-        expect(fetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
           "/api/user/start-trial",
           expect.objectContaining({
             method: "POST",
             headers: expect.objectContaining({
               "Content-Type": "application/json",
-              Authorization: "Bearer null",
+              Authorization: "Bearer tok_123",
             }),
           })
         );
       });
+
+      expect(
+        await screen.findByText("Welcome to Trade Journal Pro!")
+      ).toBeInTheDocument();
+      expect(screen.getByText("7 Days Remaining")).toBeInTheDocument();
+      expect(onTrialActivated).toHaveBeenCalled();
     });
 
-    it("shows success screen after activation", async () => {
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, message: "Trial activated" }),
-      });
+    it("refuses to activate (no API call) when there is no session (edge case)", async () => {
+      // Without a session the component must NOT fire a `Bearer undefined`
+      // request — it should stop and prompt the user to sign in.
+      supabaseApi.auth.getSession.mockResolvedValue({ data: { session: null } });
+      renderWithRouter(<TrialActivation />);
 
-      renderWithProviders(<TrialActivation />);
-
-      const activateButton = screen.getByRole("button", {
-        name: /activate 7-day free trial/i,
-      });
-      fireEvent.click(activateButton);
+      fireEvent.click(
+        screen.getByRole("button", { name: /activate 7-day free trial/i })
+      );
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Welcome to Trade Journal Pro!")
-        ).toBeInTheDocument();
-        expect(screen.getByText("7 Days Remaining")).toBeInTheDocument();
+        expect(toastMock.error).toHaveBeenCalledWith(
+          "Please sign in to activate your trial."
+        );
       });
-    });
-  });
-
-  describe("Integration Tests", () => {
-    it("completes full registration flow", async () => {
-      // Mock all API calls
-      fetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            success: true,
-            user_id: "123",
-            token: "test-token",
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, message: "Email verified" }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, message: "Payment added" }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, message: "Trial activated" }),
-        });
-
-      // This would be a more complex integration test
-      // simulating the full flow through all steps
-      expect(true).toBe(true);
-    });
-  });
-});
-
-describe("Access Control", () => {
-  it("enforces email verification requirement", async () => {
-    // Mock access check response
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        can_access: false,
-        requirements: {
-          email_verified: false,
-          payment_method_verified: false,
-          onboarding_completed: false,
-        },
-      }),
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText("Welcome to Trade Journal Pro!")
+      ).not.toBeInTheDocument();
     });
 
-    // Test would verify that ProtectedRoute redirects to email verification
-    expect(true).toBe(true);
-  });
+    it("shows an error toast when activation fails (error state)", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "Trial already used" }),
+      });
+      renderWithRouter(<TrialActivation />);
 
-  it("enforces payment method verification requirement", async () => {
-    // Mock access check response
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        can_access: false,
-        requirements: {
-          email_verified: true,
-          payment_method_verified: false,
-          onboarding_completed: false,
-        },
-      }),
+      fireEvent.click(
+        screen.getByRole("button", { name: /activate 7-day free trial/i })
+      );
+
+      await waitFor(() => {
+        expect(toastMock.error).toHaveBeenCalledWith("Trial already used");
+      });
+      expect(
+        screen.queryByText("Welcome to Trade Journal Pro!")
+      ).not.toBeInTheDocument();
     });
-
-    // Test would verify that ProtectedRoute redirects to payment method
-    expect(true).toBe(true);
-  });
-
-  it("allows access when all requirements are met", async () => {
-    // Mock access check response
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        can_access: true,
-        requirements: {
-          email_verified: true,
-          payment_method_verified: true,
-          onboarding_completed: true,
-        },
-        trial: {
-          status: "active",
-          ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          days_remaining: 7,
-        },
-      }),
-    });
-
-    // Test would verify that ProtectedRoute allows access
-    expect(true).toBe(true);
-  });
-
-  it("blocks access when trial has expired", async () => {
-    // Mock access check response
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        can_access: false,
-        requirements: {
-          email_verified: true,
-          payment_method_verified: true,
-          onboarding_completed: true,
-        },
-        trial: {
-          status: "expired",
-          ends_at: new Date(Date.now() - 24 * 60 * 60 * 1000),
-          days_remaining: 0,
-        },
-      }),
-    });
-
-    // Test would verify that ProtectedRoute shows trial expired message
-    expect(true).toBe(true);
   });
 });
