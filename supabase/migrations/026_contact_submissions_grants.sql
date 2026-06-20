@@ -1,0 +1,26 @@
+-- ============================================================
+-- Trade Journal Pro — Grant table privileges on contact_submissions
+-- Migration: 026_contact_submissions_grants.sql
+--
+-- Bug: admins hit "permission denied for table contact_submissions"
+-- (SQLSTATE 42501) when loading the admin contact inbox.
+--
+-- Root cause: 023 created contact_submissions with RLS enabled and
+-- 024 added admin SELECT/UPDATE policies, but neither issued a base
+-- table GRANT to `authenticated`. The broad GRANT in 004_grants.sql
+-- only covered tables existing at that time, so this table (created
+-- much later) has no privilege for `authenticated`. Postgres checks
+-- table-level privileges BEFORE evaluating RLS, so the admin's query
+-- is rejected outright — the is_admin() policy never gets a chance to
+-- allow the row. Same failure mode that 022_fix_view_grants.sql fixed
+-- for the recreated views.
+--
+-- Fix: grant SELECT + UPDATE to `authenticated`. RLS still scopes
+-- access — the 024 policies only admit rows when is_admin() is true,
+-- so non-admin authenticated users still see/modify nothing. INSERT
+-- stays with the service_role Edge Function only (no grant here), so
+-- the public Contact form path is unchanged. anon is intentionally
+-- not granted: the browser must never read submission PII directly.
+-- ============================================================
+
+GRANT SELECT, UPDATE ON public.contact_submissions TO authenticated;
