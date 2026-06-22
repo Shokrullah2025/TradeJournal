@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ModalPortal from "../components/common/ModalPortal";
 import {
   CreditCard,
   Check,
@@ -900,8 +901,9 @@ const Billing = () => {
 
           {/* Stripe Payment Modal */}
           {showPaymentForm && clientSecret && (
+            <ModalPortal>
             <div
-              className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-50"
+              className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-[9999]"
               data-testid="billing-payment-modal"
             >
               <div className="relative top-20 mx-auto p-5 border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
@@ -934,6 +936,7 @@ const Billing = () => {
                 </div>
               </div>
             </div>
+            </ModalPortal>
           )}
         </div>
       </div>

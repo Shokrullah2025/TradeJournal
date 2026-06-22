@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ModalPortal from "../common/ModalPortal";
 import { RR_MODES, QUICK_MODES, ADVANCED_RR_MODES, getDefaultModeForInstrument, getUserRRList, parseRRValue } from "../../utils/rrModes";
 import { useTemplates } from "../../hooks/useTemplates";
 import { useUserSettings } from "../../hooks/useUserSettings";
@@ -1224,7 +1225,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <ModalPortal>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
       <div
         data-testid="trade-entry-modal"
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden"
@@ -2210,6 +2212,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
         </div>
       )}
     </div>
+    </ModalPortal>
   );
 };
 

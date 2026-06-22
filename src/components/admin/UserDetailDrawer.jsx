@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import ModalPortal from "../common/ModalPortal";
 import PropTypes from "prop-types";
 import { X, User, Shield, CreditCard, TrendingUp, Clock, Loader2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -111,7 +112,8 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
     Number(n || 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
 
   return (
-    <div className="fixed inset-0 z-50 flex" data-testid="admin-user-detail-modal">
+    <ModalPortal>
+    <div className="fixed inset-0 z-[9999] flex" data-testid="admin-user-detail-modal">
       <div
         className="flex-1 bg-gray-900/60 backdrop-blur-sm"
         onClick={onClose}
@@ -269,6 +271,7 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
         )}
       </aside>
     </div>
+    </ModalPortal>
   );
 };
 

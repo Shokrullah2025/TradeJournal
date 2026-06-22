@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
+import ModalPortal from "../components/common/ModalPortal";
 import {
   Play,
   Pause,
@@ -275,7 +276,8 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
     .filter((s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase()))
     .slice(0, 8);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
       <div
         className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -505,6 +507,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -3400,9 +3403,10 @@ const Backtest = () => {
         />
       )}
       {chartModalSession && (
+        <ModalPortal>
         <div
           data-testid="history-chart-modal"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50"
           onClick={() => setChartModalSession(null)}
         >
           <div
@@ -3440,6 +3444,7 @@ const Backtest = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
       </>
     );
@@ -5655,9 +5660,10 @@ const Backtest = () => {
 
           {/* Delete-all-drawings confirmation modal */}
           {showClearDrawingsConfirm && (
+            <ModalPortal>
             <div
               data-testid="clear-drawings-modal"
-              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50"
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
               onClick={() => setShowClearDrawingsConfirm(false)}
             >
               <div
@@ -5695,6 +5701,7 @@ const Backtest = () => {
                 </div>
               </div>
             </div>
+            </ModalPortal>
           )}
 
           {/* Chart settings modal */}
