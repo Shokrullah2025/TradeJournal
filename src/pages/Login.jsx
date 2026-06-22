@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LogIn, TrendingUp } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { loginSchema } from "../utils/validation";
-import ThemeToggle from "../components/common/ThemeToggle";
+import AuthNavbar from "../components/auth/AuthNavbar";
 
 const REMEMBER_KEY = "tjp_remembered_email";
 
@@ -60,23 +60,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      {/* Theme Toggle */}
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle size="md" showLabel />
-      </div>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      {/* Top navigation — brand, home link, and a direct path to the dashboard */}
+      <AuthNavbar />
 
+      <div className="flex flex-1">
       {/* Left — Login Form */}
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
-
-          {/* Logo */}
-          <div className="flex items-center mb-6">
-            <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="ml-3 text-2xl font-bold">Trade Journal Pro</h1>
-          </div>
 
           {/* Forgot-password panel */}
           {showForgotPassword ? (
@@ -262,6 +253,7 @@ const Login = () => {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
