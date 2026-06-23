@@ -72,15 +72,15 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
               Email Verified!
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Your email has been successfully verified. You can now proceed
-              with your registration.
+              Your email has been successfully verified. Next, start your 7-day
+              free trial to unlock all Pro features.
             </p>
             <div className="mt-6">
               <button
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/start-trial")}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Go to Dashboard
+                Start Your Free Trial
               </button>
             </div>
           </div>

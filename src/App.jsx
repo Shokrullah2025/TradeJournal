@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import MultiStepRegistration from "./pages/MultiStepRegistration";
 import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./components/auth/EmailVerification";
+import TrialActivation from "./components/auth/TrialActivation";
 import ContactMessages from "./pages/ContactMessages";
 import Billing from "./pages/Billing";
 import BrokerSelection from "./pages/BrokerSelection";
@@ -123,6 +124,21 @@ function App() {
                     <Route path="/refund" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><RefundPolicy /></Suspense>} />
                     <Route path="/aup" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><AcceptableUsePolicy /></Suspense>} />
                     <Route path="/dmca" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><DMCAPolicy /></Suspense>} />
+
+                    {/* Trial activation — full-screen (outside the app shell).
+                        Reached after the user confirms their email via the link
+                        in their inbox, which lands on the standalone
+                        /verify-email route. Requires auth (the email-confirm
+                        link establishes a session). Declared before the "/*"
+                        catch-all so route specificity wins. */}
+                    <Route
+                      path="/start-trial"
+                      element={
+                        <ProtectedRoute>
+                          <TrialActivation planSlug="pro" billingCycle="monthly" />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     {/* Protected routes */}
                     <Route
