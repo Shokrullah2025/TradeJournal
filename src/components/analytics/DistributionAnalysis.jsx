@@ -17,7 +17,7 @@ import {
   LabelList,
   Label,
 } from "recharts";
-import { Target, TrendingDown, Activity } from "lucide-react";
+import { Target, TrendingDown, Activity, Info } from "lucide-react";
 
 const POS = "#22c55e";
 const NEG = "#ef4444";
@@ -31,12 +31,32 @@ const AXIS_LABEL_STYLE = {
   fontWeight: 600,
 };
 
-// Short "how to read it" note shown under each chart.
-const ChartCaption = ({ children }) => (
-  <p className="text-[11px] leading-snug text-gray-400 dark:text-gray-500 mt-3 px-0.5">
-    {children}
-  </p>
+// Small "ⓘ" affordance next to a chart title; reveals the "how to read it"
+// note on hover/focus so it no longer overflows the bottom of the card.
+const InfoTip = ({ text, testId }) => (
+  <span className="relative inline-flex group">
+    <button
+      type="button"
+      data-testid={testId}
+      aria-label="Chart explanation"
+      className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+    >
+      <Info className="w-3.5 h-3.5" />
+    </button>
+    <span
+      role="tooltip"
+      className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-[11px] leading-snug text-gray-500 dark:text-gray-400 shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+    >
+      {text}
+    </span>
+  </span>
 );
+
+const slug = (s) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 const formatK = (value) => {
   const sign = value > 0 ? "+" : value < 0 ? "-" : "";
@@ -159,7 +179,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
   const winScatter = scatter.filter((p) => p.win);
   const lossScatter = scatter.filter((p) => !p.win);
 
-  const SectionHeader = ({ icon: Icon, tone, title, subtitle, right }) => {
+  const SectionHeader = ({ icon: Icon, tone, title, subtitle, info, right }) => {
     const toneClasses = {
       pos: "bg-success-50 dark:bg-success-900/20 text-success-600 dark:text-success-400",
       neg: "bg-danger-50 dark:bg-danger-900/20 text-danger-600 dark:text-danger-400",
@@ -175,8 +195,13 @@ const DistributionAnalysis = ({ trades = [] }) => {
             <Icon className="w-[18px] h-[18px]" />
           </div>
           <div>
-            <div className="text-[15px] font-bold text-gray-900 dark:text-gray-100">
-              {title}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[15px] font-bold text-gray-900 dark:text-gray-100">
+                {title}
+              </span>
+              {info && (
+                <InfoTip text={info} testId={`${slug(title)}-info-btn`} />
+              )}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {subtitle}
@@ -263,6 +288,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
             tone="neutral"
             title="R-Multiple Distribution"
             subtitle="Trade returns measured in units of risk (R)"
+            info="Left axis = how many trades landed in each bucket. Each bar is a return in units of risk (R): red bars on the left are losses, green on the right are wins. A real edge leans right — winners paying +2R or more outweigh the −1R losers."
             right={
               <span className="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 px-2.5 py-1 rounded-full whitespace-nowrap">
                 {rTradeCount} trades
@@ -341,12 +367,6 @@ const DistributionAnalysis = ({ trades = [] }) => {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-              <ChartCaption>
-                Left axis = how many trades landed in each bucket. Each bar is a
-                return in units of risk (R): red bars on the left are losses,
-                green on the right are wins. A real edge leans right — winners
-                paying +2R or more outweigh the −1R losers.
-              </ChartCaption>
             </div>
           )}
         </section>
@@ -358,6 +378,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
             tone="neg"
             title="Drawdown · Underwater"
             subtitle="Distance below the running equity peak"
+            info="Left axis = dollars below your highest equity point ($0 = sitting at a new high). Deeper, longer dips are your worst losing streaks — use it to judge how much pain a strategy puts you through before recovering."
             right={
               <div className="text-right">
                 <div className="text-[15px] font-bold font-mono text-danger-600 dark:text-danger-400">
@@ -425,12 +446,6 @@ const DistributionAnalysis = ({ trades = [] }) => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <ChartCaption>
-            Left axis = dollars below your highest equity point ($0 = sitting at
-            a new high). Deeper, longer dips are your worst losing streaks — use
-            it to judge how much pain a strategy puts you through before
-            recovering.
-          </ChartCaption>
         </section>
       </div>
 
@@ -441,6 +456,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
           tone="neutral"
           title="Hold Time vs P&L"
           subtitle="Each dot is a trade · dot size = magnitude of result"
+          info="Left axis = profit/loss per trade; bottom axis = how long the trade was held. Dots above the dashed $0 line are winners, below are losers, and bigger dots mean bigger results. Look for where your profits cluster — it tells you whether quick scalps or longer holds pay off."
           right={
             <div className="flex items-center gap-3.5 text-xs font-mono text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1.5">
@@ -511,13 +527,6 @@ const DistributionAnalysis = ({ trades = [] }) => {
                 <Scatter data={lossScatter} fill={NEG} fillOpacity={0.5} stroke={NEG} />
               </ScatterChart>
             </ResponsiveContainer>
-            <ChartCaption>
-              Left axis = profit/loss per trade; bottom axis = how long the trade
-              was held. Dots above the dashed $0 line are winners, below are
-              losers, and bigger dots mean bigger results. Look for where your
-              profits cluster — it tells you whether quick scalps or longer holds
-              pay off.
-            </ChartCaption>
           </div>
         )}
       </section>
