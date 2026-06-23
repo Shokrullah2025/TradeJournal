@@ -30,16 +30,19 @@ function toDateKey(value) {
 // tradeRows:    [{ created_at }]  (trades.created_at)
 export function buildDailySeries({ activityRows = [], signupRows = [], tradeRows = [], days = 30 } = {}) {
   const buckets = {};
+  // Work entirely in UTC so the bucket keys line up with the event keys, which
+  // come from created_at via toISOString() (also UTC). Mixing local midnight
+  // with UTC date strings drops "today's" events near the day boundary.
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
 
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
-    d.setDate(d.getDate() - i);
+    d.setUTCDate(d.getUTCDate() - i);
     const key = d.toISOString().split("T")[0];
     buckets[key] = {
       date: key,
-      label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      label: d.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" }),
       requests: 0,
       failures: 0,
       signups: 0,

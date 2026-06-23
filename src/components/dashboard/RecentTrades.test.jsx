@@ -1,10 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import RecentTrades from "./RecentTrades";
 
-// RecentTrades renders a short list of trades or an empty state. These tests
-// cover the empty state, a populated list, profit/loss formatting, the
-// long/short badge, and the divider rule between (but not after) rows.
+// RecentTrades renders a short grid of trade tiles or an empty state. Each tile
+// is a clickable element (role="button") that navigates to the Trades page, so
+// the component must render inside a Router. These tests cover the empty state,
+// a populated grid, profit/loss formatting, the long/short label, the status
+// badge, and the "one tile per trade" rule.
+const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
+
 const makeTrade = (overrides = {}) => ({
   id: "t1",
   instrument: "AAPL",
@@ -19,7 +24,7 @@ const makeTrade = (overrides = {}) => ({
 
 describe("RecentTrades", () => {
   it("shows the empty state when there are no trades (edge case)", () => {
-    render(<RecentTrades trades={[]} />);
+    renderWithRouter(<RecentTrades trades={[]} />);
 
     expect(screen.getByText("No trades yet")).toBeInTheDocument();
     expect(
@@ -29,54 +34,55 @@ describe("RecentTrades", () => {
 
   it("renders trade details for each trade (happy path)", () => {
     const trades = [
-      makeTrade({ id: "a", instrument: "AAPL", pnl: 250 }),
+      makeTrade({ id: "a", instrument: "AAPL", tradeType: "long", pnl: 250 }),
       makeTrade({ id: "b", instrument: "TSLA", tradeType: "short", pnl: -120 }),
     ];
 
-    render(<RecentTrades trades={trades} />);
+    renderWithRouter(<RecentTrades trades={trades} />);
 
     expect(screen.getByText("AAPL")).toBeInTheDocument();
     expect(screen.getByText("TSLA")).toBeInTheDocument();
-    expect(screen.getByText("LONG")).toBeInTheDocument();
-    expect(screen.getByText("SHORT")).toBeInTheDocument();
-    // "View all" action exists on the populated header
-    expect(screen.getByText("View all")).toBeInTheDocument();
+    // Direction label renders the raw lowercase tradeType (CSS uppercases it).
+    expect(screen.getByText("long")).toBeInTheDocument();
+    expect(screen.getByText("short")).toBeInTheDocument();
+    // One clickable tile per trade.
+    expect(screen.getAllByRole("button")).toHaveLength(2);
   });
 
   it("formats a winning trade with a leading + sign", () => {
-    render(<RecentTrades trades={[makeTrade({ pnl: 1250 })]} />);
+    renderWithRouter(<RecentTrades trades={[makeTrade({ pnl: 1250 })]} />);
 
     expect(screen.getByText("+$1,250")).toBeInTheDocument();
   });
 
   it("formats a losing trade without a leading + sign", () => {
-    render(<RecentTrades trades={[makeTrade({ pnl: -1250 })]} />);
+    renderWithRouter(<RecentTrades trades={[makeTrade({ pnl: -1250 })]} />);
 
     // No leading "+" is added; the value's own minus sign renders after the $
     expect(screen.getByText("$-1,250")).toBeInTheDocument();
   });
 
-  it("does not render a divider after a single trade (edge case)", () => {
-    const { container } = render(<RecentTrades trades={[makeTrade()]} />);
+  it("renders a single tile for one trade (edge case)", () => {
+    renderWithRouter(<RecentTrades trades={[makeTrade()]} />);
 
-    expect(container.querySelector("hr")).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
-  it("renders dividers between multiple trades but not after the last", () => {
+  it("renders exactly one tile per trade", () => {
     const trades = [
       makeTrade({ id: "a" }),
       makeTrade({ id: "b" }),
       makeTrade({ id: "c" }),
     ];
 
-    const { container } = render(<RecentTrades trades={trades} />);
+    renderWithRouter(<RecentTrades trades={trades} />);
 
-    // 3 trades -> 2 dividers
-    expect(container.querySelectorAll("hr").length).toBe(2);
+    // 3 trades -> 3 tiles
+    expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 
   it("shows the open status badge for an open trade", () => {
-    render(<RecentTrades trades={[makeTrade({ status: "open", pnl: 0 })]} />);
+    renderWithRouter(<RecentTrades trades={[makeTrade({ status: "open", pnl: 0 })]} />);
 
     expect(screen.getByText("open")).toBeInTheDocument();
   });
