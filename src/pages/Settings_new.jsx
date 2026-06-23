@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense } from "react";
+import ModalPortal from "../components/common/ModalPortal";
 import { useTemplates } from "../hooks/useTemplates";
 import { DEFAULT_VISIBLE_FIELDS } from "../utils/templateFields";
 import { RR_MODES, getDefaultModeForInstrument, getUserRRList, saveUserRRList } from "../utils/rrModes";
@@ -1995,7 +1996,8 @@ const Settings = () => {
 
       {/* Field Configuration Modal */}
       {showFieldModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <ModalPortal>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -2205,11 +2207,13 @@ const Settings = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Template Creation Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <ModalPortal>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -3061,11 +3065,13 @@ const Settings = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Add Strategy Modal */}
       {showAddStrategyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <ModalPortal>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -3133,11 +3139,13 @@ const Settings = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Add Setup Modal */}
       {showAddSetupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <ModalPortal>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -3205,11 +3213,13 @@ const Settings = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Add Risk Parameter Modal */}
       {showAddRiskParamModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <ModalPortal>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -3311,6 +3321,7 @@ const Settings = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

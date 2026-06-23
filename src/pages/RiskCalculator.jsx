@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ModalPortal from "../components/common/ModalPortal";
 import { TrendingUp, TrendingDown, Info, AlertTriangle, X } from "lucide-react";
 
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -1198,8 +1199,9 @@ const RiskCalculator = () => {
 
       {/* Over-risk warning dialog */}
       {showRiskWarning && results && (
+        <ModalPortal>
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{ background: "rgba(8,11,16,0.62)", backdropFilter: "blur(2px)" }}
           onClick={() => setShowRiskWarning(false)}
           data-testid="risk-calculator-risk-warning-overlay"
@@ -1337,6 +1339,7 @@ const RiskCalculator = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

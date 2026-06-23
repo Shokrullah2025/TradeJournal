@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ModalPortal from "../common/ModalPortal";
 import PropTypes from "prop-types";
 import { format } from "date-fns";
 import {
@@ -451,7 +452,8 @@ const TradeImageThumbs = ({ images }) => {
 // Trade Details Modal Component
 const TradeDetailsModal = ({ trade, onClose }) => {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <ModalPortal>
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div
           className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
@@ -657,6 +659,7 @@ const TradeDetailsModal = ({ trade, onClose }) => {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
