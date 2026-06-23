@@ -280,7 +280,7 @@ const TradeImageUploader = ({ images, onSave, onClose }) => {
           <button
             onClick={handleSave}
             data-testid="image-uploader-save-btn"
-            className="btn btn-primary text-sm px-4 py-1.5"
+            className="btn btn-gradient text-sm px-4 py-1.5"
           >
             Save ({visibleItems.length} {visibleItems.length === 1 ? "image" : "images"})
           </button>
