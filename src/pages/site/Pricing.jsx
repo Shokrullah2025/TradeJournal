@@ -31,7 +31,7 @@ const Pricing = () => {
       </section>
 
       {/* Tiers */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {PRICING_TIERS.map((tier) => (
             <PricingCard key={tier.id} tier={tier} cycle={cycle} />

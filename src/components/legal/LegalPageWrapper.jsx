@@ -23,8 +23,9 @@ const LegalPageWrapper = ({ title, effectiveDate, lastUpdated, children, slug })
       className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
       data-testid={`legal-page-${slug}`}
     >
-      {/* Main content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 print:py-4">
+      {/* Content — SiteLayout already owns the page <main> landmark, so this
+          is a plain container to avoid a nested/duplicate <main>. */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 print:py-4">
         {/* Document header */}
         <div className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
           <h1
@@ -69,7 +70,7 @@ const LegalPageWrapper = ({ title, effectiveDate, lastUpdated, children, slug })
             ))}
           </div>
         </nav>
-      </main>
+      </div>
     </div>
   );
 };
