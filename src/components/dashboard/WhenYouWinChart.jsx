@@ -100,6 +100,14 @@ const WhenYouWinChart = ({ trades = [] }) => {
       className="relative flex-1 min-h-0 w-full"
       data-testid="when-you-win-chart"
     >
+      {/* Same gentle fade-in as the Daily P&L chart — cells ease in, lightly
+          staggered so the heatmap settles in rather than popping on at once. */}
+      <style>{`
+        @keyframes chartFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       {dims && (
         <svg
           style={{
@@ -119,6 +127,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
               const x    = PAD.l + j * cellW;
               const y    = PAD.t + dayIdx * cellH;
               const fill = cellFill(dayIdx, hr);
+              const order = dayIdx * HOURS.length + j;
               return (
                 <rect
                   key={`${dayIdx}-${j}`}
@@ -129,6 +138,10 @@ const WhenYouWinChart = ({ trades = [] }) => {
                   rx="3"
                   fill={fill ?? undefined}
                   className={fill ? undefined : "fill-gray-100 dark:fill-gray-800"}
+                  style={{
+                    animation: "chartFadeIn 0.9s ease-out both",
+                    animationDelay: `${Math.min(order * 16, 520)}ms`,
+                  }}
                   data-testid={`when-you-win-cell-${dayIdx}-${hr}`}
                 />
               );

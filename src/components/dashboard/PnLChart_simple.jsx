@@ -167,6 +167,20 @@ const PnLChart = ({ trades = [] }) => {
 
   const hovered = hover.idx !== null ? visibleData[hover.idx] : null;
 
+  // Anchor the tooltip to the hovered candle (not the cursor): horizontally
+  // centered on the bar, vertically a few px above the bar's top edge so it
+  // floats just over whichever candle the user is on, scaled to its height.
+  const tip = hovered
+    ? (() => {
+        const bh     = Math.max(2, (Math.abs(hovered.pnl) / niceTop) * (chartH / 2));
+        const barTop = hovered.pnl >= 0 ? midY - bh : midY;
+        return {
+          x: barX(hover.idx) + BAR_W / 2,
+          y: barTop - 8,
+        };
+      })()
+    : null;
+
   return (
     // flex-1 min-h-0 lets this div fill whatever vertical space the card gives it.
     // The SVG is absolutely positioned to cover the div exactly — this way the
@@ -178,6 +192,14 @@ const PnLChart = ({ trades = [] }) => {
       onMouseLeave={handleLeave}
       data-testid="pnl-chart"
     >
+      {/* Candles ease in on mount: a soft opacity fade with a slight rise,
+          lightly staggered left-to-right so the chart settles in gently. */}
+      <style>{`
+        @keyframes pnlBarIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <svg
         style={{
           position: "absolute",
@@ -228,6 +250,19 @@ const PnLChart = ({ trades = [] }) => {
           );
         })}
 
+        {/* Background catcher: clears the tooltip when the cursor is inside the
+            plot area but not over any candle (e.g. the empty space to the right
+            of the last bar). Rendered before the bars so their hit-targets sit
+            on top and still win over their own slots. */}
+        <rect
+          x={PAD_LEFT}
+          y={PAD_TOP}
+          width={chartW}
+          height={chartH}
+          fill="transparent"
+          onMouseMove={handleLeave}
+        />
+
         {/* Bars — packed left, touching, each exactly BAR_W px wide */}
         {visibleData.map((d, i) => {
           const x  = barX(i);
@@ -236,7 +271,13 @@ const PnLChart = ({ trades = [] }) => {
           const isHover = hover.idx === i;
           const dimmed  = hover.idx !== null && !isHover;
           return (
-            <g key={d.key}>
+            <g
+              key={d.key}
+              style={{
+                animation: "pnlBarIn 0.9s ease-out both",
+                animationDelay: `${Math.min(i * 16, 520)}ms`,
+              }}
+            >
               <rect
                 x={x + 0.5}
                 y={y}
@@ -244,7 +285,7 @@ const PnLChart = ({ trades = [] }) => {
                 height={bh}
                 rx="1.5"
                 fill={d.pnl >= 0 ? "#16a34a" : "#ef4444"}
-                opacity={dimmed ? 0.45 : 1}
+                opacity={dimmed ? 0.7 : 1}
                 className="transition-opacity duration-150"
                 data-testid={`pnl-chart-bar-${i}`}
               />
@@ -294,8 +335,8 @@ const PnLChart = ({ trades = [] }) => {
           className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
           data-testid="pnl-chart-tooltip"
           style={{
-            left: hover.x,
-            top: hover.y - 10,
+            left: tip.x,
+            top: tip.y,
             transform: "translate(-50%, -100%)",
           }}
         >
