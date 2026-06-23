@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Plus,
@@ -8,39 +8,92 @@ import {
   Search,
   List,
   Calendar as CalendarIcon,
-  TrendingUp,
-  Wifi,
-  WifiOff,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
-import { useBroker } from "../context/BrokerContext";
 import TradeForm from "../components/trades/TradeForm";
 import TradeFilters from "../components/trades/TradeFilters";
 import TradeCalendar from "../components/trades/TradeCalendar";
-import TradeList from "../components/trades/TradeList";
-import BrokerModal from "../components/trades/BrokerModal";
+import TradeListView from "../components/trades/TradeListView";
+import TradePnLSummary from "../components/trades/TradePnLSummary";
 import CsvImportModal from "../components/trades/CsvImportModal";
+import { MiniLineChart } from "../components/dashboard/MiniCharts";
 import { exportToExcel } from "../utils/exportUtils";
 import toast from "react-hot-toast";
 
+const tradeDateOf = (t) => t.entryDate || t.entry_date || t.createdAt;
+
+// Cumulative sparkline series (one running total per day, oldest → newest).
+const cumulativeSeries = (trades, predicate) => {
+  const byDay = {};
+  trades.forEach((t) => {
+    if (predicate && !predicate(t)) return;
+    const key = (tradeDateOf(t) || "").substring(0, 10);
+    if (!key) return;
+    byDay[key] = (byDay[key] || 0) + 1;
+  });
+  const sorted = Object.keys(byDay).sort();
+  let running = 0;
+  const series = sorted.map((k) => (running += byDay[k]));
+  // MiniLineChart divides by (length - 1); a lone point would render NaN.
+  return series.length < 2 ? [] : series;
+};
+
+const StatTile = ({ label, value, valueClass, badge, sparkline, subtitle, testId }) => (
+  <div className="card flex flex-col gap-2" data-testid={testId}>
+    <div className="flex items-center justify-between">
+      <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+        {label}
+      </span>
+      {badge}
+    </div>
+    <div className={`text-2xl font-bold ${valueClass}`}>{value}</div>
+    {subtitle ? (
+      <div className="text-xs text-gray-400 dark:text-gray-500">{subtitle}</div>
+    ) : (
+      <div className="h-8">{sparkline}</div>
+    )}
+  </div>
+);
+
+// Bordered secondary button with a clear hover state (the global `btn-secondary`
+// class is not defined, so style explicitly here).
+const SECONDARY_BTN =
+  "btn flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+
 const Trades = () => {
   const { filteredTrades, trades, importTrades } = useTrades();
-  const { isConnected, selectedBroker, brokers } = useBroker();
   const location = useLocation();
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingTrade, setEditingTrade] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
-  const [activeView, setActiveView] = useState("calendar");
+  // A trade clicked from the Dashboard arrives via navigation state. Capture it
+  // once into local state so it survives clearing the history entry below.
+  const [highlightTradeId, setHighlightTradeId] = useState(
+    location.state?.highlightTradeId ?? null,
+  );
+  // Land on the List view when asked to highlight a specific trade (the row to
+  // scroll to lives there, not in the calendar).
+  const [activeView, setActiveView] = useState(
+    location.state?.highlightTradeId ? "list" : "calendar",
+  );
 
   // Handle OAuth success message
   useEffect(() => {
     if (location.state?.oauthSuccess) {
       toast.success(`Successfully connected to ${location.state.broker}!`);
       // Clear the state to prevent showing the message again
+      window.history.replaceState(null, "");
+    }
+  }, [location.state]);
+
+  // Consume the highlight request so a manual refresh won't re-trigger it.
+  useEffect(() => {
+    if (location.state?.highlightTradeId) {
+      setHighlightTradeId(location.state.highlightTradeId);
+      setActiveView("list");
       window.history.replaceState(null, "");
     }
   }, [location.state]);
@@ -75,62 +128,103 @@ const Trades = () => {
     setShowTradeForm(true);
   };
 
-  const filteredAndSearchedTrades = filteredTrades.filter((trade) => {
-    if (!searchTerm) return true;
+  const filteredAndSearchedTrades = useMemo(
+    () =>
+      filteredTrades.filter((trade) => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          trade.instrument.toLowerCase().includes(searchLower) ||
+          trade.strategy?.toLowerCase().includes(searchLower) ||
+          trade.notes?.toLowerCase().includes(searchLower) ||
+          trade.tags?.some((tag) => tag.toLowerCase().includes(searchLower))
+        );
+      }),
+    [filteredTrades, searchTerm],
+  );
 
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      trade.instrument.toLowerCase().includes(searchLower) ||
-      trade.strategy.toLowerCase().includes(searchLower) ||
-      trade.notes?.toLowerCase().includes(searchLower) ||
-      trade.tags?.some((tag) => tag.toLowerCase().includes(searchLower))
-    );
-  });
+  // Aggregates for the bottom stat tiles (calendar view).
+  const tileStats = useMemo(() => {
+    const closed = filteredTrades.filter((t) => t.status === "closed");
+    const winners = closed.filter((t) => (t.pnl || 0) > 0).length;
+    const losers = closed.filter((t) => (t.pnl || 0) < 0).length;
+    const total = filteredTrades.length;
+    return {
+      total,
+      open: filteredTrades.filter((t) => t.status === "open").length,
+      winners,
+      losers,
+      winPct: total ? Math.round((winners / total) * 100) : 0,
+      losePct: total ? Math.round((losers / total) * 100) : 0,
+      totalSeries: cumulativeSeries(filteredTrades),
+      winSeries: cumulativeSeries(filteredTrades, (t) => t.status === "closed" && (t.pnl || 0) > 0),
+      loseSeries: cumulativeSeries(filteredTrades, (t) => t.status === "closed" && (t.pnl || 0) < 0),
+    };
+  }, [filteredTrades]);
+
+  const viewToggle = (
+    <div
+      className="inline-flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1"
+      data-testid="trades-view-toggle"
+    >
+      <button
+        onClick={() => setActiveView("calendar")}
+        data-testid="trades-calendar-view-btn"
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          activeView === "calendar"
+            ? "bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm"
+            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+        }`}
+      >
+        <CalendarIcon className="w-4 h-4" />
+        <span>Calendar</span>
+      </button>
+      <button
+        onClick={() => setActiveView("list")}
+        data-testid="trades-list-view-btn"
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          activeView === "list"
+            ? "bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm"
+            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+        }`}
+      >
+        <List className="w-4 h-4" />
+        <span>List</span>
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Trade Journal
-          </h1>
-        </div>
+      {/* Page title */}
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        Trade Journal
+      </h1>
 
-        <div className="mt-4 sm:mt-0 flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Broker Connection Status Button */}
-          <button
-            onClick={() => setShowBrokerModal(true)}
-            className={`btn flex items-center space-x-2 ${
-              isConnected ? "btn-secondary" : "btn-primary"
-            }`}
-          >
-            {isConnected ? (
-              <>
-                <Wifi className="w-4 h-4" />
-                <span>{brokers[selectedBroker]?.name}</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-4 h-4" />
-                <span>Connect Broker</span>
-              </>
-            )}
-          </button>
+      {/* Toolbar: view toggle (left) + actions (right) */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        {viewToggle}
 
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setShowCsvModal(true)}
-            className="btn btn-secondary flex items-center space-x-2"
+            className={SECONDARY_BTN}
             data-testid="open-csv-import-btn"
+            title="Import trades from a CSV file"
           >
             <Upload className="w-4 h-4" />
-            <span>Import CSV</span>
+            <span>Import</span>
           </button>
 
           <button
             onClick={handleExport}
             disabled={trades.length === 0}
-            className="btn btn-secondary flex items-center space-x-2"
+            className={SECONDARY_BTN}
+            title={
+              trades.length === 0
+                ? "No trades to export yet"
+                : "Export all trades to an Excel file"
+            }
           >
             <Download className="w-4 h-4" />
             <span>Export</span>
@@ -138,7 +232,8 @@ const Trades = () => {
 
           <button
             onClick={() => setShowTradeForm(true)}
-            className="btn btn-primary flex items-center space-x-2"
+            className="btn btn-gradient flex items-center gap-2"
+            title="Log a new trade"
           >
             <Plus className="w-4 h-4" />
             <span>Add Trade</span>
@@ -146,25 +241,30 @@ const Trades = () => {
         </div>
       </div>
 
-      {/* Search and Filters — compact inline row, no card wrapper */}
+      {/* Search + filters (filters toggle sits to the right of search) */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="relative w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search trades..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full sm:w-64 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              data-testid="trades-search-input"
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn ${
-              showFilters ? "btn-primary" : "btn-secondary"
-            } flex items-center space-x-2`}
+            data-testid="trades-filters-toggle-btn"
+            title="Filter trades"
+            className={
+              showFilters
+                ? "btn btn-primary flex items-center gap-2"
+                : SECONDARY_BTN
+            }
           >
             <Filter className="w-4 h-4" />
             <span>Filters</span>
@@ -178,289 +278,92 @@ const Trades = () => {
         )}
       </div>
 
-      {/* View Toggle Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveView("calendar")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeView === "calendar"
-                ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-            }`}
-          >
-            <div className="flex items-center space-x-2">
-              <CalendarIcon className="w-4 h-4" />
-              <span>Calendar View</span>
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView("list")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeView === "list"
-                ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-            }`}
-          >
-            <div className="flex items-center space-x-2">
-              <List className="w-4 h-4" />
-              <span>List View</span>
-            </div>
-          </button>
-        </nav>
-      </div>
-
-      {/* Content Area */}
+      {/* Content */}
       {activeView === "calendar" ? (
         <div className="space-y-6">
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Calendar Section - Takes 3/4 of the width */}
-          <div className="xl:col-span-3">
-            <TradeCalendar
-              trades={filteredAndSearchedTrades}
-              onAddTrade={handleAddTradeForDate}
-              onEditTrade={handleEditTrade}
+            <div className="xl:col-span-3">
+              <TradeCalendar
+                trades={filteredAndSearchedTrades}
+                onAddTrade={handleAddTradeForDate}
+                onEditTrade={handleEditTrade}
+              />
+            </div>
+            <div className="xl:col-span-1">
+              <div className="xl:sticky xl:top-6">
+                <TradePnLSummary
+                  trades={filteredAndSearchedTrades}
+                  variant="calendar"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom stat tiles */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatTile
+              testId="trades-stat-total"
+              label="Total Trades"
+              value={tileStats.total}
+              valueClass="text-gray-900 dark:text-gray-100"
+              badge={
+                <span className="px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-[10px] font-medium">
+                  all time
+                </span>
+              }
+              sparkline={<MiniLineChart data={tileStats.totalSeries} color="blue" />}
             />
-          </div>
-
-          {/* P&L Summary Panel - Takes 1/4 of the width */}
-          <div className="xl:col-span-1">
-            <div className="card sticky top-6">
-              {/* Header */}
-              <div
-                className="border-b border-gray-200 dark:border-gray-700 p-4"
-                style={{ backgroundColor: "rgb(2, 132, 199)" }}
-              >
-                <h3 className="text-lg font-semibold text-white">
-                  P&L Summary
-                </h3>
-              </div>
-
-              {/* Content */}
-              <div className="p-4 space-y-4">
-                {/* Total P&L */}
-                <div className="text-center">
-                  <div
-                    className={`text-2xl font-bold ${
-                      filteredAndSearchedTrades.reduce(
-                        (sum, trade) => sum + (trade.pnl || 0),
-                        0
-                      ) >= 0
-                        ? "text-success-600 dark:text-success-400"
-                        : "text-danger-600 dark:text-danger-400"
-                    }`}
-                  >
-                    $
-                    {filteredAndSearchedTrades
-                      .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
-                      .toFixed(2)}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Total P&L
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-gray-200 dark:border-gray-700"></div>
-
-                {/* Stats Grid */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Win Rate
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {filteredAndSearchedTrades.length > 0
-                        ? `${(
-                            (filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                              .length /
-                              filteredAndSearchedTrades.length) *
-                            100
-                          ).toFixed(1)}%`
-                        : "0%"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Winning Trades
-                    </span>
-                    <span className="font-semibold text-success-600 dark:text-success-400">
-                      {
-                        filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                          .length
-                      }
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Losing Trades
-                    </span>
-                    <span className="font-semibold text-danger-600 dark:text-danger-400">
-                      {
-                        filteredAndSearchedTrades.filter((t) => t.pnl < 0)
-                          .length
-                      }
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Avg Win
-                    </span>
-                    <span className="font-semibold text-success-600 dark:text-success-400">
-                      $
-                      {filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                        .length > 0
-                        ? (
-                            filteredAndSearchedTrades
-                              .filter((t) => t.pnl > 0)
-                              .reduce((sum, t) => sum + t.pnl, 0) /
-                            filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                              .length
-                          ).toFixed(2)
-                        : "0.00"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Avg Loss
-                    </span>
-                    <span className="font-semibold text-danger-600 dark:text-danger-400">
-                      $
-                      {filteredAndSearchedTrades.filter((t) => t.pnl < 0)
-                        .length > 0
-                        ? (
-                            filteredAndSearchedTrades
-                              .filter((t) => t.pnl < 0)
-                              .reduce((sum, t) => sum + t.pnl, 0) /
-                            filteredAndSearchedTrades.filter((t) => t.pnl < 0)
-                              .length
-                          ).toFixed(2)
-                        : "0.00"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Visual Progress Bar for Win Rate */}
-                <div className="mt-4">
-                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    <span>Win Rate</span>
-                    <span>
-                      {filteredAndSearchedTrades.length > 0
-                        ? `${(
-                            (filteredAndSearchedTrades.filter((t) => t.pnl > 0)
-                              .length /
-                              filteredAndSearchedTrades.length) *
-                            100
-                          ).toFixed(1)}%`
-                        : "0%"}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-success-500 to-success-600 h-2 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${
-                          filteredAndSearchedTrades.length > 0
-                            ? (filteredAndSearchedTrades.filter(
-                                (t) => t.pnl > 0
-                              ).length /
-                                filteredAndSearchedTrades.length) *
-                              100
-                            : 0
-                        }%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Monthly Performance */}
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    This Month
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        {filteredAndSearchedTrades.length}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Total Trades
-                      </div>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div
-                        className={`text-xl font-bold ${
-                          filteredAndSearchedTrades.reduce(
-                            (sum, trade) => sum + (trade.pnl || 0),
-                            0
-                          ) >= 0
-                            ? "text-success-600 dark:text-success-400"
-                            : "text-danger-600 dark:text-danger-400"
-                        }`}
-                      >
-                        {filteredAndSearchedTrades.reduce(
-                          (sum, trade) => sum + (trade.pnl || 0),
-                          0
-                        ) >= 0
-                          ? "+"
-                          : ""}
-                        $
-                        {filteredAndSearchedTrades
-                          .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
-                          .toFixed(0)}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Monthly P&L
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-          {/* Summary Stats — below calendar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col gap-1">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Trades</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{filteredTrades.length}</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-blue-100 dark:border-blue-900 shadow-sm flex flex-col gap-1">
-              <div className="text-xs font-medium text-blue-500 dark:text-blue-400 uppercase tracking-wide">Open Positions</div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {filteredTrades.filter((t) => t.status === "open").length}
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-green-100 dark:border-green-900 shadow-sm flex flex-col gap-1">
-              <div className="text-xs font-medium text-success-600 dark:text-success-400 uppercase tracking-wide">Winning Trades</div>
-              <div className="text-2xl font-bold text-success-600 dark:text-success-400">
-                {filteredTrades.filter((t) => t.pnl > 0).length}
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-red-900 shadow-sm flex flex-col gap-1">
-              <div className="text-xs font-medium text-danger-600 dark:text-danger-400 uppercase tracking-wide">Losing Trades</div>
-              <div className="text-2xl font-bold text-danger-600 dark:text-danger-400">
-                {filteredTrades.filter((t) => t.pnl < 0).length}
-              </div>
-            </div>
+            <StatTile
+              testId="trades-stat-open"
+              label="Open Positions"
+              value={tileStats.open}
+              valueClass="text-primary-600 dark:text-primary-400"
+              badge={<span className="w-2 h-2 rounded-full bg-primary-500" />}
+              subtitle="Live · awaiting close"
+            />
+            <StatTile
+              testId="trades-stat-winning"
+              label="Winning"
+              value={tileStats.winners}
+              valueClass="text-success-600 dark:text-success-400"
+              badge={
+                <span className="text-[10px] font-medium text-success-600 dark:text-success-400">
+                  {tileStats.winPct}%
+                </span>
+              }
+              sparkline={<MiniLineChart data={tileStats.winSeries} color="green" positive />}
+            />
+            <StatTile
+              testId="trades-stat-losing"
+              label="Losing"
+              value={tileStats.losers}
+              valueClass="text-danger-600 dark:text-danger-400"
+              badge={
+                <span className="text-[10px] font-medium text-danger-600 dark:text-danger-400">
+                  {tileStats.losePct}%
+                </span>
+              }
+              sparkline={<MiniLineChart data={tileStats.loseSeries} color="red" />}
+            />
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Enhanced List View with Better Layout */}
-          <TradeList
-            trades={filteredAndSearchedTrades}
-            onEditTrade={handleEditTrade}
-            compact={false}
-          />
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="xl:col-span-3">
+            <TradeListView
+              trades={filteredAndSearchedTrades}
+              onEditTrade={handleEditTrade}
+              highlightTradeId={highlightTradeId}
+            />
+          </div>
+          <div className="xl:col-span-1">
+            <div className="xl:sticky xl:top-6">
+              <TradePnLSummary
+                trades={filteredAndSearchedTrades}
+                variant="list"
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -472,13 +375,6 @@ const Trades = () => {
           selectedDate={selectedDate}
         />
       )}
-
-      {/* Broker Modal */}
-      <BrokerModal
-        isOpen={showBrokerModal}
-        onClose={() => setShowBrokerModal(false)}
-        onTradesImported={handleTradesImported}
-      />
 
       {/* CSV Import Modal */}
       <CsvImportModal
