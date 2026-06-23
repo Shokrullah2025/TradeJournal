@@ -31,6 +31,7 @@ import CumulativePnLChart from "../components/dashboard/CumulativePnLChart";
 import WhenYouWinChart from "../components/dashboard/WhenYouWinChart";
 import PreMarketBriefing from "../components/dashboard/PreMarketBriefing";
 import TradeScatterChart from "../components/dashboard/TradeScatterChart";
+import AIInsights from "../components/dashboard/AIInsights";
 import { MiniLineChart, MiniBarChart, MiniDonutChart, MiniAreaChart, MiniRiskRewardChart, MiniDrawdownChart } from "../components/dashboard/MiniCharts";
 
 const Dashboard = () => {
@@ -84,9 +85,19 @@ const Dashboard = () => {
     return { cumData, cumDates, sessionCount };
   }, [trades, cumulativeRange]);
 
-  const recentTrades = trades
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5);
+  // Recent = most recent by entry date, matching the order the Trades page and
+  // the DB use (entry_date desc). Sort a copy — never mutate the context array.
+  const recentTrades = useMemo(
+    () =>
+      [...trades]
+        .sort(
+          (a, b) =>
+            new Date(b.entryDate || b.entry_date || 0) -
+            new Date(a.entryDate || a.entry_date || 0),
+        )
+        .slice(0, 4),
+    [trades],
+  );
 
   const statsCards = [
     {
@@ -335,7 +346,7 @@ const Dashboard = () => {
 
       {/* Recent Activity and Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 flex">
           <RecentTrades trades={recentTrades} />
         </div>
 
@@ -353,35 +364,8 @@ const Dashboard = () => {
             <TradeScatterChart trades={trades} />
           </div>
 
-          {/* Trading Insights */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-5 h-5 text-warning-600 dark:text-warning-400" />
-                <span>Insights</span>
-              </div>
-            </h3>
-            <div className="space-y-3">
-              <div className="p-3 bg-primary-50 dark:bg-primary-900/30 rounded-lg border border-primary-100 dark:border-primary-800">
-                <p className="text-sm text-primary-700 dark:text-primary-300">
-                  Your win rate has improved by 5% this month. Keep up the good
-                  work!
-                </p>
-              </div>
-              <div className="p-3 bg-warning-50 dark:bg-warning-900/30 rounded-lg border border-warning-100 dark:border-warning-800">
-                <p className="text-sm text-warning-700 dark:text-warning-300">
-                  Consider reducing position size on high-risk setups to
-                  minimize drawdown.
-                </p>
-              </div>
-              <div className="p-3 bg-success-50 dark:bg-success-900/30 rounded-lg border border-success-100 dark:border-success-800">
-                <p className="text-sm text-success-700 dark:text-success-300">
-                  Your best performing strategy is momentum trading with 75% win
-                  rate.
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Trading Insights — real AI feedback generated from the user's stats */}
+          <AIInsights trades={trades} stats={stats} />
         </div>
       </div>
     </div>
