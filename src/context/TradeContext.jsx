@@ -63,6 +63,7 @@ const toDbRow = (data, userId, accountId) => ({
   tags:             Array.isArray(data.tags) ? data.tags : [],
   risk_reward_ratio: data.riskRewardRatio ? parseFloat(data.riskRewardRatio) : null,
   external_trade_id: data.brokerTradeId || data.externalTradeId || null,
+  template_id:      data.templateId || null,
 });
 
 // snake_case DB row → camelCase UI object
@@ -93,6 +94,7 @@ const fromDbRow = (row, images = []) => ({
   tags:             Array.isArray(row.tags) ? row.tags : [],
   riskRewardRatio:  row.risk_reward_ratio != null ? parseFloat(row.risk_reward_ratio) : null,
   brokerTradeId:    row.external_trade_id,
+  templateId:       row.template_id ?? null,
   createdAt:        row.created_at,
   updatedAt:        row.updated_at,
   images,
@@ -239,7 +241,7 @@ export const TradeProvider = ({ children }) => {
     dispatch({ type: ACTIONS.SET_LOADING, payload: true });
     const { data, error } = await supabase
       .from("trades")
-      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at")
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, template_id, created_at, updated_at")
       .eq("user_id", userId)
       .order("entry_date", { ascending: false });
 
@@ -355,7 +357,7 @@ export const TradeProvider = ({ children }) => {
     const { data, error } = await supabase
       .from("trades")
       .insert(row)
-      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at")
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, template_id, created_at, updated_at")
       .single();
 
     if (error) {
@@ -379,7 +381,7 @@ export const TradeProvider = ({ children }) => {
       .update(updateFields)
       .eq("id", tradeId)
       .eq("user_id", user.id)
-      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at")
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, template_id, created_at, updated_at")
       .single();
 
     if (error) {
@@ -431,7 +433,7 @@ export const TradeProvider = ({ children }) => {
     const { data, error } = await supabase
       .from("trades")
       .insert(newRows)
-      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, created_at, updated_at");
+      .select("id, user_id, account_id, instrument, instrument_type, direction, quantity, entry_price, exit_price, stop_loss, take_profit, entry_date, exit_date, status, pnl, commission, strategy, setup_type, market_condition, notes, tags, risk_reward_ratio, external_trade_id, template_id, created_at, updated_at");
 
     if (error) throw error;
 

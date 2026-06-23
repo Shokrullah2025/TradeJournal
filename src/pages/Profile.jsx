@@ -235,7 +235,7 @@ const Profile = () => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="btn btn-primary flex items-center space-x-2"
+                  className="btn btn-gradient flex items-center space-x-2"
                   disabled={isSubmitting}
                   data-testid="profile-save-btn"
                 >

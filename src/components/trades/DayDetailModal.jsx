@@ -97,7 +97,7 @@ const TradeScreenshots = ({ images }) => {
             type="button"
             onClick={() => setZoomedImg(img)}
             data-testid={`trade-screenshot-thumb-${i}`}
-            className="relative w-[70px] h-[46px] rounded-md overflow-hidden border border-gray-200 dark:border-gray-600 hover:ring-2 hover:ring-blue-400 transition-all group"
+            className="relative w-[70px] h-[46px] rounded-md overflow-hidden border border-gray-200 dark:border-gray-600 hover:ring-2 hover:ring-primary-400 transition-all group"
             title="Click to zoom"
           >
             {img.previewUrl ? (
@@ -230,9 +230,9 @@ const DayDetailModal = ({
 
   const pnlTextClass = (pnl) =>
     pnl > 0
-      ? "text-green-600 dark:text-green-400"
+      ? "text-success-600 dark:text-success-400"
       : pnl < 0
-      ? "text-red-600 dark:text-red-400"
+      ? "text-danger-600 dark:text-danger-400"
       : "text-gray-500 dark:text-gray-400";
 
   const hasDetail = (trade) =>
@@ -244,22 +244,22 @@ const DayDetailModal = ({
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
       data-testid="day-detail-modal"
     >
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col">
-        {/* ── Dark terminal header ── */}
-        <div className="bg-slate-900 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col">
+        {/* ── Header ── */}
+        <div className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-blue-400 shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-lg font-bold text-white tracking-tight">
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">
                 {format(date, "EEE, MMMM d, yyyy")}
               </div>
-              <div className="font-mono text-xs text-slate-400 mt-0.5 tracking-wide">
-                {trades.length} POSITION{trades.length !== 1 ? "S" : ""} ·{" "}
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 tracking-wide uppercase">
+                {trades.length} position{trades.length !== 1 ? "s" : ""} ·{" "}
                 {openTrades.length === 0
-                  ? "ALL CLOSED"
-                  : `${openTrades.length} OPEN`}
+                  ? "all closed"
+                  : `${openTrades.length} open`}
               </div>
             </div>
           </div>
@@ -269,45 +269,45 @@ const DayDetailModal = ({
             <div
               className={`flex flex-col gap-0.5 px-3.5 py-[7px] rounded-lg border ${
                 totalPnL > 0
-                  ? "bg-green-950/60 border-green-800"
+                  ? "bg-success-50 dark:bg-success-900/25 border-success-200 dark:border-success-800"
                   : totalPnL < 0
-                  ? "bg-red-950/60 border-red-900"
-                  : "bg-slate-800 border-slate-700"
+                  ? "bg-danger-50 dark:bg-danger-900/25 border-danger-200 dark:border-danger-800"
+                  : "bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600"
               }`}
             >
-              <span className="font-semibold text-[9px] tracking-widest text-slate-400">
+              <span className="font-semibold text-[9px] tracking-widest text-gray-400 dark:text-gray-500">
                 DAY P&L
               </span>
               <span
-                className={`font-mono font-bold text-[15px] ${
+                className={`font-bold text-[15px] tabular-nums ${
                   totalPnL > 0
-                    ? "text-green-400"
+                    ? "text-success-600 dark:text-success-400"
                     : totalPnL < 0
-                    ? "text-red-400"
-                    : "text-slate-200"
+                    ? "text-danger-600 dark:text-danger-400"
+                    : "text-gray-700 dark:text-gray-200"
                 }`}
                 data-testid="day-pnl-value"
               >
                 {formatCurrency(totalPnL)}
               </span>
             </div>
-            <div className="flex flex-col gap-0.5 px-3.5 py-[7px] rounded-lg bg-slate-800 border border-slate-700">
-              <span className="font-semibold text-[9px] tracking-widest text-slate-400">
+            <div className="flex flex-col gap-0.5 px-3.5 py-[7px] rounded-lg bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+              <span className="font-semibold text-[9px] tracking-widest text-gray-400 dark:text-gray-500">
                 WIN
               </span>
               <span
-                className="font-mono font-bold text-[15px] text-slate-200"
+                className="font-bold text-[15px] tabular-nums text-gray-700 dark:text-gray-200"
                 data-testid="day-winrate-value"
               >
                 {closedTrades.length > 0 ? `${winRate.toFixed(0)}%` : "—"}
               </span>
             </div>
-            <div className="flex flex-col gap-0.5 px-3.5 py-[7px] rounded-lg bg-slate-800 border border-slate-700">
-              <span className="font-semibold text-[9px] tracking-widest text-slate-400">
+            <div className="flex flex-col gap-0.5 px-3.5 py-[7px] rounded-lg bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+              <span className="font-semibold text-[9px] tracking-widest text-gray-400 dark:text-gray-500">
                 W / L
               </span>
               <span
-                className="font-mono font-bold text-[15px] text-slate-200"
+                className="font-bold text-[15px] tabular-nums text-gray-700 dark:text-gray-200"
                 data-testid="day-wl-value"
               >
                 {winningTrades.length} / {losingTrades.length}
@@ -316,7 +316,7 @@ const DayDetailModal = ({
             <button
               onClick={() => onAddTrade(date)}
               data-testid="day-detail-add-btn"
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3.5 py-2 text-[13px] font-semibold transition-colors ml-1"
+              className="btn-gradient inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold transition-colors ml-1"
             >
               <Plus className="w-4 h-4" strokeWidth={2.5} />
               Add
@@ -324,7 +324,7 @@ const DayDetailModal = ({
             <button
               onClick={onClose}
               data-testid="day-detail-close-btn"
-              className="w-9 h-9 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
               aria-label="Close"
             >
               <X className="w-4 h-4" />
@@ -345,7 +345,7 @@ const DayDetailModal = ({
               </p>
               <button
                 onClick={() => onAddTrade(date)}
-                className="btn btn-primary"
+                className="btn btn-gradient"
                 data-testid="day-detail-empty-add-btn"
               >
                 Add Your First Trade
@@ -388,10 +388,10 @@ const DayDetailModal = ({
                       <span
                         className={`w-2.5 h-2.5 rounded-full ${
                           trade.status === "open"
-                            ? "bg-blue-500"
+                            ? "bg-primary-500"
                             : isWin
-                            ? "bg-green-500"
-                            : "bg-red-500"
+                            ? "bg-success-500"
+                            : "bg-danger-500"
                         }`}
                       />
 
@@ -403,8 +403,8 @@ const DayDetailModal = ({
                         <span
                           className={`font-bold text-[9px] px-1.5 py-0.5 rounded ${
                             trade.tradeType === "long"
-                              ? "text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900/40"
-                              : "text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900/40"
+                              ? "text-success-700 bg-success-100 dark:text-success-300 dark:bg-success-900/40"
+                              : "text-danger-700 bg-danger-100 dark:text-danger-300 dark:bg-danger-900/40"
                           }`}
                         >
                           {trade.tradeType?.toUpperCase()}
@@ -412,22 +412,22 @@ const DayDetailModal = ({
                       </div>
 
                       {/* entry */}
-                      <span className="font-mono text-[13px] text-gray-700 dark:text-gray-300">
+                      <span className="tabular-nums text-[13px] text-gray-700 dark:text-gray-300">
                         {formatPrice(trade.entryPrice)}
                       </span>
 
                       {/* qty */}
-                      <span className="font-mono text-[13px] text-gray-700 dark:text-gray-300">
+                      <span className="tabular-nums text-[13px] text-gray-700 dark:text-gray-300">
                         {trade.quantity}
                       </span>
 
                       {/* stop / target */}
-                      <div className="flex gap-1.5 font-mono font-semibold text-xs">
-                        <span className="text-red-600 dark:text-red-400">
+                      <div className="flex gap-1.5 tabular-nums font-semibold text-xs">
+                        <span className="text-danger-600 dark:text-danger-400">
                           {trade.stopLoss ? Number(trade.stopLoss).toFixed(2) : "—"}
                         </span>
                         <span className="text-gray-300 dark:text-gray-600">/</span>
-                        <span className="text-green-600 dark:text-green-400">
+                        <span className="text-success-600 dark:text-success-400">
                           {trade.takeProfit
                             ? Number(trade.takeProfit).toFixed(2)
                             : "—"}
@@ -439,9 +439,9 @@ const DayDetailModal = ({
 
                       {/* pnl */}
                       <span
-                        className={`font-mono font-bold text-sm text-right ${
+                        className={`tabular-nums font-bold text-sm text-right ${
                           trade.status === "open"
-                            ? "text-blue-600 dark:text-blue-400"
+                            ? "text-primary-600 dark:text-primary-400"
                             : pnlTextClass(trade.pnl || 0)
                         }`}
                         data-testid={`trade-row-pnl-${trade.id}`}
@@ -459,7 +459,7 @@ const DayDetailModal = ({
                             onEditTrade(trade);
                           }}
                           data-testid={`trade-row-edit-${trade.id}`}
-                          className="w-7 h-7 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 flex items-center justify-center transition-colors"
+                          className="w-7 h-7 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 flex items-center justify-center transition-colors"
                           title="Edit trade"
                         >
                           <Edit className="w-3.5 h-3.5" />
@@ -473,7 +473,7 @@ const DayDetailModal = ({
                             data-testid={`trade-row-expand-${trade.id}`}
                             className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
                               isExpanded
-                                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300"
+                                ? "bg-primary-50 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300"
                                 : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600"
                             }`}
                             title={isExpanded ? "Collapse" : "Expand details"}
@@ -564,14 +564,14 @@ const DayDetailModal = ({
 
               {/* Footer */}
               <div className="flex items-center justify-between px-6 py-3 bg-gray-50 dark:bg-gray-800/60">
-                <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
+                <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500">
                   {closedTrades.length} of {trades.length} trade
                   {trades.length !== 1 ? "s" : ""} closed
                 </span>
                 <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
                   Net{" "}
                   <span
-                    className={`font-mono font-bold ${pnlTextClass(totalPnL)}`}
+                    className={`tabular-nums font-bold ${pnlTextClass(totalPnL)}`}
                     data-testid="day-net-value"
                   >
                     {formatCurrency(totalPnL)}

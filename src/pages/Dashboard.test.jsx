@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 // The Dashboard page pulls everything from TradeContext + AuthContext. We mock
 // both hooks so the page's own logic (stats cards, cumulative aggregation,
@@ -18,6 +19,14 @@ vi.mock("../context/AuthContext", () => ({
 }));
 
 import Dashboard from "./Dashboard";
+
+// RecentTrades calls useNavigate(), so the page must render inside a Router.
+const renderDashboard = () =>
+  render(
+    <MemoryRouter>
+      <Dashboard />
+    </MemoryRouter>,
+  );
 
 const closed = (date, pnl, overrides = {}) => ({
   id: `${date}-${pnl}`,
@@ -71,7 +80,7 @@ describe("Dashboard page", () => {
       closed("2024-01-04T15:00:00Z", 1100),
     ];
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Dashboard" })
@@ -86,7 +95,7 @@ describe("Dashboard page", () => {
     ctx.stats = fullStats;
     ctx.trades = [closed("2024-01-02T15:00:00Z", 1500)];
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByText("$1,500")).toBeInTheDocument(); // totalPnL
     expect(screen.getByText("66%")).toBeInTheDocument(); // winRate
@@ -97,7 +106,7 @@ describe("Dashboard page", () => {
     ctx.stats = emptyStats;
     ctx.trades = [];
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByText("N/A")).toBeInTheDocument();
   });
@@ -106,7 +115,7 @@ describe("Dashboard page", () => {
     ctx.stats = emptyStats;
     ctx.trades = [];
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByText("No trades yet")).toBeInTheDocument();
   });
@@ -115,7 +124,7 @@ describe("Dashboard page", () => {
     ctx.stats = emptyStats;
     ctx.trades = [];
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(
       screen.getByTestId("cumulative-pnl-chart-empty-state")
@@ -132,7 +141,7 @@ describe("Dashboard page", () => {
         quantity: 1, entryPrice: 10, pnl: 0 },
     ];
 
-    render(<Dashboard />);
+    renderDashboard();
 
     // 2 of the 3 trades are closed
     expect(screen.getByTestId("when-you-win-trade-count")).toHaveTextContent("2");
@@ -145,7 +154,7 @@ describe("Dashboard page", () => {
       closed("2024-01-03T15:00:00Z", -200),
     ];
 
-    render(<Dashboard />);
+    renderDashboard();
 
     const toggle = screen.getByTestId("cumulative-pnl-range-toggle");
     expect(within(toggle).getByTestId("cumulative-pnl-range-30D-btn")).toBeInTheDocument();
@@ -159,13 +168,17 @@ describe("Dashboard page", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the static insights section", () => {
+  it("renders the AI insights section alongside Trade Outcomes", () => {
     ctx.stats = fullStats;
     ctx.trades = [closed("2024-01-02T15:00:00Z", 100)];
 
-    render(<Dashboard />);
+    renderDashboard();
 
-    expect(screen.getByText("Insights")).toBeInTheDocument();
+    // The static insights card was replaced by the AIInsights component, which
+    // renders its own header and a generate CTA when there are trades to analyze.
+    expect(screen.getByText("AI Insights")).toBeInTheDocument();
+    expect(screen.getByTestId("ai-insights-card")).toBeInTheDocument();
+    expect(screen.getByTestId("ai-insights-generate-btn")).toBeInTheDocument();
     expect(screen.getByText("Trade Outcomes")).toBeInTheDocument();
   });
 
@@ -178,7 +191,7 @@ describe("Dashboard page", () => {
       })
     );
 
-    render(<Dashboard />);
+    renderDashboard();
 
     // Newest 5 (SYM7..SYM3) show; the oldest (SYM0) must not.
     expect(screen.getByText("SYM7")).toBeInTheDocument();

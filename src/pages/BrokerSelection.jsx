@@ -291,7 +291,7 @@ const BrokerSelection = () => {
               </div>
               <button
                 onClick={() => setView("connect")}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/25 transition-colors whitespace-nowrap"
+                className="btn-gradient inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/25 transition-colors whitespace-nowrap"
                 data-testid="connect-account-btn"
               >
                 <Plus className="w-4 h-4" />
@@ -656,7 +656,7 @@ const BrokerSelection = () => {
                         className={`mt-auto w-full flex items-center justify-center gap-2 px-3 py-3 text-sm font-bold rounded-xl transition-colors ${
                           isConnectingFirm
                             ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
-                            : "bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-60"
+                            : "btn-gradient disabled:opacity-60"
                         }`}
                         data-testid={`firm-connect-${firm.id}-btn`}
                       >

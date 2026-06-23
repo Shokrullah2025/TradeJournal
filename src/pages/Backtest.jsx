@@ -450,7 +450,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 data-testid="history-modal-save-btn"
                 onClick={handleSave}
                 disabled={saving}
-                className="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 font-medium"
+                className="btn-gradient inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg disabled:opacity-60 font-medium"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {saving ? "Saving…" : "Save Changes"}
@@ -3031,10 +3031,7 @@ const Backtest = () => {
             </div>
             <button
               onClick={() => setCurrentView("setup")}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors flex-shrink-0"
-              style={{ background: "#1E53E5" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#1746c7")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#1E53E5")}
+              className="btn-gradient flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-shrink-0"
             >
               <Plus className="w-4 h-4" />
               New Session
@@ -3067,10 +3064,7 @@ const Backtest = () => {
               <div className="flex items-center gap-4 flex-wrap justify-center">
                 <button
                   onClick={() => setCurrentView("setup")}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-md transition-all"
-                  style={{ background: "#1E53E5" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#1746c7"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#1E53E5"; e.currentTarget.style.transform = ""; }}
+                  className="btn-gradient flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold shadow-md transition-all"
                 >
                   <Plus className="w-4 h-4" />
                   Create First Session
@@ -3792,7 +3786,7 @@ const Backtest = () => {
                       !strategy ||
                       !setup
                     }
-                    className="flex items-center justify-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-lg shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
+                    className="btn-gradient flex items-center justify-center px-8 py-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-lg shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
                   >
                     <Save className="w-5 h-5 mr-2" />
                     Create Session & Start Backtesting

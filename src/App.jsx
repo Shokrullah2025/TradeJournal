@@ -51,7 +51,6 @@ import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import FeatureGate from "./components/common/FeatureGate";
-import Footer from "./components/layout/Footer";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -238,7 +237,6 @@ function App() {
                                   />
                                 </Routes>
                                 </div>
-                                <Footer />
                               </main>
                             </div>
                           </div>

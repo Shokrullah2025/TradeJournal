@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ModalPortal from "../common/ModalPortal";
+import PropTypes from "prop-types";
 import { format } from "date-fns";
 import {
   Edit,
@@ -15,13 +16,35 @@ import {
 import { useTrades } from "../../context/TradeContext";
 import toast from "react-hot-toast";
 
-const TradeList = ({ trades, onEditTrade, compact = false }) => {
+const TradeList = ({
+  trades,
+  onEditTrade,
+  compact = false,
+  highlightTradeId = null,
+}) => {
   const { deleteTrade } = useTrades();
   const [sortConfig, setSortConfig] = useState({
     key: "createdAt",
     direction: "desc",
   });
   const [selectedTrade, setSelectedTrade] = useState(null);
+
+  // Highlight + scroll-to a trade opened from the Dashboard. We flash the row
+  // briefly, then clear so it returns to its normal appearance.
+  const rowRefs = useRef({});
+  const [flashId, setFlashId] = useState(null);
+
+  useEffect(() => {
+    if (!highlightTradeId) return;
+    if (!trades.some((t) => t.id === highlightTradeId)) return; // hidden by filters
+    setFlashId(highlightTradeId);
+    const el = rowRefs.current[highlightTradeId];
+    if (el?.scrollIntoView) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const timer = setTimeout(() => setFlashId(null), 2600);
+    return () => clearTimeout(timer);
+  }, [highlightTradeId, trades]);
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -224,7 +247,13 @@ const TradeList = ({ trades, onEditTrade, compact = false }) => {
               {sortedTrades.map((trade) => (
                 <tr
                   key={trade.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  ref={(el) => (rowRefs.current[trade.id] = el)}
+                  data-testid={`trade-row-${trade.id}`}
+                  className={`transition-all duration-700 ${
+                    flashId === trade.id
+                      ? "bg-primary-100 dark:bg-primary-900/40 ring-2 ring-inset ring-primary-400"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -632,6 +661,13 @@ const TradeDetailsModal = ({ trade, onClose }) => {
     </div>
     </ModalPortal>
   );
+};
+
+TradeList.propTypes = {
+  trades: PropTypes.array.isRequired,
+  onEditTrade: PropTypes.func,
+  compact: PropTypes.bool,
+  highlightTradeId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 export default TradeList;

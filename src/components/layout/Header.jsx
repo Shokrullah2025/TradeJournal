@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Menu, User, Search, UserCircle, CreditCard, LogOut } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useTrades } from "../../context/TradeContext";
 import { useAuth } from "../../context/AuthContext";
 import ThemeToggle from "../common/ThemeToggle";
@@ -9,6 +9,12 @@ import NotificationBell from "./NotificationBell";
 const Header = ({ onMenuClick }) => {
   const { stats } = useTrades();
   const { user, logout, loading } = useAuth();
+  const location = useLocation();
+
+  // The Total P&L / Win Rate summary only makes sense on the dashboard. Hide it
+  // on every other page (trades, backtest, brokers, analytics, risk calculator,
+  // settings, admin panel, contact inbox, etc.).
+  const showStats = location.pathname === "/dashboard";
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
 
@@ -67,6 +73,7 @@ const Header = ({ onMenuClick }) => {
             <Menu className="w-5 h-5 dark:text-gray-300" />
           </button>
 
+          {showStats && (
           <div className="header__stats hidden md:flex items-center space-x-6 ">
             <div className="header__pnl flex items-center space-x-2">
               <div className="w-2 h-2 bg-success-500 rounded-full"></div>
@@ -91,6 +98,7 @@ const Header = ({ onMenuClick }) => {
               </span>
             </div>
           </div>
+          )}
         </div>
 
         <div className="header__right flex items-center space-x-4">

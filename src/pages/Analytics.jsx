@@ -30,7 +30,6 @@ const VIEW_OPTIONS = [
   { value: "strategy", label: "By Strategy" },
   { value: "instrument", label: "By Instrument" },
   { value: "time", label: "By Time" },
-  { value: "distribution", label: "Distribution" },
   { value: "drawdown", label: "Drawdown" },
 ];
 
@@ -190,10 +189,6 @@ const Analytics = () => {
 
       {analysisType === "instrument" && (
         <InstrumentAnalysis trades={timeFilteredTrades} detailed={true} />
-      )}
-
-      {analysisType === "distribution" && (
-        <DistributionAnalysis trades={timeFilteredTrades} />
       )}
 
       {analysisType === "drawdown" && (

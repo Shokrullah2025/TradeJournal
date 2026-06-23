@@ -1,82 +1,113 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { X } from "lucide-react";
 import { useTrades } from "../../context/TradeContext";
 
+// Compact filter bar. Instrument and strategy options are derived from the
+// user's actual trades so the choices always match real data (the old static
+// list could offer symbols the user never traded, and hide ones they did).
+const SELECT_CLASS =
+  "px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200";
+
+const DEFAULT_FILTERS = {
+  dateRange: "all",
+  instrument: "all",
+  strategy: "all",
+  outcome: "all",
+};
+
 const TradeFilters = () => {
-  const { filters, setFilters } = useTrades();
+  const { filters, setFilters, trades } = useTrades();
+
+  const { instruments, strategies } = useMemo(() => {
+    const i = new Set();
+    const s = new Set();
+    (trades || []).forEach((t) => {
+      if (t.instrument) i.add(t.instrument);
+      if (t.strategy) s.add(t.strategy);
+    });
+    return {
+      instruments: [...i].sort(),
+      strategies: [...s].sort(),
+    };
+  }, [trades]);
 
   const handleFilterChange = (filterType, value) => {
     setFilters({ [filterType]: value });
   };
 
+  const isActive = Object.keys(DEFAULT_FILTERS).some(
+    (key) => filters[key] !== DEFAULT_FILTERS[key],
+  );
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Date Range
-        </label>
-        <select
-          value={filters.dateRange}
-          onChange={(e) => handleFilterChange("dateRange", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-        >
-          <option value="all">All Time</option>
-          <option value="7d">Last 7 Days</option>
-          <option value="30d">Last 30 Days</option>
-          <option value="90d">Last 90 Days</option>
-        </select>
-      </div>
+    <div
+      className="flex flex-wrap items-center gap-2"
+      data-testid="trade-filters"
+    >
+      <select
+        value={filters.outcome}
+        onChange={(e) => handleFilterChange("outcome", e.target.value)}
+        data-testid="trade-filter-outcome-select"
+        className={SELECT_CLASS}
+      >
+        <option value="all">All trades</option>
+        <option value="winning">Wins</option>
+        <option value="losing">Losses</option>
+      </select>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Instrument
-        </label>
-        <select
-          value={filters.instrument}
-          onChange={(e) => handleFilterChange("instrument", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-        >
-          <option value="all">All Instruments</option>
-          <option value="AAPL">AAPL</option>
-          <option value="GOOGL">GOOGL</option>
-          <option value="MSFT">MSFT</option>
-          <option value="TSLA">TSLA</option>
-          <option value="SPY">SPY</option>
-          <option value="QQQ">QQQ</option>
-        </select>
-      </div>
+      <select
+        value={filters.instrument}
+        onChange={(e) => handleFilterChange("instrument", e.target.value)}
+        data-testid="trade-filter-instrument-select"
+        className={SELECT_CLASS}
+      >
+        <option value="all">All instruments</option>
+        {instruments.map((sym) => (
+          <option key={sym} value={sym}>
+            {sym}
+          </option>
+        ))}
+      </select>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Strategy
-        </label>
+      {strategies.length > 0 && (
         <select
           value={filters.strategy}
           onChange={(e) => handleFilterChange("strategy", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          data-testid="trade-filter-strategy-select"
+          className={SELECT_CLASS}
         >
-          <option value="all">All Strategies</option>
-          <option value="Breakout">Breakout</option>
-          <option value="Pullback">Pullback</option>
-          <option value="Momentum">Momentum</option>
-          <option value="Mean Reversion">Mean Reversion</option>
-          <option value="Scalping">Scalping</option>
+          <option value="all">All strategies</option>
+          {strategies.map((st) => (
+            <option key={st} value={st}>
+              {st}
+            </option>
+          ))}
         </select>
-      </div>
+      )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Outcome
-        </label>
-        <select
-          value={filters.outcome}
-          onChange={(e) => handleFilterChange("outcome", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+      <select
+        value={filters.dateRange}
+        onChange={(e) => handleFilterChange("dateRange", e.target.value)}
+        data-testid="trade-filter-date-select"
+        className={SELECT_CLASS}
+      >
+        <option value="all">All time</option>
+        <option value="7d">Last 7 days</option>
+        <option value="30d">Last 30 days</option>
+        <option value="90d">Last 90 days</option>
+      </select>
+
+      {isActive && (
+        <button
+          type="button"
+          onClick={() => setFilters(DEFAULT_FILTERS)}
+          data-testid="trade-filter-clear-btn"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
         >
-          <option value="all">All Trades</option>
-          <option value="winning">Winning Trades</option>
-          <option value="losing">Losing Trades</option>
-        </select>
-      </div>
+          <X className="w-3.5 h-3.5" />
+          Clear
+        </button>
+      )}
     </div>
   );
 };
