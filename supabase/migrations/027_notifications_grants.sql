@@ -1,0 +1,26 @@
+-- ============================================================
+-- Trade Journal Pro — Grant table privileges on notifications
+-- Migration: 027_notifications_grants.sql
+--
+-- Bug: authenticated users hit "permission denied for table
+-- notifications" (SQLSTATE 42501) when the app reads the bell
+-- dropdown / inserts client-side notifications.
+--
+-- Root cause: 020_notifications.sql created the table with RLS
+-- enabled and added SELECT/UPDATE/INSERT policies, but never issued
+-- a base table GRANT to `authenticated`. Postgres checks table-level
+-- privileges BEFORE evaluating RLS, so every query is rejected
+-- outright and the auth.uid() = user_id policies never get a chance
+-- to run. Same failure mode fixed for contact_submissions in 026.
+--
+-- Fix: grant SELECT, INSERT, UPDATE to `authenticated` — one grant
+-- per policy that already exists on the table. RLS still scopes every
+-- row to its owner (auth.uid() = user_id), so users can only ever see,
+-- insert, or update their own notifications. DELETE is intentionally
+-- not granted (there is no delete policy). anon is not granted: only
+-- signed-in users have notifications. Server-side sources (Stripe
+-- webhook, notify-email) use the service_role key and bypass RLS, so
+-- they are unaffected.
+-- ============================================================
+
+GRANT SELECT, INSERT, UPDATE ON public.notifications TO authenticated;
