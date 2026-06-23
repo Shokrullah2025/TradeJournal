@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { RR_MODES, QUICK_MODES, ADVANCED_RR_MODES, getDefaultModeForInstrument, getUserRRList, parseRRValue } from "../../utils/rrModes";
 import { useTemplates } from "../../hooks/useTemplates";
 import { useUserSettings } from "../../hooks/useUserSettings";
+import { isFieldVisible as isFieldVisibleForConfig } from "../../utils/templateFields";
 import TradeImageUploader from "./TradeImageUploader";
 import { useForm } from "react-hook-form";
 import {
@@ -49,6 +50,9 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   const [activeTab, setActiveTab] = useState("quick");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [lastAppliedTemplate, setLastAppliedTemplate] = useState(null);
+  // Per-field visibility coming from the applied template's Configure Fields config.
+  // null = no config → show every field (default/legacy behavior).
+  const [fieldVisibility, setFieldVisibility] = useState(null);
   const [exitPriceMode, setExitPriceMode] = useState("stopLoss"); // "stopLoss", "takeProfit", "custom"
   const [rrUnit, setRrUnit] = useState("points"); // Risk/Reward hub display unit: "points" | "ticks"
   const [rrMode, setRrMode] = useState(() => getDefaultModeForInstrument("stocks"));
@@ -57,10 +61,17 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   );
 
   // Templates fetched from Supabase — persisted across devices and cache clears
-  const { templates: settingsTemplates } = useTemplates();
+  const { templates: settingsTemplates, loading: templatesLoading } = useTemplates();
   const { strategies: settingsStrategies, setups: settingsSetups, riskProfiles: settingsRiskProfiles } = useUserSettings();
 
   const isEditing = !!trade;
+
+  // A field renders unless the active template explicitly turns it off.
+  // No config (null) or an unlisted key both mean "visible" so the form
+  // behaves exactly as before when no template visibility is in effect.
+  // Shared with the Settings editor via utils/templateFields so both sides
+  // agree on every field's state (see the "screenshots toggle" regression).
+  const isFieldVisible = (key) => isFieldVisibleForConfig(fieldVisibility, key);
 
   const {
     register,
@@ -140,7 +151,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
   const SLOT_LABELS = ["Chart", "Entry", "Exit", "Notes"];
 
-  // Screenshots feature — always available in the form
+  // Screenshots panel visibility follows the same per-template field-visibility
+  // system as every other field (Settings → Configure Fields → "Screenshots &
+  // Attachments"). It is hidden only when the applied/default template turns the
+  // "screenshots" field off; images on an existing trade are always preserved.
   const [tradeImages, setTradeImages] = useState(() =>
     isEditing && trade?.images ? trade.images : []
   );
@@ -151,13 +165,17 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   const [brokenSlots, setBrokenSlots] = useState(new Set());
   const slotFileInputRef = useRef(null);
   const draggedSlotRef = useRef(null);
+  // Pending setTimeout handles from applyTemplate, cleared on unmount.
+  const templateTimersRef = useRef([]);
 
-  // Clean up object URLs on unmount
+  // Clean up object URLs and any pending template timers on unmount
   useEffect(() => {
     return () => {
       tradeImages.forEach((img) => {
         if (img.isNew && img.previewUrl) URL.revokeObjectURL(img.previewUrl);
       });
+      templateTimersRef.current.forEach(clearTimeout);
+      templateTimersRef.current = [];
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -239,9 +257,24 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   ]);
 
 
-  // Auto-detect the template that was applied to this trade when editing
-  useEffect(() => {
+  // Editing an existing trade: surface which template it was created from by
+  // selecting it in the picker. Prefer the template_id stored on the trade;
+  // fall back to inferring from strategy/setup for older trades saved before
+  // template_id existed. We deliberately do NOT apply the template's field
+  // visibility here — that could hide a field the trade already has data in.
+  // All of the trade's fields stay visible and editable. useLayoutEffect so the
+  // picker shows the right template before paint (no "No template" flash).
+  useLayoutEffect(() => {
     if (!isEditing || !trade || settingsTemplates.length === 0 || selectedTemplateId) return;
+
+    if (trade.templateId) {
+      const used = settingsTemplates.find((t) => t.id === trade.templateId);
+      if (used) {
+        setSelectedTemplateId(String(used.id));
+        return;
+      }
+    }
+
     const match = settingsTemplates.find((t) => {
       const f = t.fields || {};
       const strategyMatch = f.strategy ? f.strategy === trade.strategy : true;
@@ -251,23 +284,47 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     if (match) setSelectedTemplateId(String(match.id));
   }, [isEditing, trade, settingsTemplates]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // New trade: auto-load the user's default (starred) template, or the first
+  // template if none is starred. Fully applies it — selection, default values,
+  // and field visibility — so the form is ready immediately. Runs once; the
+  // in-form picker can still override. Silent so it doesn't toast on open.
+  // useLayoutEffect (not useEffect) so the selection is set BEFORE the browser
+  // paints — otherwise the picker briefly shows "No template" then switches.
+  useLayoutEffect(() => {
+    if (isEditing || lastAppliedTemplate || selectedTemplateId || settingsTemplates.length === 0) return;
+    const def = settingsTemplates.find((t) => t.isDefault) || settingsTemplates[0];
+    if (def) applyTemplate(def.id, { silent: true });
+  }, [isEditing, lastAppliedTemplate, selectedTemplateId, settingsTemplates]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Template application function
-  const applyTemplate = (templateId) => {
+
+  // Template application function.
+  //   silent     – suppress the "applied" toast (used for auto-load on open).
+  //   fillValues – set the template's default field VALUES. True for new trades
+  //                and explicit picks; false when loading an existing trade's
+  //                template (we want its visibility/selection but must NOT
+  //                overwrite the trade's saved values).
+  const applyTemplate = (templateId, { silent = false, fillValues = true } = {}) => {
     const template = settingsTemplates.find((t) => t.id === templateId);
+    if (!template) return;
 
-    console.log("Applying template:", template);
-    console.log("Template fields:", template?.fields);
-    console.log("Template included fields:", template?.includedFields);
-    console.log("Available risk profiles:", settingsRiskProfiles);
+    setSelectedTemplateId(String(template.id));
+    setIsApplyingTemplate(true);
 
-    if (!template) {
-      console.log("Template not found!");
+    // Field-visibility config (Configure Fields tab) always applies so the form
+    // shows exactly the template's fields. Empty/missing config = show all.
+    setFieldVisibility(
+      template.visibleFields && Object.keys(template.visibleFields).length > 0
+        ? template.visibleFields
+        : null
+    );
+
+    // Only remember the template for tab-switch value reapplication when we are
+    // actually filling values. For an existing trade we load for display only.
+    if (!fillValues) {
+      setIsApplyingTemplate(false);
       return;
     }
-
-    setIsApplyingTemplate(true);
-    setLastAppliedTemplate(template); // Save template for reapplication when switching tabs
+    setLastAppliedTemplate(template);
 
     // Access fields from template.fields object
     const templateFields = template.fields || {};
@@ -460,26 +517,11 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       console.log("Using first available profile:", riskRewardToApply);
     }
 
-    // Fallback to 1:1.5 if still no value and create a default profile for this session
+    // Fallback to 1:1.5 if still no value. (useUserSettings owns risk profiles
+    // and exposes no setter here, so we just apply the ratio — no attempt to
+    // mutate the profile list, which previously threw when none existed.)
     if (!riskRewardToApply) {
       riskRewardToApply = "1:1.5";
-      console.log("Using fallback 1:1.5");
-
-      // Create a temporary risk profile for this session if none exist
-      if (settingsRiskProfiles.length === 0) {
-        const tempProfile = {
-          id: Date.now(),
-          name: "Default (1:1.5)",
-          riskRatio: 1,
-          rewardRatio: 1.5,
-          pointRisk: 50,
-          pointProfit: 75,
-          usePercentage: true,
-          accountPercentage: 2,
-        };
-        setSettingsRiskProfiles([tempProfile]);
-        console.log("Created temporary risk profile");
-      }
     }
 
     // Always apply the risk/reward ratio
@@ -504,19 +546,16 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       console.log("ERROR: No riskRewardToApply value found!");
     }
 
-    toast.success(`Template "${template.name}" applied successfully!`);
+    if (!silent) toast.success(`Template "${template.name}" applied successfully!`);
 
-    // Force calculation after template application
-    setTimeout(() => {
+    // Force calculation after template application. Track the timer handles so
+    // they're cleared on unmount (CLAUDE.md §3) — auto-load schedules this on
+    // every new-trade open, so an uncleared timer fires after the modal closes.
+    const t1 = setTimeout(() => {
       setIsApplyingTemplate(false);
-
-      // Force re-render by triggering watch
-      const currentRiskReward = getValues("riskReward");
-      console.log("Final riskReward value in form:", currentRiskReward);
 
       // Get current form values and force calculation
       const formValues = getValues();
-      // console.log("Template applied, current form values:", formValues);
 
       // Force trigger calculation if we have required fields
       if (
@@ -524,20 +563,16 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
         formValues.riskReward &&
         formValues.tradeType
       ) {
-        // console.log("Forcing calculation with values:", {
-        //   entryPrice: formValues.entryPrice,
-        //   riskReward: formValues.riskReward,
-        //   tradeType: formValues.tradeType
-        // });
-
         // Force trigger the calculation by updating the entryPrice field
         const currentEntry = formValues.entryPrice;
         setValue("entryPrice", "");
-        setTimeout(() => {
+        const t2 = setTimeout(() => {
           setValue("entryPrice", currentEntry);
         }, 50);
+        templateTimersRef.current.push(t2);
       }
     }, 200);
+    templateTimersRef.current.push(t1);
   };
 
   // Auto-calculation effect
@@ -989,6 +1024,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
       const formattedData = {
         ...data,
+        // Record which template drove this trade so editing can reload it.
+        templateId: selectedTemplateId || null,
         status: data.status || "closed", // Default to closed for manual entry
         entryDate: data.entryDate ? `${data.entryDate}T00:00:00` : null,
         exitDate: data.exitDate ? `${data.exitDate}T00:00:00` : null,
@@ -1223,33 +1260,86 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     setActiveSlotIndex(null);
   };
 
+  // For a NEW trade, hold the form behind a spinner until templates finish
+  // loading. Otherwise the form's first paint shows the un-templated state
+  // ("No template", all fields visible) and then snaps to the starred template
+  // once the async fetch resolves. Once templates are loaded, the new-trade
+  // useLayoutEffect applies the starred template before the first real paint.
+  if (!isEditing && templatesLoading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div
+          data-testid="trade-entry-modal"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex items-center justify-center border border-gray-200 dark:border-gray-700 overflow-hidden"
+        >
+          <div
+            className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
+            data-testid="trade-form-loading-spinner"
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
         data-testid="trade-entry-modal"
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden"
       >
-        {/* HEADER */}
-        <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
-              {isEditing ? "Edit Trade" : "Add New Trade"}
-            </h2>
-            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 truncate">
-              {watchedInstrument || "—"} ·{" "}
-              {selectedInstrumentType
-                ? selectedInstrumentType[0].toUpperCase() + selectedInstrumentType.slice(1)
-                : "—"}{" "}
-              · {watchedTradeType === "short" ? "Short" : "Long"}
-            </p>
+        {/* HEADER — two zones mirror the body split so the tab switch lands on
+            the boundary between the form (left) and the Risk/Reward panel (right). */}
+        <div className="flex items-stretch border-b border-gray-100 dark:border-gray-700">
+          {/* Left zone — mirrors the form column */}
+          <div className="flex-1 min-w-0 flex items-center gap-4 px-6 py-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
+                {isEditing ? "Edit Trade" : "Add New Trade"}
+              </h2>
+              <p className="text-xs font-medium text-gray-400 dark:text-gray-500 truncate">
+                {watchedInstrument || "—"} ·{" "}
+                {selectedInstrumentType
+                  ? selectedInstrumentType[0].toUpperCase() + selectedInstrumentType.slice(1)
+                  : "—"}{" "}
+                · {watchedTradeType === "short" ? "Short" : "Long"}
+              </p>
+            </div>
+
+            {/* Template picker — sits at the column split */}
+            {settingsTemplates.length > 0 && (
+              <select
+                aria-label="Apply template"
+                className="ml-auto hidden sm:block input !h-9 !py-0 text-xs max-w-[180px] flex-shrink-0"
+                value={selectedTemplateId}
+                onChange={(e) => {
+                  const templateId = e.target.value;
+                  setSelectedTemplateId(templateId);
+                  if (templateId === "clear") {
+                    setSelectedTemplateId("");
+                    setLastAppliedTemplate(null);
+                    setFieldVisibility(null); // show all fields again
+                  } else if (templateId) applyTemplate(templateId);
+                }}
+                data-testid="trade-form-template-select"
+              >
+                {!selectedTemplateId && <option value="">No template</option>}
+                {selectedTemplateId && <option value="clear">✕ Clear template</option>}
+                {settingsTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          <div className="ml-auto flex items-center gap-3">
-            {/* Tab switch */}
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1 gap-0.5">
+          {/* Right zone — mirrors the 360px Risk/Reward panel */}
+          <div className="flex items-center justify-end gap-3 px-5 py-4 md:w-[360px] md:flex-shrink-0 md:border-l border-gray-100 dark:border-gray-700">
+            {/* Quick Entry / Advanced toggle */}
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1 gap-0.5 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveTab("quick")}
@@ -1277,11 +1367,12 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 Advanced
               </button>
             </div>
+
             <button
               type="button"
               onClick={onClose}
               data-testid="modal-close-btn"
-              className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1525,7 +1616,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         — optional
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
                       <div>
                         <label className="label">Exit Date</label>
                         <input
@@ -1535,6 +1626,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                           defaultValue={watchedEntryDate || ""}
                         />
                       </div>
+                      {isFieldVisible("exitPrice") && (
                       <div>
                         <label className="label">Exit Price</label>
                         <select
@@ -1549,47 +1641,38 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                             else if (mode === "breakeven" && watchedEntryPrice)
                               setValue("exitPrice", parseFloat(watchedEntryPrice));
                           }}
-                          className="input mb-2"
+                          className="input"
                         >
                           <option value="stopLoss">Stop Loss ({watchedStopLoss || "0.00"})</option>
                           <option value="takeProfit">Take Profit ({watchedTakeProfit || "0.00"})</option>
                           <option value="breakeven">Breakeven</option>
                           <option value="custom">Custom</option>
                         </select>
-                        <input
-                          type="number"
-                          step="0.01"
-                          {...register("exitPrice")}
-                          className="input"
-                          placeholder="0.00"
-                          disabled={exitPriceMode !== "custom"}
-                        />
+                        {/* Manual price entry only matters for Custom; the preset
+                            modes already resolve the exit price from the dropdown. */}
+                        {exitPriceMode === "custom" ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            {...register("exitPrice")}
+                            className="input mt-2"
+                            placeholder="0.00"
+                          />
+                        ) : (
+                          <input type="hidden" {...register("exitPrice")} />
+                        )}
                       </div>
-                      <div>
-                        <label className="label">Realized P&amp;L</label>
-                        <div
-                          data-testid="trade-form-realized-pnl"
-                          className={`h-11 rounded-xl flex items-center px-4 font-mono text-base font-bold border ${
-                            exitPnlPreview == null
-                              ? "bg-gray-50 dark:bg-gray-700 text-gray-400 border-gray-200 dark:border-gray-600"
-                              : exitPnlPreview >= 0
-                                ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-700"
-                                : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700"
-                          }`}
-                        >
-                          {exitPnlPreview == null
-                            ? "—"
-                            : `${exitPnlPreview >= 0 ? "+" : "−"}$${Math.abs(exitPnlPreview).toLocaleString("en-US", { maximumFractionDigits: 2 })}`}
-                        </div>
-                        <input type="hidden" {...register("pnl")} />
-                      </div>
+                      )}
+                      {/* P&L is recomputed from exit price on save */}
+                      <input type="hidden" {...register("pnl")} />
                     </div>
                   </section>
                 )}
 
-                {/* ── Attachments ── */}
+                {/* ── Attachments — shown unless the template hides the field ── */}
+                {isFieldVisible("screenshots") && (
                 <section>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center mb-3">
                     <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
                       <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
                       Screenshots
@@ -1597,27 +1680,6 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         {visibleImages.length} / 4
                       </span>
                     </div>
-                    {settingsTemplates.length > 0 && (
-                      <select
-                        className="input !h-9 !py-0 text-xs max-w-[180px]"
-                        value={selectedTemplateId}
-                        onChange={(e) => {
-                          const templateId = e.target.value;
-                          setSelectedTemplateId(templateId);
-                          if (templateId === "clear") setSelectedTemplateId("");
-                          else if (templateId) applyTemplate(templateId);
-                        }}
-                        data-testid="trade-form-template-select"
-                      >
-                        <option value="">No template</option>
-                        {selectedTemplateId && <option value="clear">✕ Clear template</option>}
-                        {settingsTemplates.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
                   </div>
                   <div className="grid grid-cols-4 gap-2.5" data-testid="trade-form-images-panel">
                     {SLOT_LABELS.map((label, slotIndex) => {
@@ -1698,6 +1760,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                     Manage screenshots
                   </button>
                 </section>
+                )}
               </div>
             )}
 
@@ -1755,6 +1818,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       Strategy & Setup
                     </h4>
 
+                    {isFieldVisible("strategy") && (
                     <div>
                       <label className="label">Strategy</label>
                       {settingsStrategies.length > 0 ? (
@@ -1785,7 +1849,9 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         </datalist>
                       )}
                     </div>
+                    )}
 
+                    {isFieldVisible("setup") && (
                     <div>
                       <label className="label">Setup</label>
                       {settingsSetups.length > 0 ? (
@@ -1816,7 +1882,9 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         </datalist>
                       )}
                     </div>
+                    )}
 
+                    {isFieldVisible("marketCondition") && (
                     <div>
                       <label className="label">Market Condition</label>
                       <input
@@ -1831,6 +1899,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         ))}
                       </datalist>
                     </div>
+                    )}
 
                     <div>
                       <label className="label">Tags</label>
@@ -1911,6 +1980,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       Risk Management
                     </h4>
 
+                    {isFieldVisible("notes") && (
                     <div>
                       <label className="label">Detailed Notes</label>
                       <textarea
@@ -1920,6 +1990,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         placeholder="Detailed trade analysis, lessons learned, market conditions..."
                       />
                     </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1928,19 +1999,21 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
           </form>
 
           {/* RIGHT: Risk / Reward hero */}
-          <div className="w-full md:w-[360px] flex-shrink-0 bg-gradient-to-b from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black p-5 flex flex-col gap-4 md:overflow-y-auto">
+          <div className="w-full md:w-[360px] flex-shrink-0 bg-gray-50 dark:bg-gray-900/40 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 p-5 flex flex-col gap-4 md:overflow-y-auto">
             {/* header row */}
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
                 Risk / Reward
               </span>
-              <div className="flex bg-white/5 border border-white/10 rounded-lg p-0.5 gap-0.5">
+              <div className="flex bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-0.5 gap-0.5">
                 <button
                   type="button"
                   onClick={() => setRrUnit("ticks")}
                   data-testid="rr-unit-ticks-btn"
                   className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                    rrUnit === "ticks" ? "bg-white/15 text-white" : "text-slate-400 hover:text-slate-200"
+                    rrUnit === "ticks"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
                 >
                   Ticks
@@ -1950,7 +2023,9 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   onClick={() => setRrUnit("points")}
                   data-testid="rr-unit-points-btn"
                   className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                    rrUnit === "points" ? "bg-white/15 text-white" : "text-slate-400 hover:text-slate-200"
+                    rrUnit === "points"
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
                 >
                   Points
@@ -1961,20 +2036,20 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             {/* Big ratio */}
             <div className="flex items-baseline gap-2.5">
               <div
-                className="font-mono text-5xl font-bold text-white leading-none tracking-tight"
+                className="tabular-nums text-5xl font-bold text-gray-900 dark:text-gray-100 leading-none tracking-tight"
                 data-testid="rr-ratio-value"
               >
                 {rrHub.rrText}
-                <span className="text-2xl text-slate-500 font-semibold"> : 1</span>
+                <span className="text-2xl text-gray-400 dark:text-gray-500 font-semibold"> : 1</span>
               </div>
               {rrHub.rrValue != null && (
                 <span
                   className={`text-[11px] font-bold px-2 py-1 rounded-md border ${
                     rrHub.verdict === "Excellent" || rrHub.verdict === "Strong"
-                      ? "text-green-400 bg-green-500/10 border-green-500/25"
+                      ? "text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/25 border-success-200 dark:border-success-800"
                       : rrHub.verdict === "Poor"
-                        ? "text-red-400 bg-red-500/10 border-red-500/25"
-                        : "text-amber-400 bg-amber-500/10 border-amber-500/25"
+                        ? "text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/25 border-danger-200 dark:border-danger-800"
+                        : "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/25 border-amber-200 dark:border-amber-800"
                   }`}
                 >
                   {rrHub.verdict}
@@ -1985,8 +2060,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             {/* Target ratio chips */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-slate-400">Target ratio</span>
-                <span className="text-[11px] text-slate-500">auto-sets take profit</span>
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Target ratio</span>
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">auto-sets take profit</span>
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {[1, 1.5, 2, 3].map((R) => {
@@ -1997,10 +2072,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       type="button"
                       onClick={() => applyTargetRatio(R)}
                       data-testid={`rr-ratio-${R}-btn`}
-                      className={`h-8 rounded-lg font-mono text-xs font-bold border transition-colors ${
+                      className={`h-8 rounded-lg tabular-nums text-xs font-bold border transition-colors ${
                         active
-                          ? "bg-blue-500/20 text-blue-300 border-blue-500/50"
-                          : "bg-white/5 text-slate-400 border-white/10 hover:border-blue-400/40 hover:text-blue-300"
+                          ? "bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 border-primary-300 dark:border-primary-700"
+                          : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 hover:text-primary-600 dark:hover:text-primary-300"
                       }`}
                     >
                       1:{R}
@@ -2014,8 +2089,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             <div className="flex gap-4">
               <div className="flex-1 flex flex-col gap-3">
                 <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-red-400 mb-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-danger-600 dark:text-danger-400 mb-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-danger-500" />
                     Stop Loss
                   </label>
                   <input
@@ -2025,10 +2100,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                     onChange={(e) => setValue("stopLoss", e.target.value, { shouldValidate: true })}
                     placeholder="0.00"
                     data-testid="rr-stop-loss-input"
-                    className="w-full h-10 px-3 rounded-lg border border-red-500/30 bg-red-500/10 font-mono text-base font-semibold text-white placeholder-slate-500 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20"
+                    className="w-full h-10 px-3 rounded-lg border border-danger-300 dark:border-danger-700 bg-danger-50 dark:bg-danger-900/20 tabular-nums text-base font-semibold text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-danger-500 focus:ring-2 focus:ring-danger-500/20"
                   />
                   {rrHub.hasStop && (
-                    <div className="font-mono text-[11px] text-red-400 font-semibold mt-1">
+                    <div className="tabular-nums text-[11px] text-danger-600 dark:text-danger-400 font-semibold mt-1">
                       −{rrHub.riskDisp.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
                       {rrHub.unitLabel}
                       {rrHub.riskUsdStr && <span> · −{rrHub.riskUsdStr}</span>}
@@ -2036,8 +2111,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   )}
                 </div>
                 <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-green-400 mb-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-success-600 dark:text-success-400 mb-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
                     Take Profit
                   </label>
                   <input
@@ -2047,10 +2122,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                     onChange={(e) => setValue("takeProfit", e.target.value, { shouldValidate: true })}
                     placeholder="0.00"
                     data-testid="rr-take-profit-input"
-                    className="w-full h-10 px-3 rounded-lg border border-green-500/30 bg-green-500/10 font-mono text-base font-semibold text-white placeholder-slate-500 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/20"
+                    className="w-full h-10 px-3 rounded-lg border border-success-300 dark:border-success-700 bg-success-50 dark:bg-success-900/20 tabular-nums text-base font-semibold text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-success-500 focus:ring-2 focus:ring-success-500/20"
                   />
                   {rrHub.hasTP && (
-                    <div className="font-mono text-[11px] text-green-400 font-semibold mt-1">
+                    <div className="tabular-nums text-[11px] text-success-600 dark:text-success-400 font-semibold mt-1">
                       +{rrHub.rewardDisp.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
                       {rrHub.unitLabel}
                       {rrHub.rewardUsdStr && <span> · +{rrHub.rewardUsdStr}</span>}
@@ -2061,31 +2136,31 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
               {/* Ladder */}
               <div className="w-24 flex-shrink-0 flex gap-2">
-                <div className="w-3 h-[176px] rounded-full overflow-hidden flex flex-col bg-white/5">
+                <div className="w-3 h-[176px] rounded-full overflow-hidden flex flex-col bg-gray-200 dark:bg-gray-700">
                   <div
-                    className="bg-gradient-to-b from-green-400 to-green-500"
+                    className="bg-gradient-to-b from-success-400 to-success-500"
                     style={{ height: `${rrHub.rewardPct}%` }}
                   />
                   <div
-                    className="bg-gradient-to-b from-red-400 to-red-500"
+                    className="bg-gradient-to-b from-danger-400 to-danger-500"
                     style={{ height: `${rrHub.riskPct}%` }}
                   />
                 </div>
-                <div className="flex-1 relative h-[176px] font-mono">
+                <div className="flex-1 relative h-[176px] tabular-nums">
                   <div className="absolute top-0 left-0 -translate-y-1">
-                    <div className="text-[9px] text-green-400 font-bold tracking-wide">TARGET</div>
-                    <div className="text-xs text-white font-bold">{rrHub.tp ?? "—"}</div>
+                    <div className="text-[9px] text-success-600 dark:text-success-400 font-bold tracking-wide">TARGET</div>
+                    <div className="text-xs text-gray-900 dark:text-gray-100 font-bold">{rrHub.tp ?? "—"}</div>
                   </div>
                   <div
                     className="absolute left-0 -translate-y-1/2"
                     style={{ top: `${rrHub.rewardPct}%` }}
                   >
-                    <div className="text-[9px] text-slate-500 font-bold tracking-wide">ENTRY</div>
-                    <div className="text-xs text-slate-300 font-bold">{rrHub.entry ?? "—"}</div>
+                    <div className="text-[9px] text-gray-400 dark:text-gray-500 font-bold tracking-wide">ENTRY</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300 font-bold">{rrHub.entry ?? "—"}</div>
                   </div>
                   <div className="absolute bottom-0 left-0 translate-y-1">
-                    <div className="text-[9px] text-red-400 font-bold tracking-wide">STOP</div>
-                    <div className="text-xs text-white font-bold">{rrHub.stop ?? "—"}</div>
+                    <div className="text-[9px] text-danger-600 dark:text-danger-400 font-bold tracking-wide">STOP</div>
+                    <div className="text-xs text-gray-900 dark:text-gray-100 font-bold">{rrHub.stop ?? "—"}</div>
                   </div>
                 </div>
               </div>
@@ -2093,33 +2168,33 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
 
             {/* Reward / Risk $ cards */}
             <div className="grid grid-cols-2 gap-2.5">
-              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3">
-                <div className="text-[11px] font-bold text-green-400 uppercase tracking-wide mb-1">
+              <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800 rounded-xl p-3">
+                <div className="text-[11px] font-bold text-success-600 dark:text-success-400 uppercase tracking-wide mb-1">
                   Reward
                 </div>
                 <div
-                  className="font-mono text-xl font-bold text-white leading-none"
+                  className="tabular-nums text-xl font-bold text-gray-900 dark:text-gray-100 leading-none"
                   data-testid="rr-reward-value"
                 >
                   {rrHub.rewardUsdStr ? `+${rrHub.rewardUsdStr}` : "—"}
                 </div>
-                <div className="font-mono text-[11px] text-green-300 font-semibold mt-1.5">
+                <div className="tabular-nums text-[11px] text-success-600 dark:text-success-400 font-semibold mt-1.5">
                   {rrHub.hasTP
                     ? `+${rrHub.rewardDisp.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${rrHub.unitLabel}`
                     : ""}
                 </div>
               </div>
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-                <div className="text-[11px] font-bold text-red-400 uppercase tracking-wide mb-1">
+              <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 rounded-xl p-3">
+                <div className="text-[11px] font-bold text-danger-600 dark:text-danger-400 uppercase tracking-wide mb-1">
                   Risk
                 </div>
                 <div
-                  className="font-mono text-xl font-bold text-white leading-none"
+                  className="tabular-nums text-xl font-bold text-gray-900 dark:text-gray-100 leading-none"
                   data-testid="rr-risk-value"
                 >
                   {rrHub.riskUsdStr ? `−${rrHub.riskUsdStr}` : "—"}
                 </div>
-                <div className="font-mono text-[11px] text-red-300 font-semibold mt-1.5">
+                <div className="tabular-nums text-[11px] text-danger-600 dark:text-danger-400 font-semibold mt-1.5">
                   {rrHub.hasStop
                     ? `−${rrHub.riskDisp.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${rrHub.unitLabel}`
                     : ""}
@@ -2127,21 +2202,18 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               </div>
             </div>
 
-            {/* footer line */}
-            <div className="mt-auto flex items-center justify-between text-[11px] text-slate-500 font-medium pt-3 border-t border-white/5">
-              <span className="font-mono">
-                {rrHub.qty ?? "—"} × {rrHub.inst || "—"}
-              </span>
-              <span className="font-mono">{rrHub.ptLabel}</span>
-            </div>
           </div>
         </div>
 
         {/* FOOTER */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
           <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 font-medium">
-            <Camera className="w-4 h-4" />
-            <span data-testid="trade-form-photo-count">Photos {visibleImages.length}/4</span>
+            {isFieldVisible("screenshots") ? (
+              <>
+                <Camera className="w-4 h-4" />
+                <span data-testid="trade-form-photo-count">Photos {visibleImages.length}/4</span>
+              </>
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -2157,7 +2229,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               type="submit"
               form="trade-entry-form"
               disabled={isSubmitting}
-              className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-colors disabled:opacity-60"
+              className="btn-gradient h-11 px-6 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-colors disabled:opacity-60"
               data-testid="trade-form-submit-btn"
             >
               {isSubmitting ? (

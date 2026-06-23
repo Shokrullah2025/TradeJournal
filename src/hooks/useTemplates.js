@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
-const COLS = 'id, template_name, description, fields, is_default, usage_count, is_favorite, created_at';
+const COLS = 'id, template_name, description, fields, visible_fields, custom_fields, is_default, usage_count, is_favorite, created_at';
 
 function toApp(row) {
   return {
@@ -10,6 +10,8 @@ function toApp(row) {
     name:       row.template_name,
     description: row.description || '',
     fields:     row.fields || {},
+    visibleFields: row.visible_fields || {},
+    customFields:  row.custom_fields || [],
     isDefault:  row.is_default,
     usageCount: row.usage_count,
     isFavorite: row.is_favorite,
@@ -23,7 +25,10 @@ function toRow(t, userId) {
     template_name: t.name,
     description:   t.description || '',
     fields:        t.fields || {},
+    visible_fields: t.visibleFields || {},
+    custom_fields:  t.customFields || [],
     is_default:    t.isDefault || false,
+    is_favorite:   t.isFavorite || false,
     strategy:      t.fields?.strategy    || null,
     setup_type:    t.fields?.setup       || null,
     market_condition: t.fields?.marketCondition || null,
