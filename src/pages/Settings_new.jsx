@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useTemplates } from "../hooks/useTemplates";
+import { DEFAULT_VISIBLE_FIELDS } from "../utils/templateFields";
 import { RR_MODES, getDefaultModeForInstrument, getUserRRList, saveUserRRList } from "../utils/rrModes";
 import {
   Settings as SettingsIcon,
@@ -154,22 +155,7 @@ const Settings = () => {
       targetProfit: "",
       maxLoss: "",
     },
-    visibleFields: {
-      instrumentType: true,
-      tradeType: true,
-      strategy: true,
-      setup: true,
-      marketCondition: true,
-      riskRewardRatio: true,
-      targetProfit: false,
-      maxLoss: false,
-      timeframe: false,
-      notes: false,
-      stopLoss: false,
-      entryPrice: false,
-      exitPrice: false,
-      position: false,
-    },
+    visibleFields: { ...DEFAULT_VISIBLE_FIELDS },
     customFields: [],
   });
 
@@ -514,23 +500,7 @@ const Settings = () => {
         targetProfit: "",
         maxLoss: "",
       },
-      visibleFields: {
-        instrumentType: true,
-        tradeType: true,
-        strategy: true,
-        setup: true,
-        marketCondition: true,
-        marketDirection: false,
-        riskRewardRatio: true,
-        targetProfit: false,
-        maxLoss: false,
-        timeframe: false,
-        notes: false,
-        stopLoss: false,
-        entryPrice: false,
-        exitPrice: false,
-        position: false,
-      },
+      visibleFields: { ...DEFAULT_VISIBLE_FIELDS },
       customFields: [],
     });
     setShowFieldCustomization(false);
@@ -627,23 +597,10 @@ const Settings = () => {
       name: template.name,
       description: template.description,
       fields: { ...template.fields },
-      visibleFields: template.visibleFields || {
-        instrumentType: true,
-        tradeType: true,
-        strategy: true,
-        setup: true,
-        marketCondition: true,
-        marketDirection: false,
-        riskRewardRatio: true,
-        targetProfit: false,
-        maxLoss: false,
-        timeframe: false,
-        notes: false,
-        stopLoss: false,
-        entryPrice: false,
-        exitPrice: false,
-        position: false,
-      },
+      // Merge defaults UNDER the saved config so every known field has a
+      // defined boolean even for templates saved before a field existed
+      // (e.g. legacy templates with no `screenshots` key).
+      visibleFields: { ...DEFAULT_VISIBLE_FIELDS, ...(template.visibleFields || {}) },
       customFields: template.customFields || [],
     });
     setShowFieldCustomization(false);
@@ -656,7 +613,16 @@ const Settings = () => {
     }
     try {
       if (editingTemplate) {
-        await saveTemplate({ ...templateFormData, id: editingTemplate.id });
+        // Preserve the template's default/favorite status — templateFormData
+        // doesn't carry them, and toRow always writes is_default, so omitting
+        // this silently un-stars the template on every edit (which is what
+        // stopped the default template's field config from applying).
+        await saveTemplate({
+          ...templateFormData,
+          id: editingTemplate.id,
+          isDefault: editingTemplate.isDefault,
+          isFavorite: editingTemplate.isFavorite,
+        });
         toast.success("Template updated successfully");
       } else {
         await saveTemplate({ ...templateFormData, isDefault: false });
@@ -1098,7 +1064,7 @@ const Settings = () => {
                 </div>
                 <button
                   onClick={handleSavePreferences}
-                  className="btn btn-primary flex items-center space-x-2 flex-shrink-0"
+                  className="btn btn-gradient flex items-center space-x-2 flex-shrink-0"
                   data-testid="settings-save-preferences-btn"
                 >
                   <Save className="w-4 h-4" />
@@ -2963,7 +2929,15 @@ const Settings = () => {
                       <span className="text-xs text-gray-300">|</span>
                       <button
                         type="button"
-                        onClick={() => setTemplateFormData((prev) => ({ ...prev, visibleFields: {} }))}
+                        onClick={() =>
+                          setTemplateFormData((prev) => ({
+                            ...prev,
+                            visibleFields: Object.keys(availableFields).reduce(
+                              (acc, f) => ({ ...acc, [f]: false }),
+                              {}
+                            ),
+                          }))
+                        }
                         className="text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap"
                       >
                         Deselect all
@@ -3023,6 +2997,7 @@ const Settings = () => {
                                       isEnabled ? "bg-blue-600" : "bg-gray-300"
                                     }`}
                                     aria-pressed={isEnabled}
+                                    data-testid={`template-field-toggle-${fieldKey}`}
                                   >
                                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${isEnabled ? "translate-x-5" : "translate-x-0"}`} />
                                   </button>
@@ -3074,7 +3049,7 @@ const Settings = () => {
                   </button>
                   <button
                     onClick={handleSaveTemplate}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
+                    className="btn-gradient-blue px-6 py-2 rounded-md transition-colors flex items-center space-x-2 text-sm"
                   >
                     <Save className="w-4 h-4" />
                     <span>
