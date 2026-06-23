@@ -56,6 +56,37 @@
   .btn-accent {
     @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:focus:ring-indigo-400;
   }
+
+  /* Brand green gradient — primary action buttons (Add Trade, Update Trade,
+     New Session, Connect Account, Save, etc.). White text in light mode,
+     near-black text in dark mode, matching the Risk Calculator CTA. */
+  .btn-gradient {
+    background: linear-gradient(145deg, #2ebd85, #1f8f64);
+    color: #ffffff;
+    border: none;
+  }
+
+  .btn-gradient:hover {
+    filter: brightness(1.06);
+  }
+
+  .dark .btn-gradient {
+    color: #06140d;
+  }
+
+  /* Blue gradient — same diagonal light→dark treatment and depth as the green
+     buttons, but kept blue for Save actions (template, risk profile). Brighter
+     top-left, darker bottom-right, with a blue-tinted drop shadow. */
+  .btn-gradient-blue {
+    background: linear-gradient(145deg, #2b8fe6, #1366b0);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 12px -2px rgba(19, 102, 176, 0.45);
+  }
+
+  .btn-gradient-blue:hover {
+    filter: brightness(1.06);
+  }
   
   .btn-sm {
     @apply px-3 py-1.5 text-sm;

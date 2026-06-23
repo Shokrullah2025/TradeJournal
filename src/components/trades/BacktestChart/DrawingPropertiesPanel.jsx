@@ -276,11 +276,12 @@ const PresetsSection = ({ sel, theme, onPropertyChange }) => {
         title={canSave ? "Save current settings under this name" : trimmedName ? `"${trimmedName}" already exists — use Update` : "Enter a unique name to save"}
         disabled={!canSave}
         onClick={saveNew}
+        className={canSave ? "btn-gradient" : undefined}
         style={{
           ...smallBtnStyle(theme),
-          color: canSave ? theme.accent : theme.label,
-          borderColor: canSave ? theme.accent : theme.fieldBorder,
-          background: canSave ? theme.accentSoft : theme.fieldBg,
+          ...(canSave
+            ? { background: undefined, color: undefined, borderColor: "transparent" }
+            : { color: theme.label, borderColor: theme.fieldBorder, background: theme.fieldBg }),
           cursor: canSave ? "pointer" : "default",
           opacity: canSave ? 1 : 0.5,
         }}

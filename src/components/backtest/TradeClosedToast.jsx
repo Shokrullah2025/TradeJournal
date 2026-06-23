@@ -131,8 +131,7 @@ export default function TradeClosedToast({
           ) : (
             <button
               onClick={handleSaveNote}
-              className="text-xs px-2 py-1 rounded font-semibold"
-              style={{ background: "#089981", color: "#fff" }}
+              className="btn-gradient text-xs px-2 py-1 rounded font-semibold"
               data-testid="trade-toast-note-save-btn"
             >
               Save

@@ -256,7 +256,7 @@ const FeatureFlagsPanel = () => {
                       data-testid={`admin-flag-save-${row.key}`}
                       className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                         dirty[row.key] && !tableMissing
-                          ? "bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600"
+                          ? "btn-gradient"
                           : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                       }`}
                     >
