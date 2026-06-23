@@ -160,6 +160,13 @@ const CumulativePnLChart = ({
       onMouseLeave={handleMouseLeave}
       data-testid="cumulative-pnl-chart"
     >
+      {/* Same gentle fade-in as the Daily P&L chart — opacity + slight rise. */}
+      <style>{`
+        @keyframes chartFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       {dims && <svg
         style={{
           position: "absolute",
@@ -245,7 +252,10 @@ const CumulativePnLChart = ({
         })}
 
         {/* Area fills + line strokes + hover inside master clip */}
-        <g clipPath={`url(#cm_${uid})`}>
+        <g
+          clipPath={`url(#cm_${uid})`}
+          style={{ animation: "chartFadeIn 0.9s ease-out both" }}
+        >
           <path
             d={areaPath}
             fill={`url(#cpg_${uid})`}
