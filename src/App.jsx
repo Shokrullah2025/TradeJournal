@@ -130,7 +130,7 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <ErrorBoundary>
-                          <div className="flex h-screen bg-gray-50">
+                          <div className="app-shell flex h-screen bg-gray-50 dark:bg-gray-900">
                             <Sidebar
                               isOpen={sidebarOpen}
                               onClose={() => setSidebarOpen(false)}

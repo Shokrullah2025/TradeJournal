@@ -27,6 +27,21 @@
     --toast-color: #f9fafb;
     --toast-border: #374151;
     --toast-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.2);
+
+    /* Calculator "trading terminal" surface palette — the reference dark theme
+       (see makePalette in src/pages/RiskCalculator.jsx). These tokens drive the
+       app-shell-scoped overrides at the bottom of this file so every
+       authenticated page matches the Risk Calculator's dark surfaces. */
+    --surface-deep: #0b0f15;
+    --surface-bg: #0d1117;
+    --surface-card: #11161e;
+    --surface-raised: #161c26;
+    --surface-hover: #1b212b;
+    --surface-border-soft: #1b212b;
+    --surface-border: #20262f;
+    --surface-input-border: #232b36;
+    --surface-text: #e6edf3;
+    --surface-text-mid: #9aa3b2;
   }
 
   /* Smooth theme transition */
@@ -195,4 +210,71 @@
 }
 .rich-text-content li {
   margin: 0.125rem 0;
+}
+
+/* ==========================================================================
+   Dark-theme retint — match the Risk Calculator across the authenticated app
+   --------------------------------------------------------------------------
+   Scoped to `.app-shell` (the protected layout container in App.jsx) so the
+   public marketing / legal / auth pages, which render outside the shell via
+   SiteLayout, keep their existing look. Each rule has higher specificity than
+   the Tailwind utility it overrides (extra `.app-shell` class), so it wins
+   without `!important`. The markup classes are dark: variants, which compile
+   to escaped `.dark\:bg-gray-800` selectors — target those, not `.bg-gray-800`.
+   ========================================================================== */
+
+/* Shared component classes */
+.dark .app-shell .card {
+  background-color: var(--surface-card);
+  border-color: var(--surface-border);
+}
+.dark .app-shell .input,
+.dark .app-shell .select,
+.dark .app-shell .textarea {
+  background-color: var(--surface-card);
+  border-color: var(--surface-input-border);
+  color: var(--surface-text);
+}
+
+/* Raw Tailwind gray background utilities used inline across pages */
+.dark .app-shell .dark\:bg-gray-950 { background-color: var(--surface-deep); }
+.dark .app-shell .dark\:bg-gray-900 { background-color: var(--surface-bg); }
+.dark .app-shell .dark\:bg-gray-800 { background-color: var(--surface-card); }
+.dark .app-shell .dark\:bg-gray-700 { background-color: var(--surface-raised); }
+.dark .app-shell .dark\:bg-gray-600 { background-color: var(--surface-hover); }
+
+/* Hover background variants */
+.dark .app-shell .dark\:hover\:bg-gray-800:hover { background-color: var(--surface-card); }
+.dark .app-shell .dark\:hover\:bg-gray-700:hover { background-color: var(--surface-hover); }
+.dark .app-shell .dark\:hover\:bg-gray-600:hover { background-color: var(--surface-input-border); }
+
+/* Borders */
+.dark .app-shell .dark\:border-gray-800 { border-color: var(--surface-border-soft); }
+.dark .app-shell .dark\:border-gray-700 { border-color: var(--surface-border); }
+.dark .app-shell .dark\:border-gray-600 { border-color: var(--surface-input-border); }
+.dark .app-shell .dark\:hover\:border-gray-700:hover { border-color: var(--surface-border); }
+.dark .app-shell .dark\:hover\:border-gray-600:hover { border-color: var(--surface-input-border); }
+.dark .app-shell .dark\:hover\:border-gray-500:hover { border-color: #2b3441; }
+
+/* Divider color (Tailwind applies border-color to the gap between children) */
+.dark .app-shell .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--surface-border);
+}
+
+/* Focus ring surface */
+.dark .app-shell .dark\:ring-gray-800 { --tw-ring-color: var(--surface-border); }
+
+/* Crisp primary text to match the calculator (#e6edf3). Secondary grays
+   (400/500/300) already read well on the deeper surfaces, so leave them. */
+.dark .app-shell .dark\:text-gray-100 { color: var(--surface-text); }
+.dark .app-shell .dark\:text-gray-50  { color: #f0f4f8; }
+
+/* Modals render through ModalPortal into document.body — outside .app-shell —
+   so retint them globally. The public site does not open these app modals. */
+.dark .modal-content {
+  background-color: var(--surface-card);
+  border-color: var(--surface-border);
+}
+.dark .modal-overlay {
+  background-color: rgba(1, 4, 9, 0.8);
 }
