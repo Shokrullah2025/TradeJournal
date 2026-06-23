@@ -73,9 +73,9 @@ export const BillingProvider = ({ children }) => {
       const [subResult, methodsResult, invoicesResult] = await Promise.all([
         supabase
           .from("user_subscriptions")
-          .select("id, status, current_period_end, cancel_at_period_end, stripe_customer_id, subscription_plans(name, slug, price)")
+          .select("id, status, current_period_end, cancel_at_period_end, trial_start, trial_end, stripe_customer_id, subscription_plans(name, slug, price)")
           .eq("user_id", userId)
-          .in("status", ["active", "suspended"])
+          .in("status", ["active", "trialing", "suspended"])
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
@@ -150,6 +150,22 @@ export const BillingProvider = ({ children }) => {
     return subData.data.clientSecret;
   };
 
+  // `customerId` comes from the stripe-setup-intent step, which already
+  // resolves-or-creates the Stripe customer — no extra create-customer call.
+  const startTrial = async (planSlug, billingCycle, paymentMethodId, customerId) => {
+    const { data: trialData, error: trialError } = await supabase.functions.invoke(
+      "stripe-start-trial",
+      {
+        body: { customerId, planSlug, billingCycle, paymentMethodId },
+      },
+    );
+    if (trialError || !trialData?.success) {
+      throw new Error(trialData?.error || "Failed to start your trial");
+    }
+
+    return trialData.data;
+  };
+
   const openPortal = async () => {
     const { data, error } = await supabase.functions.invoke("stripe-portal");
     if (error || !data?.success) {
@@ -191,6 +207,7 @@ export const BillingProvider = ({ children }) => {
     isLoading,
     // Stripe actions
     createCheckoutSession,
+    startTrial,
     openPortal,
   };
 

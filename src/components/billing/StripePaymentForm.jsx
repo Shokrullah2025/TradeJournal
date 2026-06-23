@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PropTypes from "prop-types";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Shield } from "lucide-react";
@@ -7,7 +8,7 @@ import { toast } from "react-hot-toast";
 // Initialized once at module level — safe because publishable keys are public by design
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
+const CheckoutForm = ({ onSuccess, onCancel, amount, mode, submitLabel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -18,6 +19,32 @@ const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
 
     setIsProcessing(true);
     try {
+      if (mode === "setup") {
+        // Trial flow: collect & confirm the card without charging it. The resulting
+        // payment method is handed back so the caller can start a trial subscription
+        // that auto-charges when the trial ends.
+        const { error, setupIntent } = await stripe.confirmSetup({
+          elements,
+          confirmParams: {
+            return_url: `${window.location.origin}/billing?setup=success`,
+          },
+          redirect: "if_required",
+        });
+
+        if (error) {
+          toast.error(error.message || "We couldn't verify your card. Please try again.");
+        } else if (setupIntent?.status === "succeeded") {
+          onSuccess(setupIntent.payment_method);
+        } else {
+          // e.g. requires_action / processing that didn't resolve — don't leave
+          // the user on a button that appears to do nothing.
+          toast.error(
+            "Your card needs additional verification. Please try a different card.",
+          );
+        }
+        return;
+      }
+
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -75,6 +102,8 @@ const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
               <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
               Processing...
             </span>
+          ) : submitLabel ? (
+            submitLabel
           ) : amount ? (
             `Subscribe — $${amount}`
           ) : (
@@ -86,7 +115,14 @@ const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
   );
 };
 
-const StripePaymentForm = ({ clientSecret, amount, onSuccess, onCancel }) => {
+const StripePaymentForm = ({
+  clientSecret,
+  amount,
+  onSuccess,
+  onCancel,
+  mode = "payment",
+  submitLabel,
+}) => {
   const options = {
     clientSecret,
     appearance: {
@@ -97,9 +133,30 @@ const StripePaymentForm = ({ clientSecret, amount, onSuccess, onCancel }) => {
 
   return (
     <Elements stripe={stripePromise} options={options}>
-      <CheckoutForm onSuccess={onSuccess} onCancel={onCancel} amount={amount} />
+      <CheckoutForm
+        onSuccess={onSuccess}
+        onCancel={onCancel}
+        amount={amount}
+        mode={mode}
+        submitLabel={submitLabel}
+      />
     </Elements>
   );
+};
+
+const checkoutPropTypes = {
+  onSuccess: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  amount: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  mode: PropTypes.oneOf(["payment", "setup"]),
+  submitLabel: PropTypes.string,
+};
+
+CheckoutForm.propTypes = checkoutPropTypes;
+
+StripePaymentForm.propTypes = {
+  ...checkoutPropTypes,
+  clientSecret: PropTypes.string.isRequired,
 };
 
 export default StripePaymentForm;

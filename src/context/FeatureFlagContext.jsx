@@ -59,7 +59,10 @@ export const FeatureFlagProvider = ({ children }) => {
         .from("user_subscriptions")
         .select("status, trial_end, subscription_plans(slug)")
         .eq("user_id", user.id)
-        .eq("status", "active")
+        // A trial grants the same Pro entitlements as a paid plan, so both
+        // 'active' and 'trialing' rows must resolve the audience. (Stripe's
+        // trialing status is stored as 'trialing' since migration 025.)
+        .in("status", ["active", "trialing"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();

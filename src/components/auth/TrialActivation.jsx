@@ -1,50 +1,73 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
-import { Clock, CheckCircle, Star, ArrowRight } from "lucide-react";
+import { Clock, CheckCircle, Star, ArrowRight, CreditCard } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { format } from "date-fns";
 import { supabase } from "../../lib/supabase";
+import { useBilling } from "../../context/BillingContext";
+import StripePaymentForm from "../billing/StripePaymentForm";
 
-const TrialActivation = ({ onTrialActivated }) => {
-  const [isActivating, setIsActivating] = useState(false);
-  const [trialStatus, setTrialStatus] = useState("pending"); // pending, activating, activated, error
+const TrialActivation = ({
+  onTrialActivated,
+  planSlug = "pro",
+  billingCycle = "monthly",
+}) => {
+  // intro → card (collect card) → activated. `error` shows a recoverable message.
+  const [trialStatus, setTrialStatus] = useState("intro");
+  const [isWorking, setIsWorking] = useState(false);
+  const [clientSecret, setClientSecret] = useState(null);
+  const [customerId, setCustomerId] = useState(null);
+  const [trialEnd, setTrialEnd] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
+  const { startTrial } = useBilling();
 
-  const activateTrial = async () => {
-    setIsActivating(true);
-    setTrialStatus("activating");
-
+  // Step 1 — create a SetupIntent so the user can enter a card without being charged.
+  const beginTrial = async () => {
+    setIsWorking(true);
+    setErrorMessage("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      // Never POST with a malformed `Bearer undefined` header — without a valid
-      // session the request can't be authorized, so stop and tell the user.
+      // Without a valid session the request can't be authorized — stop early
+      // rather than firing a `Bearer undefined` request.
       if (!session?.access_token) {
-        setTrialStatus("error");
-        toast.error("Please sign in to activate your trial.");
+        setErrorMessage("Please sign in to start your trial.");
+        toast.error("Please sign in to start your trial.");
         return;
       }
-      const response = await fetch("/api/user/start-trial", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setTrialStatus("activated");
-        toast.success("Your 7-day free trial has been activated!");
-        onTrialActivated?.(data);
-      } else {
-        setTrialStatus("error");
-        toast.error(data.error || "Failed to activate trial");
+      const { data, error } = await supabase.functions.invoke("stripe-setup-intent");
+      if (error || !data?.success) {
+        throw new Error(data?.error || "Failed to start your trial");
       }
-    } catch (error) {
-      setTrialStatus("error");
-      toast.error("Network error. Please try again.");
+
+      setClientSecret(data.data.clientSecret);
+      setCustomerId(data.data.customerId);
+      setTrialStatus("card");
+    } catch (err) {
+      setErrorMessage(err.message || "Something went wrong. Please try again.");
+      toast.error(err.message || "Something went wrong. Please try again.");
     } finally {
-      setIsActivating(false);
+      setIsWorking(false);
+    }
+  };
+
+  // Step 2 — the card was confirmed client-side; start the trial subscription.
+  const handleCardConfirmed = async (paymentMethodId) => {
+    setIsWorking(true);
+    setErrorMessage("");
+    try {
+      const result = await startTrial(planSlug, billingCycle, paymentMethodId, customerId);
+      setTrialEnd(result?.trialEnd ?? null);
+      setTrialStatus("activated");
+      toast.success("Your 7-day free trial has started!");
+      onTrialActivated?.(result);
+    } catch (err) {
+      setErrorMessage(err.message || "We couldn't start your trial. Please try again.");
+      toast.error(err.message || "We couldn't start your trial. Please try again.");
+    } finally {
+      setIsWorking(false);
     }
   };
 
@@ -83,7 +106,10 @@ const TrialActivation = ({ onTrialActivated }) => {
 
   if (trialStatus === "activated") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div
+        className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+        data-testid="trial-activated-state"
+      >
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="flex items-center justify-center w-16 h-16 bg-green-600 rounded-full mx-auto">
@@ -109,12 +135,10 @@ const TrialActivation = ({ onTrialActivated }) => {
                 7 Days Remaining
               </span>
             </div>
-            <p className="text-sm text-green-700">
-              Your trial expires on{" "}
-              {new Date(
-                Date.now() + 7 * 24 * 60 * 60 * 1000
-              ).toLocaleDateString()}
-              . You'll have full access to all Pro features until then.
+            <p className="text-sm text-green-700" data-testid="trial-end-date">
+              {trialEnd
+                ? `Your card will be charged on ${format(new Date(trialEnd), "MMM d, yyyy")} unless you cancel before then. You have full access to all Pro features until your trial ends.`
+                : "You'll have full access to all Pro features during your trial. Cancel anytime before it ends to avoid being charged."}
             </p>
           </div>
 
@@ -187,8 +211,8 @@ const TrialActivation = ({ onTrialActivated }) => {
             <span className="text-2xl font-bold text-blue-600">$0</span>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            No commitment, cancel anytime. After your trial, continue for just
-            $29.99/month.
+            No commitment, cancel anytime. After your 7 days, your plan continues
+            automatically at $29.99/month unless you cancel.
           </p>
           <div className="grid grid-cols-1 gap-3">
             {trialFeatures.map((feature, index) => (
@@ -214,37 +238,73 @@ const TrialActivation = ({ onTrialActivated }) => {
           </div>
           <div className="mt-2 text-sm text-yellow-700">
             <ul className="space-y-1">
-              <li>• No charges during your 7-day trial</li>
-              <li>• Full access to all Pro features</li>
-              <li>• Cancel anytime with no fees</li>
-              <li>• Automatic conversion to paid plan after trial</li>
+              <li>• $0 charged today — your card is only verified</li>
+              <li>• Full access to all Pro features for 7 days</li>
+              <li>• Cancel anytime before it ends and you won't be charged</li>
+              <li>• Otherwise it converts to a paid plan automatically</li>
             </ul>
           </div>
         </div>
 
-        <div>
-          <button
-            onClick={activateTrial}
-            disabled={isActivating}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        {errorMessage && (
+          <div
+            className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700"
+            data-testid="trial-error-message"
+            role="alert"
           >
-            {isActivating ? (
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Activating Your Trial...
-              </div>
-            ) : (
-              <div className="flex items-center">
-                <Star className="w-5 h-5 mr-2" />
-                Activate 7-Day Free Trial
-              </div>
-            )}
-          </button>
-        </div>
+            {errorMessage}
+          </div>
+        )}
+
+        {trialStatus === "card" && clientSecret ? (
+          <div
+            className="border border-gray-200 rounded-lg p-4 bg-white"
+            data-testid="trial-card-input"
+          >
+            <div className="flex items-center mb-3 text-sm font-medium text-gray-900">
+              <CreditCard className="w-4 h-4 mr-2 text-blue-600" />
+              Add a card to start your trial
+            </div>
+            <StripePaymentForm
+              clientSecret={clientSecret}
+              mode="setup"
+              submitLabel={isWorking ? "Starting trial…" : "Start free trial"}
+              onSuccess={handleCardConfirmed}
+              onCancel={() => setTrialStatus("intro")}
+            />
+          </div>
+        ) : (
+          <form
+            data-testid="trial-activate-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              beginTrial();
+            }}
+          >
+            <button
+              type="submit"
+              disabled={isWorking}
+              data-testid="trial-activate-submit-btn"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isWorking ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Starting Your Trial...
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <Star className="w-5 h-5 mr-2" />
+                  Start 7-Day Free Trial
+                </div>
+              )}
+            </button>
+          </form>
+        )}
 
         <div className="text-center">
           <p className="text-xs text-gray-500">
-            By activating your trial, you agree to our{" "}
+            By starting your trial, you agree to our{" "}
             <a href="#" className="text-blue-600 hover:text-blue-500">
               Terms of Service
             </a>{" "}
@@ -257,6 +317,12 @@ const TrialActivation = ({ onTrialActivated }) => {
       </div>
     </div>
   );
+};
+
+TrialActivation.propTypes = {
+  onTrialActivated: PropTypes.func,
+  planSlug: PropTypes.string,
+  billingCycle: PropTypes.oneOf(["monthly", "annually"]),
 };
 
 export default TrialActivation;

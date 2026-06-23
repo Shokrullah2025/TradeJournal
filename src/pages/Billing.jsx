@@ -12,6 +12,7 @@ import {
   AlertCircle,
   User,
 } from "lucide-react";
+import { format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
@@ -30,9 +31,10 @@ const Billing = () => {
     openPortal,
   } = useBilling();
   // Derive active plan slug from real DB subscription (BillingContext).
-  // Falls back to "basic" when there is no active subscription.
+  // A trial carries the same plan entitlement as an active subscription, so
+  // both 'active' and 'trialing' resolve the plan. Falls back to "basic".
   const currentPlanSlug =
-    subscription?.status === "active"
+    subscription?.status === "active" || subscription?.status === "trialing"
       ? (subscription?.subscription_plans?.slug ?? "basic")
       : "basic";
 
@@ -308,6 +310,44 @@ const Billing = () => {
                 : "Manage your subscription and payment information"}
             </p>
           </div>
+
+          {/* Trial banner — shown while the subscription is in its free trial. */}
+          {subscription?.status === "trialing" && (
+            <div
+              className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-6"
+              data-testid="billing-trial-banner"
+            >
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-start space-x-3">
+                  <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div>
+                    <h3 className="text-lg font-medium text-amber-900 dark:text-amber-200">
+                      Free trial active
+                    </h3>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      {subscription?.trial_end
+                        ? `Your card will be charged on ${format(new Date(subscription.trial_end), "MMM d, yyyy")} unless you cancel before then.`
+                        : "Cancel before your trial ends to avoid being charged."}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await openPortal();
+                    } catch (err) {
+                      toast.error(err.message || "Couldn't open the billing portal.");
+                    }
+                  }}
+                  className="py-2 px-4 border border-amber-300 dark:border-amber-600 rounded-md text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                  data-testid="billing-trial-cancel-btn"
+                >
+                  Manage or cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Current Subscription Status — admins only at top; users see it inside the Payment tab */}
           {user?.role === "admin" && (
