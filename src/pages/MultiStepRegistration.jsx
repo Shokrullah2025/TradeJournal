@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, UserPlus, TrendingUp, Check, Mail } from "lucide-react";
+import { Eye, EyeOff, UserPlus, TrendingUp, Check, Mail, Star } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { z } from "zod";
 
 import { useAuth } from "../context/AuthContext";
 import EmailVerification from "../components/auth/EmailVerification";
+import TrialActivation from "../components/auth/TrialActivation";
 
 // Schema for user registration
 const registrationSchema = z
@@ -55,6 +56,7 @@ const MultiStepRegistration = () => {
   const steps = [
     { id: "account", title: "Create Account", icon: UserPlus },
     { id: "email", title: "Verify Email", icon: Mail },
+    { id: "trial", title: "Start Trial", icon: Star },
   ];
 
   const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
@@ -110,8 +112,11 @@ const MultiStepRegistration = () => {
     setRegistrationData((prev) => ({ ...prev, emailVerified: true, userId }));
 
     // Supabase Auth manages the session automatically — no token storage needed.
-    toast.success("Registration completed successfully!");
-    navigate("/dashboard");
+    // Advance to the trial step so the user can start their 7-day free trial
+    // (card up front) before landing on the dashboard. TrialActivation handles
+    // navigation to /dashboard once the trial is active.
+    toast.success("Email verified! Let's start your free trial.");
+    setCurrentStep("trial");
   };
 
   const handleResendEmail = () => {
@@ -499,6 +504,12 @@ const MultiStepRegistration = () => {
         onResendEmail={handleResendEmail}
       />
     );
+  }
+
+  // Step 3: Trial Activation — collect a card up front and start the 7-day
+  // free trial. TrialActivation navigates to /dashboard once activated.
+  if (currentStep === "trial") {
+    return <TrialActivation planSlug="pro" billingCycle="monthly" />;
   }
 
   return null;
