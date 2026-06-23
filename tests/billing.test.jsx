@@ -95,7 +95,7 @@ describe("BillingContext", () => {
     expect(screen.getByTestId("arpu")).toHaveTextContent("139.33");
   });
 
-  it("createCheckoutSession returns the clientSecret from the Edge Functions", async () => {
+  it("createCheckoutSession forwards the billing address and returns clientSecret + totals", async () => {
     await renderBilling();
 
     mockInvoke
@@ -104,17 +104,30 @@ describe("BillingContext", () => {
         error: null,
       })
       .mockResolvedValueOnce({
-        data: { success: true, data: { clientSecret: "cs_test_abc" } },
+        data: {
+          success: true,
+          data: {
+            clientSecret: "cs_test_abc",
+            totals: { subtotal: 2900, tax: 551, total: 3451, currency: "eur" },
+          },
+        },
         error: null,
       });
 
-    let clientSecret;
+    const address = { country: "DE", postal_code: "10115" };
+    const taxId = { type: "eu_vat", value: "DE123456789" };
+
+    let result;
     await act(async () => {
-      clientSecret = await api.createCheckoutSession("premium", "monthly");
+      result = await api.createCheckoutSession("premium", "monthly", { address, taxId });
     });
 
-    expect(clientSecret).toBe("cs_test_abc");
-    expect(mockInvoke).toHaveBeenNthCalledWith(1, "stripe-create-customer");
+    expect(result.clientSecret).toBe("cs_test_abc");
+    expect(result.totals).toEqual({ subtotal: 2900, tax: 551, total: 3451, currency: "eur" });
+    // Address + tax ID must reach the customer function so Stripe Tax can run.
+    expect(mockInvoke).toHaveBeenNthCalledWith(1, "stripe-create-customer", {
+      body: { address, taxId },
+    });
     expect(mockInvoke).toHaveBeenNthCalledWith(2, "stripe-create-subscription", {
       body: { customerId: "cus_123", planSlug: "premium", billingCycle: "monthly" },
     });

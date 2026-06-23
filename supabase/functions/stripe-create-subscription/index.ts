@@ -49,6 +49,16 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Invalid customer ID", 403);
     }
 
+    // Stripe Tax resolves the VAT/GST jurisdiction from the customer's address.
+    // Without a country it errors with `customer_tax_location_invalid`, so we
+    // fail early with a clear, actionable message.
+    if (!(customer as Stripe.Customer).address?.country) {
+      return errorResponse(
+        "A billing address is required before checkout so we can calculate tax.",
+        422,
+      );
+    }
+
     // Look up the Stripe price ID from the database
     const { data: plan, error: planError } = await supabase
       .from("subscription_plans")
@@ -81,6 +91,10 @@ Deno.serve(async (req: Request) => {
       items: [{ price: priceId }],
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
+      // Stripe computes VAT/GST/sales tax from the customer's address and adds
+      // it to the invoice. Requires each Price to have a tax_behavior and its
+      // Product a tax_code set in the Stripe Dashboard.
+      automatic_tax: { enabled: true },
       expand: ["latest_invoice.payment_intent"],
     });
 
@@ -90,6 +104,15 @@ Deno.serve(async (req: Request) => {
     if (!paymentIntent?.client_secret) {
       return errorResponse("Failed to get payment client secret from Stripe", 500);
     }
+
+    // Return the tax-inclusive total so the browser can show the real amount
+    // (subtotal + VAT) on the pay button instead of the pre-tax plan price.
+    const totals = {
+      subtotal: invoice?.subtotal ?? null,
+      tax: invoice?.tax ?? null,
+      total: invoice?.total ?? null,
+      currency: invoice?.currency ?? null,
+    };
 
     // Save subscription row as 'suspended' — the webhook activates it once payment confirms
     const now = new Date().toISOString();
@@ -116,9 +139,15 @@ Deno.serve(async (req: Request) => {
     return successResponse({
       clientSecret: paymentIntent.client_secret,
       subscriptionId: subscription.id,
+      totals,
     });
   } catch (err) {
     console.error("stripe-create-subscription error:", err);
+    // A missing tax_behavior/tax_code on the Price surfaces as an invalid
+    // request — show it so the operator knows to finish the Dashboard setup.
+    if (err instanceof Stripe.errors.StripeInvalidRequestError) {
+      return errorResponse(err.message, 422);
+    }
     return errorResponse("Internal server error", 500);
   }
 });

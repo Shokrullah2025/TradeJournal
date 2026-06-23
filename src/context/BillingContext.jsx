@@ -131,9 +131,13 @@ export const BillingProvider = ({ children }) => {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  const createCheckoutSession = async (planSlug, billingCycle) => {
+  // billingDetails: { address, taxId } collected by BillingAddressForm. The
+  // address must reach Stripe before the subscription is created so Stripe Tax
+  // can compute VAT/GST. Returns the clientSecret plus tax-inclusive totals.
+  const createCheckoutSession = async (planSlug, billingCycle, billingDetails = {}) => {
     const { data: custData, error: custError } = await supabase.functions.invoke(
       "stripe-create-customer",
+      { body: { address: billingDetails.address, taxId: billingDetails.taxId } },
     );
     if (custError || !custData?.success) {
       throw new Error(custData?.error || "Failed to initialize checkout");
@@ -147,7 +151,7 @@ export const BillingProvider = ({ children }) => {
       throw new Error(subData?.error || "Failed to create subscription");
     }
 
-    return subData.data.clientSecret;
+    return { clientSecret: subData.data.clientSecret, totals: subData.data.totals };
   };
 
   const openPortal = async () => {

@@ -1,13 +1,17 @@
 import React, { useState } from "react";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { Shield } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { stripePromise } from "../../lib/stripe";
 
-// Initialized once at module level — safe because publishable keys are public by design
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+// Format a Stripe minor-unit amount (e.g. cents) in its currency for display.
+const formatMinorAmount = (minor, currency) =>
+  new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: (currency || "usd").toUpperCase(),
+  }).format((minor ?? 0) / 100);
 
-const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
+const CheckoutForm = ({ onSuccess, onCancel, amount, totals }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,6 +54,32 @@ const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
     >
       <PaymentElement />
 
+      {totals?.total != null && (
+        <div
+          className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-md p-3 space-y-1"
+          data-testid="stripe-payment-totals"
+        >
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span data-testid="stripe-payment-subtotal">
+              {formatMinorAmount(totals.subtotal, totals.currency)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tax (VAT/GST)</span>
+            <span data-testid="stripe-payment-tax">
+              {formatMinorAmount(totals.tax, totals.currency)}
+            </span>
+          </div>
+          <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-600 pt-1 mt-1">
+            <span>Total due today</span>
+            <span data-testid="stripe-payment-total">
+              {formatMinorAmount(totals.total, totals.currency)}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-md p-3">
         <Shield className="w-4 h-4 flex-shrink-0 text-green-600 dark:text-green-400" />
         <span>Card details go directly to Stripe — never stored on our servers</span>
@@ -75,6 +105,8 @@ const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
               <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
               Processing...
             </span>
+          ) : totals?.total != null ? (
+            `Subscribe — ${formatMinorAmount(totals.total, totals.currency)}`
           ) : amount ? (
             `Subscribe — $${amount}`
           ) : (
@@ -86,7 +118,7 @@ const CheckoutForm = ({ onSuccess, onCancel, amount }) => {
   );
 };
 
-const StripePaymentForm = ({ clientSecret, amount, onSuccess, onCancel }) => {
+const StripePaymentForm = ({ clientSecret, amount, totals, onSuccess, onCancel }) => {
   const options = {
     clientSecret,
     appearance: {
@@ -97,7 +129,12 @@ const StripePaymentForm = ({ clientSecret, amount, onSuccess, onCancel }) => {
 
   return (
     <Elements stripe={stripePromise} options={options}>
-      <CheckoutForm onSuccess={onSuccess} onCancel={onCancel} amount={amount} />
+      <CheckoutForm
+        onSuccess={onSuccess}
+        onCancel={onCancel}
+        amount={amount}
+        totals={totals}
+      />
     </Elements>
   );
 };

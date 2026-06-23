@@ -15,6 +15,7 @@ import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
 import StripePaymentForm from "../components/billing/StripePaymentForm";
+import BillingAddressForm from "../components/billing/BillingAddressForm";
 
 const Billing = () => {
   const { user } = useAuth();
@@ -38,7 +39,10 @@ const Billing = () => {
   const [selectedPlan, setSelectedPlan] = useState("premium");
   const [billingCycle, setBillingCycle] = useState("monthly");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  // Two-step checkout: collect billing address (for tax) → then card payment.
+  const [checkoutStep, setCheckoutStep] = useState("address");
   const [clientSecret, setClientSecret] = useState(null);
+  const [checkoutTotals, setCheckoutTotals] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [billingAnalytics, setBillingAnalytics] = useState(null);
@@ -50,13 +54,29 @@ const Billing = () => {
     }
   }, [user, getSubscriptionAnalytics]);
 
-  const handleUpgrade = async (planSlug, cycle) => {
+  // Step 1: open the modal on the address step. No network call yet — the
+  // subscription is only created once we have an address for tax calculation.
+  const handleUpgrade = (planSlug) => {
     setSelectedPlan(planSlug);
+    setCheckoutStep("address");
+    setClientSecret(null);
+    setCheckoutTotals(null);
+    setShowPaymentForm(true);
+  };
+
+  // Step 2: address submitted → create the customer (with address) and the
+  // subscription, then advance to the card-payment step with the real totals.
+  const handleAddressSubmit = async ({ address, taxId }) => {
     setCheckoutLoading(true);
     try {
-      const cs = await createCheckoutSession(planSlug, cycle);
+      const { clientSecret: cs, totals } = await createCheckoutSession(
+        selectedPlan,
+        billingCycle,
+        { address, taxId },
+      );
       setClientSecret(cs);
-      setShowPaymentForm(true);
+      setCheckoutTotals(totals);
+      setCheckoutStep("payment");
     } catch (err) {
       toast.error(err.message || "Failed to initialize checkout. Please try again.");
     } finally {
@@ -64,15 +84,16 @@ const Billing = () => {
     }
   };
 
-  const handlePaymentSuccess = () => {
+  const resetCheckout = () => {
     setShowPaymentForm(false);
+    setCheckoutStep("address");
     setClientSecret(null);
+    setCheckoutTotals(null);
   };
 
-  const handlePaymentCancel = () => {
-    setShowPaymentForm(false);
-    setClientSecret(null);
-  };
+  const handlePaymentSuccess = () => resetCheckout();
+
+  const handlePaymentCancel = () => resetCheckout();
 
   const handleOpenPortal = async () => {
     setPortalLoading(true);
@@ -587,7 +608,7 @@ const Billing = () => {
                             <button
                               onClick={() => {
                                 if (plan.id !== currentPlanSlug && plan.id !== "basic") {
-                                  handleUpgrade(plan.id, billingCycle);
+                                  handleUpgrade(plan.id);
                                 }
                               }}
                               disabled={
@@ -898,8 +919,8 @@ const Billing = () => {
             </div>
           )}
 
-          {/* Stripe Payment Modal */}
-          {showPaymentForm && clientSecret && (
+          {/* Stripe Checkout Modal — step 1: billing address, step 2: payment */}
+          {showPaymentForm && (
             <div
               className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-50"
               data-testid="billing-payment-modal"
@@ -908,7 +929,9 @@ const Billing = () => {
                 <div className="mt-3">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Complete Subscription
+                      {checkoutStep === "address"
+                        ? "Billing details"
+                        : "Complete Subscription"}
                     </h3>
                     <button
                       onClick={handlePaymentCancel}
@@ -925,12 +948,23 @@ const Billing = () => {
                     ({billingCycle}).
                   </p>
 
-                  <StripePaymentForm
-                    clientSecret={clientSecret}
-                    amount={getPlanPrice(plans.find((p) => p.id === selectedPlan))}
-                    onSuccess={handlePaymentSuccess}
-                    onCancel={handlePaymentCancel}
-                  />
+                  {checkoutStep === "address" ? (
+                    <BillingAddressForm
+                      onSubmit={handleAddressSubmit}
+                      onCancel={handlePaymentCancel}
+                      isSubmitting={checkoutLoading}
+                    />
+                  ) : (
+                    clientSecret && (
+                      <StripePaymentForm
+                        clientSecret={clientSecret}
+                        amount={getPlanPrice(plans.find((p) => p.id === selectedPlan))}
+                        totals={checkoutTotals}
+                        onSuccess={handlePaymentSuccess}
+                        onCancel={handlePaymentCancel}
+                      />
+                    )
+                  )}
                 </div>
               </div>
             </div>

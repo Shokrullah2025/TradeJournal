@@ -23,6 +23,18 @@ vi.mock("../src/components/billing/StripePaymentForm", () => ({
     <div data-testid="stripe-payment-form-mock">Stripe checkout for ${amount}</div>
   ),
 }));
+// Stub the address step (real one loads Stripe Elements). Clicking it submits a
+// sample EU address so the two-step checkout flow can be driven in tests.
+vi.mock("../src/components/billing/BillingAddressForm", () => ({
+  default: ({ onSubmit }) => (
+    <button
+      data-testid="billing-address-form-mock"
+      onClick={() => onSubmit({ address: { country: "DE" }, taxId: null })}
+    >
+      Submit address
+    </button>
+  ),
+}));
 
 import Billing from "../src/pages/Billing";
 
@@ -80,22 +92,33 @@ describe("Billing Page Integration", () => {
     expect(screen.getByText("$990")).toBeInTheDocument(); // Enterprise yearly
   });
 
-  it("opens the Stripe checkout modal when an upgrade button is clicked", async () => {
-    billingState.createCheckoutSession.mockResolvedValue("cs_test_123");
+  it("opens the modal at the address step, then advances to payment after address submit", async () => {
+    billingState.createCheckoutSession.mockResolvedValue({
+      clientSecret: "cs_test_123",
+      totals: { subtotal: 2900, tax: 551, total: 3451, currency: "eur" },
+    });
     render(<Billing />);
     goToPlansTab();
 
     const upgradeButtons = screen.getAllByText(/Upgrade to/);
     fireEvent.click(upgradeButtons[0]); // Premium
 
+    // Step 1: address form is shown and no subscription is created yet.
+    expect(await screen.findByTestId("billing-payment-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("billing-address-form-mock")).toBeInTheDocument();
+    expect(billingState.createCheckoutSession).not.toHaveBeenCalled();
+
+    // Step 2: submitting the address creates the session and shows the card form.
+    fireEvent.click(screen.getByTestId("billing-address-form-mock"));
+
     await waitFor(() => {
       expect(billingState.createCheckoutSession).toHaveBeenCalledWith(
         "premium",
-        "monthly"
+        "monthly",
+        { address: { country: "DE" }, taxId: null }
       );
     });
-    expect(await screen.findByTestId("billing-payment-modal")).toBeInTheDocument();
-    expect(screen.getByTestId("stripe-payment-form-mock")).toBeInTheDocument();
+    expect(await screen.findByTestId("stripe-payment-form-mock")).toBeInTheDocument();
   });
 
   it("opens the Stripe portal when Manage Payment Methods is clicked", async () => {
@@ -132,6 +155,8 @@ describe("Billing Page Integration", () => {
     goToPlansTab();
 
     fireEvent.click(screen.getAllByText(/Upgrade to/)[0]);
+    // Advance past the address step to trigger the failing checkout call.
+    fireEvent.click(await screen.findByTestId("billing-address-form-mock"));
 
     await waitFor(() => {
       expect(toastMock.error).toHaveBeenCalledWith(
