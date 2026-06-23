@@ -41,7 +41,6 @@
     --surface-border: #20262f;
     --surface-input-border: #232b36;
     --surface-text: #e6edf3;
-    --surface-text-mid: #9aa3b2;
   }
 
   /* Smooth theme transition */
@@ -236,12 +235,15 @@
   color: var(--surface-text);
 }
 
-/* Raw Tailwind gray background utilities used inline across pages */
-.dark .app-shell .dark\:bg-gray-950 { background-color: var(--surface-deep); }
-.dark .app-shell .dark\:bg-gray-900 { background-color: var(--surface-bg); }
-.dark .app-shell .dark\:bg-gray-800 { background-color: var(--surface-card); }
-.dark .app-shell .dark\:bg-gray-700 { background-color: var(--surface-raised); }
-.dark .app-shell .dark\:bg-gray-600 { background-color: var(--surface-hover); }
+/* Raw Tailwind gray background utilities used inline across pages. Written as
+   rgb(<triplet> / var(--tw-bg-opacity, 1)) so that translucent overlays which
+   pair the gray with `bg-opacity-*` (e.g. the mobile sidebar scrim and modal
+   backdrops) keep their transparency instead of turning fully opaque. */
+.dark .app-shell .dark\:bg-gray-950 { background-color: rgb(11 15 21 / var(--tw-bg-opacity, 1)); }  /* --surface-deep   #0b0f15 */
+.dark .app-shell .dark\:bg-gray-900 { background-color: rgb(13 17 23 / var(--tw-bg-opacity, 1)); }  /* --surface-bg     #0d1117 */
+.dark .app-shell .dark\:bg-gray-800 { background-color: rgb(17 22 30 / var(--tw-bg-opacity, 1)); }  /* --surface-card   #11161e */
+.dark .app-shell .dark\:bg-gray-700 { background-color: rgb(22 28 38 / var(--tw-bg-opacity, 1)); }  /* --surface-raised #161c26 */
+.dark .app-shell .dark\:bg-gray-600 { background-color: rgb(27 33 43 / var(--tw-bg-opacity, 1)); }  /* --surface-hover  #1b212b */
 
 /* Hover background variants */
 .dark .app-shell .dark\:hover\:bg-gray-800:hover { background-color: var(--surface-card); }
