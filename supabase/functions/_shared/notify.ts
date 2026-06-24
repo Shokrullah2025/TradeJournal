@@ -99,9 +99,9 @@ export async function createServerNotification(
 }
 
 /**
- * Send the email for an existing notification via Resend, then update its
- * email_status. Skips gracefully when the email channel is off for the category
- * or RESEND_API_KEY is unset. Returns the resulting status.
+ * Send the email for an existing notification via Brevo (primary) / SES (fallback),
+ * then update its email_status. Skips gracefully when the email channel is off for
+ * the category or no provider is configured. Returns the resulting status.
  */
 export async function sendNotificationEmail(
   supabase: Supa,
@@ -134,13 +134,6 @@ export async function sendNotificationEmail(
 
   if (!prefs.email) return finalize("skipped");
 
-  const accessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID");
-  const secretAccessKey = Deno.env.get("AWS_SECRET_ACCESS_KEY");
-  if (!accessKeyId || !secretAccessKey) {
-    console.error("[notify] AWS SES credentials not set");
-    return finalize("failed");
-  }
-
   // Resolve the recipient's email from auth (service_role).
   const { data: authUser } = await supabase.auth.admin.getUserById(
     notification.user_id as string,
@@ -150,44 +143,78 @@ export async function sendNotificationEmail(
 
   const from = Deno.env.get("NOTIFY_FROM_EMAIL") ??
     "Trade Journal Pro <notifications@tradejournalpro.app>";
-  const region = Deno.env.get("AWS_SES_REGION") ?? "us-east-1";
+  const html = renderEmail(
+    notification.title as string,
+    (notification.body as string | null) ?? "",
+    notification.link_to as string | null,
+  );
 
+  const status = await sendTransactionalEmail(to, from, notification.title as string, html);
+  return finalize(status);
+}
+
+/**
+ * Send a transactional email via Brevo (primary) with AWS SES as automatic fallback.
+ * Neither provider is required — if both are unconfigured the call returns "failed".
+ */
+export async function sendTransactionalEmail(
+  to: string,
+  from: string,
+  subject: string,
+  html: string,
+  replyTo?: string,
+): Promise<"sent" | "failed"> {
+  // --- Primary: Brevo ---
+  const brevoKey = Deno.env.get("BREVO_API_KEY");
+  if (brevoKey) {
+    try {
+      const payload: Record<string, unknown> = {
+        sender: { email: from.match(/<(.+)>/)?.[1] ?? from, name: "Trade Journal Pro" },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      };
+      if (replyTo) payload.replyTo = { email: replyTo };
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "api-key": brevoKey, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return "sent";
+      console.warn("[notify] Brevo failed:", res.status, await res.text());
+    } catch (err) {
+      console.warn("[notify] Brevo error, falling back to SES:", err);
+    }
+  }
+
+  // --- Fallback: AWS SES ---
+  const accessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID");
+  const secretAccessKey = Deno.env.get("AWS_SECRET_ACCESS_KEY");
+  if (!accessKeyId || !secretAccessKey) {
+    console.error("[notify] no email provider configured (BREVO_API_KEY or AWS credentials required)");
+    return "failed";
+  }
+  const region = Deno.env.get("AWS_SES_REGION") ?? "us-east-1";
   try {
     const aws = new AwsClient({ accessKeyId, secretAccessKey, region, service: "ses" });
+    const sesPayload: Record<string, unknown> = {
+      FromEmailAddress: from,
+      Destination: { ToAddresses: [to] },
+      Content: { Simple: { Subject: { Data: subject }, Body: { Html: { Data: html } } } },
+    };
+    if (replyTo) sesPayload.ReplyToAddresses = [replyTo];
     const res = await aws.fetch(
       `https://email.${region}.amazonaws.com/v2/email/outbound-emails`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          FromEmailAddress: from,
-          Destination: { ToAddresses: [to] },
-          Content: {
-            Simple: {
-              Subject: { Data: notification.title as string },
-              Body: {
-                Html: {
-                  Data: renderEmail(
-                    notification.title as string,
-                    (notification.body as string | null) ?? "",
-                    notification.link_to as string | null,
-                  ),
-                },
-              },
-            },
-          },
-        }),
-      },
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sesPayload) },
     );
-
     if (!res.ok) {
       console.error("[notify] SES error:", res.status, await res.text());
-      return finalize("failed");
+      return "failed";
     }
-    return finalize("sent");
+    return "sent";
   } catch (err) {
-    console.error("[notify] email send failed:", err);
-    return finalize("failed");
+    console.error("[notify] SES fallback failed:", err);
+    return "failed";
   }
 }
 

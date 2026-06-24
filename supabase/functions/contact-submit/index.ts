@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3";
-import { AwsClient } from "https://esm.sh/aws4fetch@1";
+import { sendTransactionalEmail } from "../_shared/notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -145,53 +145,29 @@ async function verifyTurnstile(
   }
 }
 
-// Emails the support inbox via AWS SES, with reply-to set to the submitter so the
-// team can respond directly.
+// Emails the support inbox via Brevo (primary) / AWS SES (fallback), with reply-to
+// set to the submitter so the team can respond directly.
 async function notifyTeam(input: {
   name: string;
   email: string;
   subject: string;
   message: string;
 }): Promise<"sent" | "failed" | "none"> {
-  const accessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID");
-  const secretAccessKey = Deno.env.get("AWS_SECRET_ACCESS_KEY");
-  if (!accessKeyId || !secretAccessKey) return "none"; // email channel not configured — skip silently
+  const brevoKey = Deno.env.get("BREVO_API_KEY");
+  const awsKey = Deno.env.get("AWS_ACCESS_KEY_ID");
+  if (!brevoKey && !awsKey) return "none"; // email channel not configured — skip silently
 
   const to = Deno.env.get("CONTACT_TO_EMAIL") ?? "support@tradejournalpro.app";
   const from = Deno.env.get("NOTIFY_FROM_EMAIL") ??
     "Trade Journal Pro <notifications@tradejournalpro.app>";
-  const region = Deno.env.get("AWS_SES_REGION") ?? "us-east-1";
 
-  try {
-    const aws = new AwsClient({ accessKeyId, secretAccessKey, region, service: "ses" });
-    const res = await aws.fetch(
-      `https://email.${region}.amazonaws.com/v2/email/outbound-emails`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          FromEmailAddress: from,
-          Destination: { ToAddresses: [to] },
-          ReplyToAddresses: [input.email],
-          Content: {
-            Simple: {
-              Subject: { Data: `New contact: ${input.subject}` },
-              Body: { Html: { Data: renderEmail(input) } },
-            },
-          },
-        }),
-      },
-    );
-
-    if (!res.ok) {
-      console.error("contact-submit SES error:", res.status, await res.text());
-      return "failed";
-    }
-    return "sent";
-  } catch (err) {
-    console.error("contact-submit email send failed:", err);
-    return "failed";
-  }
+  return await sendTransactionalEmail(
+    to,
+    from,
+    `New contact: ${input.subject}`,
+    renderEmail(input),
+    input.email,
+  );
 }
 
 function renderEmail(input: {
