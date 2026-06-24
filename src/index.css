@@ -306,3 +306,43 @@
 .dark .modal-overlay {
   background-color: rgba(1, 4, 9, 0.8);
 }
+
+/* ==========================================================================
+   Dark-theme gradient depth — subtle "cool" backdrop for the app shell
+   --------------------------------------------------------------------------
+   Layers a faint brand aura (blue upper-right, a hint of green upper-left) over
+   a deep diagonal base on the three large surfaces: the main canvas, the
+   sidebar, and the header. Painted via `background-image` only, so they sit on
+   top of the solid `--surface-*` base colors set by the retint block above
+   WITHOUT any specificity fight — nothing else sets background-image on these
+   elements. Scoped to `.dark .app-shell` so light mode and the public
+   marketing / auth pages (rendered outside the shell) stay untouched.
+   ========================================================================== */
+
+/* Main content canvas — soft brand glow at the top that fades into the deep
+   base as the page scrolls. `background-attachment: local` keeps the aura
+   anchored to the content so it scrolls naturally with the page. */
+.dark .app-shell main {
+  background-image:
+    radial-gradient(1100px 520px at 88% -8%, rgba(37, 99, 235, 0.10), transparent 60%),
+    radial-gradient(800px 520px at -5% -5%, rgba(46, 189, 133, 0.045), transparent 55%),
+    linear-gradient(165deg, #0f1620 0%, #0d1117 48%, #0b0e13 100%);
+  background-repeat: no-repeat;
+  background-attachment: local;
+}
+
+/* Sidebar — gentle vertical gradient, a touch lighter at the top (behind the
+   brand) settling into the base at the bottom, with a faint glow behind the
+   logo. */
+.dark .app-shell .sidebar {
+  background-image:
+    radial-gradient(520px 360px at 50% -12%, rgba(37, 99, 235, 0.12), transparent 62%),
+    linear-gradient(180deg, #141b27 0%, #10151d 58%, #0d1117 100%);
+  background-repeat: no-repeat;
+}
+
+/* Header — quiet horizontal gradient so the top bar reads as one cohesive band
+   with the sidebar's upper tone. */
+.dark .app-shell .header {
+  background-image: linear-gradient(90deg, #141b27 0%, #11161e 60%, #10151d 100%);
+}
