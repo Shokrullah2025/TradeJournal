@@ -3,6 +3,7 @@
 // service_role key (RLS-bypassing) so webhooks and background jobs can notify.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { AwsClient } from "https://esm.sh/aws4fetch@1";
 
 type Supa = ReturnType<typeof createClient>;
 
@@ -133,9 +134,10 @@ export async function sendNotificationEmail(
 
   if (!prefs.email) return finalize("skipped");
 
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) {
-    console.error("[notify] RESEND_API_KEY not set");
+  const accessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID");
+  const secretAccessKey = Deno.env.get("AWS_SECRET_ACCESS_KEY");
+  if (!accessKeyId || !secretAccessKey) {
+    console.error("[notify] AWS SES credentials not set");
     return finalize("failed");
   }
 
@@ -148,28 +150,38 @@ export async function sendNotificationEmail(
 
   const from = Deno.env.get("NOTIFY_FROM_EMAIL") ??
     "Trade Journal Pro <notifications@tradejournalpro.app>";
+  const region = Deno.env.get("AWS_SES_REGION") ?? "us-east-1";
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+    const aws = new AwsClient({ accessKeyId, secretAccessKey, region, service: "ses" });
+    const res = await aws.fetch(
+      `https://email.${region}.amazonaws.com/v2/email/outbound-emails`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          FromEmailAddress: from,
+          Destination: { ToAddresses: [to] },
+          Content: {
+            Simple: {
+              Subject: { Data: notification.title as string },
+              Body: {
+                Html: {
+                  Data: renderEmail(
+                    notification.title as string,
+                    (notification.body as string | null) ?? "",
+                    notification.link_to as string | null,
+                  ),
+                },
+              },
+            },
+          },
+        }),
       },
-      body: JSON.stringify({
-        from,
-        to,
-        subject: notification.title,
-        html: renderEmail(
-          notification.title as string,
-          (notification.body as string | null) ?? "",
-          notification.link_to as string | null,
-        ),
-      }),
-    });
+    );
 
     if (!res.ok) {
-      console.error("[notify] Resend error:", res.status, await res.text());
+      console.error("[notify] SES error:", res.status, await res.text());
       return finalize("failed");
     }
     return finalize("sent");
