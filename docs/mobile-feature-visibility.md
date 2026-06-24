@@ -107,7 +107,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Trades", href: "/trades", icon: BookOpen },
   { name: "Backtest", href: "/backtest", icon: Activity, feature: "backtesting", desktopOnly: true },
-  { name: "Brokers", href: "/brokers", icon: Link, feature: "broker_sync" },
+  { name: "Brokers", href: "/brokers", icon: Link, feature: "broker_sync" }, // Link = lucide icon, not react-router's Link
   { name: "Analytics", href: "/analytics", icon: BarChart3, feature: "advanced_analytics" },
   { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator, feature: "risk_calculator" },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -134,7 +134,7 @@ function DesktopOnlyRoute({ children }) {
   if (isMobile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center"
-           data-testid="desktop-only-notice">
+           data-testid="desktop-access-denied">
         <Monitor className="w-12 h-12 text-gray-400 mb-4" />
         <h2 className="text-lg font-semibold">Best on desktop</h2>
         <p className="text-gray-500 mt-2">
@@ -151,7 +151,12 @@ Wrap `Backtest`, `Admin`, and `ContactMessages` routes in `App.jsx`, stacking
 with the existing `FeatureGate` / `AdminRoute`. Put `DesktopOnlyRoute` on the
 **outside** — `FeatureGate` fails open while flags are loading (it renders
 children during `loading`), so an outer desktop guard ensures a mobile user
-never briefly renders the heavy Backtest page during flag load.
+never briefly renders the heavy Backtest page during flag load. (This fail-open
+reasoning is specific to Backtest's `FeatureGate`. `Admin` / `ContactMessages`
+are wrapped in `AdminRoute`, which does *not* fail open — it shows a loading
+screen and then denies non-admins — so the `DesktopOnlyRoute` vs `AdminRoute`
+order there is a UX choice about which message a non-admin on mobile sees, not a
+correctness issue.)
 
 ### 3.4 Make the ✅ Full / ⚠️ Limited pages responsive
 
@@ -171,7 +176,7 @@ These are layout changes inside each page, not gating:
 
 - `useIsMobile` must clean up its `matchMedia` listener (CLAUDE.md §3).
 - New nav/route states still need `data-testid`s (CLAUDE.md §9) — e.g.
-  `desktop-only-notice` above.
+  `desktop-access-denied` above (matching the existing `*-access-denied` guard family).
 - No new server data, queries, or schema — this is presentation/gating only.
 
 ---
