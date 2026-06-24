@@ -30,11 +30,11 @@ Three tiers:
 |---|---|---|---|---|---|
 | **Dashboard** | `/dashboard` | `pages/Dashboard.jsx` | ✅ Full | The at-a-glance check is *the* mobile use case (P&L, win rate, recent trades). | Single-column stack. Stat cards 1-up. Charts shrink to full-width; keep PnL + cumulative, lazy-render the rest below the fold. |
 | **Trades** | `/trades` | `pages/Trades.jsx` | ✅ Full | Logging and reviewing trades is the #1 on-the-go task. | Replace the wide table with a stacked **card list** per trade. Filters collapse into a bottom sheet / dropdown. |
-| **Trade Entry** | `/trade-entry` | `pages/TradeEntry.jsx` | ✅ Full | Quick capture right after a trade — the most valuable mobile flow. | Full-width single-column form, large touch targets, numeric keypads on number inputs. |
+| **Trade Entry** | `/trade-entry` *(in-page links)* | `pages/TradeEntry.jsx` | ✅ Full | Quick capture right after a trade — the most valuable mobile flow. | Full-width single-column form, large touch targets, numeric keypads on number inputs. |
 | **Risk Calculator** | `/risk-calculator` | `pages/RiskCalculator.jsx` | ✅ Full | Small, self-contained utility that's genuinely useful pre-trade. | Single-column inputs → result card. No multi-pane layout. |
 | **Settings** | `/settings` | `pages/Settings_new.jsx` | ✅ Full | Account/preferences must stay reachable everywhere. | Section list → accordion/stacked panels instead of side-by-side tabs. |
-| **Profile** | `/profile` | `pages/Profile.jsx` | ✅ Full | Account management is universal. | Stacked sections; avatar upload uses the device camera/gallery. |
-| **Billing** | `/billing` | `pages/Billing.jsx` | ✅ Full | Users manage subscriptions from phones; Stripe Elements are responsive. | Single-column plan cards + Stripe form. |
+| **Profile** | `/profile` *(profile menu)* | `pages/Profile.jsx` | ✅ Full | Account management is universal. | Stacked sections; avatar upload uses the device camera/gallery. |
+| **Billing** | `/billing` *(profile menu)* | `pages/Billing.jsx` | ✅ Full | Users manage subscriptions from phones. | Single-column plan cards + Stripe form. **Verify** Stripe Element height + on-screen-keyboard behaviour — it's often the most cramped real-world mobile flow. |
 | **Notifications** | header bell | `layout/NotificationBell` | ✅ Full | Lightweight, high-value on mobile. | Keep. Dropdown becomes a full-width sheet on small screens. |
 | **Theme toggle** | header | `common/ThemeToggle` | ✅ Full | Tiny, no downside. | Keep in header. |
 | **Analytics** | `/analytics` | `pages/Analytics.jsx` | ⚠️ Limited | Useful, but built around dense multi-series charts that don't read well on a phone. | Show **summary metrics + overview** only. Keep the view switcher but let wide charts scroll horizontally; flag deep strategy/instrument/time/drawdown breakdowns as "best on desktop". |
@@ -49,6 +49,14 @@ Three tiers:
 > Breakpoint: "mobile" = below Tailwind's `lg` (1024px), matching the existing
 > sidebar drawer behaviour (`lg:translate-x-0` / `lg:hidden`). Tablets in
 > landscape (≥1024px) get the desktop experience.
+>
+> Note the **768–1023px band**: the header already hides search / the P&L strip /
+> profile text at `md` (768px), but the *sidebar* only becomes a drawer below
+> `lg`. So in that band the new `useIsMobile` (cutoff `lg`) treats the device as
+> mobile — the drawer nav and desktop-only route guards engage, while those
+> header chrome items are already gone. This is intentional (a phone in landscape
+> or a small tablet behaves as mobile), but call it out so the `md`/`lg` split
+> isn't read as a bug.
 
 ---
 
@@ -107,7 +115,8 @@ const navigation = [
   .filter((item) => !item.feature || isFeatureEnabled(item.feature))
   .filter((item) => !item.desktopOnly || !isMobile);
 
-// adminNavigation items are all desktopOnly — filter them the same way
+// adminNavigation has NO filter today — add the same desktopOnly filter to it
+// (it currently renders unconditionally when user?.role === "admin")
 ```
 
 ### 3.3 Guard the routes (deep links / bookmarks)
@@ -117,11 +126,14 @@ not render a broken page on a phone. Add a small `DesktopOnlyRoute` wrapper next
 to the existing guards in `components/auth/ProtectedRoute.jsx`:
 
 ```jsx
+import { Monitor } from "lucide-react"; // ProtectedRoute.jsx imports no icons today
+import { useIsMobile } from "../../hooks/useIsMobile";
+
 function DesktopOnlyRoute({ children }) {
   const isMobile = useIsMobile();
   if (isMobile) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center"
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center"
            data-testid="desktop-only-notice">
         <Monitor className="w-12 h-12 text-gray-400 mb-4" />
         <h2 className="text-lg font-semibold">Best on desktop</h2>
@@ -135,8 +147,11 @@ function DesktopOnlyRoute({ children }) {
 }
 ```
 
-Wrap `Backtest`, `Admin`, and `ContactMessages` routes in `App.jsx` (stacking
-with the existing `FeatureGate` / `AdminRoute`).
+Wrap `Backtest`, `Admin`, and `ContactMessages` routes in `App.jsx`, stacking
+with the existing `FeatureGate` / `AdminRoute`. Put `DesktopOnlyRoute` on the
+**outside** — `FeatureGate` fails open while flags are loading (it renders
+children during `loading`), so an outer desktop guard ensures a mobile user
+never briefly renders the heavy Backtest page during flag load.
 
 ### 3.4 Make the ✅ Full / ⚠️ Limited pages responsive
 
