@@ -230,14 +230,18 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ── Register ─────────────────────────────────────────────────────────────
-  const register = useCallback(async ({ firstName, lastName, email, password }) => {
+  // Callers pass snake_case (first_name/last_name) — matching the DB column
+  // names and the registration form contract — and read result.user_id to drive
+  // the multi-step flow. Destructure the same keys and surface user_id in the
+  // return so the names actually persist and the next step receives the id.
+  const register = useCallback(async ({ first_name, last_name, email, password }) => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { first_name: firstName, last_name: lastName },
+        data: { first_name, last_name },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -254,14 +258,47 @@ export const AuthProvider = ({ children }) => {
     if (data.user) {
       await supabase.from("user_profiles").upsert({
         user_id:    data.user.id,
-        first_name: firstName,
-        last_name:  lastName,
+        first_name,
+        last_name,
       }, { onConflict: "user_id" });
       logActivity(data.user.id, "register", {});
     }
 
     toast.success("Account created! Please check your email to verify your account.");
-    return data;
+    return { ...data, user_id: data.user?.id ?? null };
+  }, []);
+
+  // ── Email verification ─────────────────────────────────────────────────────
+  // signUp() already sends the initial confirmation email; this re-sends it for
+  // the "Resend email" actions in the verification step. `type: 'signup'` issues
+  // a fresh account-confirmation link (not a password reset). Previously this
+  // function was referenced by the registration flow but never defined, so the
+  // call threw and was silently swallowed — no email was ever (re)sent.
+  const sendEmailVerification = useCallback(async (email) => {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      const msg = friendlyError(error);
+      toast.error(msg);
+      throw new Error(msg);
+    }
+    toast.success("Verification email sent. Check your inbox and spam folder.");
+  }, []);
+
+  // Confirm an email from the verification-link token. Supabase exchanges the
+  // token hash for a session; on success the user is signed in. The link can
+  // also land on /auth/callback (OAuthCallback) — this backs the in-app token
+  // path used by EmailVerification. Errors propagate so the caller can show the
+  // "verification failed" state.
+  const verifyEmail = useCallback(async (tokenHash) => {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: "email",
+    });
+    if (error) throw new Error(friendlyError(error));
   }, []);
 
   // ── Logout ───────────────────────────────────────────────────────────────
@@ -426,6 +463,8 @@ export const AuthProvider = ({ children }) => {
     ...state,
     login,
     register,
+    sendEmailVerification,
+    verifyEmail,
     logout,
     sendPasswordReset,
     updateUserProfile,

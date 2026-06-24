@@ -57,6 +57,7 @@ import {
   PublicRoute,
   AdminRoute,
   BillingRoute,
+  RequireSubscription,
 } from "./components/auth/ProtectedRoute";
 
 function App() {
@@ -148,6 +149,7 @@ function App() {
                       path="/*"
                       element={
                         <ProtectedRoute>
+                          <RequireSubscription>
                           <ErrorBoundary>
                           <div className="app-shell flex h-screen bg-gray-50 dark:bg-gray-900">
                             <Sidebar
@@ -260,6 +262,7 @@ function App() {
                             </div>
                           </div>
                           </ErrorBoundary>
+                          </RequireSubscription>
                         </ProtectedRoute>
                       }
                     />

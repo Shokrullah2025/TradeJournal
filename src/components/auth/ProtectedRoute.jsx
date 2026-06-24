@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useFeatureFlags } from "../../context/FeatureFlagContext";
 
 // ── Shared loading spinner ────────────────────────────────────────────────
 const LoadingScreen = () => (
@@ -25,6 +26,36 @@ export const ProtectedRoute = ({ children }) => {
 
   if (loading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  return children;
+};
+
+// ── Requires an entitling subscription (active plan or live trial) ─────────
+// Enforces the card-up-front trial: an authenticated, non-admin user with no
+// paid plan and no active trial is funnelled to /start-trial before they can
+// reach the app shell. Without this, ProtectedRoute alone lets any signed-in
+// user into the dashboard, so the trial step was never enforced.
+//
+// Entitlement is read from FeatureFlagContext, which already resolves the
+// user's audience from their active/trialing subscription and is auth-reactive.
+// Admins resolve to "admin" and always pass; "free" means no plan and no live
+// trial.
+//
+// Caveats handled elsewhere:
+//   • Post-activation, FeatureFlagContext's audience is stale until the app
+//     re-resolves it, so TrialActivation finishes with a full reload to avoid a
+//     redirect loop back here.
+//   • FeatureFlagContext fails open to "free" on a lookup error, so a transient
+//     DB error sends the user to /start-trial rather than into the app — it errs
+//     toward "must subscribe", never toward free access.
+export const RequireSubscription = ({ children }) => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { audience, loading: flagsLoading } = useFeatureFlags();
+  const location = useLocation();
+
+  if (authLoading || flagsLoading) return <LoadingScreen />;
+  if (!isAuthenticated)
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (audience === "free") return <Navigate to="/start-trial" replace />;
   return children;
 };
 

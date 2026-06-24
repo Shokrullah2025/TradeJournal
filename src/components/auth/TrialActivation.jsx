@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
 import { Clock, CheckCircle, Star, ArrowRight, CreditCard } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
@@ -20,8 +19,14 @@ const TrialActivation = ({
   const [customerId, setCustomerId] = useState(null);
   const [trialEnd, setTrialEnd] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const navigate = useNavigate();
   const { startTrial } = useBilling();
+
+  // After the trial is activated the user's subscription becomes "trialing", but
+  // the in-memory FeatureFlag audience is still "free" until the app re-resolves
+  // it. Navigate with a full reload so RequireSubscription reads the fresh
+  // entitlement and lets the user into the app instead of bouncing them back
+  // here. (A client-side navigate would loop against the route guard.)
+  const goWithReload = (path) => window.location.assign(path);
 
   // Step 1 — create a SetupIntent so the user can enter a card without being charged.
   const beginTrial = async () => {
@@ -168,7 +173,7 @@ const TrialActivation = ({
 
           <div className="space-y-3">
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => goWithReload("/dashboard")}
               className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Get Started
@@ -176,7 +181,7 @@ const TrialActivation = ({
             </button>
 
             <button
-              onClick={() => navigate("/profile")}
+              onClick={() => goWithReload("/profile")}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Complete Your Profile

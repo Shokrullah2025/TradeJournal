@@ -13,7 +13,9 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
   const { verifyEmail: verifyEmailAuth, sendEmailVerification } = useAuth();
 
   useEffect(() => {
-    const token = searchParams.get("token");
+    // Supabase confirmation links carry `token_hash`; keep `token` as a fallback
+    // for older links. Either is exchanged for a session by verifyEmail.
+    const token = searchParams.get("token_hash") || searchParams.get("token");
     if (token) {
       verifyEmail(token);
     }
