@@ -104,25 +104,28 @@ function App() {
                       element={<OAuthCallback />}
                     />
 
-                    {/* Public product website (no auth guard).
-                        Declared explicitly so these out-rank the protected
-                        "/*" matcher below by route specificity. */}
+                    {/* Public product website + legal pages share the same
+                        SiteLayout (navbar + footer), so navigation stays
+                        consistent across every public page. Declared explicitly
+                        so these out-rank the protected "/*" matcher below by
+                        route specificity; SiteLayout already provides a
+                        <Suspense> boundary for these lazy chunks. */}
                     <Route element={<SiteLayout />}>
                       <Route path="/" element={<Home />} />
                       <Route path="/features" element={<Features />} />
                       <Route path="/pricing" element={<Pricing />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />
-                    </Route>
 
-                    {/* Legal pages — public, no auth required */}
-                    <Route path="/terms" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><TermsOfService /></Suspense>} />
-                    <Route path="/privacy" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><PrivacyPolicy /></Suspense>} />
-                    <Route path="/disclaimer" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><Disclaimer /></Suspense>} />
-                    <Route path="/cookies" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><CookiePolicy /></Suspense>} />
-                    <Route path="/refund" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><RefundPolicy /></Suspense>} />
-                    <Route path="/aup" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><AcceptableUsePolicy /></Suspense>} />
-                    <Route path="/dmca" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>}><DMCAPolicy /></Suspense>} />
+                      {/* Legal pages — public, no auth required */}
+                      <Route path="/terms" element={<TermsOfService />} />
+                      <Route path="/privacy" element={<PrivacyPolicy />} />
+                      <Route path="/disclaimer" element={<Disclaimer />} />
+                      <Route path="/cookies" element={<CookiePolicy />} />
+                      <Route path="/refund" element={<RefundPolicy />} />
+                      <Route path="/aup" element={<AcceptableUsePolicy />} />
+                      <Route path="/dmca" element={<DMCAPolicy />} />
+                    </Route>
 
                     {/* Protected routes */}
                     <Route
@@ -199,7 +202,7 @@ function App() {
                                       <Suspense
                                         fallback={
                                           <div className="flex items-center justify-center h-64">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
                                           </div>
                                         }
                                       >
@@ -214,7 +217,7 @@ function App() {
                                         <Suspense
                                           fallback={
                                             <div className="flex items-center justify-center h-64">
-                                              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                                              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
                                             </div>
                                           }
                                         >
