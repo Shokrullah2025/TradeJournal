@@ -25,7 +25,15 @@ const ModalPortal = ({ children }) => {
     }
   }, [])
 
-  return createPortal(children, document.body)
+  // Wrap in an `.app-shell` scope (display:contents → no layout box) so the
+  // dark-theme retint defined for the authenticated app in src/index.css also
+  // applies to modal content, which otherwise renders in document.body outside
+  // the shell. Every ModalPortal caller is an authenticated-app surface, so this
+  // never leaks the retint onto the public site.
+  return createPortal(
+    <div className="app-shell contents">{children}</div>,
+    document.body
+  )
 }
 
 export default ModalPortal
