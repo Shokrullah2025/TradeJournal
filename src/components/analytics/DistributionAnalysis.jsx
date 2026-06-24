@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -75,7 +75,60 @@ const formatHold = (minutes) => {
   return `${(hours / 24).toFixed(1)}d`;
 };
 
+// The hover banner. Rendered as our own overlay (not Recharts' Tooltip) so it
+// only appears when the cursor is actually over the bar, not anywhere in the
+// category column — matching the candle banners on the other analytics charts.
+const TooltipBox = ({ data }) => (
+  <div className="bg-white dark:bg-gray-800 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg whitespace-nowrap">
+    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+      {data.label}
+    </p>
+    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+      {data.count} {data.count === 1 ? "trade" : "trades"}
+    </p>
+  </div>
+);
+
+// Absolutely-positioned highlight + banner for the hovered bar. The banner is
+// pinned a few px above the bar's top tip, just like the other candle charts.
+const ChartTooltipOverlay = ({ hovered }) => (
+  <>
+    <div
+      className="pointer-events-none absolute z-0 rounded bg-gray-400/10"
+      style={{
+        left: hovered.rectX - 6,
+        top: hovered.rectTop - 6,
+        width: hovered.rectW + 12,
+        height: hovered.rectH + 12,
+      }}
+    />
+    <div
+      className="pointer-events-none absolute z-10 [transform:translate(-50%,calc(-100%_-_14px))]"
+      style={{ left: hovered.cx, top: hovered.rectTop }}
+    >
+      <TooltipBox data={hovered.data} />
+    </div>
+  </>
+);
+
 const DistributionAnalysis = ({ trades = [] }) => {
+  // Hovered bar, captured from the Bar's own mouse events (fire only over the
+  // rectangle) so the banner never shows over empty parts of a column.
+  const [hovered, setHovered] = useState(null);
+  const handleBarHover = (d) => {
+    if (typeof d?.y !== "number") return;
+    const rectTop = Math.min(d.y, d.y + d.height);
+    setHovered({
+      cx: d.x + d.width / 2,
+      rectTop,
+      rectX: d.x,
+      rectW: d.width,
+      rectH: Math.abs(d.height),
+      data: d.payload,
+    });
+  };
+  const clearHover = () => setHovered(null);
+
   const closedTrades = useMemo(
     () => trades.filter((t) => t.status === "closed"),
     [trades]
@@ -213,23 +266,6 @@ const DistributionAnalysis = ({ trades = [] }) => {
     );
   };
 
-  const RTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const d = payload[0].payload;
-      return (
-        <div className="bg-white dark:bg-gray-800 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
-          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            {d.label}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-            {d.count} {d.count === 1 ? "trade" : "trades"}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   const UnderwaterTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const d = payload[0].payload;
@@ -301,7 +337,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
               see this distribution.
             </div>
           ) : (
-            <div className="h-[220px]">
+            <div className="h-[220px] relative">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={rBins}
@@ -336,11 +372,13 @@ const DistributionAnalysis = ({ trades = [] }) => {
                       style={AXIS_LABEL_STYLE}
                     />
                   </YAxis>
-                  <Tooltip
-                    content={<RTooltip />}
-                    cursor={{ fill: "rgba(156,163,175,0.08)" }}
-                  />
-                  <Bar dataKey="count" radius={[5, 5, 0, 0]} maxBarSize={40}>
+                  <Bar
+                    dataKey="count"
+                    radius={[5, 5, 0, 0]}
+                    maxBarSize={40}
+                    onMouseEnter={handleBarHover}
+                    onMouseLeave={clearHover}
+                  >
                     <LabelList
                       dataKey="count"
                       position="top"
@@ -367,6 +405,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              {hovered && <ChartTooltipOverlay hovered={hovered} />}
             </div>
           )}
         </section>
