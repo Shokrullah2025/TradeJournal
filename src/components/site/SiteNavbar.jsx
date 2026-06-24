@@ -1,19 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
-import { TrendingUp, Menu, X, ArrowRight } from "lucide-react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { TrendingUp, Menu, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import ThemeToggle from "../common/ThemeToggle";
 import { NAV_LINKS } from "./content";
 
 /**
- * Public, auth-aware top navigation for the product website.
- * Guests see "Sign in" / "Get started"; authenticated users get a direct
- * "Go to Dashboard" link so they can jump back into the app.
+ * Public top navigation for the product website. The actions are the same for
+ * everyone — "Sign in" and "Get started" — but "Sign in" is session-aware:
+ * a visitor whose JWT/session is still alive is sent straight to the dashboard,
+ * while one whose session is missing or expired lands on the login page.
  */
 const SiteNavbar = () => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+
+  // "Sign in" doubles as the path back into the app. isAuthenticated mirrors
+  // the live Supabase session (AuthContext flips it on sign-out / failed token
+  // refresh), so a still-valid session skips the login form entirely.
+  const handleSignIn = () => {
+    navigate(isAuthenticated ? "/dashboard" : "/login");
+  };
 
   // Close the mobile drawer whenever the route changes.
   useEffect(() => {
@@ -76,33 +85,21 @@ const SiteNavbar = () => {
           {/* Desktop actions */}
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle size="sm" />
-            {isAuthenticated ? (
-              <Link
-                to="/dashboard"
-                data-testid="site-nav-dashboard-btn"
-                className="btn btn-primary btn-sm inline-flex items-center gap-1"
-              >
-                Go to Dashboard
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  data-testid="site-nav-signin-btn"
-                  className="btn btn-ghost btn-sm"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  to="/register"
-                  data-testid="site-nav-getstarted-btn"
-                  className="btn btn-primary btn-sm"
-                >
-                  Get started
-                </Link>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={handleSignIn}
+              data-testid="site-nav-signin-btn"
+              className="btn btn-ghost btn-sm"
+            >
+              Sign in
+            </button>
+            <Link
+              to="/register"
+              data-testid="site-nav-getstarted-btn"
+              className="btn btn-primary btn-sm"
+            >
+              Get started
+            </Link>
           </div>
 
           {/* Mobile toggle */}
@@ -151,33 +148,21 @@ const SiteNavbar = () => {
             ))}
 
             <div className="mt-4 flex flex-col gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
-              {isAuthenticated ? (
-                <Link
-                  to="/dashboard"
-                  data-testid="site-nav-mobile-dashboard-btn"
-                  className="btn btn-primary w-full justify-center inline-flex items-center gap-1"
-                >
-                  Go to Dashboard
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    data-testid="site-nav-mobile-signin-btn"
-                    className="btn btn-ghost w-full justify-center border border-gray-200 dark:border-gray-700"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    to="/register"
-                    data-testid="site-nav-mobile-getstarted-btn"
-                    className="btn btn-primary w-full justify-center"
-                  >
-                    Get started
-                  </Link>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={handleSignIn}
+                data-testid="site-nav-mobile-signin-btn"
+                className="btn btn-ghost w-full justify-center border border-gray-200 dark:border-gray-700"
+              >
+                Sign in
+              </button>
+              <Link
+                to="/register"
+                data-testid="site-nav-mobile-getstarted-btn"
+                className="btn btn-primary w-full justify-center"
+              >
+                Get started
+              </Link>
             </div>
           </div>
         </div>
