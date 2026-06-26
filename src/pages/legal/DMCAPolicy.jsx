@@ -10,7 +10,7 @@ const DMCAPolicy = () => (
     slug="dmca"
   >
     <p>
-      This DMCA & Copyright Policy describes how <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), handles claims of copyright infringement in connection with Trade Journal Pro (the "Service"), and explains your rights and obligations under the Digital Millennium Copyright Act, 17 U.S.C. § 512 (the "DMCA").
+      This DMCA & Copyright Policy describes how <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), handles claims of copyright infringement in connection with Tradgella (the "Service"), and explains your rights and obligations under the Digital Millennium Copyright Act, 17 U.S.C. § 512 (the "DMCA").
     </p>
     <p>
       We respect intellectual property rights and expect our users to do the same. This policy is incorporated into our <Link to="/terms">Terms of Service</Link>.
@@ -33,7 +33,7 @@ const DMCAPolicy = () => (
 
     <h2>2. User-Uploaded Content on the Service</h2>
     <p>
-      The primary type of user-generated content that Trade Journal Pro hosts is:
+      The primary type of user-generated content that Tradgella hosts is:
     </p>
     <ul>
       <li><strong>Trade screenshot images</strong> — chart screenshots and trade analysis images uploaded by users to illustrate their trades (stored in Supabase Storage, trade-images bucket); and</li>
@@ -104,7 +104,7 @@ const DMCAPolicy = () => (
 
     <h2>7. Our Own Copyright and Intellectual Property</h2>
     <p>
-      All software code, user interface designs, icons, logos, trademarks, and other proprietary content of Trade Journal Pro are owned by [COMPANY LEGAL NAME] and are protected by U.S. copyright law (17 U.S.C. § 102 et seq.), trademark law, and other applicable intellectual property laws.
+      All software code, user interface designs, icons, logos, trademarks, and other proprietary content of Tradgella are owned by [COMPANY LEGAL NAME] and are protected by U.S. copyright law (17 U.S.C. § 102 et seq.), trademark law, and other applicable intellectual property laws.
     </p>
     <p>
       You may not copy, reproduce, distribute, create derivative works from, or publicly display any portion of the Service's codebase, design, or brand elements without our prior written consent. Unauthorized use of our copyrighted material may result in civil and criminal liability under applicable law.
@@ -112,7 +112,7 @@ const DMCAPolicy = () => (
 
     <h2>8. Trademarks</h2>
     <p>
-      "Trade Journal Pro" and any associated logos are trademarks or service marks of [COMPANY LEGAL NAME]. Nothing in these terms or this policy grants you any right to use our trademarks, trade names, or service marks without our prior written approval. All other trademarks mentioned on the Service are the property of their respective owners.
+      "Tradgella" and any associated logos are trademarks or service marks of [COMPANY LEGAL NAME]. Nothing in these terms or this policy grants you any right to use our trademarks, trade names, or service marks without our prior written approval. All other trademarks mentioned on the Service are the property of their respective owners.
     </p>
 
     <h2>9. Contact</h2>

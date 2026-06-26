@@ -10,7 +10,7 @@ const TermsOfService = () => (
     slug="terms"
   >
     <p>
-      Please read these Terms of Service ("Terms") carefully before using Trade Journal Pro (the "Service") operated by{" "}
+      Please read these Terms of Service ("Terms") carefully before using Tradgella (the "Service") operated by{" "}
       <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), located at{" "}
       <strong>[PRINCIPAL ADDRESS]</strong>.
     </p>
@@ -33,7 +33,7 @@ const TermsOfService = () => (
     </p>
 
     <h2>3. Subscription Plans and Fees</h2>
-    <p>Trade Journal Pro offers the following subscription plans (prices in USD):</p>
+    <p>Tradgella offers the following subscription plans (prices in USD):</p>
     <ul>
       <li><strong>Basic — $9.99/month or $99.90/year:</strong> Up to 100 trades per month, 1 trading account, basic analytics, email support.</li>
       <li><strong>Pro — $19.99/month or $199.90/year:</strong> Unlimited trades, up to 3 trading accounts, advanced analytics, data export, priority support.</li>
@@ -124,7 +124,7 @@ const TermsOfService = () => (
 
     <h2>14. Financial and Trading Disclaimer</h2>
     <p>
-      Trade Journal Pro is a trade recordkeeping and performance analytics tool. It does NOT provide investment advice, trading recommendations, financial advice, or signals of any kind. Nothing on this platform should be construed as a recommendation to buy, sell, or hold any security, commodity, cryptocurrency, or financial instrument. See our full <Link to="/disclaimer">Financial & Risk Disclaimer</Link>.
+      Tradgella is a trade recordkeeping and performance analytics tool. It does NOT provide investment advice, trading recommendations, financial advice, or signals of any kind. Nothing on this platform should be construed as a recommendation to buy, sell, or hold any security, commodity, cryptocurrency, or financial instrument. See our full <Link to="/disclaimer">Financial & Risk Disclaimer</Link>.
     </p>
 
     <h2>15. Disclaimers of Warranties</h2>

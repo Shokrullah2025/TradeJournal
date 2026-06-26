@@ -25,7 +25,7 @@ const Home = () => (
       <SectionHeading
         eyebrow="Everything in one place"
         title="The complete trading journal"
-        subtitle="From the first note to a fully analysed track record — Trade Journal Pro covers the entire loop."
+        subtitle="From the first note to a fully analysed track record — Tradgella covers the entire loop."
       />
       <div className="mt-12">
         <FeatureGrid features={HIGHLIGHT_FEATURES} idPrefix="home-feature" />

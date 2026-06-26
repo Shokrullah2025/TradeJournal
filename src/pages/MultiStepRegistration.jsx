@@ -216,7 +216,7 @@ const MultiStepRegistration = () => {
                   <TrendingUp className="w-8 h-8 text-white" />
                 </div>
                 <h1 className="ml-3 text-2xl font-bold text-gray-900">
-                  Trade Journal Pro
+                  Tradgella
                 </h1>
               </div>
               <h2 className="mt-6 text-3xl font-extrabold text-gray-900">

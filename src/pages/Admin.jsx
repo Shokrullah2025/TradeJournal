@@ -43,7 +43,7 @@ const Admin = () => {
             Admin Dashboard
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage users, monitor system health, and control feature access for Trade Journal Pro.
+            Manage users, monitor system health, and control feature access for Tradgella.
           </p>
         </div>
       </div>

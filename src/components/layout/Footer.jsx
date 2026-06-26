@@ -32,7 +32,7 @@ const Footer = () => (
         ))}
       </nav>
       <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">
-        © {new Date().getFullYear()} [COMPANY LEGAL NAME]. All rights reserved. Trade Journal Pro is not a registered investment adviser and does not provide financial or trading advice.
+        © {new Date().getFullYear()} [COMPANY LEGAL NAME]. All rights reserved. Tradgella is not a registered investment adviser and does not provide financial or trading advice.
       </p>
     </div>
   </footer>

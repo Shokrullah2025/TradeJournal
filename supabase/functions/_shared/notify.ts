@@ -147,7 +147,7 @@ export async function sendNotificationEmail(
   if (!to) return finalize("failed");
 
   const from = Deno.env.get("NOTIFY_FROM_EMAIL") ??
-    "Trade Journal Pro <notifications@tradejournalpro.app>";
+    "Tradgella <notifications@tradejournalpro.app>";
 
   try {
     const res = await fetch("https://api.resend.com/emails", {

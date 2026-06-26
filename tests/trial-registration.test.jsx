@@ -241,7 +241,7 @@ describe("Registration & Trial Flow", () => {
       expect(
         await screen.findByTestId("trial-activated-state")
       ).toBeInTheDocument();
-      expect(screen.getByText("Welcome to Trade Journal Pro!")).toBeInTheDocument();
+      expect(screen.getByText("Welcome to Tradgella!")).toBeInTheDocument();
       expect(onTrialActivated).toHaveBeenCalled();
     });
 

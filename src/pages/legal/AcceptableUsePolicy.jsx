@@ -10,7 +10,7 @@ const AcceptableUsePolicy = () => (
     slug="aup"
   >
     <p>
-      This Acceptable Use Policy ("AUP") governs your use of Trade Journal Pro (the "Service") operated by <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company. This AUP is incorporated by reference into our <Link to="/terms">Terms of Service</Link> and is part of the binding agreement between you and the Company.
+      This Acceptable Use Policy ("AUP") governs your use of Tradgella (the "Service") operated by <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company. This AUP is incorporated by reference into our <Link to="/terms">Terms of Service</Link> and is part of the binding agreement between you and the Company.
     </p>
     <p>
       The purpose of this AUP is to protect the security, integrity, and availability of the Service for all users, and to ensure the Service is not used for unlawful or harmful purposes.
@@ -18,7 +18,7 @@ const AcceptableUsePolicy = () => (
 
     <h2>1. Scope</h2>
     <p>
-      This AUP applies to all access to and use of Trade Journal Pro, including your account, any API integrations, broker connections, file uploads, data entries, and any automated or manual interaction with the Service.
+      This AUP applies to all access to and use of Tradgella, including your account, any API integrations, broker connections, file uploads, data entries, and any automated or manual interaction with the Service.
     </p>
 
     <h2>2. Prohibited Activities</h2>
@@ -81,7 +81,7 @@ const AcceptableUsePolicy = () => (
       You are solely responsible for all activity that occurs under your account, whether or not authorized by you. You must:
     </p>
     <ul>
-      <li>Use a strong, unique password for your Trade Journal Pro account;</li>
+      <li>Use a strong, unique password for your Tradgella account;</li>
       <li>Not share your password or authentication tokens with any third party;</li>
       <li>Promptly notify us at <strong>[CONTACT EMAIL]</strong> if you discover or suspect any unauthorized access to or use of your account;</li>
       <li>Log out of your account when using shared or public devices.</li>

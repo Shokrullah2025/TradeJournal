@@ -29,7 +29,7 @@ const Hero = () => {
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-lg text-gray-600 dark:text-gray-400 lg:mx-0">
-              Trade Journal Pro turns your trades into insight. Log or auto-sync
+              Tradgella turns your trades into insight. Log or auto-sync
               every fill, see the metrics that reveal your real edge, and
               backtest new ideas — all in one fast, beautiful workspace.
             </p>

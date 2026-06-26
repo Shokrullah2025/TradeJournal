@@ -43,7 +43,7 @@
 
 1. **Visit**: [https://developer.tradovate.com](https://developer.tradovate.com)
 2. **Create Account**: Sign up for a developer account (ONE time, for you as developer)
-3. **Create OAuth Application**: Register your Trade Journal Pro app
+3. **Create OAuth Application**: Register your Tradgella app
 
 ### Step 2: Application Registration Details
 
@@ -52,7 +52,7 @@ When registering your application, use these exact settings:
 #### Application Name
 
 ```
-Trade Journal Pro
+Tradgella
 ```
 
 #### Redirect URIs (CRITICAL - Must match exactly)

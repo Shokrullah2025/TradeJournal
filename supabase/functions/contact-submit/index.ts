@@ -157,7 +157,7 @@ async function notifyTeam(input: {
 
   const to = Deno.env.get("CONTACT_TO_EMAIL") ?? "support@tradejournalpro.app";
   const from = Deno.env.get("NOTIFY_FROM_EMAIL") ??
-    "Trade Journal Pro <notifications@tradejournalpro.app>";
+    "Tradgella <notifications@tradejournalpro.app>";
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
