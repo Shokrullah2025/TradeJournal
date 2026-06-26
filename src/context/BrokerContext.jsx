@@ -225,10 +225,10 @@ class BrokerService {
           <div class="container">
             <div class="form-content">
               <h1>Sign In to Your Account</h1>
-              <p class="subtitle">Continue to Trade Journal integration</p>
+              <p class="subtitle">Continue to Tradgella integration</p>
               <div class="demo-notice">🧪 <strong>Demo Mode:</strong> This is a simulated login for testing</div>
               <div class="permissions">
-                <h3>Trade Journal will be able to:</h3>
+                <h3>Tradgella will be able to:</h3>
                 <ul><li>View your account information</li><li>Read your trade history</li><li>Access position data</li></ul>
               </div>
               <form id="loginForm">
