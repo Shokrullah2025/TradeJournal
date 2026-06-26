@@ -1,13 +1,10 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { Shield, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatStripeError } from "../../utils/stripeErrors";
-
-// Initialized once at module level — safe because publishable keys are public by design
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+import { stripePromise, isStripeConfigured } from "../../lib/stripe";
 
 const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitLabel }) => {
   const stripe = useStripe();
@@ -155,6 +152,20 @@ const StripePaymentForm = ({
   mode = "payment",
   submitLabel,
 }) => {
+  // Billing is unavailable if VITE_STRIPE_PUBLISHABLE_KEY was not set at build
+  // time. Show a friendly message instead of mounting <Elements stripe={null}>.
+  if (!isStripeConfigured) {
+    return (
+      <div
+        className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 flex items-start gap-2"
+        data-testid="stripe-not-configured"
+      >
+        <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+        <span>Payments are temporarily unavailable. Please try again later or contact support.</span>
+      </div>
+    );
+  }
+
   const options = {
     clientSecret,
     appearance: {
