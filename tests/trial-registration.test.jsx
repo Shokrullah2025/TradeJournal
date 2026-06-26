@@ -26,7 +26,7 @@ const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock } = v
   },
   toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
   fetchMock: vi.fn(),
-  stripeMock: { confirmSetup: vi.fn(), confirmPayment: vi.fn() },
+  stripeMock: { confirmSetup: vi.fn(), confirmPayment: vi.fn(), retrieveSetupIntent: vi.fn() },
 }));
 
 vi.mock("../src/context/AuthContext", () => ({ useAuth: () => authApi }));
@@ -67,6 +67,11 @@ describe("Registration & Trial Flow", () => {
     billingApi.startTrial.mockResolvedValue({
       subscriptionId: "sub_123",
       trialEnd: "2026-07-01T00:00:00.000Z",
+    });
+    // Fresh SetupIntent — not yet confirmed, so handleSubmit proceeds to confirmSetup.
+    stripeMock.retrieveSetupIntent.mockResolvedValue({
+      setupIntent: { status: "requires_payment_method" },
+      error: undefined,
     });
     stripeMock.confirmSetup.mockResolvedValue({
       setupIntent: { status: "succeeded", payment_method: "pm_123" },
@@ -230,7 +235,7 @@ describe("Registration & Trial Flow", () => {
         expect(stripeMock.confirmSetup).toHaveBeenCalled();
       });
       await waitFor(() => {
-        expect(billingApi.startTrial).toHaveBeenCalledWith("pro", "monthly", "pm_123", "cus_123");
+        expect(billingApi.startTrial).toHaveBeenCalledWith("premium", "monthly", "pm_123", "cus_123");
       });
 
       expect(

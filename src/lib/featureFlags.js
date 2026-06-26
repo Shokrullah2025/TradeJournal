@@ -17,21 +17,24 @@ export const FEATURE_CATALOG = [
 ];
 
 // Audiences a flag can target. Order matters for the admin UI columns.
+// NOTE: keys must match the `subscription_plans.slug` values in Supabase. The
+// mid-tier plan's slug is "premium" (its display name is "Pro").
 export const AUDIENCES = [
   { key: "free",       label: "Free" },
   { key: "trial",      label: "Trial" },
   { key: "basic",      label: "Basic" },
-  { key: "pro",        label: "Pro" },
+  { key: "premium",    label: "Pro" },
   { key: "enterprise", label: "Enterprise" },
   { key: "admin",      label: "Admin" },
 ];
 
 // Resolve which audience a user belongs to, given their role and active
 // subscription. Precedence: admin role > active trial > paid plan slug > free.
+// The whitelist mirrors the real subscription_plans slugs in Supabase.
 export function resolveAudience({ role, planSlug, isTrial } = {}) {
   if (role === "admin") return "admin";
   if (isTrial) return "trial";
-  if (planSlug && ["basic", "pro", "enterprise"].includes(planSlug)) return planSlug;
+  if (planSlug && ["basic", "premium", "enterprise"].includes(planSlug)) return planSlug;
   return "free";
 }
 

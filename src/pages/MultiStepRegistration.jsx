@@ -8,7 +8,6 @@ import { z } from "zod";
 
 import { useAuth } from "../context/AuthContext";
 import EmailVerification from "../components/auth/EmailVerification";
-import TrialActivation from "../components/auth/TrialActivation";
 
 // Schema for user registration
 const registrationSchema = z
@@ -112,11 +111,12 @@ const MultiStepRegistration = () => {
     setRegistrationData((prev) => ({ ...prev, emailVerified: true, userId }));
 
     // Supabase Auth manages the session automatically — no token storage needed.
-    // Advance to the trial step so the user can start their 7-day free trial
-    // (card up front) before landing on the dashboard. TrialActivation handles
-    // navigation to /dashboard once the trial is active.
-    toast.success("Email verified! Let's start your free trial.");
-    setCurrentStep("trial");
+    // Send the user to the dashboard. They have no subscription yet, so
+    // RequireSubscription renders it behind the TrialGate overlay where they
+    // start their 7-day free trial (card up front). A full reload ensures the
+    // FeatureFlag audience re-resolves to "free" so the gate appears.
+    toast.success("Email verified! Add a card to start your free trial.");
+    window.location.assign("/dashboard");
   };
 
   const handleResendEmail = () => {
@@ -506,11 +506,9 @@ const MultiStepRegistration = () => {
     );
   }
 
-  // Step 3: Trial Activation — collect a card up front and start the 7-day
-  // free trial. TrialActivation navigates to /dashboard once activated.
-  if (currentStep === "trial") {
-    return <TrialActivation planSlug="pro" billingCycle="monthly" />;
-  }
+  // The trial is no longer a registration step — after email verification the
+  // user is sent to the dashboard, which is gated by the TrialGate overlay
+  // until they add a card. (See handleEmailVerified.)
 
   return null;
 };

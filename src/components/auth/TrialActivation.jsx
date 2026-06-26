@@ -9,9 +9,13 @@ import StripePaymentForm from "../billing/StripePaymentForm";
 
 const TrialActivation = ({
   onTrialActivated,
-  planSlug = "pro",
+  planSlug = "premium",
   billingCycle = "monthly",
+  variant = "page",
 }) => {
+  // "page" renders full-screen (standalone route); "overlay" renders just the
+  // card panel so it can sit inside the blurred TrialGate over the dashboard.
+  const isOverlay = variant === "overlay";
   // intro → card (collect card) → activated. `error` shows a recoverable message.
   const [trialStatus, setTrialStatus] = useState("intro");
   const [isWorking, setIsWorking] = useState(false);
@@ -19,6 +23,9 @@ const TrialActivation = ({
   const [customerId, setCustomerId] = useState(null);
   const [trialEnd, setTrialEnd] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  // Set once the card is verified (SetupIntent succeeded). Its presence means we
+  // no longer need the card form — a failed trial start can be retried directly.
+  const [paymentMethodId, setPaymentMethodId] = useState(null);
   const { startTrial } = useBilling();
 
   // After the trial is activated the user's subscription becomes "trialing", but
@@ -58,12 +65,15 @@ const TrialActivation = ({
     }
   };
 
-  // Step 2 — the card was confirmed client-side; start the trial subscription.
-  const handleCardConfirmed = async (paymentMethodId) => {
+  // Step 3 — start the trial subscription with the already-verified card. Kept
+  // separate from card confirmation so a failure here (e.g. a transient backend
+  // error) can be retried directly via "Try again" without re-confirming the
+  // card — Stripe rejects re-confirming an already-succeeded SetupIntent.
+  const activateTrial = async (pmId) => {
     setIsWorking(true);
     setErrorMessage("");
     try {
-      const result = await startTrial(planSlug, billingCycle, paymentMethodId, customerId);
+      const result = await startTrial(planSlug, billingCycle, pmId, customerId);
       setTrialEnd(result?.trialEnd ?? null);
       setTrialStatus("activated");
       toast.success("Your 7-day free trial has started!");
@@ -74,6 +84,24 @@ const TrialActivation = ({
     } finally {
       setIsWorking(false);
     }
+  };
+
+  // Step 2 — the card was confirmed client-side; remember it, then start the trial.
+  const handleCardConfirmed = async (pmId) => {
+    setPaymentMethodId(pmId);
+    await activateTrial(pmId);
+  };
+
+  // After a failed trial start, let the user re-enter a card instead of retrying
+  // the same one (e.g. if the card itself was the problem). Go straight to the
+  // card form: clear the verified card and request a fresh SetupIntent (the old
+  // one is single-use and already succeeded). beginTrial flips to the "card"
+  // step once the new SetupIntent is ready; until then isWorking shows a spinner.
+  const useDifferentCard = () => {
+    setPaymentMethodId(null);
+    setClientSecret(null);
+    setErrorMessage("");
+    beginTrial();
   };
 
   const trialFeatures = [
@@ -112,7 +140,11 @@ const TrialActivation = ({
   if (trialStatus === "activated") {
     return (
       <div
-        className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+        className={
+          isOverlay
+            ? "w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
+            : "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+        }
         data-testid="trial-activated-state"
       >
         <div className="max-w-md w-full space-y-8">
@@ -193,7 +225,13 @@ const TrialActivation = ({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      className={
+        isOverlay
+          ? "w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
+          : "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+      }
+    >
       <div className="max-w-lg w-full space-y-8">
         <div className="text-center">
           <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mx-auto">
@@ -234,23 +272,6 @@ const TrialActivation = ({
           </div>
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Clock className="w-5 h-5 text-yellow-600 mr-2" />
-            <span className="text-sm font-medium text-yellow-800">
-              Trial Details
-            </span>
-          </div>
-          <div className="mt-2 text-sm text-yellow-700">
-            <ul className="space-y-1">
-              <li>• $0 charged today — your card is only verified</li>
-              <li>• Full access to all Pro features for 7 days</li>
-              <li>• Cancel anytime before it ends and you won't be charged</li>
-              <li>• Otherwise it converts to a paid plan automatically</li>
-            </ul>
-          </div>
-        </div>
-
         {errorMessage && (
           <div
             className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700"
@@ -261,7 +282,43 @@ const TrialActivation = ({
           </div>
         )}
 
-        {trialStatus === "card" && clientSecret ? (
+        {paymentMethodId ? (
+          // Card already verified; the trial start failed. Retry just that step.
+          <div className="space-y-3">
+            <form
+              data-testid="trial-retry-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                activateTrial(paymentMethodId);
+              }}
+            >
+              <button
+                type="submit"
+                disabled={isWorking}
+                data-testid="trial-retry-submit-btn"
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isWorking ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Starting Your Trial...
+                  </div>
+                ) : (
+                  "Try again"
+                )}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={useDifferentCard}
+              disabled={isWorking}
+              data-testid="trial-different-card-btn"
+              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Use a different card
+            </button>
+          </div>
+        ) : trialStatus === "card" && clientSecret ? (
           <div
             className="border border-gray-200 rounded-lg p-4 bg-white"
             data-testid="trial-card-input"
@@ -328,6 +385,7 @@ TrialActivation.propTypes = {
   onTrialActivated: PropTypes.func,
   planSlug: PropTypes.string,
   billingCycle: PropTypes.oneOf(["monthly", "annually"]),
+  variant: PropTypes.oneOf(["page", "overlay"]),
 };
 
 export default TrialActivation;

@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
+import TrialGate from "./TrialGate";
 
 // ── Shared loading spinner ────────────────────────────────────────────────
 const LoadingScreen = () => (
@@ -31,9 +32,11 @@ export const ProtectedRoute = ({ children }) => {
 
 // ── Requires an entitling subscription (active plan or live trial) ─────────
 // Enforces the card-up-front trial: an authenticated, non-admin user with no
-// paid plan and no active trial is funnelled to /start-trial before they can
-// reach the app shell. Without this, ProtectedRoute alone lets any signed-in
-// user into the dashboard, so the trial step was never enforced.
+// paid plan and no active trial ("free") sees the app shell rendered behind a
+// non-dismissible TrialGate overlay — the dashboard is visible but blurred and
+// inert until they add a card and start the trial. Without this, ProtectedRoute
+// alone lets any signed-in user into the dashboard, so the trial was never
+// enforced.
 //
 // Entitlement is read from FeatureFlagContext, which already resolves the
 // user's audience from their active/trialing subscription and is auth-reactive.
@@ -42,11 +45,11 @@ export const ProtectedRoute = ({ children }) => {
 //
 // Caveats handled elsewhere:
 //   • Post-activation, FeatureFlagContext's audience is stale until the app
-//     re-resolves it, so TrialActivation finishes with a full reload to avoid a
-//     redirect loop back here.
+//     re-resolves it, so TrialActivation finishes with a full reload so the
+//     gate clears and the user lands in the unblurred app.
 //   • FeatureFlagContext fails open to "free" on a lookup error, so a transient
-//     DB error sends the user to /start-trial rather than into the app — it errs
-//     toward "must subscribe", never toward free access.
+//     DB error shows the gate rather than free access — it errs toward "must
+//     subscribe", never toward free access.
 export const RequireSubscription = ({ children }) => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { audience, loading: flagsLoading } = useFeatureFlags();
@@ -55,7 +58,7 @@ export const RequireSubscription = ({ children }) => {
   if (authLoading || flagsLoading) return <LoadingScreen />;
   if (!isAuthenticated)
     return <Navigate to="/login" state={{ from: location }} replace />;
-  if (audience === "free") return <Navigate to="/start-trial" replace />;
+  if (audience === "free") return <TrialGate>{children}</TrialGate>;
   return children;
 };
 

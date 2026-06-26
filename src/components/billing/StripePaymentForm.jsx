@@ -2,24 +2,41 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { Shield } from "lucide-react";
+import { Shield, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { formatStripeError } from "../../utils/stripeErrors";
 
 // Initialized once at module level — safe because publishable keys are public by design
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-const CheckoutForm = ({ onSuccess, onCancel, amount, mode, submitLabel }) => {
+const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitLabel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  // Persistent, inline card error (e.g. expired card, wrong CVC, declined) shown
+  // under the card field — survives until the user edits the card or resubmits.
+  const [cardError, setCardError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!stripe || !elements) return;
 
     setIsProcessing(true);
+    setCardError("");
     try {
       if (mode === "setup") {
+        // A SetupIntent can only be confirmed once. If the card was already
+        // confirmed on a previous attempt but a later step failed (e.g. starting
+        // the trial errored), re-confirming the same SetupIntent makes Stripe
+        // throw `setup_intent_unexpected_state` ("already succeeded"). Check the
+        // real state first and reuse the verified card instead of confirming again
+        // — this lets the genuine downstream error surface on retry.
+        const { setupIntent: existing } = await stripe.retrieveSetupIntent(clientSecret);
+        if (existing?.status === "succeeded") {
+          onSuccess(existing.payment_method);
+          return;
+        }
+
         // Trial flow: collect & confirm the card without charging it. The resulting
         // payment method is handed back so the caller can start a trial subscription
         // that auto-charges when the trial ends.
@@ -32,15 +49,17 @@ const CheckoutForm = ({ onSuccess, onCancel, amount, mode, submitLabel }) => {
         });
 
         if (error) {
-          toast.error(error.message || "We couldn't verify your card. Please try again.");
+          const msg = formatStripeError(error);
+          setCardError(msg);
+          toast.error(msg);
         } else if (setupIntent?.status === "succeeded") {
           onSuccess(setupIntent.payment_method);
         } else {
           // e.g. requires_action / processing that didn't resolve — don't leave
           // the user on a button that appears to do nothing.
-          toast.error(
-            "Your card needs additional verification. Please try a different card.",
-          );
+          const msg = "Your card needs additional verification. Please try a different card.";
+          setCardError(msg);
+          toast.error(msg);
         }
         return;
       }
@@ -56,7 +75,9 @@ const CheckoutForm = ({ onSuccess, onCancel, amount, mode, submitLabel }) => {
       });
 
       if (error) {
-        toast.error(error.message || "Payment failed. Please try again.");
+        const msg = formatStripeError(error);
+        setCardError(msg);
+        toast.error(msg);
       } else if (
         paymentIntent?.status === "succeeded" ||
         paymentIntent?.status === "processing"
@@ -75,7 +96,18 @@ const CheckoutForm = ({ onSuccess, onCancel, amount, mode, submitLabel }) => {
       className="space-y-4"
       data-testid="stripe-payment-form"
     >
-      <PaymentElement />
+      <PaymentElement onChange={() => cardError && setCardError("")} />
+
+      {cardError && (
+        <div
+          className="flex items-start space-x-2 text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3"
+          data-testid="stripe-card-error"
+          role="alert"
+        >
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-500 dark:text-red-400" />
+          <span>{cardError}</span>
+        </div>
+      )}
 
       <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-md p-3">
         <Shield className="w-4 h-4 flex-shrink-0 text-green-600 dark:text-green-400" />
@@ -134,6 +166,7 @@ const StripePaymentForm = ({
   return (
     <Elements stripe={stripePromise} options={options}>
       <CheckoutForm
+        clientSecret={clientSecret}
         onSuccess={onSuccess}
         onCancel={onCancel}
         amount={amount}
@@ -145,6 +178,7 @@ const StripePaymentForm = ({
 };
 
 const checkoutPropTypes = {
+  clientSecret: PropTypes.string,
   onSuccess: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   amount: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),

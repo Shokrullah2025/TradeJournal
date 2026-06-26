@@ -13,7 +13,6 @@ import Login from "./pages/Login";
 import MultiStepRegistration from "./pages/MultiStepRegistration";
 import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./components/auth/EmailVerification";
-import TrialActivation from "./components/auth/TrialActivation";
 import ContactMessages from "./pages/ContactMessages";
 import Billing from "./pages/Billing";
 import BrokerSelection from "./pages/BrokerSelection";
@@ -129,20 +128,10 @@ function App() {
                       <Route path="/dmca" element={<DMCAPolicy />} />
                     </Route>
 
-                    {/* Trial activation — full-screen (outside the app shell).
-                        Reached after the user confirms their email via the link
-                        in their inbox, which lands on the standalone
-                        /verify-email route. Requires auth (the email-confirm
-                        link establishes a session). Declared before the "/*"
-                        catch-all so route specificity wins. */}
-                    <Route
-                      path="/start-trial"
-                      element={
-                        <ProtectedRoute>
-                          <TrialActivation planSlug="pro" billingCycle="monthly" />
-                        </ProtectedRoute>
-                      }
-                    />
+                    {/* Trial activation is no longer a standalone page. A "free"
+                        user (no card, no live trial) is shown the app shell with
+                        a non-dismissible TrialGate overlay over it — see
+                        RequireSubscription. */}
 
                     {/* Protected routes */}
                     <Route
