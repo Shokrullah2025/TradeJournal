@@ -153,7 +153,7 @@ const TrialActivation = ({
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Welcome to Trade Journal Pro!
+              Welcome to Tradgella!
             </h2>
             <p className="mt-2 text-sm text-gray-600">
               Your 7-day free trial has been successfully activated.

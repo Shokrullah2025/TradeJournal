@@ -28,7 +28,7 @@ const SiteFooter = () => {
                 <TrendingUp className="h-5 w-5 text-white" />
               </span>
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Trade Journal Pro
+                Tradgella
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-gray-600 dark:text-gray-400">
@@ -64,7 +64,7 @@ const SiteFooter = () => {
 
         <div className="mt-12 border-t border-gray-200 dark:border-gray-800 pt-8">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            © {year} Trade Journal Pro. All rights reserved.
+            © {year} Tradgella. All rights reserved.
           </p>
         </div>
       </div>

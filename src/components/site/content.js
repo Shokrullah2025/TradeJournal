@@ -226,7 +226,7 @@ export const FEATURE_CATEGORIES = [
     eyebrow: "Platform",
     title: "Fast, secure, and a joy to use",
     subtitle:
-      "The details that make Trade Journal Pro something you'll actually open every day.",
+      "The details that make Tradgella something you'll actually open every day.",
     features: [
       {
         icon: Calculator,
@@ -363,7 +363,7 @@ export const FAQS = [
   {
     question: "Which brokers can I connect?",
     answer:
-      "Trade Journal Pro syncs with Tradovate and popular futures prop firms such as Apex, Topstep, and MyFundedFutures. You can also import any history via CSV or Excel.",
+      "Tradgella syncs with Tradovate and popular futures prop firms such as Apex, Topstep, and MyFundedFutures. You can also import any history via CSV or Excel.",
   },
   {
     question: "Is my trading data secure?",

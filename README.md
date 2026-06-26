@@ -1,1 +1,1 @@
-# TradeJournal
+# Tradgella
