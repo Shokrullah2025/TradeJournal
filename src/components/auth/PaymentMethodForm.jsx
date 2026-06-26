@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { CreditCard, Lock, Shield } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+import { stripePromise, isStripeConfigured } from "../../lib/stripe";
 
 const SetupForm = ({ onPaymentMethodAdded }) => {
   const stripe = useStripe();
@@ -118,7 +116,14 @@ const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
           </p>
         </div>
 
-        {isInitializing ? (
+        {!isStripeConfigured ? (
+          <div
+            className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800"
+            data-testid="payment-method-not-configured"
+          >
+            Payments are temporarily unavailable. Please try again later or contact support.
+          </div>
+        ) : isInitializing ? (
           <div className="flex justify-center py-8" data-testid="payment-method-loading">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           </div>
