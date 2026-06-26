@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, UserPlus, TrendingUp, Check, Mail } from "lucide-react";
+import { Eye, EyeOff, UserPlus, TrendingUp, Check, Mail, Star } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { z } from "zod";
 
@@ -55,6 +55,7 @@ const MultiStepRegistration = () => {
   const steps = [
     { id: "account", title: "Create Account", icon: UserPlus },
     { id: "email", title: "Verify Email", icon: Mail },
+    { id: "trial", title: "Start Trial", icon: Star },
   ];
 
   const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
@@ -110,8 +111,12 @@ const MultiStepRegistration = () => {
     setRegistrationData((prev) => ({ ...prev, emailVerified: true, userId }));
 
     // Supabase Auth manages the session automatically — no token storage needed.
-    toast.success("Registration completed successfully!");
-    navigate("/dashboard");
+    // Send the user to the dashboard. They have no subscription yet, so
+    // RequireSubscription renders it behind the TrialGate overlay where they
+    // start their 7-day free trial (card up front). A full reload ensures the
+    // FeatureFlag audience re-resolves to "free" so the gate appears.
+    toast.success("Email verified! Add a card to start your free trial.");
+    window.location.assign("/dashboard");
   };
 
   const handleResendEmail = () => {
@@ -500,6 +505,10 @@ const MultiStepRegistration = () => {
       />
     );
   }
+
+  // The trial is no longer a registration step — after email verification the
+  // user is sent to the dashboard, which is gated by the TrialGate overlay
+  // until they add a card. (See handleEmailVerified.)
 
   return null;
 };

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { invokeFunction } from "../lib/invokeFunction";
 
 const BillingContext = createContext();
 
@@ -73,9 +74,9 @@ export const BillingProvider = ({ children }) => {
       const [subResult, methodsResult, invoicesResult] = await Promise.all([
         supabase
           .from("user_subscriptions")
-          .select("id, status, current_period_end, cancel_at_period_end, stripe_customer_id, subscription_plans(name, slug, price)")
+          .select("id, status, current_period_end, cancel_at_period_end, trial_start, trial_end, stripe_customer_id, subscription_plans(name, slug, price)")
           .eq("user_id", userId)
-          .in("status", ["active", "suspended"])
+          .in("status", ["active", "trialing", "suspended"])
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
@@ -132,30 +133,38 @@ export const BillingProvider = ({ children }) => {
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const createCheckoutSession = async (planSlug, billingCycle) => {
-    const { data: custData, error: custError } = await supabase.functions.invoke(
+    const custData = await invokeFunction(
       "stripe-create-customer",
+      undefined,
+      "Failed to initialize checkout",
     );
-    if (custError || !custData?.success) {
-      throw new Error(custData?.error || "Failed to initialize checkout");
-    }
 
-    const { data: subData, error: subError } = await supabase.functions.invoke(
+    const subData = await invokeFunction(
       "stripe-create-subscription",
-      { body: { customerId: custData.data.customerId, planSlug, billingCycle } },
+      { body: { customerId: custData.customerId, planSlug, billingCycle } },
+      "Failed to create subscription",
     );
-    if (subError || !subData?.success) {
-      throw new Error(subData?.error || "Failed to create subscription");
-    }
 
-    return subData.data.clientSecret;
+    return subData.clientSecret;
+  };
+
+  // `customerId` comes from the stripe-setup-intent step, which already
+  // resolves-or-creates the Stripe customer — no extra create-customer call.
+  const startTrial = async (planSlug, billingCycle, paymentMethodId, customerId) => {
+    return invokeFunction(
+      "stripe-start-trial",
+      { body: { customerId, planSlug, billingCycle, paymentMethodId } },
+      "Failed to start your trial",
+    );
   };
 
   const openPortal = async () => {
-    const { data, error } = await supabase.functions.invoke("stripe-portal");
-    if (error || !data?.success) {
-      throw new Error(data?.error || "Failed to open billing portal");
-    }
-    window.location.href = data.data.url;
+    const data = await invokeFunction(
+      "stripe-portal",
+      undefined,
+      "Failed to open billing portal",
+    );
+    window.location.href = data.url;
   };
 
   // ── Admin-compat helpers (use mock data until admin RLS policies are added) ─
@@ -191,6 +200,7 @@ export const BillingProvider = ({ children }) => {
     isLoading,
     // Stripe actions
     createCheckoutSession,
+    startTrial,
     openPortal,
   };
 

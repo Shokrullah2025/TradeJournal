@@ -9,20 +9,23 @@ import {
 describe("resolveAudience", () => {
   it("returns 'admin' for admins regardless of plan (precedence)", () => {
     expect(resolveAudience({ role: "admin" })).toBe("admin");
-    expect(resolveAudience({ role: "admin", planSlug: "pro", isTrial: true })).toBe("admin");
+    expect(resolveAudience({ role: "admin", planSlug: "premium", isTrial: true })).toBe("admin");
   });
 
   it("returns 'trial' for a trialing non-admin even if a plan is present", () => {
-    expect(resolveAudience({ role: "user", planSlug: "pro", isTrial: true })).toBe("trial");
+    expect(resolveAudience({ role: "user", planSlug: "premium", isTrial: true })).toBe("trial");
   });
 
   it("returns the plan slug for paid non-trial users (happy path)", () => {
+    // Slugs mirror subscription_plans in Supabase: basic / premium / enterprise.
     expect(resolveAudience({ role: "user", planSlug: "basic" })).toBe("basic");
-    expect(resolveAudience({ role: "user", planSlug: "pro" })).toBe("pro");
+    expect(resolveAudience({ role: "user", planSlug: "premium" })).toBe("premium");
     expect(resolveAudience({ role: "user", planSlug: "enterprise" })).toBe("enterprise");
   });
 
   it("falls back to 'free' for unknown plan, no plan, or no args (edge cases)", () => {
+    // "pro" is a display name, not a slug — it must NOT resolve to a paid tier.
+    expect(resolveAudience({ role: "user", planSlug: "pro" })).toBe("free");
     expect(resolveAudience({ role: "user", planSlug: "mystery" })).toBe("free");
     expect(resolveAudience({ role: "user" })).toBe("free");
     expect(resolveAudience({})).toBe("free");
@@ -70,7 +73,7 @@ describe("catalog integrity", () => {
       "free",
       "trial",
       "basic",
-      "pro",
+      "premium",
       "enterprise",
       "admin",
     ]);

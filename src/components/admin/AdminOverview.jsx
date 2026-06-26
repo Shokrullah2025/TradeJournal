@@ -68,7 +68,7 @@ const AdminOverview = () => {
           supabase.from("users").select("id", { count: "exact", head: true }).gte("created_at", sevenDaysAgoISO()),
           supabase.from("users").select("id", { count: "exact", head: true }).gt("failed_login_attempts", 0),
           supabase.from("user_subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
-          supabase.from("user_subscriptions").select("id", { count: "exact", head: true }).eq("status", "active").gte("trial_end", nowISO),
+          supabase.from("user_subscriptions").select("id", { count: "exact", head: true }).eq("status", "trialing").gte("trial_end", nowISO),
           supabase.from("invoices").select("total_amount, paid_at").eq("status", "paid").gte("paid_at", new Date(Date.now() - 30 * 864e5).toISOString()),
           supabase
             .from("users")

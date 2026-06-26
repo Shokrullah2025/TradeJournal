@@ -1,6 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14?target=deno&no-check";
 import { createServerNotification } from "../_shared/notify.ts";
+import {
+  classifyDeleteEvent,
+  classifyUpdateEvent,
+  stripeStatusToDb,
+} from "./status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,10 +67,15 @@ Deno.serve(async (req: Request) => {
 
           const planId = await resolvePlanId(supabase, sub.items.data[0]?.price?.id);
 
+          // Capture the prior DB status BEFORE the update so we can detect
+          // trial-lifecycle transitions (e.g. trialing → active = converted).
+          const priorStatus = await getDbSubStatus(supabase, sub.id);
+          const newStatus = stripeStatusToDb(sub.status);
+
           await supabase
             .from("user_subscriptions")
             .update({
-              status: stripeStatusToDb(sub.status),
+              status: newStatus,
               current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
               current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
               cancel_at_period_end: sub.cancel_at_period_end,
@@ -77,6 +87,30 @@ Deno.serve(async (req: Request) => {
             .eq("stripe_subscription_id", sub.id)
             .eq("user_id", userId);
 
+          if (event.type === "customer.subscription.created") {
+            // New trial subscription — record the start of the trial lifecycle.
+            if (newStatus === "trialing") {
+              await logSubscriptionEvent(supabase, {
+                userId,
+                stripeSubscriptionId: sub.id,
+                eventType: "trial_started",
+                fromStatus: null,
+                toStatus: "trialing",
+              });
+            }
+          } else {
+            const evt = classifyUpdateEvent(priorStatus, sub.status, sub.cancel_at_period_end);
+            if (evt) {
+              await logSubscriptionEvent(supabase, {
+                userId,
+                stripeSubscriptionId: sub.id,
+                eventType: evt,
+                fromStatus: priorStatus,
+                toStatus: newStatus,
+              });
+            }
+          }
+
           break;
         }
 
@@ -84,6 +118,10 @@ Deno.serve(async (req: Request) => {
           const sub = event.data.object as Stripe.Subscription;
           const userId = await resolveUserId(supabase, sub.customer as string);
           if (!userId) break;
+
+          // Capture prior status before flipping to 'cancelled' so we can tell a
+          // trial that expired (no usable card) apart from one the user cancelled.
+          const priorStatus = await getDbSubStatus(supabase, sub.id);
 
           await supabase
             .from("user_subscriptions")
@@ -94,6 +132,20 @@ Deno.serve(async (req: Request) => {
             })
             .eq("stripe_subscription_id", sub.id)
             .eq("user_id", userId);
+
+          const evt = classifyDeleteEvent(
+            priorStatus,
+            sub.cancellation_details?.reason ?? null,
+          );
+          if (evt) {
+            await logSubscriptionEvent(supabase, {
+              userId,
+              stripeSubscriptionId: sub.id,
+              eventType: evt,
+              fromStatus: priorStatus,
+              toStatus: "cancelled",
+            });
+          }
 
           break;
         }
@@ -288,20 +340,57 @@ async function resolvePlanId(
   return data?.id ?? null;
 }
 
-function stripeStatusToDb(status: Stripe.Subscription.Status): string {
-  switch (status) {
-    case "active":
-    case "trialing":
-      return "active";
-    case "canceled":
-      return "cancelled";
-    case "past_due":
-    case "incomplete":
-    case "incomplete_expired":
-    case "unpaid":
-    case "paused":
-      return "suspended";
-    default:
-      return "suspended";
+// Append-only trial-lifecycle ledger (migration 025). Written only by this
+// webhook with the service-role key — there is deliberately no user INSERT
+// policy, so app code cannot forge events.
+async function logSubscriptionEvent(
+  supabase: ReturnType<typeof createClient>,
+  args: {
+    userId: string;
+    stripeSubscriptionId: string;
+    eventType: string;
+    fromStatus?: string | null;
+    toStatus?: string | null;
+  },
+): Promise<void> {
+  const subRow = await resolveSubRow(supabase, args.stripeSubscriptionId);
+  if (!subRow) return;
+
+  // Idempotency: Stripe redelivers webhooks, and some lifecycle transitions
+  // surface across two events (e.g. a mid-trial cancel fires on both
+  // subscription.updated and subscription.deleted). Each (subscription, event)
+  // pair must be logged at most once. Also covers the trial_started row the
+  // stripe-start-trial function may have already written.
+  const { data: existing } = await supabase
+    .from("subscription_events")
+    .select("id")
+    .eq("subscription_id", subRow.id)
+    .eq("event_type", args.eventType)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+
+  const { error } = await supabase.from("subscription_events").insert({
+    user_id: args.userId,
+    subscription_id: subRow.id,
+    event_type: args.eventType,
+    from_status: args.fromStatus ?? null,
+    to_status: args.toStatus ?? null,
+    metadata: { stripe_subscription_id: args.stripeSubscriptionId },
+  });
+  if (error) {
+    console.error(`Failed to log subscription_event ${args.eventType}:`, error);
   }
+}
+
+async function getDbSubStatus(
+  supabase: ReturnType<typeof createClient>,
+  stripeSubId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("user_subscriptions")
+    .select("status")
+    .eq("stripe_subscription_id", stripeSubId)
+    .maybeSingle();
+  return (data?.status as string | undefined) ?? null;
 }

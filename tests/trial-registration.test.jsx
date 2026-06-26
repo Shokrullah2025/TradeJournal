@@ -5,15 +5,20 @@ import { BrowserRouter } from "react-router-dom";
 // The registration / trial flow was migrated off the old REST API:
 //   • MultiStepRegistration + EmailVerification now use Supabase Auth (useAuth)
 //   • PaymentMethodForm is now Stripe Elements (no manual card inputs)
-//   • TrialActivation still POSTs /api/user/start-trial, but with a Supabase
-//     session access token in the Authorization header.
-// These tests cover the current implementations. Auth, the supabase singleton,
-// Stripe, toast and fetch are all mocked so nothing hits the network.
-const { authApi, supabaseApi, toastMock, fetchMock } = vi.hoisted(() => ({
+//   • TrialActivation now collects a card up front (SetupIntent → confirmSetup)
+//     and starts a real Stripe trial subscription via useBilling().startTrial,
+//     which auto-charges when the trial ends. The dead /api/user/start-trial
+//     fetch has been removed.
+// These tests cover the current implementations. Auth, billing, the supabase
+// singleton, Stripe and toast are all mocked so nothing hits the network.
+const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock } = vi.hoisted(() => ({
   authApi: {
     register: vi.fn(),
     sendEmailVerification: vi.fn(),
     verifyEmail: vi.fn(),
+  },
+  billingApi: {
+    startTrial: vi.fn(),
   },
   supabaseApi: {
     auth: { getSession: vi.fn() },
@@ -21,16 +26,18 @@ const { authApi, supabaseApi, toastMock, fetchMock } = vi.hoisted(() => ({
   },
   toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
   fetchMock: vi.fn(),
+  stripeMock: { confirmSetup: vi.fn(), confirmPayment: vi.fn(), retrieveSetupIntent: vi.fn() },
 }));
 
 vi.mock("../src/context/AuthContext", () => ({ useAuth: () => authApi }));
+vi.mock("../src/context/BillingContext", () => ({ useBilling: () => billingApi }));
 vi.mock("../src/lib/supabase", () => ({ supabase: supabaseApi }));
 vi.mock("react-hot-toast", () => ({ toast: toastMock, default: toastMock }));
 vi.mock("@stripe/stripe-js", () => ({ loadStripe: vi.fn(() => Promise.resolve({})) }));
 vi.mock("@stripe/react-stripe-js", () => ({
   Elements: ({ children }) => <div>{children}</div>,
   PaymentElement: () => <div data-testid="stripe-payment-element" />,
-  useStripe: () => ({}),
+  useStripe: () => stripeMock,
   useElements: () => ({}),
 }));
 
@@ -54,8 +61,21 @@ describe("Registration & Trial Flow", () => {
       data: { session: { access_token: "tok_123" } },
     });
     supabaseApi.functions.invoke.mockResolvedValue({
-      data: { success: true, data: { clientSecret: "seti_secret_123" } },
+      data: { success: true, data: { clientSecret: "seti_secret_123", customerId: "cus_123" } },
       error: null,
+    });
+    billingApi.startTrial.mockResolvedValue({
+      subscriptionId: "sub_123",
+      trialEnd: "2026-07-01T00:00:00.000Z",
+    });
+    // Fresh SetupIntent — not yet confirmed, so handleSubmit proceeds to confirmSetup.
+    stripeMock.retrieveSetupIntent.mockResolvedValue({
+      setupIntent: { status: "requires_payment_method" },
+      error: undefined,
+    });
+    stripeMock.confirmSetup.mockResolvedValue({
+      setupIntent: { status: "succeeded", payment_method: "pm_123" },
+      error: undefined,
     });
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
   });
@@ -192,77 +212,71 @@ describe("Registration & Trial Flow", () => {
       expect(screen.getByText("Ready to Start Your Trial?")).toBeInTheDocument();
       expect(screen.getByText("7-Day Free Trial")).toBeInTheDocument();
       expect(screen.getByText("$0")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /activate 7-day free trial/i })
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("trial-activate-submit-btn")).toBeInTheDocument();
     });
 
-    it("activates the trial with the Supabase session token and shows success", async () => {
+    it("collects a card then starts the trial and shows success (happy path)", async () => {
       const onTrialActivated = vi.fn();
       renderWithRouter(<TrialActivation onTrialActivated={onTrialActivated} />);
 
-      fireEvent.click(
-        screen.getByRole("button", { name: /activate 7-day free trial/i })
-      );
+      // Step 1: click "Start free trial" → request a SetupIntent and show the card step.
+      fireEvent.click(screen.getByTestId("trial-activate-submit-btn"));
 
       await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalledWith(
-          "/api/user/start-trial",
-          expect.objectContaining({
-            method: "POST",
-            headers: expect.objectContaining({
-              "Content-Type": "application/json",
-              Authorization: "Bearer tok_123",
-            }),
-          })
-        );
+        expect(supabaseApi.functions.invoke).toHaveBeenCalledWith("stripe-setup-intent");
+      });
+      const cardStep = await screen.findByTestId("trial-card-input");
+      expect(cardStep).toBeInTheDocument();
+
+      // Step 2: confirm the card → confirmSetup yields a payment method → startTrial.
+      fireEvent.click(screen.getByTestId("stripe-payment-submit-btn"));
+
+      await waitFor(() => {
+        expect(stripeMock.confirmSetup).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(billingApi.startTrial).toHaveBeenCalledWith("premium", "monthly", "pm_123", "cus_123");
       });
 
       expect(
-        await screen.findByText("Welcome to Trade Journal Pro!")
+        await screen.findByTestId("trial-activated-state")
       ).toBeInTheDocument();
-      expect(screen.getByText("7 Days Remaining")).toBeInTheDocument();
+      expect(screen.getByText("Welcome to Trade Journal Pro!")).toBeInTheDocument();
       expect(onTrialActivated).toHaveBeenCalled();
     });
 
-    it("refuses to activate (no API call) when there is no session (edge case)", async () => {
-      // Without a session the component must NOT fire a `Bearer undefined`
-      // request — it should stop and prompt the user to sign in.
+    it("refuses to start (no SetupIntent) when there is no session (edge case)", async () => {
+      // Without a session the component must NOT fire an unauthorized request —
+      // it should stop and prompt the user to sign in.
       supabaseApi.auth.getSession.mockResolvedValue({ data: { session: null } });
       renderWithRouter(<TrialActivation />);
 
-      fireEvent.click(
-        screen.getByRole("button", { name: /activate 7-day free trial/i })
-      );
+      fireEvent.click(screen.getByTestId("trial-activate-submit-btn"));
 
       await waitFor(() => {
         expect(toastMock.error).toHaveBeenCalledWith(
-          "Please sign in to activate your trial."
+          "Please sign in to start your trial."
         );
       });
-      expect(fetchMock).not.toHaveBeenCalled();
-      expect(
-        screen.queryByText("Welcome to Trade Journal Pro!")
-      ).not.toBeInTheDocument();
+      expect(supabaseApi.functions.invoke).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("trial-card-input")).not.toBeInTheDocument();
     });
 
-    it("shows an error toast when activation fails (error state)", async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ error: "Trial already used" }),
-      });
+    it("shows the error message when starting the trial fails (error state)", async () => {
+      // e.g. the anti-abuse 409 — user has already used their free trial.
+      billingApi.startTrial.mockRejectedValueOnce(
+        new Error("You've already used your free trial.")
+      );
       renderWithRouter(<TrialActivation />);
 
-      fireEvent.click(
-        screen.getByRole("button", { name: /activate 7-day free trial/i })
-      );
+      fireEvent.click(screen.getByTestId("trial-activate-submit-btn"));
+      await screen.findByTestId("trial-card-input");
+      fireEvent.click(screen.getByTestId("stripe-payment-submit-btn"));
 
-      await waitFor(() => {
-        expect(toastMock.error).toHaveBeenCalledWith("Trial already used");
-      });
-      expect(
-        screen.queryByText("Welcome to Trade Journal Pro!")
-      ).not.toBeInTheDocument();
+      expect(await screen.findByTestId("trial-error-message")).toHaveTextContent(
+        "You've already used your free trial."
+      );
+      expect(screen.queryByTestId("trial-activated-state")).not.toBeInTheDocument();
     });
   });
 });

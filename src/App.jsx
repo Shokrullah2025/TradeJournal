@@ -56,6 +56,7 @@ import {
   PublicRoute,
   AdminRoute,
   BillingRoute,
+  RequireSubscription,
 } from "./components/auth/ProtectedRoute";
 
 function App() {
@@ -127,11 +128,17 @@ function App() {
                       <Route path="/dmca" element={<DMCAPolicy />} />
                     </Route>
 
+                    {/* Trial activation is no longer a standalone page. A "free"
+                        user (no card, no live trial) is shown the app shell with
+                        a non-dismissible TrialGate overlay over it — see
+                        RequireSubscription. */}
+
                     {/* Protected routes */}
                     <Route
                       path="/*"
                       element={
                         <ProtectedRoute>
+                          <RequireSubscription>
                           <ErrorBoundary>
                           <div className="app-shell flex h-screen bg-gray-50 dark:bg-gray-900">
                             <Sidebar
@@ -244,6 +251,7 @@ function App() {
                             </div>
                           </div>
                           </ErrorBoundary>
+                          </RequireSubscription>
                         </ProtectedRoute>
                       }
                     />
