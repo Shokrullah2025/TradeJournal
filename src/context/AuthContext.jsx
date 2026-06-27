@@ -264,7 +264,9 @@ export const AuthProvider = ({ children }) => {
       logActivity(data.user.id, "register", {});
     }
 
-    toast.success("Account created! Please check your email to verify your account.");
+    // No success toast here on purpose — the registration flow redirects to the
+    // login page, which shows the single "verify your email" notice. A toast
+    // would be a duplicate of that same message.
     return { ...data, user_id: data.user?.id ?? null };
   }, []);
 

@@ -38,7 +38,7 @@ const MultiStepRegistration = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
-  const { register: registerUser, sendEmailVerification } = useAuth();
+  const { register: registerUser } = useAuth();
 
   const {
     register,
@@ -85,23 +85,22 @@ const MultiStepRegistration = () => {
 
   const handleAccountCreation = async (data) => {
     try {
-      const result = await registerUser({
+      await registerUser({
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email,
         password: data.password,
       });
 
-      setRegistrationData({
-        ...data,
-        userId: result.user_id,
+      // signUp() already sent the confirmation email and (with email
+      // confirmation enabled) does NOT create a session — the user is not signed
+      // in yet. Send them to the login page; the email-verify notice there tells
+      // them to confirm their address before they can sign in. We pass the email
+      // so that notice can show it. (registerUser already toasts the success.)
+      navigate("/login", {
+        replace: true,
+        state: { verifyEmail: true, email: data.email },
       });
-
-      toast.success("Account created successfully!");
-      setCurrentStep("email");
-
-      // Send verification email
-      await sendEmailVerification(data.email);
     } catch (error) {
       // Error handling is done in the AuthContext
     }
