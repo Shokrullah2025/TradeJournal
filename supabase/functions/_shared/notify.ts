@@ -147,7 +147,7 @@ export async function sendNotificationEmail(
   if (!to) return finalize("failed");
 
   const from = Deno.env.get("NOTIFY_FROM_EMAIL") ??
-    "Tradgella <notifications@tradejournalpro.app>";
+    "Tradgella <noreply@tradgella.com>";
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -180,7 +180,7 @@ export async function sendNotificationEmail(
 }
 
 function renderEmail(title: string, body: string, linkTo: string | null): string {
-  const appUrl = Deno.env.get("APP_URL") ?? "https://app.tradejournalpro.app";
+  const appUrl = Deno.env.get("APP_URL") ?? "https://tradgella.com";
   const cta = linkTo
     ? `<p style="margin:24px 0;"><a href="${appUrl}${linkTo}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;">View in app</a></p>`
     : "";

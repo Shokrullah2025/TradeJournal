@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +31,15 @@ const Login = () => {
     () => !!location.state?.verifyEmail
   );
   const verifyEmailAddress = location.state?.email || "";
+
+  // Auto-dismiss the verify-email notice after 9s so it's readable but doesn't
+  // linger forever. The X still lets the user close it sooner. Timer is cleared
+  // on unmount / re-run to avoid setState after unmount.
+  useEffect(() => {
+    if (!showVerifyNotice) return;
+    const timer = setTimeout(() => setShowVerifyNotice(false), 9000);
+    return () => clearTimeout(timer);
+  }, [showVerifyNotice]);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(loginSchema),

@@ -62,7 +62,7 @@ const Contact = () => {
     {
       icon: Mail,
       title: "Email us",
-      detail: "support@tradejournalpro.app",
+      detail: "support@tradgella.com",
     },
     {
       icon: MessageSquare,

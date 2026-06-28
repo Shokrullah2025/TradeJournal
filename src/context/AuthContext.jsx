@@ -242,7 +242,7 @@ export const AuthProvider = ({ children }) => {
       password,
       options: {
         data: { first_name, last_name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     });
 
@@ -280,7 +280,7 @@ export const AuthProvider = ({ children }) => {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
     });
     if (error) {
       const msg = friendlyError(error);
@@ -295,10 +295,10 @@ export const AuthProvider = ({ children }) => {
   // also land on /auth/callback (OAuthCallback) — this backs the in-app token
   // path used by EmailVerification. Errors propagate so the caller can show the
   // "verification failed" state.
-  const verifyEmail = useCallback(async (tokenHash) => {
+  const verifyEmail = useCallback(async (tokenHash, type = "email") => {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: "email",
+      type,
     });
     if (error) throw new Error(friendlyError(error));
   }, []);

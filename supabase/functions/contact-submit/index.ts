@@ -155,9 +155,9 @@ async function notifyTeam(input: {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) return "none"; // email channel not configured — skip silently
 
-  const to = Deno.env.get("CONTACT_TO_EMAIL") ?? "support@tradejournalpro.app";
+  const to = Deno.env.get("CONTACT_TO_EMAIL") ?? "support@tradgella.com";
   const from = Deno.env.get("NOTIFY_FROM_EMAIL") ??
-    "Tradgella <notifications@tradejournalpro.app>";
+    "Tradgella <noreply@tradgella.com>";
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
