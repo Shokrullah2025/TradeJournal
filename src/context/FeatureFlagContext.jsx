@@ -3,6 +3,7 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useRef,
   useCallback,
   useMemo,
 } from "react";
@@ -27,6 +28,11 @@ export const FeatureFlagProvider = ({ children }) => {
   const [flags, setFlags] = useState({}); // keyed by flag.key
   const [audience, setAudience] = useState("free");
   const [loading, setLoading] = useState(true);
+  // True once the first authenticated resolution has completed. Subsequent
+  // re-resolutions (e.g. a routine token refresh when the tab regains focus
+  // hands AuthContext a new `user` object reference) must NOT flip `loading`
+  // back to true — see the effect below.
+  const hasResolvedRef = useRef(false);
 
   // Pull the flag catalog. Fails open: if the table is missing (migration not
   // applied) or the read errors, we keep an empty map and evaluateFlag() treats
@@ -79,14 +85,26 @@ export const FeatureFlagProvider = ({ children }) => {
   useEffect(() => {
     let cancelled = false;
     if (!isAuthenticated) {
+      hasResolvedRef.current = false;
       setFlags({});
       setAudience("free");
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // Only block the gated app shell (RequireSubscription renders a full-screen
+    // LoadingScreen while this is true) on the FIRST resolution after sign-in.
+    // Re-resolutions caused by a new `user` reference after a token refresh
+    // refresh flags/audience in the background, leaving the existing shell —
+    // and the non-dismissible TrialGate over it — mounted. Flipping `loading`
+    // here would unmount TrialGate, throwing away any in-progress trial flow
+    // (e.g. the entered card / SetupIntent step) and dropping the user back to
+    // the start every time they switch tabs and come back.
+    if (!hasResolvedRef.current) setLoading(true);
     Promise.all([refreshFlags(), resolveUserAudience()]).finally(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        hasResolvedRef.current = true;
+        setLoading(false);
+      }
     });
     return () => {
       cancelled = true;
