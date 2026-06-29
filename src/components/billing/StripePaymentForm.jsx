@@ -146,6 +146,7 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitL
 
 const StripePaymentForm = ({
   clientSecret,
+  customerSessionClientSecret,
   amount,
   onSuccess,
   onCancel,
@@ -168,6 +169,10 @@ const StripePaymentForm = ({
 
   const options = {
     clientSecret,
+    // When present, the Payment Element shows this customer's previously saved
+    // cards (one-click "quick checkout") instead of only a blank card form.
+    // Omitted when there's no session secret so Elements isn't passed undefined.
+    ...(customerSessionClientSecret ? { customerSessionClientSecret } : {}),
     appearance: {
       theme: "stripe",
       variables: { colorPrimary: "#2563eb" },
@@ -202,6 +207,7 @@ CheckoutForm.propTypes = checkoutPropTypes;
 StripePaymentForm.propTypes = {
   ...checkoutPropTypes,
   clientSecret: PropTypes.string.isRequired,
+  customerSessionClientSecret: PropTypes.string,
 };
 
 export default StripePaymentForm;

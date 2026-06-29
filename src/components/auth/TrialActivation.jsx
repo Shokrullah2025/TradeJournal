@@ -21,6 +21,10 @@ const TrialActivation = ({
   const [isWorking, setIsWorking] = useState(false);
   const [clientSecret, setClientSecret] = useState(null);
   const [customerId, setCustomerId] = useState(null);
+  // Stripe Customer Session secret — enables the Payment Element to show cards
+  // this customer saved previously, for one-click checkout. Null when they have
+  // none (or session creation failed); the card form still works without it.
+  const [customerSessionClientSecret, setCustomerSessionClientSecret] = useState(null);
   const [trialEnd, setTrialEnd] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   // Set once the card is verified (SetupIntent succeeded). Its presence means we
@@ -56,6 +60,7 @@ const TrialActivation = ({
 
       setClientSecret(data.data.clientSecret);
       setCustomerId(data.data.customerId);
+      setCustomerSessionClientSecret(data.data.customerSessionClientSecret ?? null);
       setTrialStatus("card");
     } catch (err) {
       setErrorMessage(err.message || "Something went wrong. Please try again.");
@@ -100,6 +105,7 @@ const TrialActivation = ({
   const useDifferentCard = () => {
     setPaymentMethodId(null);
     setClientSecret(null);
+    setCustomerSessionClientSecret(null);
     setErrorMessage("");
     beginTrial();
   };
@@ -329,6 +335,7 @@ const TrialActivation = ({
             </div>
             <StripePaymentForm
               clientSecret={clientSecret}
+              customerSessionClientSecret={customerSessionClientSecret}
               mode="setup"
               submitLabel={isWorking ? "Starting trial…" : "Start free trial"}
               onSuccess={handleCardConfirmed}
