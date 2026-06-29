@@ -235,8 +235,12 @@ export const AuthProvider = ({ children }) => {
   // the multi-step flow. Destructure the same keys and surface user_id in the
   // return so the names actually persist and the next step receives the id.
   const register = useCallback(async ({ first_name, last_name, email, password }) => {
-    dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-
+    // Intentionally does NOT toggle the global auth `loading` flag. That flag
+    // gates the route shell (PublicRoute), so flipping it here would unmount the
+    // registration form and show the full-screen LoadingScreen — a white screen
+    // with a spinner. The form drives its own in-page overlay from react-hook-
+    // form's `isSubmitting` (awaiting this call), so the user keeps seeing the
+    // registration page with a spinner in front instead.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -245,8 +249,6 @@ export const AuthProvider = ({ children }) => {
         emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     });
-
-    dispatch({ type: ActionTypes.SET_LOADING, payload: false });
 
     if (error) {
       const msg = friendlyError(error);
