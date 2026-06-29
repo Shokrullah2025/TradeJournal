@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, MailCheck, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { loginSchema } from "../utils/validation";
 import AuthNavbar from "../components/auth/AuthNavbar";
@@ -23,6 +23,23 @@ const Login = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const from      = location.state?.from?.pathname || "/dashboard";
+
+  // Shown once after sign-up: the account exists but the email isn't confirmed
+  // yet, so the user must verify before they can sign in. Driven by the
+  // navigation state set in the registration flow; dismissible.
+  const [showVerifyNotice, setShowVerifyNotice] = useState(
+    () => !!location.state?.verifyEmail
+  );
+  const verifyEmailAddress = location.state?.email || "";
+
+  // Auto-dismiss the verify-email notice after 9s so it's readable but doesn't
+  // linger forever. The X still lets the user close it sooner. Timer is cleared
+  // on unmount / re-run to avoid setState after unmount.
+  useEffect(() => {
+    if (!showVerifyNotice) return;
+    const timer = setTimeout(() => setShowVerifyNotice(false), 9000);
+    return () => clearTimeout(timer);
+  }, [showVerifyNotice]);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(loginSchema),
@@ -120,6 +137,33 @@ const Login = () => {
             </div>
           ) : (
             <>
+              {showVerifyNotice && (
+                <div
+                  className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-200"
+                  data-testid="login-verify-email-notice"
+                  role="status"
+                >
+                  <MailCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                  <div className="flex-1">
+                    <p className="font-medium">Verify your email to sign in</p>
+                    <p className="mt-1">
+                      We've sent a verification link
+                      {verifyEmailAddress ? <> to <span className="font-medium">{verifyEmailAddress}</span></> : null}.
+                      Please confirm your email address before signing in — check your inbox and spam folder.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowVerifyNotice(false)}
+                    className="flex-shrink-0 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+                    aria-label="Dismiss"
+                    data-testid="login-verify-email-notice-dismiss-btn"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
               <h2 className="text-3xl font-extrabold mb-2">Welcome back</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">
                 Don't have an account?{" "}

@@ -145,7 +145,12 @@ describe("Registration & Trial Flow", () => {
           password: "Test1234",
         });
       });
-      expect(authApi.sendEmailVerification).toHaveBeenCalledWith("john@example.com");
+      // register() (Supabase signUp) already sends the confirmation email and
+      // the flow then redirects to /login showing a single verify notice. The
+      // account step must NOT also call sendEmailVerification — that would send
+      // the user a duplicate email. (Resending is a separate, user-triggered
+      // action on the EmailVerification screen.)
+      expect(authApi.sendEmailVerification).not.toHaveBeenCalled();
     });
   });
 

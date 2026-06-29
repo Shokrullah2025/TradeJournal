@@ -18,6 +18,7 @@ import Billing from "./pages/Billing";
 import BrokerSelection from "./pages/BrokerSelection";
 import TradeEntry from "./pages/TradeEntry";
 import OAuthCallback from "./pages/OAuthCallback";
+import AuthConfirm from "./pages/AuthConfirm";
 
 // Lazy — keeps the bundled country/state dataset out of the initial load.
 const Profile = React.lazy(() => import("./pages/Profile"));
@@ -99,6 +100,10 @@ function App() {
                       path="/verify-email"
                       element={<EmailVerification />}
                     />
+                    {/* Email-confirmation landing (sign-up link). Separate from
+                        the broker OAuth callback below so it isn't mistaken for a
+                        broker handshake. */}
+                    <Route path="/auth/confirm" element={<AuthConfirm />} />
                     <Route path="/auth/callback" element={<OAuthCallback />} />
                     <Route
                       path="/auth/callback/tradovate"

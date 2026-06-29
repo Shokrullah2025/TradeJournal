@@ -38,7 +38,7 @@ const MultiStepRegistration = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
-  const { register: registerUser, sendEmailVerification } = useAuth();
+  const { register: registerUser } = useAuth();
 
   const {
     register,
@@ -85,23 +85,22 @@ const MultiStepRegistration = () => {
 
   const handleAccountCreation = async (data) => {
     try {
-      const result = await registerUser({
+      await registerUser({
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email,
         password: data.password,
       });
 
-      setRegistrationData({
-        ...data,
-        userId: result.user_id,
+      // signUp() already sent the confirmation email and (with email
+      // confirmation enabled) does NOT create a session — the user is not signed
+      // in yet. Send them to the login page; the email-verify notice there tells
+      // them to confirm their address before they can sign in. We pass the email
+      // so that notice can show it. (registerUser already toasts the success.)
+      navigate("/login", {
+        replace: true,
+        state: { verifyEmail: true, email: data.email },
       });
-
-      toast.success("Account created successfully!");
-      setCurrentStep("email");
-
-      // Send verification email
-      await sendEmailVerification(data.email);
     } catch (error) {
       // Error handling is done in the AuthContext
     }
@@ -126,6 +125,29 @@ const MultiStepRegistration = () => {
   // Step 1: Account Creation
   if (currentStep === "account") {
     return (
+      <>
+        {/* While the signup request is in flight (it can be slow — the server
+            sends the confirmation email synchronously), keep the form visible
+            but dim it behind a translucent overlay with a spinner in front, so
+            the user gets clear feedback instead of a frozen-looking page. */}
+        {isSubmitting && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 backdrop-blur-[2px]"
+            data-testid="register-loading-overlay"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-2xl">
+              <div
+                className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
+                data-testid="register-loading-spinner"
+              />
+              <p className="text-sm font-medium text-gray-700">
+                Creating your account…
+              </p>
+            </div>
+          </div>
+        )}
       <div className="min-h-screen flex">
         {/* Left side - Feature Highlight */}
         <div className="hidden lg:block relative w-0 flex-1">
@@ -492,6 +514,7 @@ const MultiStepRegistration = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 

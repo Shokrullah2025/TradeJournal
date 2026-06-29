@@ -235,18 +235,20 @@ export const AuthProvider = ({ children }) => {
   // the multi-step flow. Destructure the same keys and surface user_id in the
   // return so the names actually persist and the next step receives the id.
   const register = useCallback(async ({ first_name, last_name, email, password }) => {
-    dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-
+    // Intentionally does NOT toggle the global auth `loading` flag. That flag
+    // gates the route shell (PublicRoute), so flipping it here would unmount the
+    // registration form and show the full-screen LoadingScreen — a white screen
+    // with a spinner. The form drives its own in-page overlay from react-hook-
+    // form's `isSubmitting` (awaiting this call), so the user keeps seeing the
+    // registration page with a spinner in front instead.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { first_name, last_name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     });
-
-    dispatch({ type: ActionTypes.SET_LOADING, payload: false });
 
     if (error) {
       const msg = friendlyError(error);
@@ -264,7 +266,9 @@ export const AuthProvider = ({ children }) => {
       logActivity(data.user.id, "register", {});
     }
 
-    toast.success("Account created! Please check your email to verify your account.");
+    // No success toast here on purpose — the registration flow redirects to the
+    // login page, which shows the single "verify your email" notice. A toast
+    // would be a duplicate of that same message.
     return { ...data, user_id: data.user?.id ?? null };
   }, []);
 
@@ -278,7 +282,7 @@ export const AuthProvider = ({ children }) => {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
     });
     if (error) {
       const msg = friendlyError(error);
@@ -293,10 +297,10 @@ export const AuthProvider = ({ children }) => {
   // also land on /auth/callback (OAuthCallback) — this backs the in-app token
   // path used by EmailVerification. Errors propagate so the caller can show the
   // "verification failed" state.
-  const verifyEmail = useCallback(async (tokenHash) => {
+  const verifyEmail = useCallback(async (tokenHash, type = "email") => {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: "email",
+      type,
     });
     if (error) throw new Error(friendlyError(error));
   }, []);

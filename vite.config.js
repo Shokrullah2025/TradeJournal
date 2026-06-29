@@ -7,7 +7,14 @@ import react from "@vitejs/plugin-react";
 // with "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY...". On a hosted
 // build (e.g. Cloudflare Pages) that broken bundle gets deployed silently.
 // We fail the build loudly instead, so the deploy log makes the cause obvious.
-const REQUIRED_BUILD_ENV = ["VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY"];
+const REQUIRED_BUILD_ENV = [
+  "VITE_SUPABASE_URL",
+  "VITE_SUPABASE_ANON_KEY",
+  // Stripe's publishable key is inlined too. Without it the payment form renders
+  // "Payments are temporarily unavailable" and trials can't be started — so a
+  // production build missing it is a broken deploy. Fail loudly instead.
+  "VITE_STRIPE_PUBLISHABLE_KEY",
+];
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
