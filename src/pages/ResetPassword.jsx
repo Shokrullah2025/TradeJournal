@@ -105,7 +105,7 @@ const ResetPassword = () => {
                 title: "Your password was changed",
                 body: "If this wasn't you, reset your password and contact support immediately.",
                 severity: "warning",
-                link_to: "/profile",
+                link_to: "/settings?tab=security",
               },
             });
           });

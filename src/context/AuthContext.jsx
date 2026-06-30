@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { logActivity } from "../utils/logActivity";
 import { emitNotification } from "../utils/notifications";
 import { validateAdminUserUpdate } from "../lib/schemas/adminUser";
+import { getAal, listFactors, challengeAndVerify } from "../utils/mfa";
 
 // Fire-and-forget security notification on sign-in. Fetches the user's channel
 // prefs so the email decision is honored, then emits. Never blocks login.
@@ -24,7 +25,9 @@ const notifyNewLogin = (userId) => {
           title: "New sign-in to your account",
           body: `A new sign-in was detected on ${new Date().toLocaleString()}.`,
           severity: "info",
-          link_to: "/profile",
+          // Informational only — no actionable destination, so it must not
+          // navigate (clicking just marks it read). Only "proper" actionable
+          // notifications (broker reconnect, milestones, etc.) carry a link_to.
         },
       });
     });
@@ -35,12 +38,17 @@ const initialState = {
   user: null,
   isAuthenticated: false,
   loading: true,
+  // True when the signed-in session is still aal1 but the account has a verified
+  // TOTP factor — i.e. the user must complete a 2FA code step before they're
+  // allowed into protected routes. Drives the MfaStepUp gate in ProtectedRoute.
+  mfaRequired: false,
 };
 
 const ActionTypes = {
-  SET_USER:    "SET_USER",
-  LOGOUT:      "LOGOUT",
-  SET_LOADING: "SET_LOADING",
+  SET_USER:         "SET_USER",
+  LOGOUT:           "LOGOUT",
+  SET_LOADING:      "SET_LOADING",
+  SET_MFA_REQUIRED: "SET_MFA_REQUIRED",
 };
 
 const authReducer = (state, action) => {
@@ -48,9 +56,11 @@ const authReducer = (state, action) => {
     case ActionTypes.SET_USER:
       return { ...state, user: action.payload, isAuthenticated: !!action.payload, loading: false };
     case ActionTypes.LOGOUT:
-      return { ...state, user: null, isAuthenticated: false, loading: false };
+      return { ...state, user: null, isAuthenticated: false, loading: false, mfaRequired: false };
     case ActionTypes.SET_LOADING:
       return { ...state, loading: action.payload };
+    case ActionTypes.SET_MFA_REQUIRED:
+      return { ...state, mfaRequired: action.payload };
     default:
       return state;
   }
@@ -211,6 +221,24 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, [resolveSession]);
 
+  // Recompute the 2FA step-up requirement whenever auth state changes — covers
+  // session restore/refresh (a user who closed the tab mid-step-up) and the
+  // post-verify elevation back to aal2. Runs OFF the bootstrap loading path (it
+  // never flips `loading`), so it cannot reintroduce the documented hung-loading
+  // bug. A verified TOTP factor on an aal1 session => step-up required.
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
+    let cancelled = false;
+    getAal()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const required = data?.currentLevel === "aal1" && data?.nextLevel === "aal2";
+        dispatch({ type: ActionTypes.SET_MFA_REQUIRED, payload: required });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [state.isAuthenticated, state.user]);
+
   // ── Login ────────────────────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
@@ -221,12 +249,24 @@ export const AuthProvider = ({ children }) => {
       toast.error(msg);
       throw new Error(msg);
     }
+    // A password sign-in only reaches aal1. If the account has a verified TOTP
+    // factor, require the 6-digit code before completing login — defer the
+    // activity log / new-login notification / welcome toast to completeMfaLogin().
+    const { data: aal } = await getAal();
+    if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
+      dispatch({ type: ActionTypes.SET_MFA_REQUIRED, payload: true });
+      dispatch({ type: ActionTypes.SET_LOADING, payload: false });
+      const { data: factorsData } = await listFactors();
+      const totp = factorsData?.totp?.find((f) => f.status === "verified");
+      return { status: "mfa_required", factorId: totp?.id ?? null };
+    }
     if (data.user) {
       logActivity(data.user.id, "login", {});
       notifyNewLogin(data.user.id);
     }
     // onAuthStateChange fires and sets the user — no manual dispatch needed
     toast.success("Welcome back!");
+    return { status: "ok" };
   }, []);
 
   // ── Register ─────────────────────────────────────────────────────────────
@@ -429,6 +469,90 @@ export const AuthProvider = ({ children }) => {
     if (!silent) toast.success("Profile updated.");
   }, [state.user]);
 
+  // ── Complete 2FA step-up at login ─────────────────────────────────────────
+  // Called after `login()` returns { status: 'mfa_required' }. Verifies the TOTP
+  // code, clears the step-up gate, and runs the login side effects that were
+  // deferred until the second factor was confirmed.
+  const completeMfaLogin = useCallback(async (factorId, code) => {
+    const { error } = await challengeAndVerify(factorId, code);
+    if (error) throw new Error("Invalid code. Please try again.");
+    dispatch({ type: ActionTypes.SET_MFA_REQUIRED, payload: false });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      logActivity(user.id, "login", {});
+      notifyNewLogin(user.id);
+    }
+    toast.success("Welcome back!");
+  }, []);
+
+  // ── Change password (logged-in user) ──────────────────────────────────────
+  // Supabase's updateUser() does NOT verify the current password, so we
+  // re-authenticate first to confirm the user actually knows it. The re-auth
+  // refreshes the JWT for the same user — no logout side effect — and we
+  // deliberately do not fire notifyNewLogin for this internal re-auth.
+  const changePassword = useCallback(async ({ currentPassword, newPassword }) => {
+    if (!state.user) throw new Error("Not authenticated.");
+
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: state.user.email,
+      password: currentPassword,
+    });
+    if (reauthError) {
+      const msg = "Current password is incorrect.";
+      toast.error(msg);
+      throw new Error(msg);
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      const msg = /same|different/i.test(error.message || "")
+        ? "New password must be different from your old password."
+        : friendlyError(error);
+      toast.error(msg);
+      throw new Error(msg);
+    }
+
+    logActivity(state.user.id, "password_changed", {});
+
+    // In-app security notification (fire-and-forget), honoring the user's prefs.
+    const userId = state.user.id;
+    supabase
+      .from("user_profiles")
+      .select("preferences")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data: profile }) => {
+        emitNotification({
+          userId,
+          prefs: profile?.preferences?.notifications,
+          record: {
+            category: "security",
+            event_type: "password_changed",
+            title: "Your password was changed",
+            body: "If this wasn't you, reset your password and contact support immediately.",
+            severity: "warning",
+            link_to: "/settings?tab=security",
+          },
+        });
+      });
+
+    toast.success("Password updated.");
+  }, [state.user]);
+
+  // ── Sign out of all devices ───────────────────────────────────────────────
+  // Global scope revokes every refresh token for the user, so other devices are
+  // signed out on their next token refresh.
+  const signOutEverywhere = useCallback(async () => {
+    if (state.user) logActivity(state.user.id, "signout_all_devices", {});
+    const { error } = await supabase.auth.signOut({ scope: "global" });
+    if (error) {
+      toast.error("Failed to sign out of all devices.");
+      throw new Error(error.message);
+    }
+    dispatch({ type: ActionTypes.LOGOUT });
+    toast.success("Signed out of all devices.");
+  }, [state.user]);
+
   // ── Admin: update another user's role/status ─────────────────────────────
   // Persisted only for admins via the users_update_admin RLS policy
   // (021_admin_dashboard.sql). Input is whitelist-validated with Zod so a
@@ -474,6 +598,9 @@ export const AuthProvider = ({ children }) => {
     updateUserProfile,
     updateUser,
     fetchAllUsers,
+    completeMfaLogin,
+    changePassword,
+    signOutEverywhere,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

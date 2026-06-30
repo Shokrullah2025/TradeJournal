@@ -157,6 +157,15 @@ export const changePasswordSchema = z
     path: ["confirmNewPassword"],
   });
 
+// Two-factor (TOTP) 6-digit code schema — used by the Login MFA step-up and the
+// Security tab's enrollment verification.
+export const totpCodeSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit code"),
+});
+
 // Contact/Support form schema
 export const contactSchema = z.object({
   name: z
@@ -189,5 +198,6 @@ export default {
   adminUserSchema,
   billingSchema,
   changePasswordSchema,
+  totpCodeSchema,
   contactSchema,
 };
