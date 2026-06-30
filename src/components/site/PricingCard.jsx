@@ -14,7 +14,7 @@ const PricingCard = ({ tier, cycle }) => {
 
   return (
     <div
-      data-testid={`pricing-card-${tier.id}`}
+      data-test-id={`pricing-card-${tier.id}`}
       className={`relative flex flex-col rounded-2xl border p-8 ${
         tier.popular
           ? "border-primary-500 bg-white shadow-xl dark:border-primary-500 dark:bg-gray-800"
@@ -23,7 +23,7 @@ const PricingCard = ({ tier, cycle }) => {
     >
       {tier.popular && (
         <span
-          data-testid={`pricing-card-badge-${tier.id}`}
+          data-test-id={`pricing-card-badge-${tier.id}`}
           className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-white"
         >
           Most popular
@@ -39,7 +39,7 @@ const PricingCard = ({ tier, cycle }) => {
 
       <div className="mt-6 flex items-baseline gap-1">
         <span
-          data-testid={`pricing-card-price-${tier.id}`}
+          data-test-id={`pricing-card-price-${tier.id}`}
           className="text-4xl font-bold text-gray-900 dark:text-gray-100"
         >
           ${price}
@@ -64,7 +64,7 @@ const PricingCard = ({ tier, cycle }) => {
 
       <Link
         to="/register"
-        data-testid={`pricing-card-cta-${tier.id}`}
+        data-test-id={`pricing-card-cta-${tier.id}`}
         className={`mt-8 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
           tier.popular
             ? "bg-primary-600 text-white hover:bg-primary-700"

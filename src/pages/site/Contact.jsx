@@ -77,7 +77,7 @@ const Contact = () => {
   ];
 
   return (
-    <div data-testid="site-contact-page">
+    <div data-test-id="site-contact-page">
       {/* Header */}
       <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
@@ -123,7 +123,7 @@ const Contact = () => {
               Looking for answers now? Visit our{" "}
               <Link
                 to="/pricing"
-                data-testid="contact-faq-link"
+                data-test-id="contact-faq-link"
                 className="font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
               >
                 pricing FAQ
@@ -135,7 +135,7 @@ const Contact = () => {
           {/* Form column */}
           <div className="lg:col-span-3">
             <form
-              data-testid="contact-form"
+              data-test-id="contact-form"
               onSubmit={handleSubmit(onSubmit)}
               noValidate
               className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800 sm:p-8"
@@ -148,14 +148,14 @@ const Contact = () => {
                   <input
                     id="contact-name"
                     type="text"
-                    data-testid="contact-name-input"
+                    data-test-id="contact-name-input"
                     className="input"
                     placeholder="Jane Trader"
                     {...register("name")}
                   />
                   {errors.name && (
                     <p
-                      data-testid="contact-name-error"
+                      data-test-id="contact-name-error"
                       className="mt-1 text-sm text-danger-600 dark:text-danger-400"
                     >
                       {errors.name.message}
@@ -170,14 +170,14 @@ const Contact = () => {
                   <input
                     id="contact-email"
                     type="email"
-                    data-testid="contact-email-input"
+                    data-test-id="contact-email-input"
                     className="input"
                     placeholder="you@example.com"
                     {...register("email")}
                   />
                   {errors.email && (
                     <p
-                      data-testid="contact-email-error"
+                      data-test-id="contact-email-error"
                       className="mt-1 text-sm text-danger-600 dark:text-danger-400"
                     >
                       {errors.email.message}
@@ -193,14 +193,14 @@ const Contact = () => {
                 <input
                   id="contact-subject"
                   type="text"
-                  data-testid="contact-subject-input"
+                  data-test-id="contact-subject-input"
                   className="input"
                   placeholder="How can we help?"
                   {...register("subject")}
                 />
                 {errors.subject && (
                   <p
-                    data-testid="contact-subject-error"
+                    data-test-id="contact-subject-error"
                     className="mt-1 text-sm text-danger-600 dark:text-danger-400"
                   >
                     {errors.subject.message}
@@ -215,14 +215,14 @@ const Contact = () => {
                 <textarea
                   id="contact-message"
                   rows={5}
-                  data-testid="contact-message-input"
+                  data-test-id="contact-message-input"
                   className="textarea"
                   placeholder="Tell us a bit more…"
                   {...register("message")}
                 />
                 {errors.message && (
                   <p
-                    data-testid="contact-message-error"
+                    data-test-id="contact-message-error"
                     className="mt-1 text-sm text-danger-600 dark:text-danger-400"
                   >
                     {errors.message.message}
@@ -239,7 +239,7 @@ const Contact = () => {
 
               <button
                 type="submit"
-                data-testid="contact-submit-btn"
+                data-test-id="contact-submit-btn"
                 disabled={isSubmitting}
                 className="btn btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 py-3 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >

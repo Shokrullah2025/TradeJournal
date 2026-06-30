@@ -8,13 +8,13 @@ import { FAQS } from "./content";
  * project dependency). Each item expands/collapses independently.
  */
 const FAQAccordion = () => (
-  <div data-testid="faq-accordion" className="mx-auto max-w-3xl divide-y divide-gray-200 dark:divide-gray-700">
+  <div data-test-id="faq-accordion" className="mx-auto max-w-3xl divide-y divide-gray-200 dark:divide-gray-700">
     {FAQS.map((faq, index) => (
       <Disclosure as="div" key={faq.question} className="py-4">
         {({ open }) => (
           <>
             <Disclosure.Button
-              data-testid={`faq-question-${index}`}
+              data-test-id={`faq-question-${index}`}
               className="flex w-full items-center justify-between text-left"
             >
               <span className="text-base font-medium text-gray-900 dark:text-gray-100">
@@ -27,7 +27,7 @@ const FAQAccordion = () => (
               />
             </Disclosure.Button>
             <Disclosure.Panel
-              data-testid={`faq-answer-${index}`}
+              data-test-id={`faq-answer-${index}`}
               className="mt-3 pr-8 text-sm leading-relaxed text-gray-600 dark:text-gray-400"
             >
               {faq.answer}

@@ -136,7 +136,7 @@ const CumulativePnLChart = ({
     return (
       <div
         className="flex-1 min-h-0 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm text-center"
-        data-testid="cumulative-pnl-chart-empty-state"
+        data-test-id="cumulative-pnl-chart-empty-state"
       >
         <div>
           <div className="font-medium mb-1">No trading data yet</div>
@@ -158,7 +158,7 @@ const CumulativePnLChart = ({
       className="relative flex-1 min-h-0 w-full"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      data-testid="cumulative-pnl-chart"
+      data-test-id="cumulative-pnl-chart"
     >
       {/* Same gentle fade-in as the Daily P&L chart — opacity + slight rise. */}
       <style>{`
@@ -243,7 +243,7 @@ const CumulativePnLChart = ({
                 fill="#374151"
                 fontFamily="inherit"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
-                data-testid={`cumulative-pnl-chart-ylabel-${i}`}
+                data-test-id={`cumulative-pnl-chart-ylabel-${i}`}
               >
                 {fmtK(Math.round(v))}
               </text>
@@ -341,7 +341,7 @@ const CumulativePnLChart = ({
       {hovered && (
         <div
           className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
-          data-testid="cumulative-pnl-chart-tooltip"
+          data-test-id="cumulative-pnl-chart-tooltip"
           style={{
             left: hover.x,
             top: hover.y - 10,
@@ -354,7 +354,7 @@ const CumulativePnLChart = ({
                 ? "font-semibold text-green-400 dark:text-green-600"
                 : "font-semibold text-red-400 dark:text-red-600"
             }
-            data-testid="cumulative-pnl-chart-tooltip-value"
+            data-test-id="cumulative-pnl-chart-tooltip-value"
           >
             {fmtFull(hovered.v)}
           </div>

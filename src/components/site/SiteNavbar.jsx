@@ -46,7 +46,7 @@ const SiteNavbar = () => {
 
   return (
     <header
-      data-testid="site-navbar"
+      data-test-id="site-navbar"
       className="sticky top-0 z-40 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md"
     >
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -54,7 +54,7 @@ const SiteNavbar = () => {
           {/* Brand */}
           <Link
             to="/"
-            data-testid="site-nav-brand-link"
+            data-test-id="site-nav-brand-link"
             className="flex items-center gap-2"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600">
@@ -71,7 +71,7 @@ const SiteNavbar = () => {
               <NavLink
                 key={item.to}
                 to={item.to}
-                data-testid={`site-nav-${item.label.toLowerCase()}-link`}
+                data-test-id={`site-nav-${item.label.toLowerCase()}-link`}
                 className={linkClass}
               >
                 {item.label}
@@ -85,14 +85,14 @@ const SiteNavbar = () => {
             <button
               type="button"
               onClick={handleSignIn}
-              data-testid="site-nav-signin-btn"
+              data-test-id="site-nav-signin-btn"
               className="btn btn-ghost btn-sm"
             >
               Sign in
             </button>
             <Link
               to="/register"
-              data-testid="site-nav-getstarted-btn"
+              data-test-id="site-nav-getstarted-btn"
               className="btn btn-primary btn-sm"
             >
               Get started
@@ -105,7 +105,7 @@ const SiteNavbar = () => {
             <button
               type="button"
               onClick={() => setMobileOpen((o) => !o)}
-              data-testid="site-nav-mobile-toggle"
+              data-test-id="site-nav-mobile-toggle"
               aria-label="Toggle navigation menu"
               aria-expanded={mobileOpen}
               className="btn-icon text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
@@ -123,7 +123,7 @@ const SiteNavbar = () => {
       {/* Mobile drawer */}
       {mobileOpen && (
         <div
-          data-testid="site-nav-mobile-menu"
+          data-test-id="site-nav-mobile-menu"
           className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 md:hidden"
         >
           <div className="space-y-1 px-4 py-4">
@@ -131,7 +131,7 @@ const SiteNavbar = () => {
               <NavLink
                 key={item.to}
                 to={item.to}
-                data-testid={`site-nav-mobile-${item.label.toLowerCase()}-link`}
+                data-test-id={`site-nav-mobile-${item.label.toLowerCase()}-link`}
                 className={({ isActive }) =>
                   `block rounded-lg px-3 py-2 text-base font-medium ${
                     isActive
@@ -148,14 +148,14 @@ const SiteNavbar = () => {
               <button
                 type="button"
                 onClick={handleSignIn}
-                data-testid="site-nav-mobile-signin-btn"
+                data-test-id="site-nav-mobile-signin-btn"
                 className="btn btn-ghost w-full justify-center border border-gray-200 dark:border-gray-700"
               >
                 Sign in
               </button>
               <Link
                 to="/register"
-                data-testid="site-nav-mobile-getstarted-btn"
+                data-test-id="site-nav-mobile-getstarted-btn"
                 className="btn btn-primary w-full justify-center"
               >
                 Get started

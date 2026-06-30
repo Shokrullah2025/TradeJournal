@@ -36,7 +36,7 @@ vi.mock("react-hot-toast", () => ({ toast: toastMock, default: toastMock }));
 vi.mock("@stripe/stripe-js", () => ({ loadStripe: vi.fn(() => Promise.resolve({})) }));
 vi.mock("@stripe/react-stripe-js", () => ({
   Elements: ({ children }) => <div>{children}</div>,
-  PaymentElement: () => <div data-testid="stripe-payment-element" />,
+  PaymentElement: () => <div data-test-id="stripe-payment-element" />,
   useStripe: () => stripeMock,
   useElements: () => ({}),
 }));

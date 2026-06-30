@@ -97,7 +97,7 @@ const Divider = ({ theme }) => (
 const LtSelect = ({ value, onChange, theme, title, testid, minWidth = 0, children }) => (
   <div title={title} style={{ position: "relative", display: "flex", alignItems: "center", flex: "0 0 auto" }}>
     <select
-      data-testid={testid}
+      data-test-id={testid}
       value={value}
       onChange={onChange}
       style={{
@@ -130,7 +130,7 @@ const LtText = ({ keyId, defaultValue, onCommit, placeholder, theme, testid }) =
       type="text"
       defaultValue={defaultValue}
       placeholder={placeholder}
-      data-testid={testid}
+      data-test-id={testid}
       onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
       onBlur={(e) => onCommit(e.target.value)}
       onClick={(e) => e.stopPropagation()}
@@ -262,7 +262,7 @@ const PresetsSection = ({ sel, theme, onPropertyChange }) => {
     <div style={{ display: "flex", gap: 6, marginTop: presets.length ? 7 : 0 }}>
       <input
         type="text"
-        data-testid="drawing-panel-preset-name-input"
+        data-test-id="drawing-panel-preset-name-input"
         placeholder="Name these settings…"
         value={name}
         maxLength={MAX_PRESET_NAME_LENGTH}
@@ -272,7 +272,7 @@ const PresetsSection = ({ sel, theme, onPropertyChange }) => {
         style={{ ...fieldInputStyle(theme), flex: 1, minWidth: 0 }}
       />
       <button
-        data-testid="drawing-panel-preset-save-btn"
+        data-test-id="drawing-panel-preset-save-btn"
         title={canSave ? "Save current settings under this name" : trimmedName ? `"${trimmedName}" already exists — use Update` : "Enter a unique name to save"}
         disabled={!canSave}
         onClick={saveNew}
@@ -299,7 +299,7 @@ const PresetsSection = ({ sel, theme, onPropertyChange }) => {
         <>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button
-              data-testid="drawing-panel-preset-dropdown-trigger"
+              data-test-id="drawing-panel-preset-dropdown-trigger"
               onClick={() => setListOpen((o) => !o)}
               style={{
                 ...fieldInputStyle(theme), flex: 1, minWidth: 0, display: "flex", alignItems: "center",
@@ -315,7 +315,7 @@ const PresetsSection = ({ sel, theme, onPropertyChange }) => {
             {active && (
               <>
                 <button
-                  data-testid="drawing-panel-preset-update-btn"
+                  data-test-id="drawing-panel-preset-update-btn"
                   title={isDirty ? `Update "${active}" with current settings` : `"${active}" is already up to date`}
                   disabled={!isDirty && !feedback}
                   onClick={handleUpdate}
@@ -331,7 +331,7 @@ const PresetsSection = ({ sel, theme, onPropertyChange }) => {
                   {feedback ? "✓" : "Update"}
                 </button>
                 <button
-                  data-testid="drawing-panel-preset-delete-btn"
+                  data-test-id="drawing-panel-preset-delete-btn"
                   title={`Delete "${active}"`}
                   onClick={() => { deletePreset(sel.type, active); bump(); }}
                   style={{ ...smallBtnStyle(theme), width: 30, padding: 0, display: "grid", placeItems: "center" }}
@@ -358,7 +358,7 @@ const PresetsSection = ({ sel, theme, onPropertyChange }) => {
                     onDragStart={(e) => handleDragStart(e, n)}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleDrop(e, n)}
-                    data-testid={`drawing-panel-preset-item-${n}`}
+                    data-test-id={`drawing-panel-preset-item-${n}`}
                     onClick={() => applyPreset(n)}
                     style={{
                       display: "flex", alignItems: "center", gap: 6, padding: "5px 8px",
@@ -440,7 +440,7 @@ const DrawingPropertiesPanel = ({ panelDrawing, isDark, onPropertyChange, propsP
   const colorControl = (value, def, allowAuto = false) => (
     <div key="color" style={{ position: "relative", flex: "0 0 auto" }}>
       <button
-        data-testid="drawing-panel-color-btn"
+        data-test-id="drawing-panel-color-btn"
         title="Color"
         onClick={togglePop("color")}
         style={iconBtnStyle(theme, openPop === "color")}
@@ -534,15 +534,15 @@ const DrawingPropertiesPanel = ({ panelDrawing, isDark, onPropertyChange, propsP
             <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 200, overflowY: "auto" }}>
               {levels.map((lvl, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="checkbox" data-testid={`fib-level-visible-${i}`} checked={lvl.visible !== false}
+                  <input type="checkbox" data-test-id={`fib-level-visible-${i}`} checked={lvl.visible !== false}
                     onChange={(e) => setLevel(i, { visible: e.target.checked })} style={{ cursor: "pointer", margin: 0 }} />
-                  <input type="number" step="0.001" data-testid={`fib-level-value-${i}`} key={`r-${i}-${lvl.r}`}
+                  <input type="number" step="0.001" data-test-id={`fib-level-value-${i}`} key={`r-${i}-${lvl.r}`}
                     defaultValue={lvl.r}
                     onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
                     onBlur={(e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) setLevel(i, { r: v }); }}
                     onClick={(e) => e.stopPropagation()}
                     style={{ ...fieldInputStyle(theme), width: 70, height: 26, padding: "0 6px" }} />
-                  <input type="color" data-testid={`fib-level-color-${i}`} value={lvl.color}
+                  <input type="color" data-test-id={`fib-level-color-${i}`} value={lvl.color}
                     onChange={(e) => setLevel(i, { color: e.target.value })} title="Level color"
                     style={{ width: 26, height: 22, padding: 0, border: "none", background: "transparent", cursor: "pointer" }} />
                 </div>
@@ -626,7 +626,7 @@ const DrawingPropertiesPanel = ({ panelDrawing, isDark, onPropertyChange, propsP
   return (
     <div
       ref={propsPanelRef}
-      data-testid="drawing-properties-panel"
+      data-test-id="drawing-properties-panel"
       title={TOOL_LABELS[sel.type] || sel.type}
       style={{
         position: "fixed", top: 12, left: 12, zIndex: 9999,
@@ -646,7 +646,7 @@ const DrawingPropertiesPanel = ({ panelDrawing, isDark, onPropertyChange, propsP
       {/* My Settings — gear button opens the presets popover */}
       <div style={{ position: "relative", flex: "0 0 auto" }}>
         <button
-          data-testid="drawing-panel-preset-btn"
+          data-test-id="drawing-panel-preset-btn"
           title="My settings"
           onClick={togglePop("preset")}
           style={iconBtnStyle(theme, openPop === "preset")}

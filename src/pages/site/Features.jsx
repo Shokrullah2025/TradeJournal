@@ -9,7 +9,7 @@ import { FEATURE_CATEGORIES } from "../../components/site/content";
  * shared content module, alternating background tone for visual rhythm.
  */
 const Features = () => (
-  <div data-testid="site-features-page">
+  <div data-test-id="site-features-page">
     {/* Page header */}
     <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
@@ -29,7 +29,7 @@ const Features = () => (
     {FEATURE_CATEGORIES.map((category, index) => (
       <section
         key={category.id}
-        data-testid={`features-category-${category.id}`}
+        data-test-id={`features-category-${category.id}`}
         className={
           index % 2 === 1
             ? "bg-gray-50 dark:bg-gray-800/40"

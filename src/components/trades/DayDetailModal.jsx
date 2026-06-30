@@ -61,7 +61,7 @@ const TrendSparkline = ({ trade }) => {
       height="24"
       viewBox="0 0 74 24"
       preserveAspectRatio="none"
-      data-testid={`trade-row-sparkline-${trade.id}`}
+      data-test-id={`trade-row-sparkline-${trade.id}`}
       aria-hidden="true"
     >
       <polyline
@@ -89,14 +89,14 @@ const TradeScreenshots = ({ images }) => {
       <div
         className="flex flex-wrap gap-2"
         onClick={(e) => e.stopPropagation()}
-        data-testid="trade-screenshots-strip"
+        data-test-id="trade-screenshots-strip"
       >
         {sorted.map((img, i) => (
           <button
             key={img.id}
             type="button"
             onClick={() => setZoomedImg(img)}
-            data-testid={`trade-screenshot-thumb-${i}`}
+            data-test-id={`trade-screenshot-thumb-${i}`}
             className="relative w-[70px] h-[46px] rounded-md overflow-hidden border border-gray-200 dark:border-gray-600 hover:ring-2 hover:ring-primary-400 transition-all group"
             title="Click to zoom"
           >
@@ -125,7 +125,7 @@ const TradeScreenshots = ({ images }) => {
         <div
           className="fixed inset-0 bg-black bg-opacity-80 z-[70] flex items-center justify-center p-4"
           onClick={() => setZoomedImg(null)}
-          data-testid="screenshot-lightbox"
+          data-test-id="screenshot-lightbox"
         >
           <div
             className="relative max-w-4xl max-h-[85vh] w-full"
@@ -138,7 +138,7 @@ const TradeScreenshots = ({ images }) => {
             />
             <button
               onClick={() => setZoomedImg(null)}
-              data-testid="lightbox-close-btn"
+              data-test-id="lightbox-close-btn"
               className="absolute top-2 right-2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-1.5 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -242,7 +242,7 @@ const DayDetailModal = ({
     <ModalPortal>
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
-      data-testid="day-detail-modal"
+      data-test-id="day-detail-modal"
     >
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col">
         {/* ── Header ── */}
@@ -286,7 +286,7 @@ const DayDetailModal = ({
                     ? "text-danger-600 dark:text-danger-400"
                     : "text-gray-700 dark:text-gray-200"
                 }`}
-                data-testid="day-pnl-value"
+                data-test-id="day-pnl-value"
               >
                 {formatCurrency(totalPnL)}
               </span>
@@ -297,7 +297,7 @@ const DayDetailModal = ({
               </span>
               <span
                 className="font-bold text-[15px] tabular-nums text-gray-700 dark:text-gray-200"
-                data-testid="day-winrate-value"
+                data-test-id="day-winrate-value"
               >
                 {closedTrades.length > 0 ? `${winRate.toFixed(0)}%` : "—"}
               </span>
@@ -308,14 +308,14 @@ const DayDetailModal = ({
               </span>
               <span
                 className="font-bold text-[15px] tabular-nums text-gray-700 dark:text-gray-200"
-                data-testid="day-wl-value"
+                data-test-id="day-wl-value"
               >
                 {winningTrades.length} / {losingTrades.length}
               </span>
             </div>
             <button
               onClick={() => onAddTrade(date)}
-              data-testid="day-detail-add-btn"
+              data-test-id="day-detail-add-btn"
               className="btn-gradient inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold transition-colors ml-1"
             >
               <Plus className="w-4 h-4" strokeWidth={2.5} />
@@ -323,7 +323,7 @@ const DayDetailModal = ({
             </button>
             <button
               onClick={onClose}
-              data-testid="day-detail-close-btn"
+              data-test-id="day-detail-close-btn"
               className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
               aria-label="Close"
             >
@@ -337,7 +337,7 @@ const DayDetailModal = ({
           {trades.length === 0 ? (
             <div
               className="text-center py-16 px-6"
-              data-testid="day-detail-empty-state"
+              data-test-id="day-detail-empty-state"
             >
               <Calendar className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p className="text-gray-500 dark:text-gray-400 mb-4">
@@ -346,13 +346,13 @@ const DayDetailModal = ({
               <button
                 onClick={() => onAddTrade(date)}
                 className="btn btn-gradient"
-                data-testid="day-detail-empty-add-btn"
+                data-test-id="day-detail-empty-add-btn"
               >
                 Add Your First Trade
               </button>
             </div>
           ) : (
-            <div className="min-w-[700px]" data-testid="day-detail-table">
+            <div className="min-w-[700px]" data-test-id="day-detail-table">
               {/* Column header */}
               <div
                 className={`grid ${GRID_COLS} gap-3 px-6 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700 font-semibold text-[10px] tracking-wider text-gray-400 dark:text-gray-500 items-center`}
@@ -376,7 +376,7 @@ const DayDetailModal = ({
                   <div
                     key={trade.id}
                     className="border-b border-gray-100 dark:border-gray-800"
-                    data-testid={`trade-row-${trade.id}`}
+                    data-test-id={`trade-row-${trade.id}`}
                   >
                     <div
                       className={`grid ${GRID_COLS} gap-3 px-6 py-3 items-center transition-colors ${
@@ -444,7 +444,7 @@ const DayDetailModal = ({
                             ? "text-primary-600 dark:text-primary-400"
                             : pnlTextClass(trade.pnl || 0)
                         }`}
-                        data-testid={`trade-row-pnl-${trade.id}`}
+                        data-test-id={`trade-row-pnl-${trade.id}`}
                       >
                         {trade.status === "open"
                           ? "OPEN"
@@ -458,7 +458,7 @@ const DayDetailModal = ({
                             e.stopPropagation();
                             onEditTrade(trade);
                           }}
-                          data-testid={`trade-row-edit-${trade.id}`}
+                          data-test-id={`trade-row-edit-${trade.id}`}
                           className="w-7 h-7 rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 flex items-center justify-center transition-colors"
                           title="Edit trade"
                         >
@@ -470,7 +470,7 @@ const DayDetailModal = ({
                               e.stopPropagation();
                               toggleExpand(trade.id);
                             }}
-                            data-testid={`trade-row-expand-${trade.id}`}
+                            data-test-id={`trade-row-expand-${trade.id}`}
                             className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
                               isExpanded
                                 ? "bg-primary-50 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300"
@@ -492,7 +492,7 @@ const DayDetailModal = ({
                     {isExpanded && detail && (
                       <div
                         className="mx-6 mb-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex gap-6 flex-wrap items-start"
-                        data-testid={`trade-drawer-${trade.id}`}
+                        data-test-id={`trade-drawer-${trade.id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex-1 min-w-[200px]">
@@ -548,7 +548,7 @@ const DayDetailModal = ({
                           ) : (
                             <button
                               onClick={() => setConfirmDeleteId(trade.id)}
-                              data-testid={`trade-row-delete-${trade.id}`}
+                              data-test-id={`trade-row-delete-${trade.id}`}
                               className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400 hover:text-red-600 hover:border-red-300 flex items-center justify-center transition-colors"
                               title="Delete trade"
                             >
@@ -572,7 +572,7 @@ const DayDetailModal = ({
                   Net{" "}
                   <span
                     className={`tabular-nums font-bold ${pnlTextClass(totalPnL)}`}
-                    data-testid="day-net-value"
+                    data-test-id="day-net-value"
                   >
                     {formatCurrency(totalPnL)}
                   </span>

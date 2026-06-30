@@ -43,7 +43,7 @@ const InfoTip = ({ text, testId }) => (
   <span className="relative inline-flex group">
     <button
       type="button"
-      data-testid={testId}
+      data-test-id={testId}
       aria-label="Chart explanation"
       className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
     >
@@ -240,7 +240,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
     return (
       <div
         className="card text-center py-12"
-        data-testid="instrument-empty-state"
+        data-test-id="instrument-empty-state"
       >
         <Layers className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -254,8 +254,8 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
   }
 
   return (
-    <div className="space-y-4" data-testid="instrument-analysis">
-      <section className="card" data-testid="instrument-pnl-chart">
+    <div className="space-y-4" data-test-id="instrument-analysis">
+      <section className="card" data-test-id="instrument-pnl-chart">
         <SectionHeader
           icon={Layers}
           tone="neutral"
@@ -323,7 +323,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
       </section>
 
       {detailed && (
-        <section className="card" data-testid="instrument-breakdown">
+        <section className="card" data-test-id="instrument-breakdown">
           <SectionHeader
             icon={BarChart3}
             tone="neutral"
@@ -334,7 +334,7 @@ const InstrumentAnalysis = ({ trades = [], detailed = false }) => {
             {chartData.map((instrument, index) => (
               <div
                 key={instrument.name}
-                data-testid={`instrument-row-${instrument.name}`}
+                data-test-id={`instrument-row-${instrument.name}`}
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="flex items-center gap-3">

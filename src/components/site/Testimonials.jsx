@@ -9,7 +9,7 @@ import { TESTIMONIALS } from "./content";
  */
 const Testimonials = () => (
   <section
-    data-testid="site-testimonials"
+    data-test-id="site-testimonials"
     className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24"
   >
     <SectionHeading
@@ -22,7 +22,7 @@ const Testimonials = () => (
       {TESTIMONIALS.map((item, index) => (
         <figure
           key={item.name}
-          data-testid={`site-testimonial-${index}`}
+          data-test-id={`site-testimonial-${index}`}
           className="flex flex-col rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
         >
           <Quote className="h-7 w-7 text-primary-300 dark:text-primary-700" />

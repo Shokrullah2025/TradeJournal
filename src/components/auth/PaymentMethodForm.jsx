@@ -39,7 +39,7 @@ const SetupForm = ({ onPaymentMethodAdded }) => {
     <form
       onSubmit={handleSubmit}
       className="space-y-6"
-      data-testid="payment-method-form"
+      data-test-id="payment-method-form"
     >
       <PaymentElement />
 
@@ -47,7 +47,7 @@ const SetupForm = ({ onPaymentMethodAdded }) => {
         type="submit"
         disabled={!stripe || isLoading}
         className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        data-testid="payment-method-submit-btn"
+        data-test-id="payment-method-submit-btn"
       >
         {isLoading ? (
           <span className="flex items-center gap-2">
@@ -119,18 +119,18 @@ const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
         {!isStripeConfigured ? (
           <div
             className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800"
-            data-testid="payment-method-not-configured"
+            data-test-id="payment-method-not-configured"
           >
             Payments are temporarily unavailable. Please try again later or contact support.
           </div>
         ) : isInitializing ? (
-          <div className="flex justify-center py-8" data-testid="payment-method-loading">
+          <div className="flex justify-center py-8" data-test-id="payment-method-loading">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           </div>
         ) : initError ? (
           <div
             className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700"
-            data-testid="payment-method-error"
+            data-test-id="payment-method-error"
           >
             {initError}
           </div>

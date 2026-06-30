@@ -4,7 +4,7 @@ import FeatureCard from "./FeatureCard";
 /**
  * Responsive grid of FeatureCards (1 col mobile → 2 tablet → 3 desktop).
  * `features` is an array of { icon, title, description }.
- * `idPrefix` builds a stable data-testid per card (e.g. "feature-journaling").
+ * `idPrefix` builds a stable data-test-id per card (e.g. "feature-journaling").
  */
 const FeatureGrid = ({ features, idPrefix = "feature", columns = 3 }) => {
   const colClass =
@@ -14,7 +14,7 @@ const FeatureGrid = ({ features, idPrefix = "feature", columns = 3 }) => {
 
   return (
     <div
-      data-testid={`${idPrefix}-grid`}
+      data-test-id={`${idPrefix}-grid`}
       className={`grid grid-cols-1 gap-6 ${colClass}`}
     >
       {features.map((feature, index) => (

@@ -4,7 +4,7 @@ import { TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
 /**
  * Pure CSS/SVG mock of the app dashboard, shown in the hero so the landing
  * page looks real without shipping a screenshot. Purely decorative — its
- * internals are exempt from data-testid per CLAUDE.md §9; the container
+ * internals are exempt from data-test-id per CLAUDE.md §9; the container
  * carries `site-hero-preview` for automation to locate it.
  */
 const STAT_TILES = [
@@ -20,7 +20,7 @@ const CURVE_POINTS =
 
 const DashboardPreview = () => (
   <div
-    data-testid="site-hero-preview"
+    data-test-id="site-hero-preview"
     className="w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:p-6"
   >
     {/* Window chrome */}

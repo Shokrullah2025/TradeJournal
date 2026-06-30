@@ -252,7 +252,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-2 gap-2">
             <div
               className="flex items-baseline gap-2 min-w-0"
-              data-testid="cumulative-pnl-chart-caption-row"
+              data-test-id="cumulative-pnl-chart-caption-row"
             >
               <span
                 className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap"
@@ -267,20 +267,20 @@ const Dashboard = () => {
                     : 'text-red-600 dark:text-red-400'
                 }`}
                 style={{ fontSize: 12 }}
-                data-testid="cumulative-pnl-chart-caption-total-value"
+                data-test-id="cumulative-pnl-chart-caption-total-value"
               >
                 {fmtK(cumData[cumData.length - 1] ?? 0)}
               </span>
               <span
                 className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap"
-                data-testid="cumulative-pnl-chart-caption-count"
+                data-test-id="cumulative-pnl-chart-caption-count"
               >
                 {sessionCount} sessions
               </span>
             </div>
             <div
               className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5"
-              data-testid="cumulative-pnl-range-toggle"
+              data-test-id="cumulative-pnl-range-toggle"
             >
               {CUMULATIVE_RANGE_OPTIONS.map(({ value, label }) => {
                 const active = cumulativeRange === value;
@@ -289,7 +289,7 @@ const Dashboard = () => {
                     key={value}
                     type="button"
                     onClick={() => setCumulativeRange(value)}
-                    data-testid={`cumulative-pnl-range-${label}-btn`}
+                    data-test-id={`cumulative-pnl-range-${label}-btn`}
                     className={
                       active
                         ? "text-[10px] font-medium px-2 py-0.5 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm transition-colors"
@@ -332,7 +332,7 @@ const Dashboard = () => {
             </div>
             <div
               className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0"
-              data-testid="when-you-win-trade-count"
+              data-test-id="when-you-win-trade-count"
             >
               <span className="font-medium text-gray-700 dark:text-gray-300">
                 {trades.filter((t) => t && t.status === "closed").length}

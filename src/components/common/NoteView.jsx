@@ -23,7 +23,7 @@ function NoteView({ html, clamp = 3, className = "", testId = "note-view" }) {
 
   return (
     <div
-      data-testid={testId}
+      data-test-id={testId}
       className={`rich-text-content text-sm text-gray-700 dark:text-gray-200 ${
         CLAMP_CLASS[clamp] ?? "line-clamp-3"
       } ${className}`}

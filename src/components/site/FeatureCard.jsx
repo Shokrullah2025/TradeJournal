@@ -6,7 +6,7 @@ import React from "react";
  */
 const FeatureCard = ({ icon: Icon, title, description, testId }) => (
   <div
-    data-testid={testId}
+    data-test-id={testId}
     className="group rounded-xl border border-gray-200 bg-white p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
   >
     <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary-100 text-primary-600 transition-colors group-hover:bg-primary-600 group-hover:text-white dark:bg-primary-900/30 dark:text-primary-400">

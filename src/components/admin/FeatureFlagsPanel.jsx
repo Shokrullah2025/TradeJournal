@@ -22,7 +22,7 @@ const Toggle = ({ checked, disabled, onChange, testId, label }) => (
     aria-label={label}
     disabled={disabled}
     onClick={() => onChange(!checked)}
-    data-testid={testId}
+    data-test-id={testId}
     className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 ${
       checked ? "bg-primary-600" : "bg-gray-300 dark:bg-gray-600"
     } ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
@@ -158,14 +158,14 @@ const FeatureFlagsPanel = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16" data-testid="admin-flags-loading-spinner">
+      <div className="flex items-center justify-center py-16" data-test-id="admin-flags-loading-spinner">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4" data-testid="admin-feature-flags">
+    <div className="space-y-4" data-test-id="admin-feature-flags">
       <div className="flex items-start gap-3">
         <Flag className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
         <div>
@@ -181,7 +181,7 @@ const FeatureFlagsPanel = () => {
       {tableMissing && (
         <div
           className="rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 px-4 py-3 text-sm text-warning-700 dark:text-warning-300 flex items-start gap-2"
-          data-testid="admin-flags-table-missing"
+          data-test-id="admin-flags-table-missing"
         >
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>
@@ -216,7 +216,7 @@ const FeatureFlagsPanel = () => {
             {rows.map((row) => {
               const masterOff = row.enabled === false;
               return (
-                <tr key={row.key} data-testid={`admin-flag-row-${row.key}`} className="bg-white dark:bg-gray-800">
+                <tr key={row.key} data-test-id={`admin-flag-row-${row.key}`} className="bg-white dark:bg-gray-800">
                   <td className="sticky left-0 z-10 bg-white dark:bg-gray-800 px-4 py-3 max-w-xs">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{row.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{row.description}</div>
@@ -253,7 +253,7 @@ const FeatureFlagsPanel = () => {
                       type="button"
                       disabled={tableMissing || !dirty[row.key] || savingKey === row.key}
                       onClick={() => save(row)}
-                      data-testid={`admin-flag-save-${row.key}`}
+                      data-test-id={`admin-flag-save-${row.key}`}
                       className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                         dirty[row.key] && !tableMissing
                           ? "btn-gradient"

@@ -315,7 +315,7 @@ const Billing = () => {
           {subscription?.status === "trialing" && (
             <div
               className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-6"
-              data-testid="billing-trial-banner"
+              data-test-id="billing-trial-banner"
             >
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-start space-x-3">
@@ -341,7 +341,7 @@ const Billing = () => {
                     }
                   }}
                   className="py-2 px-4 border border-amber-300 dark:border-amber-600 rounded-md text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40"
-                  data-testid="billing-trial-cancel-btn"
+                  data-test-id="billing-trial-cancel-btn"
                 >
                   Manage or cancel
                 </button>
@@ -464,12 +464,12 @@ const Billing = () => {
                     </h2>
 
                     {paymentMethods.length > 0 ? (
-                      <div className="space-y-3" data-testid="billing-payment-methods-list">
+                      <div className="space-y-3" data-test-id="billing-payment-methods-list">
                         {paymentMethods.map((pm) => (
                           <div
                             key={pm.id}
                             className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700"
-                            data-testid={`billing-payment-method-${pm.id}`}
+                            data-test-id={`billing-payment-method-${pm.id}`}
                           >
                             <div className="flex items-center gap-4">
                               <div className="p-2 bg-white dark:bg-gray-600 rounded-md shadow-sm">
@@ -493,7 +493,7 @@ const Billing = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8" data-testid="billing-no-payment-method">
+                      <div className="text-center py-8" data-test-id="billing-no-payment-method">
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                           <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                         </div>
@@ -508,7 +508,7 @@ const Billing = () => {
                         onClick={handleOpenPortal}
                         disabled={portalLoading}
                         className="inline-flex items-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-                        data-testid="billing-update-payment-btn"
+                        data-test-id="billing-update-payment-btn"
                       >
                         {portalLoading ? (
                           <>
@@ -643,7 +643,7 @@ const Billing = () => {
                                   ? `bg-${plan.color}-600 dark:bg-${plan.color}-700 text-white hover:bg-${plan.color}-700 dark:hover:bg-${plan.color}-600`
                                   : `border border-${plan.color}-600 dark:border-${plan.color}-400 text-${plan.color}-600 dark:text-${plan.color}-400 hover:bg-${plan.color}-50 dark:hover:bg-${plan.color}-900/20`
                               }`}
-                              data-testid={`billing-plan-select-${plan.id}-btn`}
+                              data-test-id={`billing-plan-select-${plan.id}-btn`}
                             >
                               {checkoutLoading && selectedPlan === plan.id ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -678,7 +678,7 @@ const Billing = () => {
                         onClick={handleOpenPortal}
                         disabled={portalLoading}
                         className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
-                        data-testid="billing-invoices-portal-btn"
+                        data-test-id="billing-invoices-portal-btn"
                       >
                         {portalLoading ? (
                           <>
@@ -703,7 +703,7 @@ const Billing = () => {
                           </div>
                           <div className="ml-4">
                             <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Total Paid</p>
-                            <p className="text-2xl font-bold text-blue-900 dark:text-blue-200" data-testid="invoices-total-paid">
+                            <p className="text-2xl font-bold text-blue-900 dark:text-blue-200" data-test-id="invoices-total-paid">
                               $
                               {userInvoices
                                 .filter((inv) => inv.status === "paid")
@@ -721,7 +721,7 @@ const Billing = () => {
                           </div>
                           <div className="ml-4">
                             <p className="text-sm font-medium text-green-900 dark:text-green-200">Invoices Paid</p>
-                            <p className="text-2xl font-bold text-green-900 dark:text-green-200" data-testid="invoices-paid-count">
+                            <p className="text-2xl font-bold text-green-900 dark:text-green-200" data-test-id="invoices-paid-count">
                               {userInvoices.filter((inv) => inv.status === "paid").length}
                             </p>
                           </div>
@@ -735,7 +735,7 @@ const Billing = () => {
                           </div>
                           <div className="ml-4">
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Next Invoice</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="invoices-next-date">
+                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-test-id="invoices-next-date">
                               {subscription?.current_period_end
                                 ? new Date(subscription.current_period_end).toLocaleDateString()
                                 : "N/A"}
@@ -747,11 +747,11 @@ const Billing = () => {
 
                     {/* Invoice Table */}
                     {isLoading ? (
-                      <div className="text-center py-12" data-testid="invoices-loading-spinner">
+                      <div className="text-center py-12" data-test-id="invoices-loading-spinner">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
                       </div>
                     ) : userInvoices.length > 0 ? (
-                      <div className="overflow-x-auto" data-testid="invoices-table">
+                      <div className="overflow-x-auto" data-test-id="invoices-table">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                           <thead className="bg-gray-50 dark:bg-gray-700">
                             <tr>
@@ -767,10 +767,10 @@ const Billing = () => {
                               <tr
                                 key={inv.id}
                                 className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                                data-testid={`invoice-row-${inv.id}`}
+                                data-test-id={`invoice-row-${inv.id}`}
                               >
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100" data-testid={`invoice-number-${inv.id}`}>
+                                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100" data-test-id={`invoice-number-${inv.id}`}>
                                     {inv.invoice_number || inv.stripe_invoice_id || `INV-${inv.id.slice(0, 8).toUpperCase()}`}
                                   </div>
                                 </td>
@@ -780,7 +780,7 @@ const Billing = () => {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 capitalize">
                                   {subscription?.subscription_plans?.slug ?? "—"} subscription
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100" data-testid={`invoice-amount-${inv.id}`}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100" data-test-id={`invoice-amount-${inv.id}`}>
                                   ${(parseFloat(inv.total_amount) || 0).toFixed(2)}{" "}
                                   <span className="text-xs text-gray-400 uppercase">{inv.currency}</span>
                                 </td>
@@ -793,7 +793,7 @@ const Billing = () => {
                                         ? "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200"
                                         : "bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200"
                                     }`}
-                                    data-testid={`invoice-status-${inv.id}`}
+                                    data-test-id={`invoice-status-${inv.id}`}
                                   >
                                     {inv.status === "paid" ? "Paid" : inv.status}
                                   </span>
@@ -804,7 +804,7 @@ const Billing = () => {
                         </table>
                       </div>
                     ) : (
-                      <div className="text-center py-12" data-testid="invoices-empty-state">
+                      <div className="text-center py-12" data-test-id="invoices-empty-state">
                         <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                           <Calendar className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                         </div>
@@ -944,7 +944,7 @@ const Billing = () => {
             <ModalPortal>
             <div
               className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-[9999]"
-              data-testid="billing-payment-modal"
+              data-test-id="billing-payment-modal"
             >
               <div className="relative top-20 mx-auto p-5 border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
                 <div className="mt-3">
@@ -955,7 +955,7 @@ const Billing = () => {
                     <button
                       onClick={handlePaymentCancel}
                       className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                      data-testid="billing-payment-modal-close-btn"
+                      data-test-id="billing-payment-modal-close-btn"
                     >
                       ✕
                     </button>

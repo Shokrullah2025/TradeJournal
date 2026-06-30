@@ -62,7 +62,7 @@ const TurnstileWidget = ({ siteKey, theme, onVerify, onExpire }) => {
 
   if (!siteKey) return null;
 
-  return <div ref={containerRef} data-testid="contact-captcha" className="mt-5" />;
+  return <div ref={containerRef} data-test-id="contact-captcha" className="mt-5" />;
 };
 
 TurnstileWidget.propTypes = {

@@ -113,11 +113,11 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
 
   return (
     <ModalPortal>
-    <div className="fixed inset-0 z-[9999] flex" data-testid="admin-user-detail-modal">
+    <div className="fixed inset-0 z-[9999] flex" data-test-id="admin-user-detail-modal">
       <div
         className="flex-1 bg-gray-900/60 backdrop-blur-sm"
         onClick={onClose}
-        data-testid="admin-user-detail-backdrop"
+        data-test-id="admin-user-detail-backdrop"
       />
       <aside
         className="w-screen max-w-md bg-white dark:bg-gray-800 shadow-xl h-full overflow-y-auto animate-slide-up"
@@ -131,7 +131,7 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
             onClick={onClose}
             autoFocus
             className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-            data-testid="admin-user-detail-close-btn"
+            data-test-id="admin-user-detail-close-btn"
             aria-label="Close"
           >
             <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -139,11 +139,11 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20" data-testid="admin-user-detail-loading-spinner">
+          <div className="flex items-center justify-center py-20" data-test-id="admin-user-detail-loading-spinner">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
           </div>
         ) : error ? (
-          <div className="p-5" data-testid="admin-user-detail-error">
+          <div className="p-5" data-test-id="admin-user-detail-error">
             <div className="rounded-lg bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 px-4 py-3 text-sm text-danger-700 dark:text-danger-300">
               {error}
             </div>
@@ -175,7 +175,7 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
                   className="select w-full"
                   value={profile?.role ?? "user"}
                   disabled={saving}
-                  data-testid="admin-user-role-select"
+                  data-test-id="admin-user-role-select"
                   onChange={(e) => {
                     const role = e.target.value;
                     onUpdate(userId, { role }).then((ok) => {
@@ -194,7 +194,7 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
                   className="select w-full"
                   value={profile?.status ?? "active"}
                   disabled={saving}
-                  data-testid="admin-user-status-select"
+                  data-test-id="admin-user-status-select"
                   onChange={(e) => {
                     const status = e.target.value;
                     onUpdate(userId, { status }).then((ok) => {
@@ -249,7 +249,7 @@ const UserDetailDrawer = ({ userId, onClose, onUpdate, saving }) => {
               {activity.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">No recorded activity.</p>
               ) : (
-                <ul className="space-y-2" data-testid="admin-user-activity-list">
+                <ul className="space-y-2" data-test-id="admin-user-activity-list">
                   {activity.map((a) => (
                     <li key={a.id} className="flex items-center justify-between text-sm">
                       <span className="text-gray-900 dark:text-gray-100">{a.action}</span>

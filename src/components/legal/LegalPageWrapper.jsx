@@ -21,7 +21,7 @@ const LegalPageWrapper = ({ title, effectiveDate, lastUpdated, children, slug })
   return (
     <div
       className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-      data-testid={`legal-page-${slug}`}
+      data-test-id={`legal-page-${slug}`}
     >
       {/* Content — SiteLayout already owns the page <main> landmark, so this
           is a plain container to avoid a nested/duplicate <main>. */}
@@ -30,12 +30,12 @@ const LegalPageWrapper = ({ title, effectiveDate, lastUpdated, children, slug })
         <div className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
           <h1
             className="text-3xl font-bold text-gray-900 dark:text-white mb-2"
-            data-testid="legal-page-title"
+            data-test-id="legal-page-title"
           >
             {title}
           </h1>
           <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
-            <span data-testid="legal-page-effective-date">
+            <span data-test-id="legal-page-effective-date">
               Effective date: {effectiveDate}
             </span>
             {lastUpdated && lastUpdated !== effectiveDate && (

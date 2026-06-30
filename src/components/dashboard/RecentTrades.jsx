@@ -23,11 +23,11 @@ const RecentTrades = ({ trades }) => {
 
   if (trades.length === 0) {
     return (
-      <div className="card w-full flex-1 flex flex-col" data-testid="recent-trades-card">
+      <div className="card w-full flex-1 flex flex-col" data-test-id="recent-trades-card">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Recent Trades
         </h3>
-        <div className="text-center py-8" data-testid="recent-trades-empty-state">
+        <div className="text-center py-8" data-test-id="recent-trades-empty-state">
           <Clock className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">No trades yet</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
@@ -43,7 +43,7 @@ const RecentTrades = ({ trades }) => {
     // wrapper — its right edge lines up with the Cumulative P&L card above.
     <div
       className="card w-full flex-1 flex flex-col"
-      data-testid="recent-trades-card"
+      data-test-id="recent-trades-card"
     >
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-5">
         Recent Trades
@@ -54,7 +54,7 @@ const RecentTrades = ({ trades }) => {
           AI Insights card, leaving empty space below like the other cards. */}
       <div
         className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-        data-testid="recent-trades-list"
+        data-test-id="recent-trades-list"
       >
         {trades.map((trade) => {
           const isWin = trade.pnl > 0;
@@ -73,7 +73,7 @@ const RecentTrades = ({ trades }) => {
                   openTrade(trade.id);
                 }
               }}
-              data-testid={`trade-row-${trade.id}`}
+              data-test-id={`trade-row-${trade.id}`}
               className={`group relative flex flex-col rounded-xl border p-4 cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                 isWin
                   ? "border-success-200 dark:border-success-800/60 bg-success-50/50 dark:bg-success-900/15"
@@ -133,7 +133,7 @@ const RecentTrades = ({ trades }) => {
                       ? "text-success-600 dark:text-success-400"
                       : "text-danger-600 dark:text-danger-400"
                   }`}
-                  data-testid={`trade-row-pnl-${trade.id}`}
+                  data-test-id={`trade-row-pnl-${trade.id}`}
                 >
                   {isWin ? "+" : ""}${trade.pnl.toLocaleString()}
                 </span>

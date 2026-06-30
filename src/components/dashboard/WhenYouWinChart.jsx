@@ -76,7 +76,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
     return (
       <div
         className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm text-center"
-        data-testid="when-you-win-empty-state"
+        data-test-id="when-you-win-empty-state"
       >
         <div>
           <div className="font-medium mb-1">No trading data</div>
@@ -98,7 +98,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
     <div
       ref={wrapRef}
       className="relative flex-1 min-h-0 w-full"
-      data-testid="when-you-win-chart"
+      data-test-id="when-you-win-chart"
     >
       {/* Same gentle fade-in as the Daily P&L chart — cells ease in, lightly
           staggered so the heatmap settles in rather than popping on at once. */}
@@ -142,7 +142,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
                     animation: "chartFadeIn 0.9s ease-out both",
                     animationDelay: `${Math.min(order * 16, 520)}ms`,
                   }}
-                  data-testid={`when-you-win-cell-${dayIdx}-${hr}`}
+                  data-test-id={`when-you-win-cell-${dayIdx}-${hr}`}
                 />
               );
             })

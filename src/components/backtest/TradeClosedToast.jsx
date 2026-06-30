@@ -59,7 +59,7 @@ export default function TradeClosedToast({
         borderColor: theme.border,
         borderLeft: `3px solid ${isWin ? "#089981" : "#f23645"}`,
       }}
-      data-testid="trade-closed-toast"
+      data-test-id="trade-closed-toast"
     >
       {/* Main row */}
       <div className="flex items-center justify-between px-3 py-2.5">
@@ -80,7 +80,7 @@ export default function TradeClosedToast({
             <span
               className="text-sm font-bold"
               style={{ color: isWin ? "#089981" : "#f23645" }}
-              data-testid="trade-toast-pnl"
+              data-test-id="trade-toast-pnl"
             >
               {isWin ? "+" : ""}${trade.pnl.toFixed(2)}
               {rStr && (
@@ -97,7 +97,7 @@ export default function TradeClosedToast({
             onClick={() => { onOpenAnalytics(); onClose(); }}
             className="text-xs px-2 py-1 rounded font-medium"
             style={{ background: "#e8f0fe", color: "#1E53E5" }}
-            data-testid="trade-toast-stats-btn"
+            data-test-id="trade-toast-stats-btn"
           >
             Stats
           </button>
@@ -124,7 +124,7 @@ export default function TradeClosedToast({
             onKeyDown={(e) => { if (e.key === "Enter") handleSaveNote(); }}
             className="flex-1 text-xs px-2 py-1 rounded border outline-none"
             style={{ background: theme.surface, borderColor: theme.border, color: theme.text }}
-            data-testid="trade-toast-note-input"
+            data-test-id="trade-toast-note-input"
           />
           {saved ? (
             <span className="text-xs px-2 py-1 rounded" style={{ color: "#089981" }}>✓</span>
@@ -132,7 +132,7 @@ export default function TradeClosedToast({
             <button
               onClick={handleSaveNote}
               className="btn-gradient text-xs px-2 py-1 rounded font-semibold"
-              data-testid="trade-toast-note-save-btn"
+              data-test-id="trade-toast-note-save-btn"
             >
               Save
             </button>

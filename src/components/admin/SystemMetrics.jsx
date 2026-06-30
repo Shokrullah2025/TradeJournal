@@ -36,7 +36,7 @@ const CHART_GRID = "#e5e7eb";
 const AXIS = "#6b7280";
 
 const ChartCard = ({ title, subtitle, children, testId }) => (
-  <div className="card flex flex-col" data-testid={testId}>
+  <div className="card flex flex-col" data-test-id={testId}>
     <div className="mb-3">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
       {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
@@ -131,13 +131,13 @@ const SystemMetrics = () => {
   const totals = useMemo(() => summarizeSeries(series), [series]);
 
   return (
-    <div className="space-y-6" data-testid="admin-system-metrics">
+    <div className="space-y-6" data-test-id="admin-system-metrics">
       {/* Range selector */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Operational metrics derived from live activity over the selected window.
         </p>
-        <div className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5" data-testid="admin-metrics-range-toggle">
+        <div className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5" data-test-id="admin-metrics-range-toggle">
           {RANGE_OPTIONS.map(({ value, label }) => {
             const active = days === value;
             return (
@@ -145,7 +145,7 @@ const SystemMetrics = () => {
                 key={value}
                 type="button"
                 onClick={() => setDays(value)}
-                data-testid={`admin-metrics-range-${label}-btn`}
+                data-test-id={`admin-metrics-range-${label}-btn`}
                 className={
                   active
                     ? "text-xs font-medium px-3 py-1 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
@@ -162,7 +162,7 @@ const SystemMetrics = () => {
       {error && (
         <div
           className="rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 px-4 py-3 text-sm text-warning-700 dark:text-warning-300"
-          data-testid="admin-metrics-error"
+          data-test-id="admin-metrics-error"
         >
           {error}
         </div>
@@ -184,7 +184,7 @@ const SystemMetrics = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16" data-testid="admin-metrics-loading-spinner">
+        <div className="flex items-center justify-center py-16" data-test-id="admin-metrics-loading-spinner">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
         </div>
       ) : (

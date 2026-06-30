@@ -369,7 +369,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 ? "grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
                 : "grid grid-cols-4 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40"
             }
-            data-testid="history-modal-edge-stats"
+            data-test-id="history-modal-edge-stats"
           >
             {[
               {
@@ -406,20 +406,20 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 }
               >
                 <p className={`${isMobile ? "text-[11px] truncate" : "text-xs"} text-gray-500 dark:text-gray-400 mb-0.5`}>{label}</p>
-                <p className={`text-sm font-bold ${cls}`} data-testid={testId}>{value}</p>
+                <p className={`text-sm font-bold ${cls}`} data-test-id={testId}>{value}</p>
               </div>
             ))}
           </div>
         )}
 
         {/* Editable note + custom tags */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3" data-testid="history-modal-meta-editor">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3" data-test-id="history-modal-meta-editor">
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Notes</label>
               <div className="relative" ref={noteMenuRef}>
                 <button
-                  data-testid="history-modal-note-menu-btn"
+                  data-test-id="history-modal-note-menu-btn"
                   onClick={() => setNoteMenuOpen((v) => !v)}
                   className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
                     noteMenuOpen
@@ -435,12 +435,12 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 </button>
                 {noteMenuOpen && (
                   <div
-                    data-testid="history-modal-note-menu"
+                    data-test-id="history-modal-note-menu"
                     role="menu"
                     className="absolute right-0 top-8 z-10 w-32 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg"
                   >
                     <button
-                      data-testid="history-modal-note-edit-btn"
+                      data-test-id="history-modal-note-edit-btn"
                       role="menuitem"
                       onClick={() => { setNoteEditing(true); setNoteMenuOpen(false); }}
                       className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -448,7 +448,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                       <Pencil className="w-3.5 h-3.5" /> Edit
                     </button>
                     <button
-                      data-testid="history-modal-note-delete-btn"
+                      data-test-id="history-modal-note-delete-btn"
                       role="menuitem"
                       onClick={() => { setNote(""); setNoteEditing(false); setNoteMenuOpen(false); }}
                       className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -468,7 +468,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
               />
             ) : (
               <div
-                data-testid="history-modal-note-readonly"
+                data-test-id="history-modal-note-readonly"
                 className={`${isMobile ? "max-h-24" : "max-h-40"} overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2`}
               >
                 {note ? (
@@ -489,13 +489,13 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 return (
                 <span
                   key={tag}
-                  data-testid={`history-modal-tag-${tag}`}
+                  data-test-id={`history-modal-tag-${tag}`}
                   className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium"
                   style={{ background: c.bg, color: c.text }}
                 >
                   {tag}
                   <button
-                    data-testid={`history-modal-remove-tag-${tag}`}
+                    data-test-id={`history-modal-remove-tag-${tag}`}
                     onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
                     className="hover:opacity-70"
                     aria-label={`Remove tag ${tag}`}
@@ -506,7 +506,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 );
               })}
               <input
-                data-testid="history-modal-tag-input"
+                data-test-id="history-modal-tag-input"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -521,7 +521,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
               />
               {tagInput.trim() && (
                 <button
-                  data-testid="history-modal-add-tag-btn"
+                  data-test-id="history-modal-add-tag-btn"
                   onClick={() => addTag(tagInput)}
                   className="text-xs px-2 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 font-medium"
                 >
@@ -535,7 +535,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 {suggestions.map((s) => (
                   <button
                     key={s}
-                    data-testid={`history-modal-suggested-tag-${s}`}
+                    data-test-id={`history-modal-suggested-tag-${s}`}
                     onClick={() => addTag(s)}
                     className="text-xs px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
                   >
@@ -548,7 +548,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
           {dirty && (
             <div className="flex justify-end">
               <button
-                data-testid="history-modal-save-btn"
+                data-test-id="history-modal-save-btn"
                 onClick={handleSave}
                 disabled={saving}
                 className="btn-gradient inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg disabled:opacity-60 font-medium"
@@ -638,7 +638,7 @@ function WindowTagBar({ tags = [], suggestions = [], onToggle, onAdd, theme, tes
   return (
     <div
       ref={ref}
-      data-testid={`${testIdPrefix}-tag-bar`}
+      data-test-id={`${testIdPrefix}-tag-bar`}
       className="absolute top-2 left-2 z-20 flex items-center gap-1 flex-wrap"
       style={{ maxWidth: "60%" }}
     >
@@ -647,7 +647,7 @@ function WindowTagBar({ tags = [], suggestions = [], onToggle, onAdd, theme, tes
         return (
         <span
           key={tag}
-          data-testid={`${testIdPrefix}-tag-${tag}`}
+          data-test-id={`${testIdPrefix}-tag-${tag}`}
           className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-sm"
           style={{ background: c.bg, color: c.text }}
         >
@@ -663,7 +663,7 @@ function WindowTagBar({ tags = [], suggestions = [], onToggle, onAdd, theme, tes
       {!readOnly && (
         <div className="relative">
           <button
-            data-testid={`${testIdPrefix}-tag-add-btn`}
+            data-test-id={`${testIdPrefix}-tag-add-btn`}
             onClick={() => setOpen((o) => !o)}
             title="Tag this window"
             className="inline-flex items-center justify-center w-5 h-5 rounded-full shadow-sm"
@@ -677,7 +677,7 @@ function WindowTagBar({ tags = [], suggestions = [], onToggle, onAdd, theme, tes
               style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
             >
               <input
-                data-testid={`${testIdPrefix}-tag-input`}
+                data-test-id={`${testIdPrefix}-tag-input`}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && input.trim()) { onAdd(input.trim()); setInput(""); } }}
@@ -700,7 +700,7 @@ function WindowTagBar({ tags = [], suggestions = [], onToggle, onAdd, theme, tes
                 {available.map((s) => (
                   <button
                     key={s}
-                    data-testid={`${testIdPrefix}-tag-option-${s}`}
+                    data-test-id={`${testIdPrefix}-tag-option-${s}`}
                     onClick={() => onToggle(s)}
                     className="w-full flex items-center gap-2 text-left text-xs px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
                     style={{ color: theme.text }}
@@ -1052,7 +1052,7 @@ function PositionCard({ pos, theme, tickSize, onUpdateField, onClose, trimPrice 
 
   return (
     <div
-      data-testid={`position-card-${pos.id}`}
+      data-test-id={`position-card-${pos.id}`}
       className="rounded p-2 text-xs border"
       style={{ background: theme.bg, borderColor: theme.border }}
     >
@@ -1060,7 +1060,7 @@ function PositionCard({ pos, theme, tickSize, onUpdateField, onClose, trimPrice 
         <span className="font-semibold" style={{ color: pos.side === "buy" ? "#089981" : "#f23645" }}>
           {pos.side.toUpperCase()} ×{pos.size}
         </span>
-        <span data-testid={`position-pnl-${pos.id}`} style={{ color: pos.currentPnL >= 0 ? "#089981" : "#f23645" }}>
+        <span data-test-id={`position-pnl-${pos.id}`} style={{ color: pos.currentPnL >= 0 ? "#089981" : "#f23645" }}>
           {pos.currentPnL >= 0 ? "+" : ""}${trimPrice(pos.currentPnL)}
         </span>
       </div>
@@ -1100,7 +1100,7 @@ function PositionCard({ pos, theme, tickSize, onUpdateField, onClose, trimPrice 
           <div className="flex items-center justify-between mb-1">
             <span style={{ color: theme.textMuted }}>Close amount</span>
             <span
-              data-testid={`position-close-qty-${pos.id}`}
+              data-test-id={`position-close-qty-${pos.id}`}
               className="font-semibold tabular-nums"
               style={{ color: theme.text }}
             >
@@ -1114,7 +1114,7 @@ function PositionCard({ pos, theme, tickSize, onUpdateField, onClose, trimPrice 
               return (
                 <button
                   key={p}
-                  data-testid={`position-close-preset-${p}-${pos.id}`}
+                  data-test-id={`position-close-preset-${p}-${pos.id}`}
                   onClick={() => setCloseQty(q)}
                   className="flex-1 py-0.5 rounded font-medium"
                   style={active
@@ -1128,7 +1128,7 @@ function PositionCard({ pos, theme, tickSize, onUpdateField, onClose, trimPrice 
           </div>
           <input
             type="range"
-            data-testid={`position-close-slider-${pos.id}`}
+            data-test-id={`position-close-slider-${pos.id}`}
             min="1"
             max={pos.size}
             step="1"
@@ -1141,7 +1141,7 @@ function PositionCard({ pos, theme, tickSize, onUpdateField, onClose, trimPrice 
       )}
 
       <button
-        data-testid={`position-close-btn-${pos.id}`}
+        data-test-id={`position-close-btn-${pos.id}`}
         onClick={() => onClose(pos, closeQty)}
         className="text-xs w-full text-center py-0.5 rounded"
         style={{ background: partial ? "#1E53E5" : theme.border, color: partial ? "#fff" : "#787b86" }}
@@ -3170,7 +3170,7 @@ const Backtest = () => {
             </div>
             {isMobile ? (
               <span
-                data-testid="backtest-desktop-only-note"
+                data-test-id="backtest-desktop-only-note"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 flex-shrink-0"
               >
                 <Smartphone className="w-4 h-4" />
@@ -3180,7 +3180,7 @@ const Backtest = () => {
               <button
                 onClick={() => setCurrentView("setup")}
                 className="btn-gradient flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-shrink-0"
-                data-testid="backtest-new-session-btn"
+                data-test-id="backtest-new-session-btn"
               >
                 <Plus className="w-4 h-4" />
                 New Session
@@ -3214,7 +3214,7 @@ const Backtest = () => {
               <div className="flex items-center gap-4 flex-wrap justify-center">
                 {isMobile ? (
                   <div
-                    data-testid="backtest-mobile-empty-note"
+                    data-test-id="backtest-mobile-empty-note"
                     className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700"
                   >
                     <Smartphone className="w-4 h-4 flex-shrink-0" />
@@ -3224,7 +3224,7 @@ const Backtest = () => {
                   <button
                     onClick={() => setCurrentView("setup")}
                     className="btn-gradient flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold shadow-md transition-all"
-                    data-testid="backtest-create-first-session-btn"
+                    data-test-id="backtest-create-first-session-btn"
                   >
                     <Plus className="w-4 h-4" />
                     Create First Session
@@ -3341,7 +3341,7 @@ const Backtest = () => {
               {historyEdge.stats.total > 0 && (
                 <div
                   className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-8"
-                  data-testid="history-edge-analytics"
+                  data-test-id="history-edge-analytics"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
@@ -3357,7 +3357,7 @@ const Backtest = () => {
                   {/* Cumulative equity curve across sessions */}
                   <div
                     className="rounded-lg overflow-hidden mb-4 bg-gray-50 dark:bg-gray-900"
-                    data-testid="history-edge-equity-curve"
+                    data-test-id="history-edge-equity-curve"
                   >
                     <EquityCurve
                       trades={historyEdge.trades}
@@ -3423,7 +3423,7 @@ const Backtest = () => {
                     ].map(({ label, value, color, testId }) => (
                       <div key={label} className="rounded-lg p-3 bg-gray-50 dark:bg-gray-900">
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{label}</p>
-                        <p className="text-sm font-bold" style={{ color }} data-testid={testId}>{value}</p>
+                        <p className="text-sm font-bold" style={{ color }} data-test-id={testId}>{value}</p>
                       </div>
                     ))}
                   </div>
@@ -3494,7 +3494,7 @@ const Backtest = () => {
                               return (
                               <span
                                 key={tag}
-                                data-testid={`session-card-tag-${s.id}-${tag}`}
+                                data-test-id={`session-card-tag-${s.id}-${tag}`}
                                 className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                                 style={{ background: c.bg, color: c.text }}
                               >
@@ -3538,7 +3538,7 @@ const Backtest = () => {
                       {/* Play — opens the static chart replay in a modal */}
                       {hasTrades && (
                         <button
-                          data-testid={`session-card-play-btn-${s.id}`}
+                          data-test-id={`session-card-play-btn-${s.id}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setChartModalSession(s);
@@ -3560,11 +3560,11 @@ const Backtest = () => {
               {/* Pagination — only when the list spills past a single page */}
               {sessionPageCount > 1 && (
                 <div
-                  data-testid="sessions-pagination"
+                  data-test-id="sessions-pagination"
                   className="flex items-center justify-center gap-2 mt-4"
                 >
                   <button
-                    data-testid="sessions-page-prev-btn"
+                    data-test-id="sessions-page-prev-btn"
                     onClick={() => setSessionsPage((p) => Math.max(0, p - 1))}
                     disabled={sessionsPage === 0}
                     className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -3582,7 +3582,7 @@ const Backtest = () => {
                       {Array.from({ length: sessionPageCount }, (_, i) => (
                         <button
                           key={i}
-                          data-testid={`sessions-page-btn-${i + 1}`}
+                          data-test-id={`sessions-page-btn-${i + 1}`}
                           onClick={() => setSessionsPage(i)}
                           className={`min-w-[2.25rem] h-9 px-2 rounded-lg text-sm font-medium transition-colors ${
                             i === sessionsPage
@@ -3597,7 +3597,7 @@ const Backtest = () => {
                   )}
 
                   <button
-                    data-testid="sessions-page-next-btn"
+                    data-test-id="sessions-page-next-btn"
                     onClick={() => setSessionsPage((p) => Math.min(sessionPageCount - 1, p + 1))}
                     disabled={sessionsPage >= sessionPageCount - 1}
                     className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -3623,7 +3623,7 @@ const Backtest = () => {
       {chartModalSession && (
         <ModalPortal>
         <div
-          data-testid="history-chart-modal"
+          data-test-id="history-chart-modal"
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50"
           onClick={() => setChartModalSession(null)}
         >
@@ -3649,7 +3649,7 @@ const Backtest = () => {
                 )}
               </div>
               <button
-                data-testid="history-chart-modal-close-btn"
+                data-test-id="history-chart-modal-close-btn"
                 onClick={() => setChartModalSession(null)}
                 className="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
                 aria-label="Close chart"
@@ -3937,14 +3937,14 @@ const Backtest = () => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     How far back to test
                   </label>
-                  <div className="flex flex-wrap gap-2" data-testid="date-range-presets">
+                  <div className="flex flex-wrap gap-2" data-test-id="date-range-presets">
                     {DATE_RANGE_PRESETS.map(({ key, label }) => {
                       const isActive = dateRangePreset === key;
                       return (
                         <button
                           key={key}
                           type="button"
-                          data-testid={`date-range-preset-${key}`}
+                          data-test-id={`date-range-preset-${key}`}
                           onClick={() => applyDateRangePreset(key)}
                           className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
                             isActive
@@ -3966,7 +3966,7 @@ const Backtest = () => {
                         </label>
                         <input
                           type="date"
-                          data-testid="date-range-start-input"
+                          data-test-id="date-range-start-input"
                           value={startDate}
                           max={endDate || undefined}
                           onChange={(e) => setStartDate(e.target.value)}
@@ -3979,7 +3979,7 @@ const Backtest = () => {
                         </label>
                         <input
                           type="date"
-                          data-testid="date-range-end-input"
+                          data-test-id="date-range-end-input"
                           value={endDate}
                           min={startDate || undefined}
                           onChange={(e) => setEndDate(e.target.value)}
@@ -3989,7 +3989,7 @@ const Backtest = () => {
                     </div>
                   )}
 
-                  <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="date-range-preview">
+                  <p className="text-sm text-gray-500 dark:text-gray-400" data-test-id="date-range-preview">
                     Testing{" "}
                     <span className="font-semibold text-gray-900 dark:text-white">{formatRangeDate(startDate)}</span>
                     {" → "}
@@ -4174,7 +4174,7 @@ const Backtest = () => {
             >
               <Layers className="w-3 h-3 flex-shrink-0" style={{ color: formTf ? "#1E53E5" : theme.textMuted }} />
               <select
-                data-testid="backtest-form-tf-select"
+                data-test-id="backtest-form-tf-select"
                 value={formTf ?? ""}
                 onChange={(e) => handleFormTfChange(e.target.value || null)}
                 disabled={isLoadingData || isLoadingFormData || !chartData.length}
@@ -4190,7 +4190,7 @@ const Backtest = () => {
               </select>
             </div>
             <button
-              data-testid="backtest-prev-btn"
+              data-test-id="backtest-prev-btn"
               onClick={handleStepBack}
               disabled={isLoadingData || !chartData.length || currentCandle <= 0}
               title="Previous candle"
@@ -4209,7 +4209,7 @@ const Backtest = () => {
               Prev
             </button>
             <button
-              data-testid="backtest-play-btn"
+              data-test-id="backtest-play-btn"
               onClick={handlePlay}
               disabled={isLoadingData || !chartData.length || (!isPlaying && currentCandle >= chartData.length - 1)}
               title={isPlaying ? "Pause" : currentCandle >= chartData.length - 1 ? "At last candle — use the date picker or Prev to rewind" : "Play forward"}
@@ -4219,7 +4219,7 @@ const Backtest = () => {
               {isPlaying ? <Pause className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
             </button>
             <button
-              data-testid="backtest-next-btn"
+              data-test-id="backtest-next-btn"
               onClick={handleStepForward}
               disabled={isLoadingData || !chartData.length || currentCandle >= chartData.length - 1}
               title="Next candle"
@@ -4238,7 +4238,7 @@ const Backtest = () => {
               <SkipForward className="w-3 h-3" />
             </button>
             <select
-              data-testid="backtest-speed-select"
+              data-test-id="backtest-speed-select"
               value={speed}
               onChange={(e) => setSpeed(Number(e.target.value))}
               title="Playback speed"
@@ -4252,7 +4252,7 @@ const Backtest = () => {
               <option value={8}>8×</option>
             </select>
             <button
-              data-testid="backtest-bar-replay-btn"
+              data-test-id="backtest-bar-replay-btn"
               onClick={() => setBarReplayMode((v) => !v)}
               disabled={isLoadingData || !chartData.length}
               title={barReplayMode ? "Bar replay ON — click chart to seek" : "Bar replay — click to activate, then click chart to seek"}
@@ -4270,7 +4270,7 @@ const Backtest = () => {
             {/* Seek to date — calendar toggle opens a dropdown with the date picker + Cut */}
             <div ref={seekDatePickerRef} className="relative flex-shrink-0">
               <button
-                data-testid="backtest-seek-date-btn"
+                data-test-id="backtest-seek-date-btn"
                 onClick={() => setShowSeekDatePicker((v) => !v)}
                 disabled={isLoadingData || !chartData.length}
                 title="Go to date — cut the chart at a date for replay"
@@ -4286,12 +4286,12 @@ const Backtest = () => {
               </button>
               {showSeekDatePicker && (
                 <div
-                  data-testid="backtest-seek-date-dropdown"
+                  data-test-id="backtest-seek-date-dropdown"
                   className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 flex items-center gap-1.5 rounded-lg shadow-xl border px-2.5 py-2"
                   style={{ background: theme.surface, borderColor: theme.border }}
                 >
                   <input
-                    data-testid="backtest-seek-date-input"
+                    data-test-id="backtest-seek-date-input"
                     type="date"
                     value={seekDate}
                     onChange={(e) => setSeekDate(e.target.value)}
@@ -4304,7 +4304,7 @@ const Backtest = () => {
                     }}
                   />
                   <button
-                    data-testid="backtest-cut-btn"
+                    data-test-id="backtest-cut-btn"
                     onClick={() => { handleCut(); setShowSeekDatePicker(false); }}
                     disabled={isLoadingData || !chartData.length || !seekDate}
                     title="Cut chart at selected date — hides future candles for replay"
@@ -4539,7 +4539,7 @@ const Backtest = () => {
 
           {/* Undo / Redo — to the right of Indicators, slightly spaced out */}
           <button
-            data-testid="backtest-undo-btn"
+            data-test-id="backtest-undo-btn"
             onClick={undo}
             disabled={!canUndo}
             title="Undo last drawing"
@@ -4551,7 +4551,7 @@ const Backtest = () => {
             <Undo2 className="w-3.5 h-3.5" />
           </button>
           <button
-            data-testid="backtest-redo-btn"
+            data-test-id="backtest-redo-btn"
             onClick={redo}
             disabled={!canRedo}
             title="Redo drawing"
@@ -4904,7 +4904,7 @@ const Backtest = () => {
                       <>
                         <div style={{ width: 24, height: 1, background: theme.border, margin: "2px 0" }} />
                         <button
-                          data-testid="drawing-clear-all-btn"
+                          data-test-id="drawing-clear-all-btn"
                           onClick={() => setShowClearDrawingsConfirm(true)}
                           title="Delete all drawings"
                           style={{
@@ -4952,7 +4952,7 @@ const Backtest = () => {
                   Selecting a tool here does NOT highlight the left panel button. */}
               {favDrawingTools.length > 0 && !isLoadingData && chartData.length > 0 && (
                 <div
-                  data-testid="fav-tools-floating-bar"
+                  data-test-id="fav-tools-floating-bar"
                   className={favBarPos ? "" : "absolute top-2 left-1/2 -translate-x-1/2"}
                   style={{
                     position: favBarPos ? "fixed" : undefined,
@@ -5021,7 +5021,7 @@ const Backtest = () => {
                           }}
                         >
                           <button
-                            data-testid={`fav-tool-${mode}-btn`}
+                            data-test-id={`fav-tool-${mode}-btn`}
                             onClick={() => { setDrawingMode(mode); setDrawingModeSource("floating"); setSelectedDrawingIds([]); }}
                             title={title}
                             style={{
@@ -5247,7 +5247,7 @@ const Backtest = () => {
                   <div className="flex-1 p-3 space-y-4 overflow-y-auto">
                     {/* Risk per trade — percentage-based risk budget */}
                     <div
-                      data-testid="order-risk-card"
+                      data-test-id="order-risk-card"
                       className="rounded-lg border p-3"
                       style={{
                         borderColor: riskOn ? "#1E53E5" : theme.border,
@@ -5257,7 +5257,7 @@ const Backtest = () => {
                     >
                       <div className="flex items-center justify-end mb-2">
                         <button
-                          data-testid="order-risk-toggle"
+                          data-test-id="order-risk-toggle"
                           onClick={() => setRiskOn((v) => !v)}
                           className="w-10 h-5 rounded-full transition-colors relative flex-shrink-0"
                           style={{ background: riskOn ? "#1E53E5" : (isDark ? "#363c4e" : "#d1d4dc") }}
@@ -5271,7 +5271,7 @@ const Backtest = () => {
 
                       <div className="flex items-baseline gap-2 mb-2.5">
                         <span
-                          data-testid="order-risk-pct-value"
+                          data-test-id="order-risk-pct-value"
                           className="text-2xl font-extrabold tabular-nums leading-none"
                           style={{ color: "#1E53E5" }}
                         >
@@ -5286,7 +5286,7 @@ const Backtest = () => {
                         {[0.25, 0.5, 1, 2].map((p) => (
                           <button
                             key={p}
-                            data-testid={`order-risk-preset-${p}`}
+                            data-test-id={`order-risk-preset-${p}`}
                             onClick={() => setRiskPct(p)}
                             disabled={!riskOn}
                             className="py-1 text-xs font-bold rounded border tabular-nums transition-colors disabled:cursor-not-allowed"
@@ -5303,7 +5303,7 @@ const Backtest = () => {
 
                       <input
                         type="range"
-                        data-testid="order-risk-slider"
+                        data-test-id="order-risk-slider"
                         min="0.1"
                         max="5"
                         step="0.05"
@@ -5321,7 +5321,7 @@ const Backtest = () => {
                       <div className="flex rounded border" style={{ borderColor: "#1E53E5", background: theme.bg }}>
                         <input
                           type="number"
-                          data-testid="order-units-input"
+                          data-test-id="order-units-input"
                           value={orderSize}
                           onChange={(e) => setOrderSize(Math.max(1, Number(e.target.value)))}
                           min="1"
@@ -5473,7 +5473,7 @@ const Backtest = () => {
                       {useStopLoss && orderCalc.riskOnStop > 0 && (
                         <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
                           <span>Risk on stop</span>
-                          <span className="font-semibold" data-testid="order-risk-on-stop" style={{ color: "#1E53E5" }}>
+                          <span className="font-semibold" data-test-id="order-risk-on-stop" style={{ color: "#1E53E5" }}>
                             ${Math.round(orderCalc.riskOnStop).toLocaleString()}
                           </span>
                         </div>
@@ -5481,7 +5481,7 @@ const Backtest = () => {
                       {useTakeProfit && orderCalc.rewardAtTgt > 0 && (
                         <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
                           <span>Reward at target</span>
-                          <span className="font-semibold" data-testid="order-reward-at-target" style={{ color: "#089981" }}>
+                          <span className="font-semibold" data-test-id="order-reward-at-target" style={{ color: "#089981" }}>
                             ${Math.round(orderCalc.rewardAtTgt).toLocaleString()}
                           </span>
                         </div>
@@ -5489,7 +5489,7 @@ const Backtest = () => {
                       {orderCalc.rr != null && (
                         <div className="flex justify-between text-xs mt-1" style={{ color: "#787b86" }}>
                           <span>Risk / reward</span>
-                          <span className="font-semibold" data-testid="order-rr" style={{ color: theme.text }}>
+                          <span className="font-semibold" data-test-id="order-rr" style={{ color: theme.text }}>
                             1 : {orderCalc.rr.toFixed(1)}
                           </span>
                         </div>
@@ -5807,7 +5807,7 @@ const Backtest = () => {
                 style={tzBox ? { left: tzBox.left, width: tzBox.width } : undefined}
               >
                 <button
-                  data-testid="backtest-timezone-select"
+                  data-test-id="backtest-timezone-select"
                   onClick={() => setShowTzDropdown((v) => !v)}
                   title="Chart timezone"
                   className={`flex items-center justify-center gap-0.5 text-[11px] leading-none rounded px-1.5 py-1 border outline-none cursor-pointer transition-colors ${tzBox ? "w-full" : ""}`}
@@ -5850,7 +5850,7 @@ const Backtest = () => {
                   the time axis. Resets every open window's zoom together. */}
               {!isLoadingData && chartData.length > 0 && (
                 <button
-                  data-testid="backtest-reset-btn"
+                  data-test-id="backtest-reset-btn"
                   onClick={handleReset}
                   title="Reset zoom for all windows"
                   className="absolute bottom-9 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2.5 py-1 text-xs rounded-full border shadow font-medium transition-colors"
@@ -5880,7 +5880,7 @@ const Backtest = () => {
           {showClearDrawingsConfirm && (
             <ModalPortal>
             <div
-              data-testid="clear-drawings-modal"
+              data-test-id="clear-drawings-modal"
               className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
               onClick={() => setShowClearDrawingsConfirm(false)}
             >
@@ -5897,7 +5897,7 @@ const Backtest = () => {
                 </p>
                 <div className="flex justify-end gap-2">
                   <button
-                    data-testid="clear-drawings-cancel-btn"
+                    data-test-id="clear-drawings-cancel-btn"
                     onClick={() => setShowClearDrawingsConfirm(false)}
                     className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
                     style={{ background: theme.bg, color: theme.text }}
@@ -5905,7 +5905,7 @@ const Backtest = () => {
                     Cancel
                   </button>
                   <button
-                    data-testid="clear-drawings-confirm-btn"
+                    data-test-id="clear-drawings-confirm-btn"
                     onClick={() => {
                       pushDrawings([]);
                       setSelectedDrawingIds([]);
@@ -5970,7 +5970,7 @@ const Backtest = () => {
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = showEdgeAnalytics ? "#1E53E5" : theme.text)}
                   onMouseLeave={(e) => (e.currentTarget.style.color = showEdgeAnalytics ? "#1E53E5" : theme.textMuted)}
-                  data-testid="edge-analytics-toggle-btn"
+                  data-test-id="edge-analytics-toggle-btn"
                 >
                   <BarChart2 className="w-3.5 h-3.5" />
                 </button>
@@ -6005,7 +6005,7 @@ const Backtest = () => {
               <button
                 onClick={() => setShowOpenPositions((v) => !v)}
                 className="w-full flex items-center justify-between mb-2"
-                data-testid="open-positions-toggle"
+                data-test-id="open-positions-toggle"
               >
                 <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#b2b5be" }}>
                   Open Positions{positions.length > 0 ? ` (${positions.length})` : ""}
@@ -6042,7 +6042,7 @@ const Backtest = () => {
               <button
                 onClick={() => setShowTradeHistory((v) => !v)}
                 className="w-full flex items-center justify-between mb-2 flex-shrink-0"
-                data-testid="trade-history-toggle"
+                data-test-id="trade-history-toggle"
               >
                 <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#b2b5be" }}>
                   Trade History{trades.length > 0 ? ` (${trades.length})` : ""}

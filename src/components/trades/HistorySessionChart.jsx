@@ -102,7 +102,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
   const visibleCount = useMemo(() => candles.length, [candles]);
 
   return (
-    <div data-testid="history-session-chart" className="p-4">
+    <div data-test-id="history-session-chart" className="p-4">
       {/* Timeframe toggle — restricted to 15m / 1h / 4h, only once opened */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
@@ -114,7 +114,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
             return (
               <span
                 key={tag}
-                data-testid={`history-chart-tag-${tag}`}
+                data-test-id={`history-chart-tag-${tag}`}
                 className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                 style={{ background: c.bg, color: c.text }}
               >
@@ -128,7 +128,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
             {VIEWER_TFS.map((t) => (
               <button
                 key={t}
-                data-testid={`history-chart-tf-${t}`}
+                data-test-id={`history-chart-tf-${t}`}
                 onClick={() => setTf(t)}
                 className={`px-3 py-1 text-xs font-semibold transition-colors ${
                   tf === t
@@ -145,13 +145,13 @@ function HistorySessionChart({ session, autoOpen = false }) {
 
       {/* Chart area — fixed height, locked (no pan/zoom past the window) */}
       <div
-        data-testid="history-chart-container"
+        data-test-id="history-chart-container"
         className="relative h-[560px] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
       >
         {!opened ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <button
-              data-testid="history-chart-play-btn"
+              data-test-id="history-chart-play-btn"
               onClick={() => setOpened(true)}
               className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 text-white hover:bg-blue-700 shadow-lg transition-colors"
               aria-label="Load session chart"
@@ -164,7 +164,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
           </div>
         ) : loading ? (
           <div
-            data-testid="history-chart-loading"
+            data-test-id="history-chart-loading"
             className="absolute inset-0 flex flex-col items-center justify-center text-gray-400"
           >
             <Loader2 className="w-6 h-6 animate-spin mb-2" />
@@ -172,7 +172,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
           </div>
         ) : error ? (
           <div
-            data-testid="history-chart-empty"
+            data-test-id="history-chart-empty"
             className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs text-gray-400"
           >
             {error}

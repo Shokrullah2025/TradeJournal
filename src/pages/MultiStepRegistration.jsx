@@ -133,14 +133,14 @@ const MultiStepRegistration = () => {
         {isSubmitting && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 backdrop-blur-[2px]"
-            data-testid="register-loading-overlay"
+            data-test-id="register-loading-overlay"
             role="status"
             aria-live="polite"
           >
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-2xl">
               <div
                 className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
-                data-testid="register-loading-spinner"
+                data-test-id="register-loading-spinner"
               />
               <p className="text-sm font-medium text-gray-700">
                 Creating your account…
@@ -429,7 +429,7 @@ const MultiStepRegistration = () => {
                     id="agreeToTerms"
                     type="checkbox"
                     className="h-4 w-4 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    data-testid="register-form-terms-checkbox"
+                    data-test-id="register-form-terms-checkbox"
                   />
                   <label
                     htmlFor="agreeToTerms"
@@ -456,7 +456,7 @@ const MultiStepRegistration = () => {
                   </label>
                 </div>
                 {errors.agreeToTerms && (
-                  <p className="mt-1 text-sm text-red-600" data-testid="register-form-terms-error">
+                  <p className="mt-1 text-sm text-red-600" data-test-id="register-form-terms-error">
                     {errors.agreeToTerms.message}
                   </p>
                 )}
@@ -467,7 +467,7 @@ const MultiStepRegistration = () => {
                     id="agreeToRefundPolicy"
                     type="checkbox"
                     className="h-4 w-4 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    data-testid="register-form-refund-ack-checkbox"
+                    data-test-id="register-form-refund-ack-checkbox"
                   />
                   <label
                     htmlFor="agreeToRefundPolicy"
@@ -488,7 +488,7 @@ const MultiStepRegistration = () => {
                   </label>
                 </div>
                 {errors.agreeToRefundPolicy && (
-                  <p className="mt-1 text-sm text-red-600" data-testid="register-form-refund-error">
+                  <p className="mt-1 text-sm text-red-600" data-test-id="register-form-refund-error">
                     {errors.agreeToRefundPolicy.message}
                   </p>
                 )}

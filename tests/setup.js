@@ -1,4 +1,10 @@
 import "@testing-library/jest-dom";
+import { configure } from "@testing-library/react";
+
+// The codebase uses `data-test-id` (hyphenated) for automation hooks. React
+// Testing Library defaults its `getByTestId` family to `data-testid`, so point
+// it at our attribute here once for the whole suite.
+configure({ testIdAttribute: "data-test-id" });
 
 // Mock localStorage
 const localStorageMock = {

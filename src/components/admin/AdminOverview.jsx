@@ -127,7 +127,7 @@ const AdminOverview = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16" data-testid="admin-overview-loading-spinner">
+      <div className="flex items-center justify-center py-16" data-test-id="admin-overview-loading-spinner">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
       </div>
     );
@@ -145,11 +145,11 @@ const AdminOverview = () => {
   ];
 
   return (
-    <div className="space-y-6" data-testid="admin-overview">
+    <div className="space-y-6" data-test-id="admin-overview">
       {error && (
         <div
           className="rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 px-4 py-3 text-sm text-warning-700 dark:text-warning-300"
-          data-testid="admin-overview-error"
+          data-test-id="admin-overview-error"
         >
           {error}
         </div>
@@ -166,11 +166,11 @@ const AdminOverview = () => {
           Recent Signups
         </h3>
         {recentSignups.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="admin-overview-signups-empty">
+          <p className="text-sm text-gray-500 dark:text-gray-400" data-test-id="admin-overview-signups-empty">
             No recent signups.
           </p>
         ) : (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700" data-testid="admin-overview-signups">
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700" data-test-id="admin-overview-signups">
             {recentSignups.map((u) => {
               const p = u.user_profiles?.[0] ?? u.user_profiles ?? {};
               const name =
@@ -178,7 +178,7 @@ const AdminOverview = () => {
                 `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() ||
                 u.id.slice(0, 8);
               return (
-                <li key={u.id} className="flex items-center justify-between py-3" data-testid={`admin-signup-row-${u.id}`}>
+                <li key={u.id} className="flex items-center justify-between py-3" data-test-id={`admin-signup-row-${u.id}`}>
                   <div className="flex items-center space-x-3 min-w-0">
                     {p.avatar_url ? (
                       <img src={p.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />

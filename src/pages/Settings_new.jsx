@@ -1045,7 +1045,7 @@ const Settings = () => {
         <nav
           className="flex flex-col gap-1"
           aria-label="Settings Navigation"
-          data-testid="settings-nav"
+          data-test-id="settings-nav"
         >
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -1058,7 +1058,7 @@ const Settings = () => {
                   setSearchParams({ tab: tab.id }, { replace: true });
                   if (isMobile) setMobileShowMenu(false);
                 }}
-                data-testid={`settings-nav-${tab.id}-link`}
+                data-test-id={`settings-nav-${tab.id}-link`}
                 className={`relative w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all duration-150 group active:opacity-70 lg:active:opacity-100 ${
                   isActive
                     ? "bg-primary-50 dark:bg-primary-900/30"
@@ -1113,7 +1113,7 @@ const Settings = () => {
             type="button"
             onClick={() => setMobileShowMenu(true)}
             aria-label="Back to settings menu"
-            data-testid="settings-mobile-back-btn"
+            data-test-id="settings-mobile-back-btn"
             className="flex-shrink-0 rounded-lg p-1.5 text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -1133,7 +1133,7 @@ const Settings = () => {
 
           {/* General Tab (Option A row content) */}
           {activeTab === "general" && (
-            <div className="max-w-3xl space-y-6" data-testid="settings-general-panel">
+            <div className="max-w-3xl space-y-6" data-test-id="settings-general-panel">
               {/* Header + Save — title hidden on mobile (the top app bar already
                   names the page); Save uses the platform blue and goes full-width
                   on mobile. */}
@@ -1149,7 +1149,7 @@ const Settings = () => {
                 <button
                   onClick={handleSavePreferences}
                   className="btn btn-primary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
-                  data-testid="settings-save-preferences-btn"
+                  data-test-id="settings-save-preferences-btn"
                 >
                   <Save className="w-4 h-4" />
                   <span>Save</span>
@@ -1159,7 +1159,7 @@ const Settings = () => {
               {/* Stats strip */}
               <div
                 className="flex flex-wrap rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-                data-testid="settings-stats-strip"
+                data-test-id="settings-stats-strip"
               >
                 {[
                   { id: "total", label: "Total Trades", value: trades.length },
@@ -1185,7 +1185,7 @@ const Settings = () => {
                   >
                     <div
                       className="text-2xl font-extrabold tabular-nums text-gray-900 dark:text-gray-100"
-                      data-testid={`settings-stat-${stat.id}-value`}
+                      data-test-id={`settings-stat-${stat.id}-value`}
                     >
                       {stat.value}
                     </div>
@@ -1221,7 +1221,7 @@ const Settings = () => {
                       setPreferences({ ...preferences, currency: e.target.value })
                     }
                     className="input w-full lg:w-64 lg:flex-shrink-0"
-                    data-testid="settings-currency-select"
+                    data-test-id="settings-currency-select"
                   >
                     <option value="USD">USD — US Dollar</option>
                     <option value="EUR">EUR — Euro</option>
@@ -1255,7 +1255,7 @@ const Settings = () => {
                       setPreferences({ ...preferences, timezone: e.target.value })
                     }
                     className="input w-full lg:w-64 lg:flex-shrink-0"
-                    data-testid="settings-timezone-select"
+                    data-test-id="settings-timezone-select"
                   >
                     <option value="America/New_York">Eastern Time (ET)</option>
                     <option value="America/Chicago">Central Time (CT)</option>
@@ -1291,7 +1291,7 @@ const Settings = () => {
                       setPreferences({ ...preferences, dateFormat: e.target.value })
                     }
                     className="input w-full lg:w-64 lg:flex-shrink-0"
-                    data-testid="settings-date-format-select"
+                    data-test-id="settings-date-format-select"
                   >
                     <option value="MM/dd/yyyy">MM/DD/YYYY (US)</option>
                     <option value="dd/MM/yyyy">DD/MM/YYYY (EU)</option>
@@ -1330,7 +1330,7 @@ const Settings = () => {
                         })
                       }
                       className="input pr-9"
-                      data-testid="settings-risk-percentage-input"
+                      data-test-id="settings-risk-percentage-input"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 dark:text-gray-500 pointer-events-none">
                       %
@@ -1366,7 +1366,7 @@ const Settings = () => {
                         })
                       }
                       className="sr-only peer"
-                      data-testid="settings-auto-backup-toggle"
+                      data-test-id="settings-auto-backup-toggle"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
                   </label>
@@ -1377,7 +1377,7 @@ const Settings = () => {
 
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
-            <div className="max-w-3xl space-y-6" data-testid="notifications-settings-tab">
+            <div className="max-w-3xl space-y-6" data-test-id="notifications-settings-tab">
               {/* Header — hidden on mobile (the top app bar names the page) */}
               <div className="hidden items-start justify-between gap-6 lg:flex">
                 <div>
@@ -1394,7 +1394,7 @@ const Settings = () => {
 
               {notificationPrefsLoading ? (
                 <div
-                  data-testid="notifications-settings-loading"
+                  data-test-id="notifications-settings-loading"
                   className="flex items-center justify-center py-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                 >
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
@@ -1412,7 +1412,7 @@ const Settings = () => {
                         <div
                           key={cat.id}
                           className="flex items-center justify-between gap-6 px-5 py-4"
-                          data-testid={`notifications-settings-row-${cat.id}`}
+                          data-test-id={`notifications-settings-row-${cat.id}`}
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
@@ -1433,7 +1433,7 @@ const Settings = () => {
                             <label className="relative inline-flex items-center cursor-pointer w-12 justify-center">
                               <input
                                 type="checkbox"
-                                data-testid={`notifications-settings-${cat.id}-inapp-toggle`}
+                                data-test-id={`notifications-settings-${cat.id}-inapp-toggle`}
                                 checked={channel.inApp}
                                 onChange={(e) =>
                                   setNotificationChannel(
@@ -1460,7 +1460,7 @@ const Settings = () => {
                             >
                               <input
                                 type="checkbox"
-                                data-testid={`notifications-settings-${cat.id}-email-toggle`}
+                                data-test-id={`notifications-settings-${cat.id}-email-toggle`}
                                 checked={channel.inApp && channel.email}
                                 disabled={!channel.inApp}
                                 onChange={(e) =>
@@ -1500,7 +1500,7 @@ const Settings = () => {
                 <button
                   onClick={handleCreateNewTemplate}
                   className="btn btn-primary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
-                  data-testid="settings-new-template-btn"
+                  data-test-id="settings-new-template-btn"
                 >
                   <Plus className="w-4 h-4" />
                   <span>New Template</span>
@@ -1511,7 +1511,7 @@ const Settings = () => {
               {templates.length === 0 && !isCreatingTemplate && !templatesLoading ? (
                 <div
                   className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center py-12"
-                  data-testid="settings-templates-empty"
+                  data-test-id="settings-templates-empty"
                 >
                   <Layout className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                   <h3 className="mt-2 text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -1533,13 +1533,13 @@ const Settings = () => {
               ) : (
                 <div
                   className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70"
-                  data-testid="settings-templates-list"
+                  data-test-id="settings-templates-list"
                 >
                   {templates.map((template) => (
                     <div
                       key={template.id}
                       className="flex items-start justify-between gap-4 px-5 py-4"
-                      data-testid={`settings-template-row-${template.id}`}
+                      data-test-id={`settings-template-row-${template.id}`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
@@ -1585,7 +1585,7 @@ const Settings = () => {
                           onClick={() => toggleTemplateDefault(template.id)}
                           className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400"
                           title="Toggle default"
-                          data-testid={`settings-template-default-btn-${template.id}`}
+                          data-test-id={`settings-template-default-btn-${template.id}`}
                         >
                           {template.isDefault ? (
                             <Star className="w-4 h-4 fill-current" />
@@ -1597,7 +1597,7 @@ const Settings = () => {
                           onClick={() => handleEditTemplate(template)}
                           className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
                           title="Edit template"
-                          data-testid={`settings-template-edit-btn-${template.id}`}
+                          data-test-id={`settings-template-edit-btn-${template.id}`}
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -1605,7 +1605,7 @@ const Settings = () => {
                           onClick={() => handleDuplicateTemplate(template)}
                           className="text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400"
                           title="Duplicate template"
-                          data-testid={`settings-template-duplicate-btn-${template.id}`}
+                          data-test-id={`settings-template-duplicate-btn-${template.id}`}
                         >
                           <Copy className="w-4 h-4" />
                         </button>
@@ -1613,7 +1613,7 @@ const Settings = () => {
                           onClick={() => handleDeleteTemplate(template.id)}
                           className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                           title="Delete template"
-                          data-testid={`settings-template-delete-btn-${template.id}`}
+                          data-test-id={`settings-template-delete-btn-${template.id}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1662,7 +1662,7 @@ const Settings = () => {
                     onClick={handleExportData}
                     disabled={trades.length === 0}
                     className="btn btn-secondary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
-                    data-testid="settings-export-data-btn"
+                    data-test-id="settings-export-data-btn"
                   >
                     <Download className="w-4 h-4" />
                     <span>Export to Excel</span>
@@ -1695,7 +1695,7 @@ const Settings = () => {
                       accept=".csv,.xlsx,.xls"
                       onChange={handleImportData}
                       className="hidden"
-                      data-testid="settings-import-data-input"
+                      data-test-id="settings-import-data-input"
                     />
                   </label>
                 </div>
@@ -1721,7 +1721,7 @@ const Settings = () => {
                   <button
                     onClick={handleClearData}
                     className="btn btn-danger flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
-                    data-testid="settings-clear-data-btn"
+                    data-test-id="settings-clear-data-btn"
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>Clear All Data</span>
@@ -3154,7 +3154,7 @@ const Settings = () => {
                                       isEnabled ? "bg-blue-600" : "bg-gray-300"
                                     }`}
                                     aria-pressed={isEnabled}
-                                    data-testid={`template-field-toggle-${fieldKey}`}
+                                    data-test-id={`template-field-toggle-${fieldKey}`}
                                   >
                                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${isEnabled ? "translate-x-5" : "translate-x-0"}`} />
                                   </button>

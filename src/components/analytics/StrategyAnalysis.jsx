@@ -66,7 +66,7 @@ const InfoTip = ({ text, testId }) => (
   <span className="relative inline-flex group">
     <button
       type="button"
-      data-testid={testId}
+      data-test-id={testId}
       aria-label="Chart explanation"
       className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
     >
@@ -286,7 +286,7 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
     return (
       <div
         className="card text-center py-12"
-        data-testid="strategy-empty-state"
+        data-test-id="strategy-empty-state"
       >
         <Target className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -301,9 +301,9 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
   }
 
   return (
-    <div className="space-y-4" data-testid="strategy-analysis">
+    <div className="space-y-4" data-test-id="strategy-analysis">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <section className="card" data-testid="strategy-pnl-chart">
+        <section className="card" data-test-id="strategy-pnl-chart">
         <SectionHeader
           icon={Target}
           tone="neutral"
@@ -372,7 +372,7 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
         </div>
         </section>
 
-        <section className="card" data-testid="strategy-distribution-chart">
+        <section className="card" data-test-id="strategy-distribution-chart">
           <SectionHeader
             icon={PieIcon}
             tone="neutral"
@@ -405,7 +405,7 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
 
       {detailed && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          <section className="card" data-testid="strategy-rankings">
+          <section className="card" data-test-id="strategy-rankings">
               <SectionHeader
                 icon={Trophy}
                 tone="pos"
@@ -416,7 +416,7 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
                 {strategyData.map((strategy, index) => (
                   <div
                     key={strategy.name}
-                    data-testid={`strategy-rank-row-${index}`}
+                    data-test-id={`strategy-rank-row-${index}`}
                     className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700"
                   >
                     <div className="flex items-center gap-3">
@@ -456,7 +456,7 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
               </div>
             </section>
 
-          <section className="card" data-testid="strategy-metrics-table">
+          <section className="card" data-test-id="strategy-metrics-table">
             <SectionHeader
               icon={BarChart3}
               tone="neutral"
@@ -467,7 +467,7 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
               {strategyData.map((strategy) => (
                 <div
                   key={strategy.name}
-                  data-testid={`strategy-metrics-row-${strategy.name}`}
+                  data-test-id={`strategy-metrics-row-${strategy.name}`}
                   className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700"
                 >
                   <div>

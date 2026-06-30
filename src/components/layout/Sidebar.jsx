@@ -136,7 +136,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   key={item.name}
                   to={item.href}
                   onClick={() => onClose()}
-                  data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
+                  data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                   className={({ isActive }) =>
                     `group flex items-center text-sm font-medium rounded-lg transition-all duration-200 ${
                       isCollapsed ? "px-3 py-2" : "px-3 py-2"
@@ -178,7 +178,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       to={item.href}
                       end={item.end}
                       onClick={() => onClose()}
-                      data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
+                      data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                       className={({ isActive }) =>
                         `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                           isActive
@@ -209,7 +209,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                     to={item.href}
                     end={item.end}
                     onClick={() => onClose()}
-                    data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link-collapsed`}
+                    data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link-collapsed`}
                     className={({ isActive }) =>
                       `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive

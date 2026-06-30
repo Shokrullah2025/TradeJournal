@@ -47,12 +47,12 @@ const Probe = () => {
   const analytics = api.getSubscriptionAnalytics();
   return (
     <div>
-      <div data-testid="total-revenue">{api.subscriptions.totalRevenue}</div>
-      <div data-testid="total-subscribers">{api.subscriptions.totalSubscribers}</div>
-      <div data-testid="payments-count">{api.payments.length}</div>
-      <div data-testid="failed-payments">{analytics.failedPayments}</div>
-      <div data-testid="premium-count">{analytics.subscriptionsByPlan.premium}</div>
-      <div data-testid="arpu">{analytics.averageRevenuePerUser}</div>
+      <div data-test-id="total-revenue">{api.subscriptions.totalRevenue}</div>
+      <div data-test-id="total-subscribers">{api.subscriptions.totalSubscribers}</div>
+      <div data-test-id="payments-count">{api.payments.length}</div>
+      <div data-test-id="failed-payments">{analytics.failedPayments}</div>
+      <div data-test-id="premium-count">{analytics.subscriptionsByPlan.premium}</div>
+      <div data-test-id="arpu">{analytics.averageRevenuePerUser}</div>
     </div>
   );
 };

@@ -91,14 +91,14 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitL
     <form
       onSubmit={handleSubmit}
       className="space-y-4"
-      data-testid="stripe-payment-form"
+      data-test-id="stripe-payment-form"
     >
       <PaymentElement onChange={() => cardError && setCardError("")} />
 
       {cardError && (
         <div
           className="flex items-start space-x-2 text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3"
-          data-testid="stripe-card-error"
+          data-test-id="stripe-card-error"
           role="alert"
         >
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-500 dark:text-red-400" />
@@ -116,7 +116,7 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitL
           type="button"
           onClick={onCancel}
           className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
-          data-testid="stripe-payment-cancel-btn"
+          data-test-id="stripe-payment-cancel-btn"
         >
           Cancel
         </button>
@@ -124,7 +124,7 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitL
           type="submit"
           disabled={!stripe || isProcessing}
           className="flex-1 py-2 px-4 bg-blue-600 dark:bg-blue-700 text-white rounded-md text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
-          data-testid="stripe-payment-submit-btn"
+          data-test-id="stripe-payment-submit-btn"
         >
           {isProcessing ? (
             <span className="flex items-center justify-center gap-2">
@@ -159,7 +159,7 @@ const StripePaymentForm = ({
     return (
       <div
         className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 flex items-start gap-2"
-        data-testid="stripe-not-configured"
+        data-test-id="stripe-not-configured"
       >
         <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
         <span>Payments are temporarily unavailable. Please try again later or contact support.</span>

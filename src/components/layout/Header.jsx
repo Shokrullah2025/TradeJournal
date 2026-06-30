@@ -118,7 +118,7 @@ const Header = ({ onMenuClick }) => {
           <div className="header__profile relative" ref={profileMenuRef}>
             <div className="flex items-center space-x-3">
               <div className="header__profile-info hidden md:block text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100" data-testid="header-profile-name">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100" data-test-id="header-profile-name">
                   {displayName}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -133,7 +133,7 @@ const Header = ({ onMenuClick }) => {
                 onClick={toggleProfileMenu}
                 className="header__profile-avatar w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors duration-200 overflow-hidden"
                 title="Profile Menu"
-                data-testid="header-profile-menu-btn"
+                data-test-id="header-profile-menu-btn"
               >
                 {user?.avatarUrl ? (
                   <img

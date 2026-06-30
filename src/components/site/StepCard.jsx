@@ -5,7 +5,7 @@ import React from "react";
  */
 const StepCard = ({ number, title, description, testId }) => (
   <div
-    data-testid={testId}
+    data-test-id={testId}
     className="relative rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
   >
     <span className="text-4xl font-bold text-primary-200 dark:text-primary-900">

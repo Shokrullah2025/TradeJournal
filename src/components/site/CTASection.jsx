@@ -12,7 +12,7 @@ const CTASection = () => {
 
   return (
     <section
-      data-testid="site-cta-section"
+      data-test-id="site-cta-section"
       className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24"
     >
       <div className="relative overflow-hidden rounded-3xl bg-primary-600 px-6 py-14 text-center sm:px-12">
@@ -30,7 +30,7 @@ const CTASection = () => {
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
-                data-testid="site-cta-dashboard-btn"
+                data-test-id="site-cta-dashboard-btn"
                 className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-base font-semibold text-primary-700 transition-colors hover:bg-primary-50"
               >
                 Go to your dashboard
@@ -39,7 +39,7 @@ const CTASection = () => {
             ) : (
               <Link
                 to="/register"
-                data-testid="site-cta-getstarted-btn"
+                data-test-id="site-cta-getstarted-btn"
                 className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-base font-semibold text-primary-700 transition-colors hover:bg-primary-50"
               >
                 Start journaling free

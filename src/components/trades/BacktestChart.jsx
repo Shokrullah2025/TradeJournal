@@ -1219,7 +1219,7 @@ const BacktestChart = ({
         <input
           type="text"
           autoFocus
-          data-testid="text-label-inline-input"
+          data-test-id="text-label-inline-input"
           value={inlineEdit.value}
           onFocus={(e) => { if (inlineEdit.selectOnFocus) e.target.select(); }}
           onChange={(e) => setInlineEdit((prev) => ({ ...prev, value: e.target.value }))}

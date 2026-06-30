@@ -167,17 +167,17 @@ const Profile = () => {
     : null;
   const fieldError = (name) =>
     errors[name] ? (
-      <p className="text-sm text-red-500 mt-1" data-testid={`profile-error-${name}`}>
+      <p className="text-sm text-red-500 mt-1" data-test-id={`profile-error-${name}`}>
         {errors[name]}
       </p>
     ) : null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6" data-testid="profile-page">
+    <div className="max-w-4xl mx-auto space-y-6" data-test-id="profile-page">
       {/* Hero / summary header */}
       <div
         className="card overflow-hidden p-0"
-        data-testid="profile-header-card"
+        data-test-id="profile-header-card"
       >
         <div className="h-24 bg-gradient-to-r from-primary-600 to-primary-400" />
         <div className="px-6 pb-6 -mt-12">
@@ -191,7 +191,7 @@ const Profile = () => {
               <div className="pb-1">
                 <h1
                   className="text-2xl font-bold text-gray-900 dark:text-gray-100"
-                  data-testid="profile-name-value"
+                  data-test-id="profile-name-value"
                 >
                   {fullName}
                 </h1>
@@ -217,7 +217,7 @@ const Profile = () => {
               <button
                 onClick={() => setIsEditing(true)}
                 className="btn btn-primary flex items-center space-x-2 self-start sm:self-auto"
-                data-testid="profile-edit-btn"
+                data-test-id="profile-edit-btn"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Edit Profile</span>
@@ -228,7 +228,7 @@ const Profile = () => {
                   onClick={handleCancel}
                   className="btn btn-secondary flex items-center space-x-2"
                   disabled={isSubmitting}
-                  data-testid="profile-cancel-btn"
+                  data-test-id="profile-cancel-btn"
                 >
                   <X className="w-4 h-4" />
                   <span>Cancel</span>
@@ -237,7 +237,7 @@ const Profile = () => {
                   onClick={handleSubmit}
                   className="btn btn-gradient flex items-center space-x-2"
                   disabled={isSubmitting}
-                  data-testid="profile-save-btn"
+                  data-test-id="profile-save-btn"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSubmitting ? "Saving..." : "Save Changes"}</span>
@@ -250,7 +250,7 @@ const Profile = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className="truncate" data-testid="profile-email-value">
+              <span className="truncate" data-test-id="profile-email-value">
                 {user?.email || "—"}
               </span>
             </div>
@@ -272,7 +272,7 @@ const Profile = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6" data-testid="profile-form">
+      <form onSubmit={handleSubmit} className="space-y-6" data-test-id="profile-form">
         {/* Personal Information */}
         <div className="card">
           <div className="flex items-center space-x-2 mb-4">
@@ -293,7 +293,7 @@ const Profile = () => {
                 className="input"
                 placeholder="Enter your first name"
                 disabled={!isEditing}
-                data-testid="profile-firstName-input"
+                data-test-id="profile-firstName-input"
               />
               {fieldError("firstName")}
             </div>
@@ -308,7 +308,7 @@ const Profile = () => {
                 className="input"
                 placeholder="Enter your last name"
                 disabled={!isEditing}
-                data-testid="profile-lastName-input"
+                data-test-id="profile-lastName-input"
               />
               {fieldError("lastName")}
             </div>
@@ -323,7 +323,7 @@ const Profile = () => {
                 className="input"
                 placeholder="How your name appears to others"
                 disabled={!isEditing}
-                data-testid="profile-displayName-input"
+                data-test-id="profile-displayName-input"
               />
             </div>
 
@@ -337,7 +337,7 @@ const Profile = () => {
                 className="input"
                 placeholder="Enter your email"
                 disabled={!isEditing}
-                data-testid="profile-email-input"
+                data-test-id="profile-email-input"
               />
               {fieldError("email")}
             </div>
@@ -352,7 +352,7 @@ const Profile = () => {
                 className="input"
                 placeholder="Enter your phone number"
                 disabled={!isEditing}
-                data-testid="profile-phone-input"
+                data-test-id="profile-phone-input"
               />
               {fieldError("phone")}
             </div>
@@ -366,7 +366,7 @@ const Profile = () => {
                 onChange={handleInputChange}
                 className="input"
                 disabled={!isEditing}
-                data-testid="profile-birthday-input"
+                data-test-id="profile-birthday-input"
               />
             </div>
 
@@ -378,7 +378,7 @@ const Profile = () => {
                 onChange={handleInputChange}
                 className="input w-auto max-w-full"
                 disabled={!isEditing}
-                data-testid="profile-timezone-select"
+                data-test-id="profile-timezone-select"
               >
                 <option value="America/New_York">Eastern Time</option>
                 <option value="America/Chicago">Central Time</option>
@@ -403,7 +403,7 @@ const Profile = () => {
                 rows="4"
                 placeholder="Tell us about yourself..."
                 disabled={!isEditing}
-                data-testid="profile-bio-input"
+                data-test-id="profile-bio-input"
               />
               {fieldError("bio")}
             </div>
@@ -441,7 +441,7 @@ const Profile = () => {
                 onChange={handleCountryChange}
                 className="input"
                 disabled={!isEditing}
-                data-testid="profile-country-select"
+                data-test-id="profile-country-select"
               >
                 <option value="">Select your country</option>
                 {COUNTRIES.map((c) => (
@@ -461,7 +461,7 @@ const Profile = () => {
                   onChange={handleInputChange}
                   className="input"
                   disabled={!isEditing}
-                  data-testid="profile-state-select"
+                  data-test-id="profile-state-select"
                 >
                   <option value="">Select your state/province</option>
                   {stateOptions.map((s) => (
@@ -483,7 +483,7 @@ const Profile = () => {
                       : "Select a country first"
                   }
                   disabled={!isEditing}
-                  data-testid="profile-state-input"
+                  data-test-id="profile-state-input"
                 />
               )}
             </div>
@@ -498,7 +498,7 @@ const Profile = () => {
                 className="input"
                 placeholder="Enter your city"
                 disabled={!isEditing}
-                data-testid="profile-city-input"
+                data-test-id="profile-city-input"
               />
             </div>
 
@@ -512,7 +512,7 @@ const Profile = () => {
                 className="input"
                 placeholder="Enter your ZIP code"
                 disabled={!isEditing}
-                data-testid="profile-zipCode-input"
+                data-test-id="profile-zipCode-input"
               />
             </div>
           </div>
@@ -536,7 +536,7 @@ const Profile = () => {
                 onChange={handleInputChange}
                 className="input"
                 disabled={!isEditing}
-                data-testid="profile-tradingExperience-select"
+                data-test-id="profile-tradingExperience-select"
               >
                 <option value="">Select experience level</option>
                 {tradingExperienceOptions.map((option) => (
@@ -555,7 +555,7 @@ const Profile = () => {
                 onChange={handleInputChange}
                 className="input"
                 disabled={!isEditing}
-                data-testid="profile-riskTolerance-select"
+                data-test-id="profile-riskTolerance-select"
               >
                 <option value="">Select risk tolerance</option>
                 {riskToleranceOptions.map((option) => (
@@ -576,7 +576,7 @@ const Profile = () => {
                 multiple
                 disabled={!isEditing}
                 size="3"
-                data-testid="profile-preferredMarkets-select"
+                data-test-id="profile-preferredMarkets-select"
               >
                 {marketOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -599,7 +599,7 @@ const Profile = () => {
                 rows="3"
                 placeholder="Describe your investment goals..."
                 disabled={!isEditing}
-                data-testid="profile-investmentGoals-input"
+                data-test-id="profile-investmentGoals-input"
               />
               {fieldError("investmentGoals")}
             </div>

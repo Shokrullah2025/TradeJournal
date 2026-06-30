@@ -125,7 +125,7 @@ const ResetPassword = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" data-testid="reset-password-checking-spinner" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" data-test-id="reset-password-checking-spinner" />
           <p className="text-gray-600 dark:text-gray-400">Verifying reset link...</p>
         </div>
       </div>
@@ -150,7 +150,7 @@ const ResetPassword = () => {
 
             <div
               className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg"
-              data-testid="reset-password-invalid-session"
+              data-test-id="reset-password-invalid-session"
             >
               <h2 className="text-xl font-bold text-red-800 dark:text-red-300 mb-2">Invalid Reset Link</h2>
               <p className="text-sm text-red-700 dark:text-red-400 mb-4">
@@ -159,7 +159,7 @@ const ResetPassword = () => {
               <button
                 onClick={() => navigate("/login")}
                 className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                data-testid="reset-password-back-to-login-btn"
+                data-test-id="reset-password-back-to-login-btn"
               >
                 Back to Login
               </button>
@@ -195,7 +195,7 @@ const ResetPassword = () => {
           <form
             className="space-y-6"
             onSubmit={handleSubmit(onSubmit)}
-            data-testid="reset-password-form"
+            data-test-id="reset-password-form"
           >
             {/* New Password */}
             <div>
@@ -209,13 +209,13 @@ const ResetPassword = () => {
                   autoComplete="new-password"
                   className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Enter new password"
-                  data-testid="reset-password-password-input"
+                  data-test-id="reset-password-password-input"
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(p => !p)}
-                  data-testid="reset-password-toggle-password-btn"
+                  data-test-id="reset-password-toggle-password-btn"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword
@@ -224,7 +224,7 @@ const ResetPassword = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-testid="reset-password-password-error">
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-test-id="reset-password-password-error">
                   {errors.password.message}
                 </p>
               )}
@@ -245,13 +245,13 @@ const ResetPassword = () => {
                   autoComplete="new-password"
                   className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Confirm new password"
-                  data-testid="reset-password-confirm-password-input"
+                  data-test-id="reset-password-confirm-password-input"
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowConfirmPassword(p => !p)}
-                  data-testid="reset-password-toggle-confirm-password-btn"
+                  data-test-id="reset-password-toggle-confirm-password-btn"
                   aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
                   {showConfirmPassword
@@ -260,7 +260,7 @@ const ResetPassword = () => {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-testid="reset-password-confirm-password-error">
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-test-id="reset-password-confirm-password-error">
                   {errors.confirmPassword.message}
                 </p>
               )}
@@ -271,10 +271,10 @@ const ResetPassword = () => {
               type="submit"
               disabled={isSubmitting}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              data-testid="reset-password-submit-btn"
+              data-test-id="reset-password-submit-btn"
             >
               {isSubmitting ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" data-testid="reset-password-loading-spinner" />
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" data-test-id="reset-password-loading-spinner" />
               ) : (
                 <>
                   <Lock className="w-5 h-5 mr-2" />

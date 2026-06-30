@@ -63,7 +63,7 @@ const MfaStepUp = () => {
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4"
-      data-testid="mfa-stepup-screen"
+      data-test-id="mfa-stepup-screen"
     >
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center text-center mb-6">
@@ -79,11 +79,11 @@ const MfaStepUp = () => {
         </div>
 
         {loadingFactor ? (
-          <div className="flex items-center justify-center py-10" data-testid="mfa-stepup-loading">
+          <div className="flex items-center justify-center py-10" data-test-id="mfa-stepup-loading">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4" data-testid="mfa-stepup-form">
+          <form onSubmit={handleSubmit} className="space-y-4" data-test-id="mfa-stepup-form">
             <input
               type="text"
               inputMode="numeric"
@@ -94,10 +94,10 @@ const MfaStepUp = () => {
               placeholder="000000"
               autoFocus
               className="input w-full text-center text-2xl tracking-[0.5em] font-semibold"
-              data-testid="mfa-stepup-code-input"
+              data-test-id="mfa-stepup-code-input"
             />
             {error && (
-              <p className="text-sm text-danger-600 dark:text-danger-400" data-testid="mfa-stepup-error">
+              <p className="text-sm text-danger-600 dark:text-danger-400" data-test-id="mfa-stepup-error">
                 {error}
               </p>
             )}
@@ -105,7 +105,7 @@ const MfaStepUp = () => {
               type="submit"
               disabled={submitting}
               className="btn btn-gradient w-full justify-center"
-              data-testid="mfa-stepup-submit-btn"
+              data-test-id="mfa-stepup-submit-btn"
             >
               {submitting ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
@@ -120,7 +120,7 @@ const MfaStepUp = () => {
           type="button"
           onClick={logout}
           className="mt-6 w-full flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-          data-testid="mfa-stepup-signout-btn"
+          data-test-id="mfa-stepup-signout-btn"
         >
           <LogOut className="w-4 h-4" />
           Sign out

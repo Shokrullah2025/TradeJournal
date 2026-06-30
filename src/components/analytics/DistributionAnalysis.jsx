@@ -37,7 +37,7 @@ const InfoTip = ({ text, testId }) => (
   <span className="relative inline-flex group">
     <button
       type="button"
-      data-testid={testId}
+      data-test-id={testId}
       aria-label="Chart explanation"
       className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
     >
@@ -302,7 +302,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
 
   if (closedTrades.length === 0) {
     return (
-      <div className="card text-center py-12" data-testid="distribution-empty-state">
+      <div className="card text-center py-12" data-test-id="distribution-empty-state">
         <Activity className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           No distribution data available
@@ -315,10 +315,10 @@ const DistributionAnalysis = ({ trades = [] }) => {
   }
 
   return (
-    <div className="space-y-4" data-testid="distribution-analysis">
+    <div className="space-y-4" data-test-id="distribution-analysis">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* R-Multiple Distribution */}
-        <section className="card" data-testid="distribution-r-multiple-chart">
+        <section className="card" data-test-id="distribution-r-multiple-chart">
           <SectionHeader
             icon={Target}
             tone="neutral"
@@ -411,7 +411,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
         </section>
 
         {/* Underwater Drawdown */}
-        <section className="card" data-testid="distribution-underwater-chart">
+        <section className="card" data-test-id="distribution-underwater-chart">
           <SectionHeader
             icon={TrendingDown}
             tone="neg"
@@ -489,7 +489,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
       </div>
 
       {/* Hold Time vs P&L scatter */}
-      <section className="card" data-testid="distribution-holdtime-chart">
+      <section className="card" data-test-id="distribution-holdtime-chart">
         <SectionHeader
           icon={Activity}
           tone="neutral"

@@ -283,7 +283,7 @@ const BrokerSelection = () => {
                 </h1>
                 <div className="mt-2 flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]" />
-                  <span data-testid="connected-summary">
+                  <span data-test-id="connected-summary">
                     {accounts.length} connected
                     {headerSync ? ` · synced ${headerSync === "just now" ? "just now" : headerSync + " ago"}` : " · not synced yet"}
                   </span>
@@ -292,7 +292,7 @@ const BrokerSelection = () => {
               <button
                 onClick={() => setView("connect")}
                 className="btn-gradient inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/25 transition-colors whitespace-nowrap"
-                data-testid="connect-account-btn"
+                data-test-id="connect-account-btn"
               >
                 <Plus className="w-4 h-4" />
                 Connect account
@@ -307,7 +307,7 @@ const BrokerSelection = () => {
                 </div>
                 <div
                   className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50"
-                  data-testid="summary-total-balance"
+                  data-test-id="summary-total-balance"
                 >
                   {formatBalance(totalBalance)}
                 </div>
@@ -324,7 +324,7 @@ const BrokerSelection = () => {
                         ? "text-rose-500"
                         : "text-gray-900 dark:text-gray-50"
                   }`}
-                  data-testid="summary-net-pnl-30d"
+                  data-test-id="summary-net-pnl-30d"
                 >
                   {formatPnL(performance.net30dPnL)}
                 </div>
@@ -335,7 +335,7 @@ const BrokerSelection = () => {
                 </div>
                 <div
                   className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50"
-                  data-testid="summary-win-rate"
+                  data-test-id="summary-win-rate"
                 >
                   {Math.round(stats.winRate ?? 0)}%
                 </div>
@@ -346,7 +346,7 @@ const BrokerSelection = () => {
                 </div>
                 <div
                   className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50"
-                  data-testid="summary-trade-count"
+                  data-test-id="summary-trade-count"
                 >
                   {(stats.totalTrades ?? 0).toLocaleString()}
                 </div>
@@ -361,7 +361,7 @@ const BrokerSelection = () => {
             {connectionError && (
               <div
                 className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl text-sm text-red-700 dark:text-red-400"
-                data-testid="broker-connection-error"
+                data-test-id="broker-connection-error"
               >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{connectionError}</span>
@@ -369,12 +369,12 @@ const BrokerSelection = () => {
             )}
 
             {/* Account rows */}
-            <div className="space-y-3.5" data-testid="connected-accounts-list">
+            <div className="space-y-3.5" data-test-id="connected-accounts-list">
               {displayAccounts.map((account) => (
                 <div
                   key={account.id}
                   className="flex items-center gap-5 px-6 py-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
-                  data-testid={`account-row-${account.id}`}
+                  data-test-id={`account-row-${account.id}`}
                 >
                   <div
                     className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-base border shrink-0 ${account.badge}`}
@@ -386,7 +386,7 @@ const BrokerSelection = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <span
                         className="font-bold text-base text-gray-900 dark:text-gray-50 truncate"
-                        data-testid={`account-row-name-${account.id}`}
+                        data-test-id={`account-row-name-${account.id}`}
                       >
                         {account.name}
                       </span>
@@ -409,7 +409,7 @@ const BrokerSelection = () => {
                       viewBox="0 0 104 38"
                       fill="none"
                       className={`hidden md:block shrink-0 ${account.sparkPositive ? "text-emerald-500" : "text-rose-500"}`}
-                      data-testid={`account-row-sparkline-${account.id}`}
+                      data-test-id={`account-row-sparkline-${account.id}`}
                       aria-hidden="true"
                     >
                       <polyline
@@ -431,7 +431,7 @@ const BrokerSelection = () => {
                   <div className="text-right shrink-0">
                     <div
                       className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-50"
-                      data-testid={`account-row-balance-${account.id}`}
+                      data-test-id={`account-row-balance-${account.id}`}
                     >
                       {formatBalance(account.balance)}
                     </div>
@@ -444,7 +444,7 @@ const BrokerSelection = () => {
                               ? "text-rose-500"
                               : "text-gray-500 dark:text-gray-400"
                         }`}
-                        data-testid={`account-row-pnl-${account.id}`}
+                        data-test-id={`account-row-pnl-${account.id}`}
                       >
                         {formatPnL(account.pnl)}
                         {account.pnlPct != null && (
@@ -464,7 +464,7 @@ const BrokerSelection = () => {
                     onClick={() => setShowManage((v) => !v)}
                     className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
                     aria-label="Manage account"
-                    data-testid={`account-row-manage-${account.id}`}
+                    data-test-id={`account-row-manage-${account.id}`}
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
@@ -475,7 +475,7 @@ const BrokerSelection = () => {
               <button
                 onClick={() => setView("connect")}
                 className="w-full flex items-center gap-4 px-6 py-5 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 text-left hover:border-emerald-500/50 transition-colors group"
-                data-testid="connect-another-btn"
+                data-test-id="connect-another-btn"
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shrink-0">
                   <Plus className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -509,7 +509,7 @@ const BrokerSelection = () => {
                       <button
                         onClick={() => navigate("/trades")}
                         className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                        data-testid="view-trades-btn"
+                        data-test-id="view-trades-btn"
                       >
                         <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
                         View Trades
@@ -519,7 +519,7 @@ const BrokerSelection = () => {
                       onClick={handleSync}
                       disabled={syncStatus === "syncing"}
                       className="inline-flex items-center px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
-                      data-testid="sync-now-btn"
+                      data-test-id="sync-now-btn"
                     >
                       <RefreshCw
                         className={`w-4 h-4 mr-2 ${syncStatus === "syncing" ? "animate-spin" : ""}`}
@@ -536,7 +536,7 @@ const BrokerSelection = () => {
                       checked={autoSync}
                       onChange={(e) => toggleAutoSync(e.target.checked)}
                       className="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"
-                      data-testid="autosync-toggle"
+                      data-test-id="autosync-toggle"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">
                       Auto-sync trades
@@ -547,7 +547,7 @@ const BrokerSelection = () => {
                       value={syncInterval}
                       onChange={(e) => setSyncInterval(parseInt(e.target.value))}
                       className="text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-2 py-1.5"
-                      data-testid="sync-interval-select"
+                      data-test-id="sync-interval-select"
                     >
                       <option value={300000}>Every 5 min</option>
                       <option value={900000}>Every 15 min</option>
@@ -561,7 +561,7 @@ const BrokerSelection = () => {
                   <button
                     onClick={() => disconnectBroker()}
                     className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline"
-                    data-testid="disconnect-btn"
+                    data-test-id="disconnect-btn"
                   >
                     Disconnect broker
                   </button>
@@ -577,7 +577,7 @@ const BrokerSelection = () => {
             <button
               onClick={() => setView("accounts")}
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-              data-testid="back-to-accounts-btn"
+              data-test-id="back-to-accounts-btn"
             >
               <ArrowLeft className="w-4 h-4" />
               Accounts
@@ -612,7 +612,7 @@ const BrokerSelection = () => {
                     <div
                       key={firm.id}
                       className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col hover:border-gray-300 dark:hover:border-gray-700 hover:-translate-y-0.5 transition-all"
-                      data-testid={`firm-card-${firm.id}`}
+                      data-test-id={`firm-card-${firm.id}`}
                     >
                       <div className="flex items-center gap-3 mb-5">
                         <div
@@ -643,7 +643,7 @@ const BrokerSelection = () => {
                                 ? "bg-emerald-500 text-white shadow-sm"
                                 : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                             }`}
-                            data-testid={`firm-${firm.id}-${value}-btn`}
+                            data-test-id={`firm-${firm.id}-${value}-btn`}
                           >
                             {label}
                           </button>
@@ -658,7 +658,7 @@ const BrokerSelection = () => {
                             ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
                             : "btn-gradient disabled:opacity-60"
                         }`}
-                        data-testid={`firm-connect-${firm.id}-btn`}
+                        data-test-id={`firm-connect-${firm.id}-btn`}
                       >
                         {isConnectingFirm ? (
                           <>
@@ -696,7 +696,7 @@ const BrokerSelection = () => {
               <button
                 onClick={() => setShowCsvModal(true)}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap shrink-0"
-                data-testid="csv-import-btn"
+                data-test-id="csv-import-btn"
               >
                 <Upload className="w-4 h-4" />
                 Import CSV
@@ -724,7 +724,7 @@ const BrokerSelection = () => {
               <button
                 onClick={() => setShowSetupStatus((v) => !v)}
                 className="w-full flex items-center justify-between px-5 py-3.5 bg-gray-50 dark:bg-gray-900/60 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                data-testid="toggle-setup-status-btn"
+                data-test-id="toggle-setup-status-btn"
               >
                 <div className="flex items-center gap-2">
                   <Settings className="w-4 h-4" />

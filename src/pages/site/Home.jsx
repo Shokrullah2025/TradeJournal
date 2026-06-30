@@ -16,7 +16,7 @@ import { HIGHLIGHT_FEATURES, STEPS } from "../../components/site/content";
  * call-to-action.
  */
 const Home = () => (
-  <div data-testid="site-home-page">
+  <div data-test-id="site-home-page">
     <Hero />
     <StatsBand />
 
@@ -33,7 +33,7 @@ const Home = () => (
       <div className="mt-10 text-center">
         <Link
           to="/features"
-          data-testid="home-explore-features-link"
+          data-test-id="home-explore-features-link"
           className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
         >
           Explore every feature
@@ -101,7 +101,7 @@ const Home = () => (
           </ul>
           <Link
             to="/features"
-            data-testid="home-autosync-link"
+            data-test-id="home-autosync-link"
             className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
           >
             See all integrations

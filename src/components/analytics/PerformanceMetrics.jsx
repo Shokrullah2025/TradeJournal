@@ -196,7 +196,7 @@ const PerformanceMetrics = ({ trades }) => {
   };
 
   return (
-    <div data-testid="performance-metrics">
+    <div data-test-id="performance-metrics">
       <div className="flex items-baseline justify-between mb-3.5 px-0.5">
         <h2 className="text-base font-bold tracking-tight text-gray-900 dark:text-gray-100">
           Performance Metrics
@@ -212,7 +212,7 @@ const PerformanceMetrics = ({ trades }) => {
           return (
             <div
               key={metric.title}
-              data-testid={`stats-${metric.title
+              data-test-id={`stats-${metric.title
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-|-$/g, "")}-card`}
@@ -225,7 +225,7 @@ const PerformanceMetrics = ({ trades }) => {
                   <metric.icon className="w-[17px] h-[17px]" />
                 </div>
                 <div
-                  data-testid={metric.testid}
+                  data-test-id={metric.testid}
                   className={`font-mono text-[23px] font-bold tracking-tight ${tone.value}`}
                 >
                   {metric.value}

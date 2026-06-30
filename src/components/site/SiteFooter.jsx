@@ -12,7 +12,7 @@ const SiteFooter = () => {
 
   return (
     <footer
-      data-testid="site-footer"
+      data-test-id="site-footer"
       className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
@@ -21,7 +21,7 @@ const SiteFooter = () => {
           <div className="col-span-2">
             <Link
               to="/"
-              data-testid="site-footer-brand-link"
+              data-test-id="site-footer-brand-link"
               className="flex items-center gap-2"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600">
@@ -48,7 +48,7 @@ const SiteFooter = () => {
                   <li key={`${column.heading}-${link.label}`}>
                     <Link
                       to={link.to}
-                      data-testid={`site-footer-${column.heading.toLowerCase()}-${link.label
+                      data-test-id={`site-footer-${column.heading.toLowerCase()}-${link.label
                         .toLowerCase()
                         .replace(/\s+/g, "-")}-link`}
                       className="text-sm text-gray-600 transition-colors hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"

@@ -88,7 +88,7 @@ const TradeScatterChart = ({ trades = [] }) => {
     return (
       <div
         className="h-52 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm text-center"
-        data-testid="trade-scatter-empty-state"
+        data-test-id="trade-scatter-empty-state"
       >
         <div>
           <div className="font-medium mb-1">No trading data yet</div>
@@ -107,7 +107,7 @@ const TradeScatterChart = ({ trades = [] }) => {
       ref={wrapRef}
       className="relative h-52 w-full"
       onMouseLeave={() => setHover(null)}
-      data-testid="trade-scatter-chart"
+      data-test-id="trade-scatter-chart"
     >
       {dims && (
         <svg
@@ -161,7 +161,7 @@ const TradeScatterChart = ({ trades = [] }) => {
                 if (!rect) return;
                 setHover({ idx: i, x: e.clientX - rect.left, y: e.clientY - rect.top });
               }}
-              data-testid={`trade-scatter-dot-${i}`}
+              data-test-id={`trade-scatter-dot-${i}`}
             />
           ))}
 
@@ -186,7 +186,7 @@ const TradeScatterChart = ({ trades = [] }) => {
         <div
           className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
           style={{ left: hover.x, top: hover.y - 10, transform: "translate(-50%, -100%)" }}
-          data-testid="trade-scatter-tooltip"
+          data-test-id="trade-scatter-tooltip"
         >
           <div
             className={

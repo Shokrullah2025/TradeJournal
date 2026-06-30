@@ -53,7 +53,7 @@ const Hero = () => {
               {isAuthenticated ? (
                 <Link
                   to="/dashboard"
-                  data-testid="site-hero-dashboard-btn"
+                  data-test-id="site-hero-dashboard-btn"
                   className="btn btn-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3 text-base sm:w-auto"
                 >
                   Go to your dashboard
@@ -62,7 +62,7 @@ const Hero = () => {
               ) : (
                 <Link
                   to="/register"
-                  data-testid="site-hero-getstarted-btn"
+                  data-test-id="site-hero-getstarted-btn"
                   className="btn btn-primary inline-flex w-full items-center justify-center gap-2 px-6 py-3 text-base sm:w-auto"
                 >
                   Start journaling free
@@ -71,7 +71,7 @@ const Hero = () => {
               )}
               <Link
                 to="/features"
-                data-testid="site-hero-features-btn"
+                data-test-id="site-hero-features-btn"
                 className="btn btn-ghost inline-flex w-full items-center justify-center gap-2 border border-gray-200 px-6 py-3 text-base dark:border-gray-700 sm:w-auto"
               >
                 <PlayCircle className="h-5 w-5" />

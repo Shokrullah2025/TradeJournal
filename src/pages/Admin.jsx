@@ -34,7 +34,7 @@ const Admin = () => {
   const ActivePanel = TABS.find((t) => t.id === activeTab)?.Panel ?? AdminOverview;
 
   return (
-    <div className="space-y-6" data-testid="admin-dashboard">
+    <div className="space-y-6" data-test-id="admin-dashboard">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -58,7 +58,7 @@ const Admin = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                data-testid={`admin-tab-${tab.id}`}
+                data-test-id={`admin-tab-${tab.id}`}
                 className={`${
                   active
                     ? "border-primary-500 text-primary-600 dark:text-primary-400"
@@ -74,7 +74,7 @@ const Admin = () => {
       </div>
 
       {/* Active panel */}
-      <div data-testid="admin-panel-content">
+      <div data-test-id="admin-panel-content">
         <ActivePanel />
       </div>
     </div>

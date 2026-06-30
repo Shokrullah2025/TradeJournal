@@ -155,7 +155,7 @@ const PnLChart = ({ trades = [] }) => {
     return (
       <div
         className="flex-1 min-h-0 w-full flex items-center justify-center"
-        data-testid="pnl-chart-empty-state"
+        data-test-id="pnl-chart-empty-state"
       >
         <div className="text-gray-500 dark:text-gray-400 text-center">
           <div className="text-sm font-medium mb-1">No trading data yet</div>
@@ -190,7 +190,7 @@ const PnLChart = ({ trades = [] }) => {
       ref={ref}
       className="relative flex-1 min-h-0 w-full"
       onMouseLeave={handleLeave}
-      data-testid="pnl-chart"
+      data-test-id="pnl-chart"
     >
       {/* Candles ease in on mount: a soft opacity fade with a slight rise,
           lightly staggered left-to-right so the chart settles in gently. */}
@@ -287,7 +287,7 @@ const PnLChart = ({ trades = [] }) => {
                 fill={d.pnl >= 0 ? "#16a34a" : "#ef4444"}
                 opacity={dimmed ? 0.7 : 1}
                 className="transition-opacity duration-150"
-                data-testid={`pnl-chart-bar-${i}`}
+                data-test-id={`pnl-chart-bar-${i}`}
               />
               {/* Invisible hit-target covers the full bar slot */}
               <rect
@@ -333,7 +333,7 @@ const PnLChart = ({ trades = [] }) => {
       {hovered && (
         <div
           className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
-          data-testid="pnl-chart-tooltip"
+          data-test-id="pnl-chart-tooltip"
           style={{
             left: tip.x,
             top: tip.y,
@@ -346,7 +346,7 @@ const PnLChart = ({ trades = [] }) => {
                 ? "font-semibold text-green-400 dark:text-green-600"
                 : "font-semibold text-red-400 dark:text-red-600"
             }
-            data-testid="pnl-chart-tooltip-value"
+            data-test-id="pnl-chart-tooltip-value"
           >
             {fmtFull(hovered.pnl)}
           </div>

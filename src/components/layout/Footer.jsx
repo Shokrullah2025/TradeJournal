@@ -14,7 +14,7 @@ const LEGAL_LINKS = [
 const Footer = () => (
   <footer
     className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-auto"
-    data-testid="site-footer"
+    data-test-id="site-footer"
   >
     <div className="px-4 sm:px-6 lg:px-8 py-4">
       <nav className="flex flex-wrap gap-x-5 gap-y-1.5 justify-center">
@@ -25,7 +25,7 @@ const Footer = () => (
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            data-testid={testId}
+            data-test-id={testId}
           >
             {label}
           </Link>

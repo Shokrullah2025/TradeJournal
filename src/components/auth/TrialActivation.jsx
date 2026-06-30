@@ -151,7 +151,7 @@ const TrialActivation = ({
             ? "w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
             : "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
         }
-        data-testid="trial-activated-state"
+        data-test-id="trial-activated-state"
       >
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
@@ -178,7 +178,7 @@ const TrialActivation = ({
                 7 Days Remaining
               </span>
             </div>
-            <p className="text-sm text-green-700" data-testid="trial-end-date">
+            <p className="text-sm text-green-700" data-test-id="trial-end-date">
               {trialEnd
                 ? `Your card will be charged on ${format(new Date(trialEnd), "MMM d, yyyy")} unless you cancel before then. You have full access to all Pro features until your trial ends.`
                 : "You'll have full access to all Pro features during your trial. Cancel anytime before it ends to avoid being charged."}
@@ -281,7 +281,7 @@ const TrialActivation = ({
         {errorMessage && (
           <div
             className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700"
-            data-testid="trial-error-message"
+            data-test-id="trial-error-message"
             role="alert"
           >
             {errorMessage}
@@ -292,7 +292,7 @@ const TrialActivation = ({
           // Card already verified; the trial start failed. Retry just that step.
           <div className="space-y-3">
             <form
-              data-testid="trial-retry-form"
+              data-test-id="trial-retry-form"
               onSubmit={(e) => {
                 e.preventDefault();
                 activateTrial(paymentMethodId);
@@ -301,7 +301,7 @@ const TrialActivation = ({
               <button
                 type="submit"
                 disabled={isWorking}
-                data-testid="trial-retry-submit-btn"
+                data-test-id="trial-retry-submit-btn"
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isWorking ? (
@@ -318,7 +318,7 @@ const TrialActivation = ({
               type="button"
               onClick={useDifferentCard}
               disabled={isWorking}
-              data-testid="trial-different-card-btn"
+              data-test-id="trial-different-card-btn"
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Use a different card
@@ -327,7 +327,7 @@ const TrialActivation = ({
         ) : trialStatus === "card" && clientSecret ? (
           <div
             className="border border-gray-200 rounded-lg p-4 bg-white"
-            data-testid="trial-card-input"
+            data-test-id="trial-card-input"
           >
             <div className="flex items-center mb-3 text-sm font-medium text-gray-900">
               <CreditCard className="w-4 h-4 mr-2 text-blue-600" />
@@ -344,7 +344,7 @@ const TrialActivation = ({
           </div>
         ) : (
           <form
-            data-testid="trial-activate-form"
+            data-test-id="trial-activate-form"
             onSubmit={(e) => {
               e.preventDefault();
               beginTrial();
@@ -353,7 +353,7 @@ const TrialActivation = ({
             <button
               type="submit"
               disabled={isWorking}
-              data-testid="trial-activate-submit-btn"
+              data-test-id="trial-activate-submit-btn"
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isWorking ? (

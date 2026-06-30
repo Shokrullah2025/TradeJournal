@@ -111,14 +111,14 @@ const ContactMessages = () => {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-6" data-testid="admin-contact-page">
+    <div className="space-y-6" data-test-id="admin-contact-page">
       <div className="flex items-center gap-3">
         <Mail className="h-6 w-6 text-primary-600 dark:text-primary-400" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Contact Submissions
         </h1>
         <span
-          data-testid="admin-contact-count"
+          data-test-id="admin-contact-count"
           className="ml-1 rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           {total}
@@ -130,7 +130,7 @@ const ContactMessages = () => {
         {STATUS_FILTERS.map((f) => (
           <button
             key={f.value}
-            data-testid={`admin-contact-filter-${f.value}`}
+            data-test-id={`admin-contact-filter-${f.value}`}
             onClick={() => {
               setStatusFilter(f.value);
               setPage(0);
@@ -172,7 +172,7 @@ const ContactMessages = () => {
               <tr>
                 <td
                   colSpan={5}
-                  data-testid="admin-contact-loading"
+                  data-test-id="admin-contact-loading"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
                   Loading…
@@ -182,7 +182,7 @@ const ContactMessages = () => {
               <tr>
                 <td
                   colSpan={5}
-                  data-testid="admin-contact-error"
+                  data-test-id="admin-contact-error"
                   className="px-6 py-10 text-center text-sm text-danger-600 dark:text-danger-400"
                 >
                   Couldn't load submissions. Please refresh and try again.
@@ -192,7 +192,7 @@ const ContactMessages = () => {
               <tr>
                 <td
                   colSpan={5}
-                  data-testid="admin-contact-empty"
+                  data-test-id="admin-contact-empty"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
                   <Inbox className="mx-auto mb-2 h-8 w-8 text-gray-400 dark:text-gray-500" />
@@ -203,7 +203,7 @@ const ContactMessages = () => {
               submissions.map((s) => (
                 <tr
                   key={s.id}
-                  data-testid={`admin-contact-row-${s.id}`}
+                  data-test-id={`admin-contact-row-${s.id}`}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700/40"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -222,7 +222,7 @@ const ContactMessages = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      data-testid={`admin-contact-status-${s.id}`}
+                      data-test-id={`admin-contact-status-${s.id}`}
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${
                         STATUS_BADGE[s.status] ?? STATUS_BADGE.read
                       }`}
@@ -232,7 +232,7 @@ const ContactMessages = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
-                      data-testid={`admin-contact-view-btn-${s.id}`}
+                      data-test-id={`admin-contact-view-btn-${s.id}`}
                       onClick={() => openMessage(s)}
                       className="text-primary-600 dark:text-primary-400 hover:underline"
                     >
@@ -253,7 +253,7 @@ const ContactMessages = () => {
             </p>
             <div className="flex gap-2">
               <button
-                data-testid="admin-contact-prev-btn"
+                data-test-id="admin-contact-prev-btn"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
                 className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -261,7 +261,7 @@ const ContactMessages = () => {
                 <ChevronLeft className="h-4 w-4" /> Prev
               </button>
               <button
-                data-testid="admin-contact-next-btn"
+                data-test-id="admin-contact-next-btn"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
                 className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -281,7 +281,7 @@ const ContactMessages = () => {
           onClick={() => setSelected(null)}
         >
           <div
-            data-testid="admin-contact-detail-modal"
+            data-test-id="admin-contact-detail-modal"
             className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -298,7 +298,7 @@ const ContactMessages = () => {
                 </p>
               </div>
               <button
-                data-testid="admin-contact-modal-close-btn"
+                data-test-id="admin-contact-modal-close-btn"
                 onClick={() => setSelected(null)}
                 className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
@@ -312,28 +312,28 @@ const ContactMessages = () => {
 
             <div className="mt-6 flex flex-wrap gap-2">
               <button
-                data-testid="admin-contact-mark-read-btn"
+                data-test-id="admin-contact-mark-read-btn"
                 onClick={() => updateStatus(selected.id, "read")}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <CheckCircle className="h-4 w-4" /> Mark read
               </button>
               <button
-                data-testid="admin-contact-archive-btn"
+                data-test-id="admin-contact-archive-btn"
                 onClick={() => updateStatus(selected.id, "archived")}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <Archive className="h-4 w-4" /> Archive
               </button>
               <button
-                data-testid="admin-contact-spam-btn"
+                data-test-id="admin-contact-spam-btn"
                 onClick={() => updateStatus(selected.id, "spam")}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-danger-200 dark:border-danger-900/50 px-3 py-1.5 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
               >
                 <ShieldAlert className="h-4 w-4" /> Spam
               </button>
               <a
-                data-testid="admin-contact-reply-btn"
+                data-test-id="admin-contact-reply-btn"
                 href={`mailto:${selected.email}?subject=Re: ${encodeURIComponent(selected.subject)}`}
                 className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
               >

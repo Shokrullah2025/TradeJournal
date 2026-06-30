@@ -7,12 +7,12 @@ import React from "react";
  */
 const PricingToggle = ({ cycle, onChange }) => (
   <div
-    data-testid="pricing-billing-toggle"
+    data-test-id="pricing-billing-toggle"
     className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 p-1 dark:border-gray-700 dark:bg-gray-800"
   >
     <button
       type="button"
-      data-testid="pricing-billing-monthly-btn"
+      data-test-id="pricing-billing-monthly-btn"
       onClick={() => onChange("monthly")}
       className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
         cycle === "monthly"
@@ -24,7 +24,7 @@ const PricingToggle = ({ cycle, onChange }) => (
     </button>
     <button
       type="button"
-      data-testid="pricing-billing-annual-btn"
+      data-test-id="pricing-billing-annual-btn"
       onClick={() => onChange("annual")}
       className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
         cycle === "annual"

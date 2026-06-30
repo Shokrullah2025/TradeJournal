@@ -7,7 +7,7 @@ import { STATS_BAND } from "./content";
  */
 const StatsBand = () => (
   <section
-    data-testid="site-stats-band"
+    data-test-id="site-stats-band"
     className="border-y border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/40"
   >
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">

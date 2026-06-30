@@ -35,7 +35,7 @@ const VALUES = [
  * the product.
  */
 const About = () => (
-  <div data-testid="site-about-page">
+  <div data-test-id="site-about-page">
     {/* Header */}
     <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">

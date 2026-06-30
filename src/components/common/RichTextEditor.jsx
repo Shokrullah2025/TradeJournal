@@ -26,7 +26,7 @@ function ToolbarButton({ onAction, title, testId, active, children }) {
   return (
     <button
       type="button"
-      data-testid={testId}
+      data-test-id={testId}
       title={title}
       aria-label={title}
       // Keep the editor selection alive: prevent the button from stealing focus.
@@ -91,7 +91,7 @@ function RichTextEditor({ value, onChange, placeholder = "", testId = "rich-text
 
   return (
     <div
-      data-testid={testId}
+      data-test-id={testId}
       className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 overflow-hidden"
     >
       {/* Toolbar */}
@@ -132,14 +132,14 @@ function RichTextEditor({ value, onChange, placeholder = "", testId = "rich-text
           </ToolbarButton>
           {colorOpen && (
             <div
-              data-testid={`${testId}-color-popover`}
+              data-test-id={`${testId}-color-popover`}
               className="absolute z-30 top-9 left-0 p-2 grid grid-cols-4 gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg"
             >
               {TEXT_COLORS.map((c) => (
                 <button
                   key={c.name}
                   type="button"
-                  data-testid={`${testId}-color-${c.name.toLowerCase()}`}
+                  data-test-id={`${testId}-color-${c.name.toLowerCase()}`}
                   title={c.name}
                   aria-label={c.name}
                   onMouseDown={(e) => e.preventDefault()}
@@ -165,7 +165,7 @@ function RichTextEditor({ value, onChange, placeholder = "", testId = "rich-text
         )}
         <div
           ref={ref}
-          data-testid={`${testId}-input`}
+          data-test-id={`${testId}-input`}
           contentEditable
           suppressContentEditableWarning
           role="textbox"
