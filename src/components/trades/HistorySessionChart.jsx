@@ -4,6 +4,11 @@ import BacktestChart from "./BacktestChart";
 import { fetchMarketCandles } from "../../utils/marketData";
 import { sliceCandlesAroundTrades } from "../../utils/historyWindow";
 import { tagColor } from "../../utils/tagColor";
+import useIsMobile from "../../hooks/useIsMobile";
+
+// Fewer bars on a narrow mobile screen so each candle renders wider and is easy
+// to inspect; the desktop viewer keeps the standard wide window.
+const MOBILE_VIEWER_BARS = 55;
 
 // Only these three timeframes are switchable in the read-only history viewer.
 const VIEWER_TFS = ["15m", "1h", "4h"];
@@ -34,6 +39,7 @@ class ChartBoundary extends Component {
  */
 function HistorySessionChart({ session, autoOpen = false }) {
   const trades = session.trades || [];
+  const isMobile = useIsMobile();
 
   const defaultTf = VIEWER_TFS.includes(session.timeframe) ? session.timeframe : "1h";
   const [tf, setTf] = useState(defaultTf);
@@ -69,7 +75,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
     fetchMarketCandles(session.market, session.symbol, tf)
       .then((all) => {
         if (cancelled) return;
-        const sliced = sliceCandlesAroundTrades(all, trades);
+        const sliced = sliceCandlesAroundTrades(all, trades, isMobile ? MOBILE_VIEWER_BARS : undefined);
         if (sliced.length < 2) {
           setCandles([]);
           setError(
@@ -91,7 +97,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
     return () => {
       cancelled = true;
     };
-  }, [opened, tf, session.market, session.symbol, trades]);
+  }, [opened, tf, session.market, session.symbol, trades, isMobile]);
 
   const visibleCount = useMemo(() => candles.length, [candles]);
 
@@ -101,7 +107,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            {session.instrumentName} · {session.symbol}
+            {session.symbol}
           </span>
           {(session.windowTags?.[1] || []).map((tag) => {
             const c = tagColor(tag);

@@ -3,6 +3,7 @@ import ModalPortal from "../components/common/ModalPortal";
 import {
   Play,
   Pause,
+  MoreVertical,
   RotateCcw,
   TrendingUp,
   TrendingDown,
@@ -46,10 +47,12 @@ import {
   Check,
   BarChart2,
   GripVertical,
+  Smartphone,
 } from "lucide-react";
 import { useBacktest } from "../context/BacktestContext";
 import BacktestChart from "../components/trades/BacktestChart";
 import HistorySessionChart from "../components/trades/HistorySessionChart";
+import MobileSessionCard from "../components/trades/MobileSessionCard";
 import RichTextEditor from "../components/common/RichTextEditor";
 import NoteView from "../components/common/NoteView";
 import { TrendlineIcon, RayIcon, SegmentIcon } from "../components/trades/BacktestChart/toolIcons";
@@ -60,6 +63,7 @@ import { fetchMarketCandles, clearCandleCache } from "../utils/marketData";
 import { tagColor } from "../utils/tagColor";
 import { useTemplates } from "../hooks/useTemplates";
 import { useUserSettings } from "../hooks/useUserSettings";
+import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { sessionMetaSchema, sessionTagSchema, MAX_SESSION_TAGS } from "../lib/schemas/backtest";
@@ -223,6 +227,8 @@ function sliceCandlesToRange(candles, startDate, endDate) {
 }
 
 function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
+  // Compact the detail layout on phones only — desktop stays exactly as it was.
+  const isMobile = useIsMobile();
   const trades = useMemo(
     () => withBalanceSnapshots(session.trades || [], session.initialBalance),
     [session.trades, session.initialBalance]
@@ -240,6 +246,19 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
   const [tags, setTags] = useState(session.tags || []);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
+  // The note is read-only until the user picks "Edit" from the 3-dots menu —
+  // keeps the detail view clean and prevents accidental edits while skimming.
+  const [noteEditing, setNoteEditing] = useState(false);
+  const [noteMenuOpen, setNoteMenuOpen] = useState(false);
+  const noteMenuRef = useRef(null);
+  useEffect(() => {
+    if (!noteMenuOpen) return;
+    const onDoc = (e) => {
+      if (noteMenuRef.current && !noteMenuRef.current.contains(e.target)) setNoteMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [noteMenuOpen]);
   const dirty =
     note !== (session.note || "") ||
     JSON.stringify(tags) !== JSON.stringify(session.tags || []);
@@ -282,10 +301,10 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
         className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{session.name}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        <div className={`${isMobile ? "p-4" : "p-5"} border-b border-gray-200 dark:border-gray-700 flex items-start justify-between`}>
+          <div className="min-w-0">
+            <h2 className={`${isMobile ? "text-base truncate" : "text-lg"} font-bold text-gray-900 dark:text-white`}>{session.name}</h2>
+            <p className={`${isMobile ? "text-xs break-words" : "text-sm"} text-gray-500 dark:text-gray-400 mt-0.5`}>
               {session.instrumentName} · {session.timeframe?.toUpperCase()} · {session.strategy} · {session.setup}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -297,7 +316,13 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
           </button>
         </div>
 
-        <div className="grid grid-cols-4 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700">
+        <div
+          className={
+            isMobile
+              ? "grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
+              : "grid grid-cols-4 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700"
+          }
+        >
           {[
             {
               label: "Starting Balance",
@@ -322,9 +347,16 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
               cls: totalPnl >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400",
             },
           ].map(({ label, value, cls }) => (
-            <div key={label} className="p-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-              <p className={`text-base font-bold ${cls}`}>{value}</p>
+            <div
+              key={label}
+              className={
+                isMobile
+                  ? "p-2 text-center bg-white dark:bg-gray-800"
+                  : "p-4 text-center"
+              }
+            >
+              <p className={`${isMobile ? "text-[11px] mb-0.5 truncate" : "text-xs mb-1"} text-gray-500 dark:text-gray-400`}>{label}</p>
+              <p className={`${isMobile ? "text-sm" : "text-base"} font-bold ${cls}`}>{value}</p>
             </div>
           ))}
         </div>
@@ -332,7 +364,11 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
         {/* Per-session edge analytics */}
         {trades.length > 0 && (
           <div
-            className="grid grid-cols-4 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40"
+            className={
+              isMobile
+                ? "grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
+                : "grid grid-cols-4 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40"
+            }
             data-testid="history-modal-edge-stats"
           >
             {[
@@ -361,8 +397,15 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 testId: "history-modal-max-dd-value",
               },
             ].map(({ label, value, cls, testId }) => (
-              <div key={label} className="p-3 text-center">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</p>
+              <div
+                key={label}
+                className={
+                  isMobile
+                    ? "p-2 text-center bg-gray-50 dark:bg-gray-900/40"
+                    : "p-3 text-center"
+                }
+              >
+                <p className={`${isMobile ? "text-[11px] truncate" : "text-xs"} text-gray-500 dark:text-gray-400 mb-0.5`}>{label}</p>
                 <p className={`text-sm font-bold ${cls}`} data-testid={testId}>{value}</p>
               </div>
             ))}
@@ -372,13 +415,71 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
         {/* Editable note + custom tags */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3" data-testid="history-modal-meta-editor">
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</label>
-            <RichTextEditor
-              testId="history-modal-note-input"
-              value={note}
-              onChange={setNote}
-              placeholder="What did you learn from this session?"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Notes</label>
+              <div className="relative" ref={noteMenuRef}>
+                <button
+                  data-testid="history-modal-note-menu-btn"
+                  onClick={() => setNoteMenuOpen((v) => !v)}
+                  className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+                    noteMenuOpen
+                      ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                      : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                  }`}
+                  aria-label="Note options"
+                  aria-haspopup="menu"
+                  aria-expanded={noteMenuOpen}
+                  title="Note options"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+                {noteMenuOpen && (
+                  <div
+                    data-testid="history-modal-note-menu"
+                    role="menu"
+                    className="absolute right-0 top-8 z-10 w-32 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg"
+                  >
+                    <button
+                      data-testid="history-modal-note-edit-btn"
+                      role="menuitem"
+                      onClick={() => { setNoteEditing(true); setNoteMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button
+                      data-testid="history-modal-note-delete-btn"
+                      role="menuitem"
+                      onClick={() => { setNote(""); setNoteEditing(false); setNoteMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            {noteEditing ? (
+              <RichTextEditor
+                testId="history-modal-note-input"
+                value={note}
+                onChange={setNote}
+                placeholder="What did you learn from this session?"
+              />
+            ) : (
+              <div
+                data-testid="history-modal-note-readonly"
+                className={`${isMobile ? "max-h-24" : "max-h-40"} overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2`}
+              >
+                {note ? (
+                  <NoteView html={note} clamp={0} testId="history-modal-note-view" />
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                    No notes yet — tap the menu to add one.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tags</label>
@@ -459,14 +560,14 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 overflow-y-auto ${isMobile ? "overflow-x-auto" : ""}`}>
           {trades.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
               <p className="text-sm">No trades recorded for this session</p>
               <p className="text-xs mt-1">Trades are saved automatically as you close them</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <table className={`w-full text-sm ${isMobile ? "min-w-[420px]" : ""}`}>
               <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700">
                 <tr className="text-xs text-gray-500 dark:text-gray-400">
                   <th className="text-left px-4 py-3 font-medium">Direction</th>
@@ -1100,9 +1201,28 @@ const Backtest = () => {
     return () => observer.disconnect();
   }, []);
 
+  // On a mobile/touch device past sessions can still be reviewed (the list and
+  // the read-only snapshot replays), but creating a new session or running a
+  // live backtest requires a precise pointer and a large chart — those are
+  // gated out below.
+  const isMobile = useIsMobile();
+
   // Session and Setup States
   const [currentView, setCurrentView] = useState("sessions");
   const [currentSession, setCurrentSession] = useState(null);
+
+  // Keep the create-session form and the live backtest off mobile. If a device
+  // becomes "mobile" while one of those views is open (e.g. a tablet rotated to
+  // portrait, or a window resized), send the user back to the read-only session
+  // list rather than leaving them stuck in an unusable view.
+  useEffect(() => {
+    if (isMobile && (currentView === "setup" || currentView === "backtest")) {
+      setCurrentView("sessions");
+      toast("Backtesting is available on desktop. You can still review past sessions here.", {
+        icon: "💻",
+      });
+    }
+  }, [isMobile, currentView]);
   const [sessionName, setSessionName] = useState("");
   const [selectedMarket, setSelectedMarket] = useState("");
   const [selectedInstruments, setSelectedInstruments] = useState([]);
@@ -1127,6 +1247,25 @@ const Backtest = () => {
   const [historyModal, setHistoryModal] = useState(null); // session obj with .trades when open
   const [chartModalSession, setChartModalSession] = useState(null); // session whose chart-replay modal is open
   const [tagSuggestions, setTagSuggestions] = useState([]); // user's saved custom tags
+
+  // Recent-sessions pagination. Fewer per page on mobile since the redesigned
+  // card is taller — keeps each page to roughly one screen on either device.
+  const SESSIONS_PER_PAGE = isMobile ? 6 : 12;
+  const [sessionsPage, setSessionsPage] = useState(0);
+  const sessionPageCount = Math.max(1, Math.ceil(sessionHistory.length / SESSIONS_PER_PAGE));
+  // Clamp the page back into range whenever the list shrinks (a delete) or the
+  // page size changes (mobile/desktop switch), so we never show an empty page.
+  useEffect(() => {
+    setSessionsPage((p) => Math.min(p, sessionPageCount - 1));
+  }, [sessionPageCount]);
+  const pagedSessions = useMemo(
+    () =>
+      sessionHistory.slice(
+        sessionsPage * SESSIONS_PER_PAGE,
+        sessionsPage * SESSIONS_PER_PAGE + SESSIONS_PER_PAGE
+      ),
+    [sessionHistory, sessionsPage, SESSIONS_PER_PAGE]
+  );
   // Per-window setup tags shown at the top of each chart window. Keyed by chart
   // number (1–3); each window's tags are independent and never auto-apply to the
   // others. Chart 1's tags are carried into the session's replay.
@@ -1141,7 +1280,7 @@ const Backtest = () => {
       .select("id, name, parameters, results, note, tags, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(20)
+      .limit(60)
       .then(({ data, error }) => {
         if (cancelled) return;
         setIsLoadingSessions(false);
@@ -3029,13 +3168,24 @@ const Backtest = () => {
                 <p className="text-xs text-gray-500 dark:text-gray-400">Replay history, test your edge</p>
               </div>
             </div>
-            <button
-              onClick={() => setCurrentView("setup")}
-              className="btn-gradient flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              New Session
-            </button>
+            {isMobile ? (
+              <span
+                data-testid="backtest-desktop-only-note"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 flex-shrink-0"
+              >
+                <Smartphone className="w-4 h-4" />
+                Desktop only
+              </span>
+            ) : (
+              <button
+                onClick={() => setCurrentView("setup")}
+                className="btn-gradient flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-shrink-0"
+                data-testid="backtest-new-session-btn"
+              >
+                <Plus className="w-4 h-4" />
+                New Session
+              </button>
+            )}
           </div>
         </div>
 
@@ -3062,13 +3212,24 @@ const Backtest = () => {
                 Your account balance carries between sessions so you can track cumulative performance.
               </p>
               <div className="flex items-center gap-4 flex-wrap justify-center">
-                <button
-                  onClick={() => setCurrentView("setup")}
-                  className="btn-gradient flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold shadow-md transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create First Session
-                </button>
+                {isMobile ? (
+                  <div
+                    data-testid="backtest-mobile-empty-note"
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700"
+                  >
+                    <Smartphone className="w-4 h-4 flex-shrink-0" />
+                    Open Trade Journal on a desktop to create your first session.
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setCurrentView("setup")}
+                    className="btn-gradient flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold shadow-md transition-all"
+                    data-testid="backtest-create-first-session-btn"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create First Session
+                  </button>
+                )}
                 <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                   <span className="font-medium text-gray-700 dark:text-gray-300">Balance:</span>
                   {isEditingBalance ? (
@@ -3275,7 +3436,19 @@ const Backtest = () => {
                 <span className="text-xs text-gray-400 dark:text-gray-500">{sessionHistory.length} session{sessionHistory.length !== 1 ? "s" : ""}</span>
               </div>
               <div className="space-y-2">
-                {sessionHistory.map((s) => {
+                {pagedSessions.map((s) => {
+                  // Mobile gets a purpose-built stacked card; desktop keeps the
+                  // exact row layout below, untouched.
+                  if (isMobile) {
+                    return (
+                      <MobileSessionCard
+                        key={s.id}
+                        session={s}
+                        onOpen={(sess) => setHistoryModal({ ...sess, trades: sess.trades || [] })}
+                        onPlay={(sess) => setChartModalSession(sess)}
+                      />
+                    );
+                  }
                   const sessionPnl = s.endingBalance != null ? s.endingBalance - s.initialBalance : null;
                   const pnlPositive = sessionPnl != null && sessionPnl >= 0;
                   const completed = s.endingBalance != null;
@@ -3284,7 +3457,7 @@ const Backtest = () => {
                     <div
                       key={s.id}
                       onClick={() => setHistoryModal({ ...s, trades: s.trades || [] })}
-                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4 cursor-pointer transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 group"
+                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 group"
                     >
                       {/* Left accent bar */}
                       <div
@@ -3353,7 +3526,7 @@ const Backtest = () => {
                             <p className={`text-base font-bold ${pnlPositive ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
                               {pnlPositive ? "+" : ""}${sessionPnl.toFixed(2)}
                             </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                            <p className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                               ${s.initialBalance?.toLocaleString(undefined, { maximumFractionDigits: 0 })} → ${s.endingBalance?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                           </>
@@ -3378,11 +3551,62 @@ const Backtest = () => {
                         </button>
                       )}
 
-                      <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 flex-shrink-0 transition-colors" />
+                      <ChevronRight className="hidden sm:block w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 flex-shrink-0 transition-colors" />
                     </div>
                   );
                 })}
               </div>
+
+              {/* Pagination — only when the list spills past a single page */}
+              {sessionPageCount > 1 && (
+                <div
+                  data-testid="sessions-pagination"
+                  className="flex items-center justify-center gap-2 mt-4"
+                >
+                  <button
+                    data-testid="sessions-page-prev-btn"
+                    onClick={() => setSessionsPage((p) => Math.max(0, p - 1))}
+                    disabled={sessionsPage === 0}
+                    className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {isMobile ? (
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300 px-2 tabular-nums">
+                      {sessionsPage + 1} / {sessionPageCount}
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: sessionPageCount }, (_, i) => (
+                        <button
+                          key={i}
+                          data-testid={`sessions-page-btn-${i + 1}`}
+                          onClick={() => setSessionsPage(i)}
+                          className={`min-w-[2.25rem] h-9 px-2 rounded-lg text-sm font-medium transition-colors ${
+                            i === sessionsPage
+                              ? "bg-blue-600 text-white"
+                              : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    data-testid="sessions-page-next-btn"
+                    onClick={() => setSessionsPage((p) => Math.min(sessionPageCount - 1, p + 1))}
+                    disabled={sessionsPage >= sessionPageCount - 1}
+                    className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

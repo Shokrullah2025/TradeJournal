@@ -37,7 +37,9 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   ].filter((item) => !item.feature || isFeatureEnabled(item.feature));
 
   const adminNavigation = [
-    { name: "Admin Panel", href: "/admin", icon: Shield, adminOnly: true },
+    // `end` keeps "/admin" from matching its nested routes (e.g. the Contact
+    // Inbox path), so only one admin item is highlighted at a time.
+    { name: "Admin Panel", href: "/admin", icon: Shield, adminOnly: true, end: true },
     {
       name: "Contact Inbox",
       href: "/admin/contact-submissions",
@@ -50,13 +52,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 bg-gray-600 dark:bg-gray-900 bg-opacity-75 lg:hidden"
+          className="fixed inset-0 z-40 bg-gray-600 dark:bg-gray-900 bg-opacity-75 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <div
-        className={`sidebar fixed inset-y-0 left-0 z-30 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 overflow-hidden ${
+        className={`sidebar fixed inset-y-0 left-0 z-50 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 overflow-hidden ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } ${isCollapsed ? "lg:w-16" : "w-64"}`}
       >
@@ -174,12 +176,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                     <NavLink
                       key={item.name}
                       to={item.href}
+                      end={item.end}
                       onClick={() => onClose()}
-                      data-testid="sidebar-admin-link"
+                      data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                       className={({ isActive }) =>
                         `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                           isActive
-                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                            ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                         }`
                       }
@@ -204,12 +207,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   <NavLink
                     key={item.name}
                     to={item.href}
+                    end={item.end}
                     onClick={() => onClose()}
-                    data-testid="sidebar-admin-link-collapsed"
+                    data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link-collapsed`}
                     className={({ isActive }) =>
                       `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive
-                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                          ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`
                     }
