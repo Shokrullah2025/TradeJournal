@@ -61,6 +61,7 @@ import { computeEdgeStats, withBalanceSnapshots } from "../utils/edgeStats";
 import { TZ_OPTIONS } from "../utils/chartTimezone";
 import { fetchMarketCandles, clearCandleCache } from "../utils/marketData";
 import { tagColor } from "../utils/tagColor";
+import { getPageCount, clampPage, getPageSlice } from "../utils/paginate";
 import { useTemplates } from "../hooks/useTemplates";
 import { useUserSettings } from "../hooks/useUserSettings";
 import useIsMobile from "../hooks/useIsMobile";
@@ -226,7 +227,7 @@ function sliceCandlesToRange(candles, startDate, endDate) {
   return sliced.length > 1 ? sliced : candles;
 }
 
-function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
+export function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
   // Compact the detail layout on phones only — desktop stays exactly as it was.
   const isMobile = useIsMobile();
   const trades = useMemo(
@@ -1252,18 +1253,14 @@ const Backtest = () => {
   // card is taller — keeps each page to roughly one screen on either device.
   const SESSIONS_PER_PAGE = isMobile ? 6 : 12;
   const [sessionsPage, setSessionsPage] = useState(0);
-  const sessionPageCount = Math.max(1, Math.ceil(sessionHistory.length / SESSIONS_PER_PAGE));
+  const sessionPageCount = getPageCount(sessionHistory.length, SESSIONS_PER_PAGE);
   // Clamp the page back into range whenever the list shrinks (a delete) or the
   // page size changes (mobile/desktop switch), so we never show an empty page.
   useEffect(() => {
-    setSessionsPage((p) => Math.min(p, sessionPageCount - 1));
+    setSessionsPage((p) => clampPage(p, sessionPageCount));
   }, [sessionPageCount]);
   const pagedSessions = useMemo(
-    () =>
-      sessionHistory.slice(
-        sessionsPage * SESSIONS_PER_PAGE,
-        sessionsPage * SESSIONS_PER_PAGE + SESSIONS_PER_PAGE
-      ),
+    () => getPageSlice(sessionHistory, sessionsPage, SESSIONS_PER_PAGE),
     [sessionHistory, sessionsPage, SESSIONS_PER_PAGE]
   );
   // Per-window setup tags shown at the top of each chart window. Keyed by chart
