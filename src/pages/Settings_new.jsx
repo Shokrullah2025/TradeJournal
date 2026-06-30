@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "react-router-dom";
 import ModalPortal from "../components/common/ModalPortal";
 import { useTemplates } from "../hooks/useTemplates";
 import { DEFAULT_VISIBLE_FIELDS } from "../utils/templateFields";
@@ -33,8 +34,11 @@ import {
   Bell,
   UserCircle,
   CreditCard,
+  ArrowLeft,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
+import useIsMobile from "../hooks/useIsMobile";
+import InfoTooltip from "../components/common/InfoTooltip";
 import { exportToExcel, importFromFile } from "../utils/exportUtils";
 import { useNotificationPrefs } from "../hooks/useNotificationPrefs";
 import toast from "react-hot-toast";
@@ -43,6 +47,19 @@ import toast from "react-hot-toast";
 // Profile page's bundled country/state dataset stays out of the Settings chunk.
 const Profile = React.lazy(() => import("./Profile"));
 const Billing = React.lazy(() => import("./Billing"));
+const SecurityTab = React.lazy(() => import("../components/settings/SecurityTab"));
+
+// Tab ids that may be opened directly via the `?tab=` deep link (e.g. the
+// "password changed" notification links to /settings?tab=security).
+const VALID_TABS = [
+  "profile",
+  "general",
+  "notifications",
+  "templates",
+  "data",
+  "billing",
+  "security",
+];
 
 // Spinner fallback shown while a lazy tab component loads.
 const TabSpinner = () => (
@@ -82,7 +99,33 @@ const Settings = () => {
     loading: notificationPrefsLoading,
     setChannel: setNotificationChannel,
   } = useNotificationPrefs();
-  const [activeTab, setActiveTab] = useState("general");
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Open the tab named in `?tab=` (deep link), falling back to General.
+  const [activeTab, setActiveTab] = useState(() => {
+    const t = searchParams.get("tab");
+    return VALID_TABS.includes(t) ? t : "general";
+  });
+  const isMobile = useIsMobile();
+  // On mobile we use an iOS-style drill-in: show the section menu first, then
+  // open the chosen section full-screen. Ignored on desktop (all hides below
+  // are gated behind `isMobile`), where the sidebar + content always show.
+  // A deep link (?tab=...) skips the menu and opens the section directly.
+  const [mobileShowMenu, setMobileShowMenu] = useState(() => {
+    const t = searchParams.get("tab");
+    return !(t && VALID_TABS.includes(t));
+  });
+
+  // Follow `?tab=` changes that happen while Settings is already mounted — e.g.
+  // clicking the "password changed" notification (→ /settings?tab=security), or
+  // browser back/forward between tabs.
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && VALID_TABS.includes(t) && t !== activeTab) {
+      setActiveTab(t);
+      setMobileShowMenu(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const tabs = [
     {
@@ -120,6 +163,12 @@ const Settings = () => {
       name: "Billing",
       icon: CreditCard,
       description: "Manage your plan, payment, and invoices",
+    },
+    {
+      id: "security",
+      name: "Security",
+      icon: Shield,
+      description: "Password, two-factor, and login activity",
     },
   ];
 
@@ -979,8 +1028,13 @@ const Settings = () => {
 
   return (
     <div className="flex flex-col lg:flex-row lg:h-full">
-      {/* Vertical Tab Navigation — stacks on top on mobile, sidebar on lg+ */}
-      <div className="w-full lg:w-80 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6">
+      {/* Vertical Tab Navigation — on mobile this is the drill-in menu (hidden
+          once a section is open); on lg+ it's the always-visible left sidebar. */}
+      <div
+        className={`w-full lg:w-80 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6 lg:block ${
+          isMobile && !mobileShowMenu ? "hidden" : ""
+        }`}
+      >
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -999,9 +1053,13 @@ const Settings = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSearchParams({ tab: tab.id }, { replace: true });
+                  if (isMobile) setMobileShowMenu(false);
+                }}
                 data-testid={`settings-nav-${tab.id}-link`}
-                className={`relative w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all duration-150 group ${
+                className={`relative w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all duration-150 group active:opacity-70 lg:active:opacity-100 ${
                   isActive
                     ? "bg-primary-50 dark:bg-primary-900/30"
                     : "hover:bg-gray-50 dark:hover:bg-gray-700/60"
@@ -1033,14 +1091,37 @@ const Settings = () => {
                     {tab.description}
                   </span>
                 </span>
+                {/* Drill-in affordance — mobile only */}
+                <ChevronRight className="h-5 w-5 mt-0.5 ml-auto flex-shrink-0 self-center text-gray-400 dark:text-gray-500 lg:hidden" />
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 p-4 lg:p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+      {/* Tab Content — on mobile this is hidden until a section is opened from
+          the drill-in menu; on lg+ it always shows beside the sidebar. */}
+      <div
+        className={`flex-1 p-4 lg:p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900 lg:block ${
+          isMobile && mobileShowMenu ? "hidden" : ""
+        }`}
+      >
+        {/* Mobile-only sticky top app bar for the drill-in view: a single
+            back arrow on the left and the section title — one name per page. */}
+        <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-2 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileShowMenu(true)}
+            aria-label="Back to settings menu"
+            data-testid="settings-mobile-back-btn"
+            className="flex-shrink-0 rounded-lg p-1.5 text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            {tabs.find((t) => t.id === activeTab)?.name}
+          </h2>
+        </div>
         {/*tab content area*/}
         <div className="mt-6">
           {/* Profile Tab — reuses the full Profile page */}
@@ -1053,9 +1134,11 @@ const Settings = () => {
           {/* General Tab (Option A row content) */}
           {activeTab === "general" && (
             <div className="max-w-3xl space-y-6" data-testid="settings-general-panel">
-              {/* Header + Save */}
-              <div className="flex items-start justify-between gap-6">
-                <div>
+              {/* Header + Save — title hidden on mobile (the top app bar already
+                  names the page); Save uses the platform blue and goes full-width
+                  on mobile. */}
+              <div className="flex items-center justify-between gap-6">
+                <div className="hidden lg:block">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                     General
                   </h2>
@@ -1065,7 +1148,7 @@ const Settings = () => {
                 </div>
                 <button
                   onClick={handleSavePreferences}
-                  className="btn btn-gradient flex items-center space-x-2 flex-shrink-0"
+                  className="btn btn-primary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
                   data-testid="settings-save-preferences-btn"
                 >
                   <Save className="w-4 h-4" />
@@ -1116,12 +1199,19 @@ const Settings = () => {
               {/* Preference rows */}
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70">
                 {/* Default currency */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      Default currency
+                <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        Default currency
+                      </div>
+                      <InfoTooltip
+                        text="Used across journals and reports"
+                        className="lg:hidden"
+                        testId="settings-currency-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       Used across journals and reports
                     </div>
                   </div>
@@ -1130,7 +1220,7 @@ const Settings = () => {
                     onChange={(e) =>
                       setPreferences({ ...preferences, currency: e.target.value })
                     }
-                    className="input w-64 flex-shrink-0"
+                    className="input w-full lg:w-64 lg:flex-shrink-0"
                     data-testid="settings-currency-select"
                   >
                     <option value="USD">USD — US Dollar</option>
@@ -1143,12 +1233,19 @@ const Settings = () => {
                 </div>
 
                 {/* Timezone */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      Timezone
+                <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        Timezone
+                      </div>
+                      <InfoTooltip
+                        text="Timestamps on every trade"
+                        className="lg:hidden"
+                        testId="settings-timezone-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       Timestamps on every trade
                     </div>
                   </div>
@@ -1157,7 +1254,7 @@ const Settings = () => {
                     onChange={(e) =>
                       setPreferences({ ...preferences, timezone: e.target.value })
                     }
-                    className="input w-64 flex-shrink-0"
+                    className="input w-full lg:w-64 lg:flex-shrink-0"
                     data-testid="settings-timezone-select"
                   >
                     <option value="America/New_York">Eastern Time (ET)</option>
@@ -1172,12 +1269,19 @@ const Settings = () => {
                 </div>
 
                 {/* Date format */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      Date format
+                <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        Date format
+                      </div>
+                      <InfoTooltip
+                        text="How dates display in the app"
+                        className="lg:hidden"
+                        testId="settings-date-format-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       How dates display in the app
                     </div>
                   </div>
@@ -1186,7 +1290,7 @@ const Settings = () => {
                     onChange={(e) =>
                       setPreferences({ ...preferences, dateFormat: e.target.value })
                     }
-                    className="input w-64 flex-shrink-0"
+                    className="input w-full lg:w-64 lg:flex-shrink-0"
                     data-testid="settings-date-format-select"
                   >
                     <option value="MM/dd/yyyy">MM/DD/YYYY (US)</option>
@@ -1196,16 +1300,23 @@ const Settings = () => {
                 </div>
 
                 {/* Default risk percentage */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      Default risk percentage
+                <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        Default risk percentage
+                      </div>
+                      <InfoTooltip
+                        text="Used for position sizing calculations"
+                        className="lg:hidden"
+                        testId="settings-risk-percentage-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       Used for position sizing calculations
                     </div>
                   </div>
-                  <div className="relative w-64 flex-shrink-0">
+                  <div className="relative w-full lg:w-64 lg:flex-shrink-0">
                     <input
                       type="number"
                       min="0.1"
@@ -1228,12 +1339,19 @@ const Settings = () => {
                 </div>
 
                 {/* Auto backup */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      Auto backup
+                <div className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        Auto backup
+                      </div>
+                      <InfoTooltip
+                        text="Automatically back up your data weekly"
+                        className="lg:hidden"
+                        testId="settings-auto-backup-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       Automatically back up your data weekly
                     </div>
                   </div>
@@ -1260,8 +1378,8 @@ const Settings = () => {
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
             <div className="max-w-3xl space-y-6" data-testid="notifications-settings-tab">
-              {/* Header */}
-              <div className="flex items-start justify-between gap-6">
+              {/* Header — hidden on mobile (the top app bar names the page) */}
+              <div className="hidden items-start justify-between gap-6 lg:flex">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                     Notification preferences
@@ -1283,7 +1401,7 @@ const Settings = () => {
                 </div>
               ) : (
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-                  <div className="hidden sm:flex items-center justify-end gap-8 px-5 py-3 border-b border-gray-100 dark:border-gray-700/70 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center justify-end gap-8 px-5 py-3 border-b border-gray-100 dark:border-gray-700/70 text-xs font-semibold text-gray-500 dark:text-gray-400">
                     <span className="w-12 text-center">In-App</span>
                     <span className="w-12 text-center">Email</span>
                   </div>
@@ -1296,11 +1414,18 @@ const Settings = () => {
                           className="flex items-center justify-between gap-6 px-5 py-4"
                           data-testid={`notifications-settings-row-${cat.id}`}
                         >
-                          <div>
-                            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                              {cat.label}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                {cat.label}
+                              </div>
+                              <InfoTooltip
+                                text={cat.description}
+                                className="lg:hidden"
+                                testId={`notifications-settings-${cat.id}-hint`}
+                              />
                             </div>
-                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                            <p className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                               {cat.description}
                             </p>
                           </div>
@@ -1362,9 +1487,9 @@ const Settings = () => {
           {/* Templates Tab */}
           {activeTab === "templates" && (
             <div className="max-w-6xl space-y-6">
-              {/* Header */}
-              <div className="flex items-start justify-between gap-6">
-                <div>
+              {/* Header — title hidden on mobile (named by the top app bar) */}
+              <div className="flex items-center justify-between gap-6">
+                <div className="hidden lg:block">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                     Trade Templates
                   </h2>
@@ -1374,7 +1499,7 @@ const Settings = () => {
                 </div>
                 <button
                   onClick={handleCreateNewTemplate}
-                  className="btn btn-primary flex items-center space-x-2 flex-shrink-0"
+                  className="btn btn-primary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
                   data-testid="settings-new-template-btn"
                 >
                   <Plus className="w-4 h-4" />
@@ -1503,8 +1628,8 @@ const Settings = () => {
           {/* Data Management Tab */}
           {activeTab === "data" && (
             <div className="max-w-2xl space-y-6">
-              {/* Header */}
-              <div>
+              {/* Header — hidden on mobile (named by the top app bar) */}
+              <div className="hidden lg:block">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                   Data Management
                 </h2>
@@ -1516,12 +1641,19 @@ const Settings = () => {
               {/* Rows */}
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70">
                 {/* Export */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      Export data
+                <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        Export data
+                      </div>
+                      <InfoTooltip
+                        text="Download your complete trading data as an Excel file for backup or analysis in other tools."
+                        className="lg:hidden"
+                        testId="settings-export-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       Download your complete trading data as an Excel file for
                       backup or analysis in other tools.
                     </div>
@@ -1529,7 +1661,7 @@ const Settings = () => {
                   <button
                     onClick={handleExportData}
                     disabled={trades.length === 0}
-                    className="btn btn-secondary flex items-center space-x-2 flex-shrink-0"
+                    className="btn btn-secondary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
                     data-testid="settings-export-data-btn"
                   >
                     <Download className="w-4 h-4" />
@@ -1538,17 +1670,24 @@ const Settings = () => {
                 </div>
 
                 {/* Import */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      Import data
+                <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        Import data
+                      </div>
+                      <InfoTooltip
+                        text="Import trade data from a CSV or Excel file. Make sure your file includes the required columns."
+                        className="lg:hidden"
+                        testId="settings-import-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       Import trade data from a CSV or Excel file. Make sure your
                       file includes the required columns.
                     </div>
                   </div>
-                  <label className="btn btn-secondary flex items-center space-x-2 cursor-pointer flex-shrink-0">
+                  <label className="btn btn-secondary flex items-center justify-center space-x-2 cursor-pointer w-full lg:w-auto lg:flex-shrink-0">
                     <Upload className="w-4 h-4" />
                     <span>Import from File</span>
                     <input
@@ -1562,19 +1701,26 @@ const Settings = () => {
                 </div>
 
                 {/* Danger zone */}
-                <div className="flex items-center justify-between gap-6 px-5 py-4">
-                  <div>
-                    <div className="text-sm font-bold text-red-600 dark:text-red-400">
-                      Danger zone
+                <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-red-600 dark:text-red-400">
+                        Danger zone
+                      </div>
+                      <InfoTooltip
+                        text="Permanently delete all your trading data. This action cannot be undone."
+                        className="lg:hidden"
+                        testId="settings-clear-data-hint"
+                      />
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
                       Permanently delete all your trading data. This action
                       cannot be undone.
                     </div>
                   </div>
                   <button
                     onClick={handleClearData}
-                    className="btn btn-danger flex items-center space-x-2 flex-shrink-0"
+                    className="btn btn-danger flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
                     data-testid="settings-clear-data-btn"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1589,6 +1735,13 @@ const Settings = () => {
           {activeTab === "billing" && (
             <Suspense fallback={<TabSpinner />}>
               <Billing />
+            </Suspense>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === "security" && (
+            <Suspense fallback={<TabSpinner />}>
+              <SecurityTab />
             </Suspense>
           )}
 

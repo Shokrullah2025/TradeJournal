@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
 import TrialGate from "./TrialGate";
+import MfaStepUp from "./MfaStepUp";
 
 // ── Shared loading spinner ────────────────────────────────────────────────
 const LoadingScreen = () => (
@@ -22,11 +23,14 @@ const LoadingScreen = () => (
 
 // ── Requires authentication ───────────────────────────────────────────────
 export const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, mfaRequired } = useAuth();
   const location = useLocation();
 
   if (loading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  // aal1 session with a verified TOTP factor: block until the code is entered.
+  // Rendered in place (not a redirect) to avoid a loop with PublicRoute.
+  if (mfaRequired) return <MfaStepUp />;
   return children;
 };
 
@@ -51,13 +55,16 @@ export const ProtectedRoute = ({ children }) => {
 //     DB error shows the gate rather than free access — it errs toward "must
 //     subscribe", never toward free access.
 export const RequireSubscription = ({ children }) => {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, mfaRequired } = useAuth();
   const { audience, loading: flagsLoading } = useFeatureFlags();
   const location = useLocation();
 
   if (authLoading || flagsLoading) return <LoadingScreen />;
   if (!isAuthenticated)
     return <Navigate to="/login" state={{ from: location }} replace />;
+  // Enforce the 2FA step-up before the subscription gate so a half-signed-in
+  // (aal1) user can never reach the app shell.
+  if (mfaRequired) return <MfaStepUp />;
   if (audience === "free") return <TrialGate>{children}</TrialGate>;
   return children;
 };
