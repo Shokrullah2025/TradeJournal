@@ -646,7 +646,9 @@ const BacktestChart = ({
           position: tr.side === "buy" ? "aboveBar" : "belowBar",
           color: tr.exitReason === "SL" ? "#f23645" : "#1E53E5",
           shape: tr.side === "buy" ? "arrowDown" : "arrowUp",
-          text: tr.exitReason || "",
+          // Replay viewer shows the arrow only (the icon is enough); the live
+          // chart keeps the exit-reason tag.
+          text: locked ? "" : (tr.exitReason || ""),
           size: 1,
         });
       }

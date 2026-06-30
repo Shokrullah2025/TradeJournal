@@ -1564,24 +1564,77 @@ export function useChartSetup({
       }
     });
 
-    // Redraw SVG drawings on vertical price-scale zoom/drag (axisPressedMouseMove)
-    try {
-      chart.priceScale("right").subscribeVisiblePriceRangeChange(() => {
-        requestAnimationFrame(updateSvgDrawings);
-      });
-    } catch {}
     const onPriceScaleDrag = () => requestAnimationFrame(updateSvgDrawings);
     wrapperRef.current?.addEventListener("wheel", onPriceScaleDrag, { passive: true });
 
-    // Additional handlers to catch price scale resize via drag
-    const onMouseMove = () => {
-      if (document.querySelector('.tv-lightweight-charts')?.classList.contains('dragging-price-scale')) {
-        requestAnimationFrame(updateSvgDrawings);
+    // ── Keep the SVG overlay glued to the chart during pointer interaction ──
+    // Dragging the price axis to scale candle height (the locked replay's only
+    // resize gesture) rescales the candles but fires NO time/price-range or
+    // container-resize event — lightweight-charts v5 has no price-range
+    // subscription and the container size never changes — so nothing else
+    // redraws the overlay and the drawings drift until the next stray event.
+    // Fix: run a requestAnimationFrame loop while the mouse is held down on the
+    // chart, then keep redrawing for a short settle tail after release so the
+    // overlay tracks the library's post-drag auto-scale animation back into place.
+    let interactionRaf = null;
+    let settleDeadline = 0;
+    let pointerDown = false;
+    const SETTLE_MS = 700;
+    const interactionTick = () => {
+      updateSvgDrawings();
+      if (pointerDown || svgDraggingRef.current || performance.now() < settleDeadline) {
+        interactionRaf = requestAnimationFrame(interactionTick);
+      } else {
+        interactionRaf = null;
       }
     };
-    const onMouseUp = () => requestAnimationFrame(updateSvgDrawings);
-    document.addEventListener("mousemove", onMouseMove);
+    const ensureInteractionLoop = () => {
+      if (interactionRaf == null) interactionRaf = requestAnimationFrame(interactionTick);
+    };
+    const onWrapperMouseDown = () => { pointerDown = true; ensureInteractionLoop(); };
+    const onMouseUp = () => {
+      pointerDown = false;
+      settleDeadline = performance.now() + SETTLE_MS;
+      ensureInteractionLoop();
+    };
+    wrapperRef.current?.addEventListener("mousedown", onWrapperMouseDown);
     document.addEventListener("mouseup", onMouseUp);
+
+    // Touch equivalents — on mobile, dragging the chart up/down to rescale the
+    // candles fires touch events, NOT mouse events, so the loop above never ran
+    // and the drawings froze until release. These drive the very same per-frame
+    // redraw on touch (mobile-only by nature: a mouse never dispatches them).
+    // touchmove keeps the loop alive even if a stray touchstart was missed.
+    const onWrapperTouchStart = () => { pointerDown = true; ensureInteractionLoop(); };
+    const onWrapperTouchMove = () => { ensureInteractionLoop(); };
+    const onTouchEnd = () => {
+      pointerDown = false;
+      settleDeadline = performance.now() + SETTLE_MS;
+      ensureInteractionLoop();
+    };
+    wrapperRef.current?.addEventListener("touchstart", onWrapperTouchStart, { passive: true });
+    wrapperRef.current?.addEventListener("touchmove", onWrapperTouchMove, { passive: true });
+    document.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchcancel", onTouchEnd);
+
+    // Redraw SVG drawings whenever the chart container itself resizes — the
+    // panel height being dragged, the window/orientation changing, or a modal
+    // reflowing. lightweight-charts' `autoSize` rescales the candles on resize
+    // but emits no time/price-scale event, so without this the overlay drawings
+    // keep their old pixel coordinates and drift out of sync. Use a double rAF so
+    // the redraw runs the frame AFTER the library applies the new canvas size —
+    // reading coordinates from the settled layout, not the stale one. Observing
+    // the container also fires once on attach, settling the initial overlay sync.
+    let resizeRaf = null;
+    const onContainerResize = () => {
+      if (resizeRaf != null) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = requestAnimationFrame(updateSvgDrawings);
+      });
+    };
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(onContainerResize) : null;
+    if (resizeObserver && wrapperRef.current) resizeObserver.observe(wrapperRef.current);
 
     // ── Ctrl/Cmd + drag marquee — rubber-band multi-select ──
     // Hold Ctrl (or Cmd) and drag across empty chart space to select every
@@ -1968,8 +2021,15 @@ export function useChartSetup({
       wrapperRef.current?.removeEventListener("wheel", onPriceScaleDrag);
       wrapperRef.current?.removeEventListener("dblclick", onDomDblClick);
       document.removeEventListener("keydown", onEscKey);
-      document.removeEventListener("mousemove", onMouseMove);
+      wrapperRef.current?.removeEventListener("mousedown", onWrapperMouseDown);
       document.removeEventListener("mouseup", onMouseUp);
+      wrapperRef.current?.removeEventListener("touchstart", onWrapperTouchStart);
+      wrapperRef.current?.removeEventListener("touchmove", onWrapperTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
+      if (interactionRaf != null) cancelAnimationFrame(interactionRaf);
+      if (resizeRaf != null) cancelAnimationFrame(resizeRaf);
+      resizeObserver?.disconnect();
       wrapperRef.current?.removeEventListener("mousedown", onMarqueeDown, true);
       document.removeEventListener("mousemove", onMarqueeMove, true);
       document.removeEventListener("mouseup", onMarqueeUp, true);
