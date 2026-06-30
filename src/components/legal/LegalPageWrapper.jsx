@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import Seo from "../seo/Seo";
 
 const LEGAL_LINKS = [
   { to: "/terms", label: "Terms of Service" },
@@ -10,6 +11,20 @@ const LEGAL_LINKS = [
   { to: "/aup", label: "Acceptable Use" },
   { to: "/dmca", label: "DMCA / Copyright" },
 ];
+
+// Short, page-specific meta descriptions keyed by slug. Falls back to a
+// generic legal-document description for any slug not listed.
+const LEGAL_DESCRIPTIONS = {
+  terms: "Read the Terms of Service governing your use of Tradgella.",
+  privacy:
+    "How Tradgella collects, uses, and protects your personal data (CPA, CCPA/CPRA, and GDPR-ready).",
+  disclaimer:
+    "Tradgella's financial disclaimer: the Service is for journaling and analysis, not financial advice.",
+  cookies: "How Tradgella uses cookies and similar technologies.",
+  refund: "Tradgella's refund, billing, and cancellation policy.",
+  aup: "Tradgella's Acceptable Use Policy — what is and isn't allowed on the Service.",
+  dmca: "Tradgella's DMCA and copyright policy, including how to file a notice.",
+};
 
 /**
  * Shared shell for every legal document. Rendered inside the public SiteLayout,
@@ -23,6 +38,14 @@ const LegalPageWrapper = ({ title, effectiveDate, lastUpdated, children, slug })
       className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
       data-testid={`legal-page-${slug}`}
     >
+      <Seo
+        title={title}
+        description={
+          LEGAL_DESCRIPTIONS[slug] ||
+          `${title} for Tradgella — the data-driven trading journal.`
+        }
+        path={slug ? `/${slug}` : "/"}
+      />
       {/* Content — SiteLayout already owns the page <main> landmark, so this
           is a plain container to avoid a nested/duplicate <main>. */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 print:py-4">

@@ -1,9 +1,23 @@
 import React, { useState } from "react";
+import Seo from "../../components/seo/Seo";
 import SectionHeading from "../../components/site/SectionHeading";
 import PricingToggle from "../../components/site/PricingToggle";
 import PricingCard from "../../components/site/PricingCard";
 import FAQAccordion from "../../components/site/FAQAccordion";
-import { PRICING_TIERS } from "../../components/site/content";
+import { PRICING_TIERS, FAQS } from "../../components/site/content";
+
+// FAQPage structured data, built from the same FAQS shown in the accordion
+// below so the markup always matches the visible content (a Google
+// requirement for FAQ rich results).
+const PRICING_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: { "@type": "Answer", text: faq.answer },
+  })),
+};
 
 /**
  * Pricing page (route "/pricing"). Billing-cycle toggle, three tiers mirroring
@@ -14,6 +28,12 @@ const Pricing = () => {
 
   return (
     <div data-testid="site-pricing-page">
+      <Seo
+        title="Pricing"
+        description="Simple, transparent pricing. Start free with up to 50 trades a month, then upgrade for broker auto-sync, advanced analytics, and backtesting. Cancel anytime."
+        path="/pricing"
+        jsonLd={PRICING_JSON_LD}
+      />
       {/* Header + toggle */}
       <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">

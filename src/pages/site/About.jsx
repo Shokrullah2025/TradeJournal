@@ -1,5 +1,6 @@
 import React from "react";
 import { Target, Eye, HeartHandshake, ShieldCheck } from "lucide-react";
+import Seo from "../../components/seo/Seo";
 import SectionHeading from "../../components/site/SectionHeading";
 import CTASection from "../../components/site/CTASection";
 
@@ -36,6 +37,11 @@ const VALUES = [
  */
 const About = () => (
   <div data-testid="site-about-page">
+    <Seo
+      title="About"
+      description="Tradgella is built by traders, for traders — to make keeping a disciplined trading journal effortless and turn your record into a measurable edge."
+      path="/about"
+    />
     {/* Header */}
     <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
