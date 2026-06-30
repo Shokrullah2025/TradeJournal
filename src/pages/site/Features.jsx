@@ -1,4 +1,5 @@
 import React from "react";
+import Seo from "../../components/seo/Seo";
 import SectionHeading from "../../components/site/SectionHeading";
 import FeatureGrid from "../../components/site/FeatureGrid";
 import CTASection from "../../components/site/CTASection";
@@ -10,6 +11,11 @@ import { FEATURE_CATEGORIES } from "../../components/site/content";
  */
 const Features = () => (
   <div data-testid="site-features-page">
+    <Seo
+      title="Features"
+      description="Explore Tradgella's features: broker auto-sync, performance analytics, backtesting, risk management, and a fast, structured trade journal."
+      path="/features"
+    />
     {/* Page header */}
     <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">

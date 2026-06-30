@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import { Mail, MessageSquare, Clock, Send } from "lucide-react";
 import { contactSchema } from "../../lib/schemas/contact";
 import { supabase } from "../../lib/supabase";
+import Seo from "../../components/seo/Seo";
 import TurnstileWidget from "../../components/site/TurnstileWidget";
 
 // Public Turnstile site key (safe to expose — verified server-side). When unset
@@ -78,6 +79,11 @@ const Contact = () => {
 
   return (
     <div data-testid="site-contact-page">
+      <Seo
+        title="Contact"
+        description="Get in touch with the Tradgella team. Questions about pricing, feedback, or partnership ideas — we usually reply within one business day."
+        path="/contact"
+      />
       {/* Header */}
       <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">

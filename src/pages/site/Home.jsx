@@ -1,6 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Link2, Zap, ShieldCheck } from "lucide-react";
+import Seo from "../../components/seo/Seo";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "../../utils/seo";
 import Hero from "../../components/site/Hero";
 import StatsBand from "../../components/site/StatsBand";
 import SectionHeading from "../../components/site/SectionHeading";
@@ -15,8 +17,30 @@ import { HIGHLIGHT_FEATURES, STEPS } from "../../components/site/content";
  * highlights, how-it-works, an auto-sync spotlight, testimonials, and a final
  * call-to-action.
  */
+const HOME_JSON_LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.svg`,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description: SITE_DESCRIPTION,
+  },
+];
+
 const Home = () => (
   <div data-testid="site-home-page">
+    <Seo
+      title="Trading Journal & Performance Analytics"
+      path="/"
+      jsonLd={HOME_JSON_LD}
+    />
     <Hero />
     <StatsBand />
 
