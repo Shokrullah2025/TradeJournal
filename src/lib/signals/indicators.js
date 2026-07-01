@@ -88,7 +88,7 @@ export function atr(candles, period = 14) {
 // Calendar day key ("YYYY-MM-DD") in a timezone, cached per formatter since
 // Intl.DateTimeFormat construction is expensive inside a per-candle loop.
 const _dayKeyFmtCache = new Map();
-function dayKeyInTz(unixSeconds, tz) {
+export function dayKeyInTz(unixSeconds, tz) {
   let fmt = _dayKeyFmtCache.get(tz);
   if (!fmt) {
     fmt = new Intl.DateTimeFormat("en-CA", {

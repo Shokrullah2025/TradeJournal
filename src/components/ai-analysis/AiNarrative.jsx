@@ -3,47 +3,50 @@ import PropTypes from "prop-types";
 import { Sparkles, RefreshCw, AlertCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
-// Only computed summaries leave the browser: the signal's levels and factor
-// checklist, the indicator snapshot, and the backtest aggregates. Raw candles
+// Only computed summaries leave the browser: the bias with its factor
+// checklist, a few context flags, and the backtested accuracy. Raw candles
 // never do.
-function buildPayload({ symbol, timeframe, signal, results, cohort }) {
+function buildPayload({ symbol, bias, accuracy, cohort }) {
+  const snap = bias.snapshot || {};
   return {
     symbol,
-    timeframe,
-    signal: {
-      direction: signal.direction,
-      entry: signal.entry,
-      stopLoss: signal.stopLoss,
-      takeProfit: signal.takeProfit,
-      confluencePct: signal.confluencePct,
-      tier: signal.tier,
-      factors: (signal.factors || []).slice(0, 8).map((f) => ({
+    bias: {
+      bias: bias.bias,
+      score: bias.score,
+      maxScore: bias.maxScore,
+      confidencePct: bias.confidencePct,
+      classification: {
+        type: snap.classification?.type ?? null,
+        direction: snap.classification?.direction ?? null,
+        closeLocation: snap.classification?.closeLocation ?? null,
+      },
+      reasons: (bias.reasons || []).slice(0, 10).map((f) => ({
         label: f.label,
-        passed: f.passed,
-        detail: f.detail,
+        points: f.points,
+        detail: f.detail || "",
       })),
     },
-    indicators: {
-      ema20: signal.snapshot?.ema20 ?? null,
-      ema50: signal.snapshot?.ema50 ?? null,
-      rsi14: signal.snapshot?.rsi14 ?? null,
-      atr14: signal.snapshot?.atr14 ?? null,
+    context: {
+      premiumDiscount: snap.dealingRange?.position ?? null,
+      prevWeekType: snap.weekly?.prevWeek?.classification?.type ?? null,
+      smtDaily: snap.smt?.daily ?? null,
+      smtWeekly: snap.smt?.weekly ?? null,
+      judas: snap.session?.judas ?? null,
     },
-    backtest: {
-      winRate: cohort?.winRate ?? results?.winRate ?? null,
-      sampleSize: cohort?.total ?? results?.total ?? 0,
-      avgR: results?.avgR ?? null,
-      expired: results?.expired ?? 0,
+    accuracy: {
+      winRate: cohort?.winRate ?? accuracy?.winRate ?? null,
+      sampleSize: cohort?.total ?? accuracy?.total ?? 0,
+      unresolved: accuracy?.expired ?? 0,
     },
   };
 }
 
 /**
- * Plain-English explanation of the computed signal, written by the
- * ai-signal-narrative Edge Function. Renders nothing at all when the feature
- * isn't configured server-side (missing Gemini key → 503).
+ * Plain-English explanation of the computed daily bias, written by the
+ * ai-signal-narrative Edge Function. Neutral is explainable too. Renders
+ * nothing at all when the feature isn't configured server-side (503).
  */
-const AiNarrative = ({ symbol, timeframe, signal, results, cohort }) => {
+const AiNarrative = ({ symbol, bias, accuracy, cohort }) => {
   const [narrative, setNarrative] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -57,11 +60,11 @@ const AiNarrative = ({ symbol, timeframe, signal, results, cohort }) => {
     };
   }, []);
 
-  // A new signal invalidates the old explanation.
+  // A new analyzed day (or asset) invalidates the old explanation.
   useEffect(() => {
     setNarrative(null);
     setError(null);
-  }, [symbol, timeframe, signal?.time, signal?.direction]);
+  }, [symbol, bias?.computedFrom?.dayKey, bias?.bias]);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -69,7 +72,7 @@ const AiNarrative = ({ symbol, timeframe, signal, results, cohort }) => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke(
         "ai-signal-narrative",
-        { body: buildPayload({ symbol, timeframe, signal, results, cohort }) },
+        { body: buildPayload({ symbol, bias, accuracy, cohort }) },
       );
       if (fnError) {
         // supabase-js surfaces non-2xx as FunctionsHttpError with the response attached
@@ -87,10 +90,9 @@ const AiNarrative = ({ symbol, timeframe, signal, results, cohort }) => {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [symbol, timeframe, signal, results, cohort]);
+  }, [symbol, bias, accuracy, cohort]);
 
-  const hasSignal = signal && signal.direction !== "neutral";
-  if (!hasSignal || unavailable) return null;
+  if (!bias || bias.maxScore === 0 || unavailable) return null;
 
   return (
     <div className="card" data-testid="ai-analysis-narrative-card">
@@ -136,8 +138,8 @@ const AiNarrative = ({ symbol, timeframe, signal, results, cohort }) => {
       {!loading && !error && !narrative && (
         <div className="text-center py-2">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            Get a plain-English read of this setup — what lines up, what doesn&apos;t, and what the
-            history says.
+            Get a plain-English read of the daily bias — what lines up, what doesn&apos;t, and what
+            the history says.
           </p>
           <button
             type="button"
@@ -146,7 +148,7 @@ const AiNarrative = ({ symbol, timeframe, signal, results, cohort }) => {
             className="btn-primary inline-flex items-center gap-2 text-sm px-4 py-2 rounded-lg"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Explain this signal</span>
+            <span>Explain this bias</span>
           </button>
         </div>
       )}
@@ -166,22 +168,18 @@ const AiNarrative = ({ symbol, timeframe, signal, results, cohort }) => {
 
 AiNarrative.propTypes = {
   symbol: PropTypes.string.isRequired,
-  timeframe: PropTypes.string.isRequired,
-  signal: PropTypes.shape({
-    time: PropTypes.number,
-    direction: PropTypes.string,
-    entry: PropTypes.number,
-    stopLoss: PropTypes.number,
-    takeProfit: PropTypes.number,
-    confluencePct: PropTypes.number,
-    tier: PropTypes.string,
-    factors: PropTypes.array,
+  bias: PropTypes.shape({
+    bias: PropTypes.string,
+    score: PropTypes.number,
+    maxScore: PropTypes.number,
+    confidencePct: PropTypes.number,
+    computedFrom: PropTypes.shape({ dayKey: PropTypes.string }),
+    reasons: PropTypes.array,
     snapshot: PropTypes.object,
   }),
-  results: PropTypes.shape({
+  accuracy: PropTypes.shape({
     winRate: PropTypes.number,
     total: PropTypes.number,
-    avgR: PropTypes.number,
     expired: PropTypes.number,
   }),
   cohort: PropTypes.shape({

@@ -15,41 +15,43 @@ const corsHeaders = {
 // Get a key at https://aistudio.google.com/apikey → GEMINI_API_KEY secret.
 const DEFAULT_MODEL = "gemini-2.5-flash";
 
-// The client sends COMPUTED summaries only (signal levels, factor checklist,
-// indicator snapshot, backtest aggregates) — never raw candles or user data.
-// Validation keeps a malformed body away from the model; identity comes from
-// the JWT below, never the body.
+// The client sends COMPUTED summaries only (the ICT daily bias with its
+// factor checklist, context flags, backtested accuracy) — never raw candles
+// or user data. Validation keeps a malformed body away from the model;
+// identity comes from the JWT below, never the body.
 const narrativeInput = z.object({
   symbol: z.string().trim().min(1).max(10),
-  timeframe: z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d"]),
-  signal: z.object({
-    direction: z.enum(["long", "short"]),
-    entry: z.number().finite(),
-    stopLoss: z.number().finite(),
-    takeProfit: z.number().finite(),
-    confluencePct: z.number().finite().min(0).max(100),
-    tier: z.enum(["high", "medium"]),
-    factors: z
+  bias: z.object({
+    bias: z.enum(["long", "short", "neutral"]),
+    score: z.number().finite(),
+    maxScore: z.number().finite().min(0),
+    confidencePct: z.number().finite().min(0).max(100),
+    classification: z.object({
+      type: z.enum(["expansion", "retracement", "reversal", "consolidation"]).nullable(),
+      direction: z.enum(["up", "down", "none"]).nullable(),
+      closeLocation: z.enum(["upper", "middle", "lower"]).nullable(),
+    }),
+    reasons: z
       .array(
         z.object({
           label: z.string().trim().min(1).max(60),
-          passed: z.boolean(),
-          detail: z.string().trim().max(120).optional().default(""),
+          points: z.number().finite(),
+          detail: z.string().trim().max(160).optional().default(""),
         }),
       )
-      .max(8),
+      .max(10),
   }),
-  indicators: z.object({
-    ema20: z.number().finite().nullable(),
-    ema50: z.number().finite().nullable(),
-    rsi14: z.number().finite().nullable(),
-    atr14: z.number().finite().nullable(),
+  context: z.object({
+    premiumDiscount: z.enum(["premium", "discount", "equilibrium"]).nullable(),
+    prevWeekType: z.enum(["expansion", "retracement", "reversal", "consolidation"]).nullable(),
+    smtDaily: z.enum(["bullish", "bearish"]).nullable(),
+    smtWeekly: z.enum(["bullish", "bearish"]).nullable(),
+    judas: z.enum(["bullish", "bearish"]).nullable(),
   }),
-  backtest: z.object({
+  accuracy: z.object({
     winRate: z.number().finite().min(0).max(1).nullable(),
     sampleSize: z.number().finite().min(0),
-    avgR: z.number().finite().nullable(),
-    expired: z.number().finite().min(0),
+    unresolved: z.number().finite().min(0),
   }),
 });
 
@@ -65,19 +67,25 @@ const RESPONSE_SCHEMA = {
 };
 
 const SYSTEM_PROMPT =
-  "You are a calm, precise trading analyst explaining a rule-based futures " +
-  "signal to the trader who received it. You are given the computed signal " +
-  "(direction, entry, stop, target, confluence factors), an indicator " +
-  "snapshot, and the backtested hit-rate of this rule set on this asset and " +
-  "timeframe. Write three parts: 'summary' — one or two sentences stating " +
-  "the setup and its confluence in plain language; 'reasoning' — two to four " +
-  "sentences explaining WHY the passed and failed factors matter for this " +
-  "trade, referencing the actual numbers given; 'riskNotes' — two to three " +
-  "sentences covering what invalidates the setup, that the hit-rate is a " +
-  "historical measurement (state the sample size) and not a prediction, and " +
-  "that this is educational analysis of ~15-minute-delayed data, not " +
-  "financial advice. Never invent numbers or levels that are not in the " +
-  "input. Plain language, no markdown, no emojis.";
+  "You are a calm, precise trading analyst explaining an ICT-style top-down " +
+  "DAILY BIAS for a futures market — not a trade signal; there is no entry, " +
+  "stop or target. You are given the bias (long, short or neutral) with its " +
+  "signed factor checklist (positive points favor longs, negative favor " +
+  "shorts), how the last daily candle is classified, context flags (premium/" +
+  "discount, previous week's candle type, SMT divergence against the " +
+  "correlated index, London Judas swing), and the backtested accuracy of " +
+  "these exact rules on this asset. Write three parts: 'summary' — one or " +
+  "two sentences stating the bias and the day's candle character in plain " +
+  "language (a neutral bias means the day does not line up, and that is a " +
+  "valid finding); 'reasoning' — two to four sentences explaining WHY the " +
+  "strongest factors for and against matter, referencing only the numbers " +
+  "and labels given; 'riskNotes' — two to three sentences stating that no " +
+  "entry or stop is provided, that the accuracy figure is a historical " +
+  "measurement of these rules (state the sample size) and not a prediction, " +
+  "that the next session can invalidate the bias by taking out the opposite " +
+  "prior-day extreme, and that this is educational analysis of ~15-minute-" +
+  "delayed data, not financial advice. Never invent numbers or levels that " +
+  "are not in the input. Plain language, no markdown, no emojis.";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {

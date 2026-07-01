@@ -11,7 +11,7 @@ export const FEATURE_CATALOG = [
   { key: "csv_import",         name: "CSV Import",         description: "Bulk-import trades from a broker CSV export.",                   route: null },
   { key: "advanced_analytics", name: "Advanced Analytics", description: "Strategy, instrument, time-of-day and drawdown breakdowns.",     route: "/analytics" },
   { key: "risk_calculator",    name: "Risk Calculator",    description: "Position-size and risk/reward planning tool.",                  route: "/risk-calculator" },
-  { key: "ai_analysis",        name: "AI Analysis",        description: "Rule-based futures signals with backtested hit-rates and an AI narrative.", route: "/ai-analysis" },
+  { key: "ai_analysis",        name: "AI Analysis",        description: "ICT top-down daily bias for futures with measured historical accuracy.", route: "/ai-analysis" },
   { key: "export_reports",     name: "Export Reports",     description: "Download analytics and trade history as XLSX.",                 route: null },
   { key: "ai_insights",        name: "AI Insights",        description: "Pre-market briefing and automated edge insights.",              route: null },
   { key: "trade_images",       name: "Trade Screenshots",  description: "Attach chart screenshots to journal entries.",                  route: null },

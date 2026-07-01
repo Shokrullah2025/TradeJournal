@@ -6,131 +6,151 @@ import {
   clearCandleCache,
   aggregateTo4hSession,
 } from "../utils/marketData";
-import { getContract } from "../lib/futuresContracts";
-import { computeLiveSignal } from "../lib/signals/engine";
-import { backtestSignals, matchingCohort } from "../lib/signals/backtest";
+import { computeLiveBias } from "../lib/ict/bias";
+import { backtestBias, biasCohort } from "../lib/ict/biasBacktest";
+import { buildSessionProfiles } from "../lib/ict/sessionProfile";
+import { smtPairFor } from "../lib/ict/smt";
 import AssetTimeframeBar from "../components/ai-analysis/AssetTimeframeBar";
-import SignalChart from "../components/ai-analysis/SignalChart";
-import SignalCard from "../components/ai-analysis/SignalCard";
+import LiquidityChart from "../components/ai-analysis/LiquidityChart";
+import DailyBiasCard from "../components/ai-analysis/DailyBiasCard";
+import SessionProfileCard from "../components/ai-analysis/SessionProfileCard";
+import WeeklyContextCard from "../components/ai-analysis/WeeklyContextCard";
+import SmtCard from "../components/ai-analysis/SmtCard";
 import HitRateCard from "../components/ai-analysis/HitRateCard";
-import RiskPanel from "../components/ai-analysis/RiskPanel";
 import AiNarrative from "../components/ai-analysis/AiNarrative";
 import DisclaimerNotice from "../components/ai-analysis/DisclaimerNotice";
 
 // Candle staleness budget — matches the market-data function's 5-min CDN cache.
 const MAX_AGE_MS = 5 * 60 * 1000;
 
-// Auto-refresh cadence per timeframe. Daily bars don't need polling.
+// Auto-refresh cadence per chart timeframe. Daily bars don't need polling.
 const REFRESH_MS = { "5m": 60_000, "15m": 60_000, "30m": 60_000, "1h": 300_000, "4h": 300_000 };
-
-// Risk inputs are UI preferences, not trade data — localStorage is fine here.
-const RISK_PREFS_KEY = "ai_analysis_risk_prefs";
-
-function loadRiskPrefs() {
-  try {
-    const raw = localStorage.getItem(RISK_PREFS_KEY);
-    if (raw) {
-      const { balance, riskPct } = JSON.parse(raw);
-      return { balance: String(balance ?? "10000"), riskPct: String(riskPct ?? "1") };
-    }
-  } catch { /* corrupted prefs — fall through to defaults */ }
-  return { balance: "10000", riskPct: "1" };
-}
 
 const AiAnalysis = () => {
   const { isDark } = useTheme();
   const [symbol, setSymbol] = useState("ES");
   const [timeframe, setTimeframe] = useState("15m");
-  const [candles, setCandles] = useState([]);
+  const [chartCandles, setChartCandles] = useState([]);
+  const [dailyCandles, setDailyCandles] = useState([]);
+  const [m30Candles, setM30Candles] = useState(null); // null → session card empty state
+  const [siblingDaily, setSiblingDaily] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [riskPrefs, setRiskPrefs] = useState(loadRiskPrefs);
 
-  const contract = useMemo(() => getContract(symbol), [symbol]);
+  const smtSibling = useMemo(() => smtPairFor(symbol), [symbol]);
 
-  // Persist risk inputs so they survive reloads.
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        RISK_PREFS_KEY,
-        JSON.stringify({ balance: riskPrefs.balance, riskPct: riskPrefs.riskPct }),
-      );
-    } catch { /* storage unavailable — inputs still work for the session */ }
-  }, [riskPrefs]);
-
-  const loadCandles = useCallback(async (cancelledRef) => {
+  const loadAll = useCallback(async (cancelledRef) => {
     setError(null);
     try {
-      // The edge function's 4h buckets are UTC-aligned; futures sessions open
-      // at 18:00 ET, so fetch 1h and re-aggregate session-aligned (as Backtest does).
-      const raw = await fetchMarketCandles(
-        "futures",
-        symbol,
-        timeframe === "4h" ? "1h" : timeframe,
-        { maxAgeMs: MAX_AGE_MS, bustSeconds: 300 },
-      );
-      const data = timeframe === "4h" ? aggregateTo4hSession(raw) : raw;
+      // Chart candles and daily candles are required; the 30m session data
+      // and the SMT sibling degrade gracefully when they fail.
+      const [chartRaw, daily, m30, sibling] = await Promise.all([
+        fetchMarketCandles(
+          "futures",
+          symbol,
+          timeframe === "4h" ? "1h" : timeframe,
+          { maxAgeMs: MAX_AGE_MS, bustSeconds: 300 },
+        ),
+        fetchMarketCandles("futures", symbol, "1d", { maxAgeMs: MAX_AGE_MS, bustSeconds: 300 }),
+        fetchMarketCandles("futures", symbol, "30m", { maxAgeMs: MAX_AGE_MS, bustSeconds: 300 })
+          .catch(() => null),
+        smtSibling
+          ? fetchMarketCandles("futures", smtSibling, "1d", { maxAgeMs: MAX_AGE_MS, bustSeconds: 300 })
+              .catch(() => null)
+          : Promise.resolve(null),
+      ]);
       if (!cancelledRef.cancelled) {
-        setCandles(data);
+        setChartCandles(timeframe === "4h" ? aggregateTo4hSession(chartRaw) : chartRaw);
+        setDailyCandles(daily);
+        setM30Candles(m30);
+        setSiblingDaily(sibling);
         setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       }
     } catch (err) {
       if (!cancelledRef.cancelled) {
-        setCandles([]);
+        setChartCandles([]);
+        setDailyCandles([]);
         setError(err.message || "Could not load chart data. Please try again.");
       }
     } finally {
       if (!cancelledRef.cancelled) setLoading(false);
     }
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, smtSibling]);
 
   // Fetch on mount and whenever the selection (or a manual refresh) changes.
   useEffect(() => {
     const cancelledRef = { cancelled: false };
     setLoading(true);
-    loadCandles(cancelledRef);
+    loadAll(cancelledRef);
     return () => {
       cancelledRef.cancelled = true;
     };
-  }, [loadCandles, refreshNonce]);
+  }, [loadAll, refreshNonce]);
 
   // Background auto-refresh — silent (no loading flash), interval per timeframe.
   useEffect(() => {
     const ms = REFRESH_MS[timeframe];
     if (!ms) return undefined;
     const cancelledRef = { cancelled: false };
-    const id = setInterval(() => loadCandles(cancelledRef), ms);
+    const id = setInterval(() => loadAll(cancelledRef), ms);
     return () => {
       cancelledRef.cancelled = true;
       clearInterval(id);
     };
-  }, [loadCandles, timeframe]);
+  }, [loadAll, timeframe]);
 
   const handleRefresh = useCallback(() => {
     clearCandleCache("futures", symbol, timeframe === "4h" ? "1h" : timeframe);
+    clearCandleCache("futures", symbol, "1d");
+    clearCandleCache("futures", symbol, "30m");
+    if (smtSibling) clearCandleCache("futures", smtSibling, "1d");
     setRefreshNonce((n) => n + 1);
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, smtSibling]);
 
-  // Engine → backtest → cohort, all deterministic and memoized on the candles.
-  const signal = useMemo(
-    () => (candles.length ? computeLiveSignal(candles, timeframe, contract) : null),
-    [candles, timeframe, contract],
+  // ICT pipeline, all pure and memoized: session profiles → live bias →
+  // historical bias accuracy → matching cohort.
+  const profiles = useMemo(
+    () =>
+      m30Candles && dailyCandles.length
+        ? buildSessionProfiles(m30Candles, dailyCandles, { days: 2 })
+        : null,
+    [m30Candles, dailyCandles],
   );
-  const results = useMemo(
-    () => backtestSignals(candles, timeframe, { contract }),
-    [candles, timeframe, contract],
+
+  // The bias factor uses the latest COMPLETED day's session annotations.
+  const latestCompletedDay = useMemo(() => {
+    if (!profiles?.length) return null;
+    for (let k = profiles.length - 1; k >= 0; k--) {
+      if (profiles[k].complete) return profiles[k];
+    }
+    return null;
+  }, [profiles]);
+
+  const bias = useMemo(
+    () =>
+      dailyCandles.length
+        ? computeLiveBias(dailyCandles, { siblingDaily, symbol, sessionDay: latestCompletedDay })
+        : null,
+    [dailyCandles, siblingDaily, symbol, latestCompletedDay],
   );
-  const cohort = useMemo(() => matchingCohort(results, signal), [results, signal]);
+
+  const accuracy = useMemo(
+    () => backtestBias(dailyCandles, { siblingDaily, symbol }),
+    [dailyCandles, siblingDaily, symbol],
+  );
+
+  const cohort = useMemo(() => biasCohort(accuracy, bias), [accuracy, bias]);
 
   return (
     <div className="space-y-6" data-testid="ai-analysis-page">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">AI Analysis</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Rule-based direction, entry, stop and target for futures — with the setup&apos;s real
-          historical hit rate and position sizing for your account.
+          ICT top-down analysis for futures — daily bias from the candle structure, session
+          profile, weekly context and correlated markets, with the measured historical accuracy
+          of the same rules.
         </p>
       </div>
 
@@ -152,7 +172,7 @@ const AiAnalysis = () => {
           data-testid="ai-analysis-loading-spinner"
         >
           <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-          <span>Loading {symbol} {timeframe} data…</span>
+          <span>Loading {symbol} data…</span>
         </div>
       )}
 
@@ -176,33 +196,29 @@ const AiAnalysis = () => {
         </div>
       )}
 
-      {!loading && !error && candles.length > 0 && (
+      {!loading && !error && chartCandles.length > 0 && (
         <>
           <div className="card p-2 sm:p-3">
-            <SignalChart candles={candles} signal={signal} isDark={isDark} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <SignalCard signal={signal} symbol={symbol} />
-            <RiskPanel
-              signal={signal}
-              contract={contract}
-              accountBalance={riskPrefs.balance}
-              riskPct={riskPrefs.riskPct}
-              onAccountBalanceChange={(v) => setRiskPrefs((p) => ({ ...p, balance: v }))}
-              onRiskPctChange={(v) => setRiskPrefs((p) => ({ ...p, riskPct: v }))}
+            <LiquidityChart
+              candles={chartCandles}
+              levels={bias?.snapshot?.levels}
+              isDark={isDark}
             />
           </div>
 
-          <HitRateCard results={results} cohort={cohort} signal={signal} timeframe={timeframe} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DailyBiasCard bias={bias} symbol={symbol} />
+            <SessionProfileCard profiles={profiles} />
+          </div>
 
-          <AiNarrative
-            symbol={symbol}
-            timeframe={timeframe}
-            signal={signal}
-            results={results}
-            cohort={cohort}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <WeeklyContextCard weekly={bias?.snapshot?.weekly} />
+            <SmtCard smt={bias?.snapshot?.smt} symbol={symbol} />
+          </div>
+
+          <HitRateCard results={accuracy} cohort={cohort} bias={bias} />
+
+          <AiNarrative symbol={symbol} bias={bias} accuracy={accuracy} cohort={cohort} />
         </>
       )}
     </div>

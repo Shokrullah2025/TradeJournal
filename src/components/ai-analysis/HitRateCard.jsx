@@ -6,40 +6,40 @@ import { format } from "date-fns";
 const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 
 const SCOPE_LABELS = {
-  "direction+tier": (sig) => `Signals like this one (${sig.direction} · ${sig.tier} confluence)`,
-  direction: (sig) => `Past ${sig.direction} signals`,
-  all: () => "All past signals",
+  bias: (b) => `Past ${b.bias}-bias days`,
+  all: () => "All past bias days",
 };
 
 /**
- * "How likely does this hit?" — the measured outcome of replaying the same
- * rule set over the fetched history. Shows the cohort that matches the live
- * signal plus overall stats, and is explicit about sample size.
+ * "How often is this bias right?" — the measured outcome of replaying the
+ * same bias rules over the daily history: did the next day run the liquidity
+ * the bias pointed at? Explicit about sample size and about what the replay
+ * cannot see (intraday sessions).
  */
-const HitRateCard = ({ results, cohort, signal, timeframe }) => {
-  const hasSignal = signal && signal.direction !== "neutral";
+const HitRateCard = ({ results, cohort, bias }) => {
+  const hasBias = bias && bias.bias !== "neutral";
   const decided = cohort ? cohort.wins + cohort.losses : 0;
-  const lowSample = hasSignal && cohort && decided < 20;
+  const lowSample = hasBias && cohort && decided < 20;
 
   return (
     <div className="card" data-testid="ai-analysis-hitrate-card">
       <div className="flex items-center gap-2 mb-4">
         <Target className="w-5 h-5 text-primary-600 dark:text-primary-400" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Historical hit rate
+          Bias accuracy
         </h3>
       </div>
 
       {results.total === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="ai-analysis-hitrate-empty">
-          Not enough history produced signals on this asset and timeframe yet.
+          The history hasn&apos;t produced any non-neutral bias days for this asset yet.
         </p>
       ) : (
         <>
-          {hasSignal && cohort && (
+          {hasBias && cohort && (
             <div className="mb-4">
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                {SCOPE_LABELS[cohort.scope](signal)}
+                {SCOPE_LABELS[cohort.scope](bias)}
               </div>
               <div
                 className="text-3xl font-bold text-gray-900 dark:text-gray-100"
@@ -47,7 +47,7 @@ const HitRateCard = ({ results, cohort, signal, timeframe }) => {
               >
                 {pct(cohort.winRate)}
                 <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  hit the target first · {cohort.total} samples
+                  called the next day correctly · {cohort.total} samples
                 </span>
               </div>
             </div>
@@ -55,20 +55,22 @@ const HitRateCard = ({ results, cohort, signal, timeframe }) => {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">All signals ({timeframe})</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">All bias days (1d)</div>
               <div className="font-semibold text-gray-900 dark:text-gray-100" data-testid="ai-analysis-hitrate-overall">
                 {pct(results.winRate)} of {results.wins + results.losses} decided
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Avg result</div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100" data-testid="ai-analysis-avgr-value">
-                {results.avgR == null ? "—" : `${results.avgR >= 0 ? "+" : ""}${results.avgR.toFixed(2)}R`}
+              <div className="text-xs text-gray-500 dark:text-gray-400">Long-bias days</div>
+              <div className="font-semibold text-gray-900 dark:text-gray-100" data-testid="ai-analysis-hitrate-long">
+                {pct(results.byBias?.long?.winRate)} of {results.byBias?.long?.total ?? 0}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Expired unresolved</div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100">{results.expired}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Short-bias days</div>
+              <div className="font-semibold text-gray-900 dark:text-gray-100" data-testid="ai-analysis-hitrate-short">
+                {pct(results.byBias?.short?.winRate)} of {results.byBias?.short?.total ?? 0}
+              </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400">History window</div>
@@ -85,15 +87,17 @@ const HitRateCard = ({ results, cohort, signal, timeframe }) => {
             >
               <AlertTriangle className="w-4 h-4 text-warning-600 dark:text-warning-400 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-warning-700 dark:text-warning-300">
-                Only {decided} resolved samples for this setup — treat the hit rate as a rough
-                guide, not a statistic.
+                Only {decided} resolved samples for this bias — treat the accuracy as a rough guide,
+                not a statistic.
               </p>
             </div>
           )}
 
           <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
-            Measured by replaying today&apos;s rules over the loaded history (stop assumed to fill
-            first when a bar touches both levels). Past performance does not predict future results.
+            Measured by replaying today&apos;s bias rules over the daily history: a bias is correct
+            when the next day runs the prior day&apos;s high (long) or low (short); a day that takes
+            both counts against the bias. The replay cannot see intraday sessions, so the session
+            factor is live-only. Past performance does not predict future results.
           </p>
         </>
       )}
@@ -108,21 +112,22 @@ HitRateCard.propTypes = {
     losses: PropTypes.number,
     expired: PropTypes.number,
     winRate: PropTypes.number,
-    avgR: PropTypes.number,
+    byBias: PropTypes.shape({
+      long: PropTypes.object,
+      short: PropTypes.object,
+    }),
     firstTime: PropTypes.number,
   }).isRequired,
   cohort: PropTypes.shape({
-    scope: PropTypes.oneOf(["direction+tier", "direction", "all"]),
+    scope: PropTypes.oneOf(["bias", "all"]),
     winRate: PropTypes.number,
     wins: PropTypes.number,
     losses: PropTypes.number,
     total: PropTypes.number,
   }),
-  signal: PropTypes.shape({
-    direction: PropTypes.string,
-    tier: PropTypes.string,
+  bias: PropTypes.shape({
+    bias: PropTypes.string,
   }),
-  timeframe: PropTypes.string.isRequired,
 };
 
 export default HitRateCard;

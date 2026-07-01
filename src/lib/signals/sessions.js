@@ -6,6 +6,13 @@
 export const MARKET_TZ = "America/New_York";
 
 export const SESSIONS = {
+  ASIA: {
+    id: "ASIA",
+    label: "Asia",
+    startMin: 20 * 60, // 20:00 ET — classic ICT Asia killzone
+    endMin: 0, // exclusive midnight: window is [20:00, 24:00)
+    tz: MARKET_TZ,
+  },
   LONDON: {
     id: "LONDON",
     label: "London",
@@ -36,14 +43,25 @@ export const SESSIONS = {
   },
 };
 
+// Intl.DateTimeFormat construction is expensive (~0.1ms); these helpers are
+// called per-candle in tight loops (session profiles, weekly aggregation, the
+// bias backtest), so formatters are cached per timezone.
+const _minuteFmtCache = new Map();
+const _weekdayFmtCache = new Map();
+
 /** Minutes since midnight for a unix-seconds timestamp in the given IANA timezone. */
 export function minutesOfDayInTz(unixSeconds, tz) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-  }).formatToParts(new Date(unixSeconds * 1000));
+  let fmt = _minuteFmtCache.get(tz);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    });
+    _minuteFmtCache.set(tz, fmt);
+  }
+  const parts = fmt.formatToParts(new Date(unixSeconds * 1000));
   let hour = 0;
   let minute = 0;
   for (const p of parts) {
@@ -54,10 +72,13 @@ export function minutesOfDayInTz(unixSeconds, tz) {
 }
 
 /** Weekday name (e.g., "Sat") in the given timezone. */
-function weekdayInTz(unixSeconds, tz) {
-  return new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(
-    new Date(unixSeconds * 1000)
-  );
+export function weekdayInTz(unixSeconds, tz) {
+  let fmt = _weekdayFmtCache.get(tz);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" });
+    _weekdayFmtCache.set(tz, fmt);
+  }
+  return fmt.format(new Date(unixSeconds * 1000));
 }
 
 /** True if the timestamp falls on Saturday or Sunday in the given timezone. */
