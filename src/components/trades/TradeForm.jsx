@@ -1291,10 +1291,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       >
         {/* HEADER — two zones mirror the body split so the tab switch lands on
             the boundary between the form (left) and the Risk/Reward panel (right). */}
-        <div className="flex items-stretch border-b border-gray-100 dark:border-gray-700">
-          {/* Left zone — mirrors the form column */}
-          <div className="flex-1 min-w-0 flex items-center gap-4 px-6 py-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+        <div className="flex flex-col md:flex-row md:items-stretch border-b border-gray-100 dark:border-gray-700">
+          {/* Left zone — mirrors the form column (its own row on mobile) */}
+          <div className="flex-1 min-w-0 flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
@@ -1310,11 +1310,11 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               </p>
             </div>
 
-            {/* Template picker — sits at the column split */}
+            {/* Template picker — desktop only (sits at the column split) */}
             {settingsTemplates.length > 0 && (
               <select
                 aria-label="Apply template"
-                className="ml-auto hidden sm:block input !h-9 !py-0 text-xs max-w-[180px] flex-shrink-0"
+                className="ml-auto hidden md:block input !h-9 !py-0 text-xs max-w-[180px] flex-shrink-0"
                 value={selectedTemplateId}
                 onChange={(e) => {
                   const templateId = e.target.value;
@@ -1336,17 +1336,28 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 ))}
               </select>
             )}
+
+            {/* Close — mobile keeps it top-right on the title row */}
+            <button
+              type="button"
+              onClick={onClose}
+              data-testid="modal-close-btn-mobile"
+              aria-label="Close"
+              className="ml-auto md:hidden w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center transition-colors flex-shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Right zone — mirrors the 360px Risk/Reward panel */}
-          <div className="flex items-center justify-end gap-3 px-5 py-4 md:w-[360px] md:flex-shrink-0 md:border-l border-gray-100 dark:border-gray-700">
-            {/* Quick Entry / Advanced toggle */}
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1 gap-0.5 flex-shrink-0">
+          {/* Right zone — mirrors the 360px Risk/Reward panel (its own row on mobile) */}
+          <div className="flex items-center gap-3 px-4 md:px-5 pb-3 md:py-4 md:justify-end md:w-[360px] md:flex-shrink-0 md:border-l border-gray-100 dark:border-gray-700">
+            {/* Quick Entry / Advanced toggle — full width on mobile */}
+            <div className="flex flex-1 md:flex-none bg-gray-100 dark:bg-gray-700 rounded-xl p-1 gap-0.5">
               <button
                 type="button"
                 onClick={() => setActiveTab("quick")}
                 data-testid="trade-form-tab-quick"
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                className={`flex flex-1 md:flex-none items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                   activeTab === "quick"
                     ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -1359,7 +1370,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 type="button"
                 onClick={() => setActiveTab("advanced")}
                 data-testid="trade-form-tab-advanced"
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                className={`flex flex-1 md:flex-none items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                   activeTab === "advanced"
                     ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -1370,11 +1381,12 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               </button>
             </div>
 
+            {/* Close — desktop only (mobile has its own on the title row) */}
             <button
               type="button"
               onClick={onClose}
               data-testid="modal-close-btn"
-              className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center transition-colors flex-shrink-0"
+              className="hidden md:flex w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 items-center justify-center transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
