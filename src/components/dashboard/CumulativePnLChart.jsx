@@ -110,12 +110,12 @@ const CumulativePnLChart = ({
     return [...set].sort((a, b) => a - b);
   }, [n, minSpacing, chartW]);
 
-  const handleMouseMove = useCallback((e) => {
+  const updateHoverFromClient = useCallback((clientX, clientY) => {
     const el = wrapRef.current;
     if (!el || n < 2) return;
     const rect         = el.getBoundingClientRect();
-    const relX         = e.clientX - rect.left;
-    const relY         = e.clientY - rect.top;
+    const relX         = clientX - rect.left;
+    const relY         = clientY - rect.top;
     const chartStartPx = PAD_LEFT;
     const chartEndPx   = PAD_LEFT + chartW;
     if (relX < chartStartPx - 4 || relX > chartEndPx + 4) {
@@ -126,6 +126,20 @@ const CumulativePnLChart = ({
     const idx = Math.round(t * (n - 1));
     setHover({ idx, x: relX, y: relY });
   }, [n, chartW]);
+
+  const handleMouseMove = useCallback(
+    (e) => updateHoverFromClient(e.clientX, e.clientY),
+    [updateHoverFromClient]
+  );
+
+  // Touch scrubbing for mobile (no hover) — drag across the line to inspect.
+  const handleTouchMove = useCallback(
+    (e) => {
+      const t = e.touches[0];
+      if (t) updateHoverFromClient(t.clientX, t.clientY);
+    },
+    [updateHoverFromClient]
+  );
 
   const handleMouseLeave = useCallback(
     () => setHover((h) => (h.idx === null ? h : { idx: null, x: 0, y: 0 })),
@@ -155,9 +169,12 @@ const CumulativePnLChart = ({
   return (
     <div
       ref={wrapRef}
-      className="relative flex-1 min-h-0 w-full"
+      className="relative flex-1 min-h-0 w-full cursor-crosshair touch-pan-y"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchMove}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleMouseLeave}
       data-testid="cumulative-pnl-chart"
     >
       {/* Same gentle fade-in as the Daily P&L chart — opacity + slight rise. */}
