@@ -14,6 +14,7 @@ import {
 import { format } from "date-fns";
 import { useTrades } from "../../context/TradeContext";
 import { tagColor } from "../../utils/tagColor";
+import useIsMobile from "../../hooks/useIsMobile";
 import toast from "react-hot-toast";
 
 // Pro terminal grid — shared by the header row and every data row so columns line
@@ -200,6 +201,7 @@ const DayDetailModal = ({
   const { deleteTrade } = useTrades();
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const isMobile = useIsMobile();
 
   if (!isOpen || !date) return null;
 
@@ -246,12 +248,12 @@ const DayDetailModal = ({
     >
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col">
         {/* ── Header ── */}
-        <div className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between md:flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
               <Calendar className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">
                 {format(date, "EEE, MMMM d, yyyy")}
               </div>
@@ -262,9 +264,81 @@ const DayDetailModal = ({
                   : `${openTrades.length} open`}
               </div>
             </div>
+            {/* Mobile keeps close top-right of the date row */}
+            {isMobile && (
+              <button
+                onClick={onClose}
+                data-testid="day-detail-close-btn"
+                className="ml-auto w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-100 flex items-center justify-center transition-colors shrink-0"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {/* KPI chips */}
+          {/* KPI chips — even 3-col grid + full-width Add on mobile */}
+          {isMobile ? (
+            <div className="flex flex-col gap-2.5">
+              <div className="grid grid-cols-3 gap-2">
+                <div
+                  className={`flex flex-col gap-0.5 px-3 py-2 rounded-lg border ${
+                    totalPnL > 0
+                      ? "bg-success-50 dark:bg-success-900/25 border-success-200 dark:border-success-800"
+                      : totalPnL < 0
+                      ? "bg-danger-50 dark:bg-danger-900/25 border-danger-200 dark:border-danger-800"
+                      : "bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600"
+                  }`}
+                >
+                  <span className="font-semibold text-[9px] tracking-widest text-gray-400 dark:text-gray-500">
+                    DAY P&L
+                  </span>
+                  <span
+                    className={`font-bold text-[15px] tabular-nums ${
+                      totalPnL > 0
+                        ? "text-success-600 dark:text-success-400"
+                        : totalPnL < 0
+                        ? "text-danger-600 dark:text-danger-400"
+                        : "text-gray-700 dark:text-gray-200"
+                    }`}
+                    data-testid="day-pnl-value"
+                  >
+                    {formatCurrency(totalPnL)}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                  <span className="font-semibold text-[9px] tracking-widest text-gray-400 dark:text-gray-500">
+                    WIN
+                  </span>
+                  <span
+                    className="font-bold text-[15px] tabular-nums text-gray-700 dark:text-gray-200"
+                    data-testid="day-winrate-value"
+                  >
+                    {closedTrades.length > 0 ? `${winRate.toFixed(0)}%` : "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                  <span className="font-semibold text-[9px] tracking-widest text-gray-400 dark:text-gray-500">
+                    W / L
+                  </span>
+                  <span
+                    className="font-bold text-[15px] tabular-nums text-gray-700 dark:text-gray-200"
+                    data-testid="day-wl-value"
+                  >
+                    {winningTrades.length} / {losingTrades.length}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => onAddTrade(date)}
+                data-testid="day-detail-add-btn"
+                className="btn-gradient inline-flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-semibold w-full"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2.5} />
+                Add Trade
+              </button>
+            </div>
+          ) : (
           <div className="flex items-center gap-2">
             <div
               className={`flex flex-col gap-0.5 px-3.5 py-[7px] rounded-lg border ${
@@ -330,10 +404,11 @@ const DayDetailModal = ({
               <X className="w-4 h-4" />
             </button>
           </div>
+          )}
         </div>
 
         {/* ── Scrollable terminal body ── */}
-        <div className="overflow-auto flex-1">
+        <div className="overflow-auto flex-1 min-h-0">
           {trades.length === 0 ? (
             <div
               className="text-center py-16 px-6"
@@ -352,8 +427,9 @@ const DayDetailModal = ({
               </button>
             </div>
           ) : (
-            <div className="min-w-[700px]" data-testid="day-detail-table">
-              {/* Column header */}
+            <div className={isMobile ? "" : "min-w-[700px]"} data-testid="day-detail-table">
+              {/* Column header — desktop table only */}
+              {!isMobile && (
               <div
                 className={`grid ${GRID_COLS} gap-3 px-6 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700 font-semibold text-[10px] tracking-wider text-gray-400 dark:text-gray-500 items-center`}
               >
@@ -366,18 +442,153 @@ const DayDetailModal = ({
                 <span className="text-right">P&L</span>
                 <span />
               </div>
+              )}
 
               {/* Rows */}
               {trades.map((trade) => {
                 const isExpanded = expandedId === trade.id;
                 const detail = hasDetail(trade);
                 const isWin = (trade.pnl || 0) >= 0;
+                const isOpen = trade.status === "open";
+                const accentBar = isOpen
+                  ? "before:bg-primary-500"
+                  : isWin
+                  ? "before:bg-success-500"
+                  : "before:bg-danger-500";
                 return (
                   <div
                     key={trade.id}
-                    className="border-b border-gray-100 dark:border-gray-800"
+                    className={
+                      isMobile
+                        ? "px-3 py-1.5 first:pt-3 last:pb-3"
+                        : "border-b border-gray-100 dark:border-gray-800"
+                    }
                     data-testid={`trade-row-${trade.id}`}
                   >
+                    {isMobile ? (
+                    /* ── Mobile stacked card ── */
+                    <div
+                      className={`relative overflow-hidden rounded-2xl border border-gray-200/80 dark:border-gray-700 bg-white dark:bg-gray-800/80 shadow-sm active:scale-[0.99] transition-transform before:content-[''] before:absolute before:inset-y-0 before:left-0 before:w-1.5 ${accentBar} ${
+                        detail ? "cursor-pointer" : ""
+                      }`}
+                      onClick={() => detail && toggleExpand(trade.id)}
+                    >
+                      <div className="p-3.5 pl-4">
+                        {/* instrument + P&L */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-extrabold text-[15px] text-gray-900 dark:text-gray-100 truncate tracking-tight">
+                              {trade.instrument}
+                            </span>
+                            <span
+                              className={`font-bold text-[9px] px-1.5 py-0.5 rounded-md shrink-0 ${
+                                trade.tradeType === "long"
+                                  ? "text-success-700 bg-success-100 dark:text-success-300 dark:bg-success-900/40"
+                                  : "text-danger-700 bg-danger-100 dark:text-danger-300 dark:bg-danger-900/40"
+                              }`}
+                            >
+                              {trade.tradeType?.toUpperCase()}
+                            </span>
+                          </div>
+                          <span
+                            className={`tabular-nums font-bold text-sm shrink-0 px-2.5 py-1 rounded-lg ${
+                              isOpen
+                                ? "text-primary-700 bg-primary-50 dark:text-primary-300 dark:bg-primary-900/30"
+                                : isWin
+                                ? "text-success-700 bg-success-50 dark:text-success-300 dark:bg-success-900/25"
+                                : "text-danger-700 bg-danger-50 dark:text-danger-300 dark:bg-danger-900/25"
+                            }`}
+                            data-testid={`trade-row-pnl-${trade.id}`}
+                          >
+                            {isOpen ? "OPEN" : formatCurrency(trade.pnl || 0)}
+                          </span>
+                        </div>
+
+                        {/* entry / qty */}
+                        <div className="grid grid-cols-2 gap-2 mt-3">
+                          <div className="rounded-xl bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
+                            <div className="text-[9px] font-bold tracking-widest text-gray-400 dark:text-gray-500">
+                              ENTRY
+                            </div>
+                            <div className="tabular-nums text-sm font-semibold text-gray-800 dark:text-gray-200 mt-0.5">
+                              {formatPrice(trade.entryPrice)}
+                            </div>
+                          </div>
+                          <div className="rounded-xl bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
+                            <div className="text-[9px] font-bold tracking-widest text-gray-400 dark:text-gray-500">
+                              QTY
+                            </div>
+                            <div className="tabular-nums text-sm font-semibold text-gray-800 dark:text-gray-200 mt-0.5">
+                              {trade.quantity}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* stop / target — full width so nothing truncates */}
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
+                          <span className="text-[9px] font-bold tracking-widest text-gray-400 dark:text-gray-500">
+                            STOP / TARGET
+                          </span>
+                          <span className="flex items-center gap-1.5 tabular-nums text-sm font-semibold">
+                            <span className="text-danger-600 dark:text-danger-400">
+                              {trade.stopLoss
+                                ? Number(trade.stopLoss).toFixed(2)
+                                : "—"}
+                            </span>
+                            <span className="text-gray-300 dark:text-gray-600">
+                              →
+                            </span>
+                            <span className="text-success-600 dark:text-success-400">
+                              {trade.takeProfit
+                                ? Number(trade.takeProfit).toFixed(2)
+                                : "—"}
+                            </span>
+                          </span>
+                        </div>
+
+                        {/* actions */}
+                        <div className="flex items-center justify-end gap-1.5 mt-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditTrade(trade);
+                            }}
+                            data-testid={`trade-row-edit-${trade.id}`}
+                            className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-semibold text-gray-500 dark:text-gray-300 hover:text-primary-600 hover:border-primary-300 dark:hover:text-primary-400 transition-colors"
+                            title="Edit trade"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            Edit
+                          </button>
+                          {detail && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleExpand(trade.id);
+                              }}
+                              data-testid={`trade-row-expand-${trade.id}`}
+                              className={`inline-flex items-center gap-1 h-8 px-3 rounded-lg border text-xs font-semibold transition-colors ${
+                                isExpanded
+                                  ? "bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/40 dark:border-primary-700 dark:text-primary-300"
+                                  : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
+                              }`}
+                              title={isExpanded ? "Collapse" : "Expand details"}
+                            >
+                              {isExpanded ? (
+                                <>
+                                  Less <ChevronUp className="w-3.5 h-3.5" />
+                                </>
+                              ) : (
+                                <>
+                                  Details <ChevronDown className="w-3.5 h-3.5" />
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    ) : (
                     <div
                       className={`grid ${GRID_COLS} gap-3 px-6 py-3 items-center transition-colors ${
                         detail ? "cursor-pointer" : ""
@@ -487,11 +698,14 @@ const DayDetailModal = ({
                         )}
                       </div>
                     </div>
+                    )}
 
                     {/* ── Detail drawer ── */}
                     {isExpanded && detail && (
                       <div
-                        className="mx-6 mb-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex gap-6 flex-wrap items-start"
+                        className={`p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex gap-6 flex-wrap items-start ${
+                          isMobile ? "mx-3 mt-2 mb-1.5" : "mx-6 mb-4"
+                        }`}
                         data-testid={`trade-drawer-${trade.id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -563,7 +777,7 @@ const DayDetailModal = ({
               })}
 
               {/* Footer */}
-              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 dark:bg-gray-800/60">
+              <div className="flex items-center justify-between px-4 md:px-6 py-3 bg-gray-50 dark:bg-gray-800/60">
                 <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500">
                   {closedTrades.length} of {trades.length} trade
                   {trades.length !== 1 ? "s" : ""} closed
