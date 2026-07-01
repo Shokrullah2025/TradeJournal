@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import ModalPortal from "../components/common/ModalPortal";
-import { TrendingUp, TrendingDown, Info, AlertTriangle, X } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Info,
+  AlertTriangle,
+  X,
+  ChevronLeft,
+  ChevronDown,
+} from "lucide-react";
+import useIsMobile from "../hooks/useIsMobile";
 
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 
@@ -75,6 +84,41 @@ const fmtPrice = (n) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
   });
+
+// Per-asset instrument presets. Selecting one auto-fills the contract specs
+// (tick size / tick value for futures, pip value for forex) so the user doesn't
+// have to look them up. "custom" leaves the spec fields for manual entry.
+const INSTRUMENT_PRESETS = {
+  futures: [
+    { symbol: "ES", name: "E-mini S&P 500", tickSize: "0.25", tickValue: "12.50" },
+    { symbol: "NQ", name: "E-mini Nasdaq 100", tickSize: "0.25", tickValue: "5.00" },
+    { symbol: "YM", name: "E-mini Dow", tickSize: "1", tickValue: "5.00" },
+    { symbol: "RTY", name: "E-mini Russell 2000", tickSize: "0.10", tickValue: "5.00" },
+    { symbol: "CL", name: "Crude Oil", tickSize: "0.01", tickValue: "10.00" },
+    { symbol: "GC", name: "Gold", tickSize: "0.10", tickValue: "10.00" },
+    { symbol: "MES", name: "Micro E-mini S&P 500", tickSize: "0.25", tickValue: "1.25" },
+    { symbol: "MNQ", name: "Micro E-mini Nasdaq 100", tickSize: "0.25", tickValue: "0.50" },
+    { symbol: "custom", name: "Custom contract" },
+  ],
+  stocks: [
+    { symbol: "AAPL", name: "Apple Inc." },
+    { symbol: "MSFT", name: "Microsoft Corp." },
+    { symbol: "NVDA", name: "NVIDIA Corp." },
+    { symbol: "TSLA", name: "Tesla Inc." },
+    { symbol: "AMZN", name: "Amazon.com Inc." },
+    { symbol: "SPY", name: "SPDR S&P 500 ETF" },
+    { symbol: "custom", name: "Other / Custom" },
+  ],
+  forex: [
+    { symbol: "EUR/USD", name: "Euro / US Dollar", pipValue: "10" },
+    { symbol: "GBP/USD", name: "British Pound / US Dollar", pipValue: "10" },
+    { symbol: "AUD/USD", name: "Australian Dollar / US Dollar", pipValue: "10" },
+    { symbol: "NZD/USD", name: "NZ Dollar / US Dollar", pipValue: "10" },
+    { symbol: "USD/CAD", name: "US Dollar / Canadian Dollar", pipValue: "7.30" },
+    { symbol: "USD/CHF", name: "US Dollar / Swiss Franc", pipValue: "11.00" },
+    { symbol: "custom", name: "Custom pair" },
+  ],
+};
 
 // ---- Reusable dark/light terminal input (tightly coupled to this page) ----
 const TerminalInput = ({
@@ -247,6 +291,11 @@ const buildPayoff = (r, c) => {
 };
 
 const RiskCalculator = () => {
+  const isMobile = useIsMobile();
+  // Mobile is a two-step flow: enter the numbers, then tap Calculate to reveal
+  // the results panel. Desktop always shows both columns side by side.
+  const [mobileShowResults, setMobileShowResults] = useState(false);
+
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains("dark")
   );
@@ -282,6 +331,9 @@ const RiskCalculator = () => {
     pipValue: "10",
   });
 
+  // Selected instrument within the current asset class (e.g. "ES", "NQ").
+  const [instrument, setInstrument] = useState(INSTRUMENT_PRESETS.futures[0].symbol);
+
   const [results, setResults] = useState(null);
   const [showRiskWarning, setShowRiskWarning] = useState(false);
 
@@ -302,10 +354,38 @@ const RiskCalculator = () => {
   const unitForType = (type) =>
     type === "stocks" ? "shares" : type === "forex" ? "lots" : "contracts";
 
+  // Copy an instrument preset's contract specs into the form (editable after).
+  const applyInstrument = (type, symbol) => {
+    const preset = (INSTRUMENT_PRESETS[type] || []).find((p) => p.symbol === symbol);
+    if (!preset) return;
+    if (type === "futures" && preset.tickSize != null) {
+      setFormData((prev) => ({
+        ...prev,
+        tickSize: preset.tickSize,
+        tickValue: preset.tickValue,
+      }));
+    } else if (type === "forex" && preset.pipValue != null) {
+      setFormData((prev) => ({ ...prev, pipValue: preset.pipValue }));
+    }
+  };
+
+  const handleInstrumentChange = (symbol) => {
+    setInstrument(symbol);
+    applyInstrument(calculatorType, symbol);
+  };
+
   const selectType = (type) => {
     setCalculatorType(type);
+    // Reset the instrument dropdown to the first preset of the new asset class
+    // and load its specs.
+    const first = INSTRUMENT_PRESETS[type]?.[0];
+    if (first) {
+      setInstrument(first.symbol);
+      applyInstrument(type, first.symbol);
+    }
     setResults(null);
     setShowRiskWarning(false);
+    setMobileShowResults(false);
   };
 
   const validPrice = (n) => Number.isFinite(n) && n > 0;
@@ -499,6 +579,8 @@ const RiskCalculator = () => {
     else if (calculatorType === "forex") res = calculateForexRisk();
     setResults(res);
     setShowRiskWarning(Boolean(res && res.overRisk));
+    // Only advance to the mobile results view when the inputs produced a result.
+    if (res) setMobileShowResults(true);
   };
 
   const resetCalculator = () => {
@@ -519,8 +601,10 @@ const RiskCalculator = () => {
       lotSize: "100000",
       pipValue: "10",
     });
+    setInstrument(INSTRUMENT_PRESETS[calculatorType]?.[0]?.symbol || "");
     setResults(null);
     setShowRiskWarning(false);
+    setMobileShowResults(false);
   };
 
   // Cards always render — default to a zero placeholder until calculated.
@@ -667,13 +751,16 @@ const RiskCalculator = () => {
 
         <div
           className="grid"
-          style={{ gridTemplateColumns: "minmax(0,392px) 1fr" }}
+          style={{
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0,392px) 1fr",
+          }}
         >
-          {/* ===== LEFT: inputs ===== */}
+          {/* ===== LEFT: inputs ===== (hidden on mobile once results are shown) */}
+          {(!isMobile || !mobileShowResults) && (
           <div
             style={{
-              padding: 26,
-              borderRight: `1px solid ${c.borderSoft}`,
+              padding: isMobile ? 20 : 26,
+              borderRight: isMobile ? "none" : `1px solid ${c.borderSoft}`,
               background: c.left,
             }}
           >
@@ -685,7 +772,7 @@ const RiskCalculator = () => {
                 border: `1px solid ${c.border}`,
                 borderRadius: 10,
                 padding: 4,
-                marginBottom: 24,
+                marginBottom: 14,
               }}
             >
               {segments.map((s) => {
@@ -711,6 +798,48 @@ const RiskCalculator = () => {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Specific instrument within the chosen asset class — picking one
+                auto-fills its contract specs (see INSTRUMENT_PRESETS). */}
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <select
+                value={instrument}
+                onChange={(e) => handleInstrumentChange(e.target.value)}
+                data-testid="risk-calculator-instrument-select"
+                aria-label="Select instrument"
+                className="w-full appearance-none outline-none"
+                style={{
+                  background: c.inputBg,
+                  border: `1px solid ${c.inputBorder}`,
+                  borderRadius: 9,
+                  color: c.text,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  height: 42,
+                  padding: "0 38px 0 12px",
+                  cursor: "pointer",
+                  fontFamily: MONO,
+                  colorScheme: isDark ? "dark" : "light",
+                }}
+              >
+                {(INSTRUMENT_PRESETS[calculatorType] || []).map((p) => (
+                  <option key={p.symbol} value={p.symbol}>
+                    {p.symbol === "custom" ? p.name : p.symbol}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: c.muted,
+                  pointerEvents: "none",
+                }}
+              />
             </div>
 
             <div
@@ -979,9 +1108,32 @@ const RiskCalculator = () => {
                 : "Enter a stop loss, then Calculate to size the trade."}
             </div>
           </div>
+          )}
 
-          {/* ===== RIGHT: results (always shown) ===== */}
-          <div style={{ padding: "26px 28px", minWidth: 0 }}>
+          {/* ===== RIGHT: results ===== (on mobile, shown only after Calculate) */}
+          {(!isMobile || mobileShowResults) && (
+          <div style={{ padding: isMobile ? "20px" : "26px 28px", minWidth: 0 }}>
+            {/* Mobile-only: back to the inputs to edit the numbers */}
+            {isMobile && (
+              <button
+                onClick={() => setMobileShowResults(false)}
+                data-testid="risk-calculator-mobile-back-btn"
+                className="flex items-center gap-1"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: c.textMid,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  padding: 0,
+                  marginBottom: 16,
+                  cursor: "pointer",
+                }}
+              >
+                <ChevronLeft size={16} />
+                Edit inputs
+              </button>
+            )}
             <div
               className="flex items-center justify-between"
               style={{ marginBottom: 18 }}
@@ -1030,7 +1182,7 @@ const RiskCalculator = () => {
             <div
               className="grid"
               style={{
-                gridTemplateColumns: "repeat(4,1fr)",
+                gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)",
                 gap: 12,
                 marginBottom: 20,
               }}
@@ -1194,6 +1346,7 @@ const RiskCalculator = () => {
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
 
