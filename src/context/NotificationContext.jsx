@@ -122,6 +122,12 @@ export const NotificationProvider = ({ children }) => {
               setNotifications((prev) =>
                 prev.map((n) => (n.id === row.id ? { ...n, ...row } : n))
               );
+            } else if (payload.eventType === "DELETE") {
+              // Default DELETE payloads carry only the row id, and the acting
+              // tab already adjusted the unread count optimistically — just drop
+              // the row here so other tabs stay in sync.
+              const removedId = payload.old?.id;
+              setNotifications((prev) => prev.filter((n) => n.id !== removedId));
             }
           }
         )
@@ -180,6 +186,86 @@ export const NotificationProvider = ({ children }) => {
     if (error) console.error("[Notify] mark all read failed:", error.message);
   }, []);
 
+  const deleteNotification = useCallback(async (id) => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    // Optimistic remove; realtime DELETE will reconcile (no-op if already gone).
+    let wasUnread = false;
+    setNotifications((prev) =>
+      prev.filter((n) => {
+        if (n.id === id) {
+          wasUnread = !n.read_at;
+          return false;
+        }
+        return true;
+      })
+    );
+    if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId); // defense in depth alongside RLS
+
+    if (error) {
+      console.error("[Notify] delete failed:", error.message);
+      toast.error("Couldn't delete notification. Please try again.");
+    }
+  }, []);
+
+  const deleteAll = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    // Snapshot for rollback if the DB write fails.
+    const snapshot = notifications;
+    const prevUnread = unreadCount;
+    setNotifications([]);
+    setUnreadCount(0);
+    setHasMore(false);
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("[Notify] delete all failed:", error.message);
+      toast.error("Couldn't clear notifications. Please try again.");
+      setNotifications(snapshot);
+      setUnreadCount(prevUnread);
+    }
+  }, [notifications, unreadCount]);
+
+  const deleteMany = useCallback(
+    async (ids) => {
+      const userId = userIdRef.current;
+      if (!userId || !ids || ids.length === 0) return;
+      const idSet = new Set(ids);
+      const snapshot = notifications;
+      const prevUnread = unreadCount;
+      const removedUnread = notifications.filter(
+        (n) => idSet.has(n.id) && !n.read_at
+      ).length;
+      setNotifications((prev) => prev.filter((n) => !idSet.has(n.id)));
+      setUnreadCount((c) => Math.max(0, c - removedUnread));
+
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .in("id", ids)
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("[Notify] delete many failed:", error.message);
+        toast.error("Couldn't delete notifications. Please try again.");
+        setNotifications(snapshot);
+        setUnreadCount(prevUnread);
+      }
+    },
+    [notifications, unreadCount]
+  );
+
   const loadMore = useCallback(async () => {
     const userId = userIdRef.current;
     if (!userId) return;
@@ -209,6 +295,9 @@ export const NotificationProvider = ({ children }) => {
     prefs: normalizeNotificationPrefs(prefsRef.current),
     markAsRead,
     markAllAsRead,
+    deleteNotification,
+    deleteMany,
+    deleteAll,
     loadMore,
     createNotification,
   };

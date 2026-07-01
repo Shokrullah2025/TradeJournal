@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
+  Check,
+  Trash2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNotifications } from "../../context/NotificationContext";
@@ -33,10 +35,13 @@ const NotificationBell = () => {
     isLoading,
     hasMore,
     markAsRead,
-    markAllAsRead,
+    deleteMany,
+    deleteAll,
     loadMore,
   } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+  // Selected notification ids for bulk actions (kept as a Set).
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const panelRef = useRef(null);
 
   // Close panel when clicking outside (mirrors the Header profile menu pattern).
@@ -49,6 +54,50 @@ const NotificationBell = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Drop selections that no longer exist (deleted elsewhere / paged out) and
+  // clear everything when the panel closes.
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedIds((prev) => (prev.size ? new Set() : prev));
+      return;
+    }
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const live = new Set(notifications.map((n) => n.id));
+      const next = new Set([...prev].filter((id) => live.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [isOpen, notifications]);
+
+  const selectedCount = selectedIds.size;
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleMarkSelectedRead = () => {
+    notifications
+      .filter((n) => selectedIds.has(n.id) && !n.read_at)
+      .forEach((n) => markAsRead(n.id));
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    const ids = [...selectedIds];
+    setSelectedIds(new Set());
+    await deleteMany(ids);
+  };
+
+  const handleClearAll = async () => {
+    setSelectedIds(new Set());
+    await deleteAll();
+  };
 
   const handleItemClick = (notification) => {
     if (!notification.read_at) markAsRead(notification.id);
@@ -81,20 +130,47 @@ const NotificationBell = () => {
       {isOpen && (
         <div
           data-testid="notifications-dropdown-panel"
-          className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[200]"
+          className="fixed left-3 right-3 top-16 w-auto sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[200]"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              Notifications
+          <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            {/* Left: bulk actions */}
+            <div className="flex items-center gap-2 min-w-0">
+              {selectedCount > 0 ? (
+                <>
+                  <button
+                    data-testid="notifications-markread-selected-button"
+                    onClick={handleMarkSelectedRead}
+                    className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 px-1.5 py-1 rounded"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Mark read
+                  </button>
+                  <button
+                    data-testid="notifications-delete-selected-button"
+                    onClick={handleDeleteSelected}
+                    className="inline-flex items-center gap-1 text-xs text-danger-600 hover:text-danger-700 px-1.5 py-1 rounded"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                </>
+              ) : (
+                <button
+                  data-testid="notifications-clearall-button"
+                  onClick={handleClearAll}
+                  disabled={notifications.length === 0}
+                  className="inline-flex items-center gap-1 text-xs text-danger-600 hover:text-danger-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            {/* Right: title / selection count */}
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate shrink-0">
+              {selectedCount > 0 ? `${selectedCount} selected` : "Notifications"}
             </h3>
-            <button
-              data-testid="notifications-markall-button"
-              onClick={markAllAsRead}
-              disabled={unreadCount === 0}
-              className="text-xs text-primary-600 hover:text-primary-700 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-              Mark all read
-            </button>
           </div>
 
           <div
@@ -120,33 +196,50 @@ const NotificationBell = () => {
                 {notifications.map((n) => {
                   const { Icon, className } =
                     SEVERITY_ICON[n.severity] ?? SEVERITY_ICON.info;
+                  const selected = selectedIds.has(n.id);
                   return (
-                    <button
+                    <div
                       key={n.id}
-                      data-testid={`notifications-item-${n.id}`}
-                      onClick={() => handleItemClick(n)}
-                      className={`w-full text-left flex gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                        n.read_at ? "" : "bg-primary-50/60 dark:bg-primary-900/10"
+                      className={`flex items-start border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                        selected
+                          ? "bg-primary-50 dark:bg-primary-900/20"
+                          : n.read_at
+                          ? ""
+                          : "bg-primary-50/60 dark:bg-primary-900/10"
                       }`}
                     >
-                      <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${className}`} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {n.title}
-                        </p>
-                        {n.body && (
-                          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                            {n.body}
+                      <input
+                        type="checkbox"
+                        data-testid={`notifications-select-${n.id}`}
+                        checked={selected}
+                        onChange={() => toggleSelectOne(n.id)}
+                        className="h-4 w-4 mt-4 ml-4 shrink-0 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                        aria-label="Select notification"
+                      />
+                      <button
+                        data-testid={`notifications-item-${n.id}`}
+                        onClick={() => handleItemClick(n)}
+                        className="flex-1 min-w-0 text-left flex gap-3 pl-2 pr-4 py-3"
+                      >
+                        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${className}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {n.title}
                           </p>
+                          {n.body && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                              {n.body}
+                            </p>
+                          )}
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            {relativeTime(n.created_at)}
+                          </p>
+                        </div>
+                        {!n.read_at && (
+                          <span className="w-2 h-2 mt-1.5 shrink-0 rounded-full bg-primary-600" />
                         )}
-                        <p className="text-[11px] text-gray-400 mt-0.5">
-                          {relativeTime(n.created_at)}
-                        </p>
-                      </div>
-                      {!n.read_at && (
-                        <span className="w-2 h-2 mt-1.5 shrink-0 rounded-full bg-primary-600" />
-                      )}
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
                 {hasMore && (
