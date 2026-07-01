@@ -305,8 +305,9 @@ const Dashboard = () => {
           <CumulativePnLChart data={cumData} dates={cumDates} />
         </div>
 
-        {/* When You Win — heatmap of avg P&L by day of week × trading hour */}
-        <div className="card !pt-3 !pr-2 !pb-2 !pl-2 flex flex-col h-[340px]">
+        {/* When You Win — heatmap of avg P&L by day of week × trading hour.
+            Hidden on mobile (only the two top charts show); visible on desktop. */}
+        <div className="card !pt-3 !pr-2 !pb-2 !pl-2 hidden lg:flex flex-col h-[340px]">
           <div className="flex items-center justify-between mb-1 px-1">
             <div className="flex items-center gap-1.5">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
@@ -351,8 +352,9 @@ const Dashboard = () => {
         </div>
 
         <div className="space-y-6">
-          {/* Trade Outcomes scatter — one dot per closed trade */}
-          <div className="card">
+          {/* Trade Outcomes scatter — one dot per closed trade.
+              Hidden on mobile; visible on desktop. */}
+          <div className="card hidden lg:block">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Trade Outcomes

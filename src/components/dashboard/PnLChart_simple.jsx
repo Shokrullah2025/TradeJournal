@@ -151,6 +151,25 @@ const PnLChart = ({ trades = [] }) => {
     []
   );
 
+  // Touch scrubbing — mobile has no hover, so tap/drag across the chart to
+  // inspect a bar. Derives the bar index from the touch x within the plot area.
+  const handleTouch = useCallback(
+    (e) => {
+      const rect = ref.current?.getBoundingClientRect();
+      const t = e.touches[0];
+      if (!rect || !t) return;
+      const relX = t.clientX - rect.left;
+      const relY = t.clientY - rect.top;
+      const i = Math.floor((relX - PAD_LEFT) / BAR_W);
+      if (i < 0 || i >= showN) {
+        handleLeave();
+        return;
+      }
+      setHover({ idx: i, x: relX, y: relY });
+    },
+    [showN, handleLeave]
+  );
+
   if (data.length === 0) {
     return (
       <div
@@ -188,8 +207,11 @@ const PnLChart = ({ trades = [] }) => {
     // so ResizeObserver always measures the true card width.
     <div
       ref={ref}
-      className="relative flex-1 min-h-0 w-full"
+      className="relative flex-1 min-h-0 w-full cursor-crosshair touch-pan-y"
       onMouseLeave={handleLeave}
+      onTouchStart={handleTouch}
+      onTouchMove={handleTouch}
+      onTouchEnd={handleLeave}
       data-testid="pnl-chart"
     >
       {/* Candles ease in on mount: a soft opacity fade with a slight rise,
