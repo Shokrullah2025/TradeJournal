@@ -3,6 +3,7 @@
 // No additional API keys required beyond the existing Supabase setup.
 
 import { minutesOfDayInTz, MARKET_TZ } from '../lib/signals/sessions'
+import { FUTURES_CONTRACTS } from '../lib/futuresContracts'
 
 const EDGE_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-data`
 
@@ -37,14 +38,11 @@ export function aggregateTo4hSession(candles) {
   return [...buckets.values()].sort((a, b) => a.time - b.time)
 }
 
-// Yahoo Finance symbols for futures contracts
-const FUTURES_YF_SYMBOL = {
-  ES:  'ES=F',
-  NQ:  'NQ=F',
-  YM:  'YM=F',
-  RTY: 'RTY=F',
-  CL:  'CL=F',
-}
+// Yahoo Finance symbols for futures contracts — derived from the shared
+// contract catalog so the AI Analysis page and Backtest resolve identically.
+const FUTURES_YF_SYMBOL = Object.fromEntries(
+  FUTURES_CONTRACTS.map((c) => [c.symbol, c.yahoo])
+)
 
 // In-memory cache layer — the fallback when a dataset is too large for
 // sessionStorage (browsers cap it around 5MB; big lower-timeframe series like

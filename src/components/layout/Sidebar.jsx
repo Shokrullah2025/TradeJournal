@@ -12,6 +12,7 @@ import {
   Mail,
   Link,
   Activity,
+  Sparkles,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -32,6 +33,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Backtest", href: "/backtest", icon: Activity, feature: "backtesting" },
     { name: "Brokers", href: "/brokers", icon: Link, feature: "broker_sync" },
     { name: "Analytics", href: "/analytics", icon: BarChart3, feature: "advanced_analytics" },
+    { name: "AI Analysis", href: "/ai-analysis", icon: Sparkles, feature: "ai_analysis" },
     { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator, feature: "risk_calculator" },
     { name: "Settings", href: "/settings", icon: Settings },
   ].filter((item) => !item.feature || isFeatureEnabled(item.feature));

@@ -22,6 +22,8 @@ import AuthConfirm from "./pages/AuthConfirm";
 
 // Lazy — keeps the bundled country/state dataset out of the initial load.
 const Profile = React.lazy(() => import("./pages/Profile"));
+// Lazy — the lightweight-charts bundle only loads when the page is opened.
+const AiAnalysis = React.lazy(() => import("./pages/AiAnalysis"));
 // Lazy — admin bundle (charts, tables) only loads for admins who open it.
 const Admin = React.lazy(() => import("./pages/Admin"));
 
@@ -193,6 +195,22 @@ function App() {
                                     element={
                                       <FeatureGate feature="advanced_analytics" title="Advanced Analytics unavailable">
                                         <Analytics />
+                                      </FeatureGate>
+                                    }
+                                  />
+                                  <Route
+                                    path="/ai-analysis"
+                                    element={
+                                      <FeatureGate feature="ai_analysis" title="AI Analysis unavailable">
+                                        <Suspense
+                                          fallback={
+                                            <div className="flex items-center justify-center h-64">
+                                              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+                                            </div>
+                                          }
+                                        >
+                                          <AiAnalysis />
+                                        </Suspense>
                                       </FeatureGate>
                                     }
                                   />
