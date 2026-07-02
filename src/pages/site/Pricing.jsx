@@ -63,8 +63,8 @@ const Pricing = () => {
         </p>
       </section>
 
-      {/* FAQ */}
-      <section className="bg-gray-50 dark:bg-gray-800/40">
+      {/* FAQ — id anchor lets the navbar's Resources menu deep-link here */}
+      <section id="faq" className="bg-gray-50 dark:bg-gray-800/40">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
           <SectionHeading
             eyebrow="FAQ"

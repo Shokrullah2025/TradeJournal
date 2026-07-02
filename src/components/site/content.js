@@ -22,6 +22,7 @@ import {
   Zap,
   TrendingUp,
 } from "lucide-react";
+import { FEATURE_PAGES, SOLUTION_PAGES } from "./detailPages";
 
 // ── Top feature highlights shown on the Home page ─────────────────────────
 export const HIGHLIGHT_FEATURES = [
@@ -400,21 +401,39 @@ export const TESTIMONIALS = [
 ];
 
 // ── Footer link columns ───────────────────────────────────────────────────
+// Feature/solution detail pages are linked here too: footer links appear on
+// every public page, giving crawlers (and readers) a persistent path to the
+// deep content pages.
 export const FOOTER_LINKS = [
   {
     heading: "Product",
     links: [
       { label: "Features", to: "/features" },
       { label: "Pricing", to: "/pricing" },
+      { label: "About", to: "/about" },
+      { label: "Contact", to: "/contact" },
       { label: "Sign in", to: "/login" },
       { label: "Get started", to: "/register" },
     ],
   },
   {
-    heading: "Company",
+    heading: "Features",
     links: [
-      { label: "About", to: "/about" },
-      { label: "Contact", to: "/contact" },
+      { label: "Trade Journal", to: "/features/trade-journal" },
+      { label: "Broker Auto-Sync", to: "/features/broker-sync" },
+      { label: "Performance Dashboard", to: "/features/performance-dashboard" },
+      { label: "Backtesting", to: "/features/backtesting" },
+      { label: "Risk Calculator", to: "/features/risk-calculator" },
+      { label: "AI Insights", to: "/features/ai-insights" },
+    ],
+  },
+  {
+    heading: "Solutions",
+    links: [
+      { label: "Day Traders", to: "/solutions/day-traders" },
+      { label: "Futures Traders", to: "/solutions/futures-traders" },
+      { label: "Forex & Crypto", to: "/solutions/forex-crypto-traders" },
+      { label: "Prop Firm Traders", to: "/solutions/prop-firm-traders" },
     ],
   },
   {
@@ -431,10 +450,76 @@ export const FOOTER_LINKS = [
   },
 ];
 
-// ── Primary nav links (navbar) ────────────────────────────────────────────
-export const NAV_LINKS = [
-  { label: "Features", to: "/features" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "About", to: "/about" },
-  { label: "Contact", to: "/contact" },
+// ── Primary navigation (navbar) ───────────────────────────────────────────
+// The navbar is menu-driven: "mega" renders the multi-column Features panel,
+// "dropdown" a simple list, "link" a flat NavLink. Feature/solution items are
+// derived from the detail-page content module so the menu can never point at
+// a page that doesn't exist.
+const featureNavItem = (page) => ({
+  label: page.navLabel,
+  description: page.navDescription,
+  icon: page.icon,
+  to: `/features/${page.slug}`,
+});
+
+export const NAV_MENUS = [
+  {
+    label: "Features",
+    type: "mega",
+    groups: ["Journal & Tracking", "Analytics", "Tools"].map((heading) => ({
+      heading,
+      items: FEATURE_PAGES.filter((page) => page.group === heading).map(
+        featureNavItem
+      ),
+    })),
+    highlight: {
+      badge: "NEW",
+      title: "AI Trade Insights",
+      description:
+        "Let AI review your journal and tell you exactly where you're leaking money.",
+      to: "/features/ai-insights",
+    },
+    footerLink: { label: "See all features", to: "/features" },
+  },
+  {
+    label: "Solutions",
+    type: "dropdown",
+    items: SOLUTION_PAGES.map((page) => ({
+      label: page.navLabel,
+      description: page.navDescription,
+      to: `/solutions/${page.slug}`,
+    })),
+  },
+  { label: "Pricing", type: "link", to: "/pricing" },
+  {
+    label: "Resources",
+    type: "dropdown",
+    items: [
+      {
+        label: "FAQ",
+        description: "Common questions answered",
+        to: "/pricing#faq",
+      },
+      {
+        label: "Help & support",
+        description: "Get in touch with the team",
+        to: "/contact",
+      },
+      {
+        label: "Financial disclaimer",
+        description: "What Tradgella is (and isn't)",
+        to: "/disclaimer",
+      },
+    ],
+  },
+  {
+    label: "Company",
+    type: "dropdown",
+    items: [
+      { label: "About us", description: "Why we built Tradgella", to: "/about" },
+      { label: "Contact", description: "Questions, feedback, support", to: "/contact" },
+      { label: "Privacy policy", description: "How your data is handled", to: "/privacy" },
+      { label: "Terms of service", description: "The fine print", to: "/terms" },
+    ],
+  },
 ];

@@ -16,7 +16,7 @@ const SiteFooter = () => {
       className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-6">
           {/* Brand */}
           <div className="col-span-2">
             <Link
