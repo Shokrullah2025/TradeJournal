@@ -53,6 +53,33 @@ const narrativeInput = z.object({
     sampleSize: z.number().finite().min(0),
     unresolved: z.number().finite().min(0),
   }),
+  // The entry-setup snapshot — optional so bias-only payloads keep validating.
+  setup: z
+    .object({
+      state: z.enum([
+        "NO_BIAS",
+        "WAITING_FOR_OB",
+        "WAITING_FOR_TAP",
+        "AWAITING_CONFIRMATION",
+        "SETUP_ACTIVE",
+        "SMT_BLOCKED",
+      ]),
+      direction: z.enum(["long", "short"]).nullable(),
+      entry: z.number().finite().nullable(),
+      stop: z.number().finite().nullable(),
+      target: z.number().finite().nullable(),
+      targetLabel: z.enum(["pdh", "pdl", "pwh", "pwl"]).nullable(),
+      rr: z.number().finite().nullable(),
+      smtStatus: z.enum(["agree", "disagree", "no-data", "no-pair"]).nullable(),
+      accuracy: z
+        .object({
+          winRate: z.number().finite().min(0).max(1).nullable(),
+          sampleSize: z.number().finite().min(0),
+          avgR: z.number().finite().nullable(),
+        })
+        .nullable(),
+    })
+    .optional(),
 });
 
 // Gemini structured-output schema — guarantees parseable JSON back.
@@ -84,7 +111,14 @@ const SYSTEM_PROMPT =
   "measurement of these rules (state the sample size) and not a prediction, " +
   "that the next session can invalidate the bias by taking out the opposite " +
   "prior-day extreme, and that this is educational analysis of ~15-minute-" +
-  "delayed data, not financial advice. Never invent numbers or levels that " +
+  "delayed data, not financial advice. When a 'setup' object is present, " +
+  "also describe where price is in the entry sequence (bias, order block, " +
+  "tap, confirmation, entry) in plain language; when its state is " +
+  "SETUP_ACTIVE, restate the given entry, stop, target and reward:risk as " +
+  "mechanical rule outputs — never invent or adjust them — and cite the " +
+  "setup's own backtested winRate and sample size from setup.accuracy in " +
+  "the risk notes, noting it is a measurement, not an instruction to trade. " +
+  "Never invent numbers or levels that " +
   "are not in the input. Plain language, no markdown, no emojis.";
 
 Deno.serve(async (req: Request) => {

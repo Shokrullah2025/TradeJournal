@@ -26,9 +26,10 @@ const LEVEL_STYLES = [
 /**
  * Read-only candlestick chart for the AI Analysis page with the ICT liquidity
  * levels (prior day / prior week highs & lows, 20-day equilibrium) drawn as
- * price lines.
+ * price lines, plus the 4H order-block zone when one is in play and the
+ * entry/stop/target lines when a setup is active.
  */
-const LiquidityChart = ({ candles, levels, isDark }) => {
+const LiquidityChart = ({ candles, levels, obZone, setupLines, isDark }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({});
@@ -88,7 +89,7 @@ const LiquidityChart = ({ candles, levels, isDark }) => {
     });
   }, [candles, isDark]);
 
-  // Draw / replace the liquidity level lines.
+  // Draw / replace the liquidity, order-block, and setup lines.
   useEffect(() => {
     const { main } = seriesRef.current;
     if (!main) return;
@@ -96,21 +97,27 @@ const LiquidityChart = ({ candles, levels, isDark }) => {
       try { main.removePriceLine(line); } catch { /* series already disposed */ }
     }
     priceLinesRef.current = [];
-    if (!levels) return;
 
-    priceLinesRef.current = LEVEL_STYLES
-      .filter(({ key }) => Number.isFinite(levels[key]))
-      .map(({ key, title, color, style }) =>
-        main.createPriceLine({
-          price: levels[key],
-          color,
-          title,
-          lineWidth: 1,
-          lineStyle: style,
-          axisLabelVisible: true,
-        }),
-      );
-  }, [levels, candles, isDark]);
+    const mk = (price, color, title, style, lineWidth = 1) =>
+      main.createPriceLine({ price, color, title, lineWidth, lineStyle: style, axisLabelVisible: true });
+    const lines = [];
+
+    if (levels) {
+      for (const { key, title, color, style } of LEVEL_STYLES) {
+        if (Number.isFinite(levels[key])) lines.push(mk(levels[key], color, title, style));
+      }
+    }
+    if (obZone) {
+      if (Number.isFinite(obZone.high)) lines.push(mk(obZone.high, "#f59e0b", "OB high", LineStyle.Dashed));
+      if (Number.isFinite(obZone.low)) lines.push(mk(obZone.low, "#f59e0b", "OB low", LineStyle.Dashed));
+    }
+    if (setupLines) {
+      if (Number.isFinite(setupLines.entry)) lines.push(mk(setupLines.entry, "#2962ff", "ENTRY", LineStyle.Solid));
+      if (Number.isFinite(setupLines.stop)) lines.push(mk(setupLines.stop, "#f23645", "SL", LineStyle.Solid, 2));
+      if (Number.isFinite(setupLines.target)) lines.push(mk(setupLines.target, "#089981", "TP", LineStyle.Solid, 2));
+    }
+    priceLinesRef.current = lines;
+  }, [levels, obZone, setupLines, candles, isDark]);
 
   return (
     <div
@@ -138,6 +145,15 @@ LiquidityChart.propTypes = {
     pwh: PropTypes.number,
     pwl: PropTypes.number,
     eq: PropTypes.number,
+  }),
+  obZone: PropTypes.shape({
+    high: PropTypes.number,
+    low: PropTypes.number,
+  }),
+  setupLines: PropTypes.shape({
+    entry: PropTypes.number,
+    stop: PropTypes.number,
+    target: PropTypes.number,
   }),
   isDark: PropTypes.bool,
 };

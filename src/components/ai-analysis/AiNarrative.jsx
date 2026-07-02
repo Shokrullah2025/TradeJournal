@@ -6,9 +6,29 @@ import { supabase } from "../../lib/supabase";
 // Only computed summaries leave the browser: the bias with its factor
 // checklist, a few context flags, and the backtested accuracy. Raw candles
 // never do.
-function buildPayload({ symbol, bias, accuracy, cohort }) {
+function buildPayload({ symbol, bias, accuracy, cohort, setup, setupAccuracy }) {
   const snap = bias.snapshot || {};
+  const setupPayload = setup
+    ? {
+        state: setup.state,
+        direction: setup.direction ?? null,
+        entry: setup.plan?.entry ?? null,
+        stop: setup.plan?.stop ?? null,
+        target: setup.plan?.target ?? null,
+        targetLabel: setup.plan?.targetLabel ?? null,
+        rr: setup.plan?.rr ?? null,
+        smtStatus: setup.smt?.status ?? null,
+        accuracy: setupAccuracy
+          ? {
+              winRate: setupAccuracy.winRate ?? null,
+              sampleSize: setupAccuracy.total ?? 0,
+              avgR: setupAccuracy.avgR ?? null,
+            }
+          : null,
+      }
+    : undefined;
   return {
+    ...(setupPayload ? { setup: setupPayload } : {}),
     symbol,
     bias: {
       bias: bias.bias,
@@ -46,7 +66,7 @@ function buildPayload({ symbol, bias, accuracy, cohort }) {
  * ai-signal-narrative Edge Function. Neutral is explainable too. Renders
  * nothing at all when the feature isn't configured server-side (503).
  */
-const AiNarrative = ({ symbol, bias, accuracy, cohort }) => {
+const AiNarrative = ({ symbol, bias, accuracy, cohort, setup, setupAccuracy }) => {
   const [narrative, setNarrative] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -60,11 +80,11 @@ const AiNarrative = ({ symbol, bias, accuracy, cohort }) => {
     };
   }, []);
 
-  // A new analyzed day (or asset) invalidates the old explanation.
+  // A new analyzed day, asset, or setup state invalidates the old explanation.
   useEffect(() => {
     setNarrative(null);
     setError(null);
-  }, [symbol, bias?.computedFrom?.dayKey, bias?.bias]);
+  }, [symbol, bias?.computedFrom?.dayKey, bias?.bias, setup?.state]);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -72,7 +92,7 @@ const AiNarrative = ({ symbol, bias, accuracy, cohort }) => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke(
         "ai-signal-narrative",
-        { body: buildPayload({ symbol, bias, accuracy, cohort }) },
+        { body: buildPayload({ symbol, bias, accuracy, cohort, setup, setupAccuracy }) },
       );
       if (fnError) {
         // supabase-js surfaces non-2xx as FunctionsHttpError with the response attached
@@ -90,7 +110,7 @@ const AiNarrative = ({ symbol, bias, accuracy, cohort }) => {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [symbol, bias, accuracy, cohort]);
+  }, [symbol, bias, accuracy, cohort, setup, setupAccuracy]);
 
   if (!bias || bias.maxScore === 0 || unavailable) return null;
 
@@ -185,6 +205,17 @@ AiNarrative.propTypes = {
   cohort: PropTypes.shape({
     winRate: PropTypes.number,
     total: PropTypes.number,
+  }),
+  setup: PropTypes.shape({
+    state: PropTypes.string,
+    direction: PropTypes.string,
+    plan: PropTypes.object,
+    smt: PropTypes.object,
+  }),
+  setupAccuracy: PropTypes.shape({
+    winRate: PropTypes.number,
+    total: PropTypes.number,
+    avgR: PropTypes.number,
   }),
 };
 

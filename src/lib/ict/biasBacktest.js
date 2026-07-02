@@ -53,7 +53,7 @@ function cohortOf(samples) {
  * @returns { total, wins, losses, expired, winRate, avgR: null,
  *            byBias: { long, short }, firstTime, lastTime, samples }
  */
-export function backtestBias(dailyCandles, { siblingDaily = null, symbol } = {}) {
+export function backtestBias(dailyCandles, { siblingDaily = null, symbol, series = null } = {}) {
   const empty = {
     ...emptyCohort(),
     byBias: { long: emptyCohort(), short: emptyCohort() },
@@ -63,7 +63,9 @@ export function backtestBias(dailyCandles, { siblingDaily = null, symbol } = {})
   };
   if (!Array.isArray(dailyCandles) || dailyCandles.length <= WARMUP_DAYS + 1) return empty;
 
-  const seriesResult = buildBiasSeries(dailyCandles, { siblingDaily, symbol });
+  // `series` lets the page share one buildBiasSeries memo across both
+  // backtests; when passed it MUST have been built from the same candles.
+  const seriesResult = series ?? buildBiasSeries(dailyCandles, { siblingDaily, symbol });
   const samples = [];
 
   // entries[k] corresponds to dailyCandles[WARMUP_DAYS + k]; the last candle
