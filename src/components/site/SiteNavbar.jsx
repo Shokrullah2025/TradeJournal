@@ -158,7 +158,7 @@ const SiteNavbar = () => {
       className="sticky top-0 z-40 w-full border-b border-accent-100 dark:border-gray-800 bg-accent-50/85 dark:bg-gray-950/85 backdrop-blur-md"
     >
       <nav className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center">
           {/* Brand */}
           <Link
             to="/"
@@ -173,8 +173,8 @@ const SiteNavbar = () => {
             </span>
           </Link>
 
-          {/* Desktop menus */}
-          <div className="hidden items-center gap-1 lg:flex">
+          {/* Desktop menus — grouped next to the brand, like the mock */}
+          <div className="ml-6 hidden items-center gap-1 lg:flex">
             {NAV_MENUS.map((menu) => {
               if (menu.type === "link") {
                 return (
@@ -232,8 +232,8 @@ const SiteNavbar = () => {
             })}
           </div>
 
-          {/* Desktop actions */}
-          <div className="hidden items-center gap-3 lg:flex">
+          {/* Desktop actions — pushed to the right edge */}
+          <div className="ml-auto hidden items-center gap-3 lg:flex">
             <ThemeToggle size="sm" />
             <button
               type="button"
@@ -253,7 +253,7 @@ const SiteNavbar = () => {
           </div>
 
           {/* Mobile toggle */}
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="ml-auto flex items-center gap-2 lg:hidden">
             <ThemeToggle size="sm" />
             <button
               type="button"
