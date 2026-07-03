@@ -6,6 +6,13 @@ import {
   RefreshCw,
   CheckCircle2,
   CalendarClock,
+  LayoutDashboard,
+  BookOpen,
+  BarChart3,
+  History,
+  Calculator,
+  Link2,
+  TrendingUp,
 } from "lucide-react";
 
 /**
@@ -23,7 +30,21 @@ import {
 
 // ── Shared bits ─────────────────────────────────────────────────────────────
 
-const Frame = ({ path, children }) => (
+// Sidebar entries mirror the real app shell (src/components/layout/Sidebar)
+// so previews read as genuine screenshots of the product.
+const APP_NAV = [
+  { label: "Dashboard", icon: LayoutDashboard },
+  { label: "Trades", icon: BookOpen },
+  { label: "Analytics", icon: BarChart3 },
+  { label: "Backtest", icon: History },
+  { label: "Risk Calc", icon: Calculator },
+  { label: "Brokers", icon: Link2 },
+];
+
+// Browser chrome + the app shell (mini sidebar with the active page
+// highlighted) around each preview, so every visual looks like the actual
+// Tradgella dashboard rather than a made-up panel.
+const Frame = ({ path, active, children }) => (
   <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-xl dark:border-gray-700 dark:bg-gray-900">
     <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-4 py-2.5 dark:border-gray-800 dark:bg-gray-800/60">
       <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
@@ -33,12 +54,42 @@ const Frame = ({ path, children }) => (
         app.tradgella.com{path}
       </span>
     </div>
-    <div className="p-4 sm:p-6">{children}</div>
+    <div className="flex">
+      <aside className="hidden w-32 shrink-0 border-r border-gray-100 bg-gray-50/70 px-2.5 py-3 dark:border-gray-800 dark:bg-gray-800/40 sm:block">
+        <div className="mb-3 flex items-center gap-1.5 px-1">
+          <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-accent-400 via-accent-500 to-accent-700">
+            <TrendingUp className="h-3 w-3 text-white" />
+          </span>
+          <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100">
+            Tradgella
+          </span>
+        </div>
+        {APP_NAV.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.label === active;
+          return (
+            <span
+              key={item.label}
+              className={`mb-0.5 flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-[10px] font-medium ${
+                isActive
+                  ? "bg-accent-100 text-accent-700 dark:bg-accent-900/50 dark:text-accent-300"
+                  : "text-gray-500 dark:text-gray-400"
+              }`}
+            >
+              <Icon className="h-3 w-3 shrink-0" />
+              {item.label}
+            </span>
+          );
+        })}
+      </aside>
+      <div className="min-w-0 flex-1 p-4 sm:p-5">{children}</div>
+    </div>
   </div>
 );
 
 Frame.propTypes = {
   path: PropTypes.string.isRequired,
+  active: PropTypes.string.isRequired,
   children: PropTypes.node.isRequired,
 };
 
@@ -47,79 +98,121 @@ const pnlText = (positive) =>
     ? "text-green-600 dark:text-green-400"
     : "text-red-600 dark:text-red-400";
 
-const StatTile = ({ label, value, positive }) => (
-  <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800/60">
-    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-      {label}
-    </p>
-    <p
-      className={`mt-1 text-lg font-bold ${
-        positive === undefined
-          ? "text-gray-900 dark:text-gray-100"
-          : pnlText(positive)
-      }`}
-    >
-      {value}
-    </p>
-  </div>
-);
-
-StatTile.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-  positive: PropTypes.bool,
-};
-
-// ── Dashboard: stat tiles + equity curve ────────────────────────────────────
+// ── Dashboard: mirrors the real Dashboard page ──────────────────────────────
+// Same structure as src/pages/Dashboard.jsx — header, the four stat cards
+// (Total P&L, Win Rate, Max Drawdown, Avg Win/Loss) with mini charts, then
+// the Daily P&L and Cumulative P&L chart cards. Values are demo data.
 
 const EQUITY_LINE =
   "0,95 27,90 54,92 80,82 107,78 134,84 160,70 187,64 214,72 240,58 267,52 294,60 320,45 347,40 374,46 400,20";
 
+const PNL_SPARK = "0,26 14,22 28,24 42,17 56,19 70,12 84,14 98,7 112,9 126,3";
+
+// Daily P&L mini bars: height % + win/loss
+const DAILY_BARS = [
+  [42, true], [28, true], [22, false], [55, true], [16, false],
+  [38, true], [62, true], [20, false], [48, true], [70, true],
+];
+
+const DASH_STATS = [
+  { label: "Total P&L", value: "+$8,420", change: "+12.5%", positive: true },
+  { label: "Win Rate", value: "63.4%", change: "+2.1%", positive: true },
+  { label: "Max Drawdown", value: "$1,240", change: "-200", positive: true },
+  { label: "Avg Win/Loss", value: "1.9:1", change: "+0.2", positive: true },
+];
+
 const DashboardVisual = () => (
   <div className="space-y-3">
-    <div className="grid grid-cols-3 gap-3">
-      <StatTile label="Win rate" value="58.3%" />
-      <StatTile label="Profit factor" value="1.86" />
-      <StatTile label="Net P&L" value="+$4,210" positive />
-    </div>
-    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800/60">
-      <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-        Equity curve — last 90 days
+    {/* Page header — matches the real dashboard */}
+    <div>
+      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Dashboard</p>
+      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+        Track your trading performance and insights
       </p>
-      <svg viewBox="0 0 400 112" className="mt-2 w-full">
-        <defs>
-          <linearGradient id="pv-equity-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="currentColor" stopOpacity="0.22" />
-            <stop offset="1" stopColor="currentColor" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {[28, 56, 84].map((y) => (
-          <line
-            key={y}
-            x1="0"
-            y1={y}
-            x2="400"
-            y2={y}
-            stroke="currentColor"
-            strokeWidth="1"
-            className="text-gray-200 dark:text-gray-700"
+    </div>
+
+    {/* Stat cards */}
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      {DASH_STATS.map((stat) => (
+        <div
+          key={stat.label}
+          className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-800/60"
+        >
+          <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+            {stat.label}
+          </p>
+          <div className="mt-0.5 flex items-center justify-between gap-1">
+            <p className="font-nums text-sm font-bold text-gray-900 dark:text-gray-100">
+              {stat.value}
+            </p>
+            <span
+              className={`rounded px-1 py-0.5 text-[9px] font-semibold ${
+                stat.positive
+                  ? "bg-green-500/10 text-green-700 dark:bg-green-500/15 dark:text-green-400"
+                  : "bg-red-500/10 text-red-700 dark:bg-red-500/15 dark:text-red-400"
+              }`}
+            >
+              {stat.change}
+            </span>
+          </div>
+          {stat.label === "Total P&L" && (
+            <svg viewBox="0 0 126 28" className="mt-1 h-5 w-full">
+              <polyline
+                points={PNL_SPARK}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="text-green-500"
+              />
+            </svg>
+          )}
+        </div>
+      ))}
+    </div>
+
+    {/* Chart cards — Daily P&L + Cumulative P&L, like the real page */}
+    <div className="grid grid-cols-2 gap-2">
+      <div className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-800/60">
+        <p className="text-[10px] font-semibold text-gray-700 dark:text-gray-300">
+          Daily P&L
+        </p>
+        <div className="mt-2 flex h-16 items-end gap-1">
+          {DAILY_BARS.map(([height, win], index) => (
+            <span
+              key={index}
+              className={`flex-1 rounded-t-sm ${win ? "bg-green-500" : "bg-red-500"}`}
+              style={{ height: `${height}%` }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-800/60">
+        <p className="text-[10px] font-semibold text-gray-700 dark:text-gray-300">
+          Cumulative P&L
+        </p>
+        <svg viewBox="0 0 400 112" className="mt-2 h-16 w-full" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="pv-equity-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="currentColor" stopOpacity="0.22" />
+              <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d={`M${EQUITY_LINE.split(" ").join(" L")} L400,112 L0,112 Z`}
+            fill="url(#pv-equity-fill)"
+            className="text-accent-500"
           />
-        ))}
-        <path
-          d={`M${EQUITY_LINE.split(" ").join(" L")} L400,112 L0,112 Z`}
-          fill="url(#pv-equity-fill)"
-          className="text-accent-500"
-        />
-        <polyline
-          points={EQUITY_LINE}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-accent-500"
-        />
-      </svg>
+          <polyline
+            points={EQUITY_LINE}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-accent-500"
+          />
+        </svg>
+      </div>
     </div>
   </div>
 );
@@ -552,15 +645,15 @@ const BriefingVisual = () => (
 // ── Public component ────────────────────────────────────────────────────────
 
 const VARIANTS = {
-  dashboard: { path: "/dashboard", render: DashboardVisual },
-  calendar: { path: "/trades", render: CalendarVisual },
-  journal: { path: "/trades", render: JournalVisual },
-  sync: { path: "/brokers", render: SyncVisual },
-  reports: { path: "/analytics", render: ReportsVisual },
-  ai: { path: "/analytics", render: AiVisual },
-  backtest: { path: "/backtest", render: BacktestVisual },
-  calculator: { path: "/risk-calculator", render: CalculatorVisual },
-  briefing: { path: "/dashboard", render: BriefingVisual },
+  dashboard: { path: "/dashboard", active: "Dashboard", render: DashboardVisual },
+  calendar: { path: "/trades", active: "Trades", render: CalendarVisual },
+  journal: { path: "/trades", active: "Trades", render: JournalVisual },
+  sync: { path: "/brokers", active: "Brokers", render: SyncVisual },
+  reports: { path: "/analytics", active: "Analytics", render: ReportsVisual },
+  ai: { path: "/analytics", active: "Analytics", render: AiVisual },
+  backtest: { path: "/backtest", active: "Backtest", render: BacktestVisual },
+  calculator: { path: "/risk-calculator", active: "Risk Calc", render: CalculatorVisual },
+  briefing: { path: "/dashboard", active: "Dashboard", render: BriefingVisual },
 };
 
 const ProductVisual = ({ variant }) => {
@@ -570,7 +663,7 @@ const ProductVisual = ({ variant }) => {
 
   return (
     <div data-testid={`product-visual-${variant}`} aria-hidden="true">
-      <Frame path={config.path}>
+      <Frame path={config.path} active={config.active}>
         <Body />
       </Frame>
     </div>

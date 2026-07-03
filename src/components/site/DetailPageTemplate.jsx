@@ -57,41 +57,47 @@ const DetailPageTemplate = ({ page, basePath }) => {
         jsonLd={jsonLd}
       />
 
-      {/* Hero */}
-      <section className="bg-gradient-to-b from-accent-50 to-white dark:from-gray-900 dark:to-gray-900">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-accent-600 dark:text-accent-400 mb-3">
-            {page.group}
-          </p>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl">
-            {page.hero.title}
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-400">
-            {page.hero.subtitle}
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to="/register"
-              data-testid={`detail-${page.slug}-getstarted-btn`}
-              className="btn btn-site inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
-            >
-              Start free
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link
-              to="/pricing"
-              data-testid={`detail-${page.slug}-pricing-btn`}
-              className="btn btn-ghost border border-gray-300 dark:border-gray-600 px-6 py-3 text-base font-semibold"
-            >
-              See pricing
-            </Link>
+      {/* Hero — landing-style split: copy left, app screenshot right */}
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[760px] -translate-x-1/2 rounded-full bg-accent-200/60 blur-3xl dark:bg-accent-900/30"
+        />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1fr,1.1fr] lg:gap-14 lg:px-8 lg:py-20">
+          <div>
+            <p className="font-nums text-xs font-semibold uppercase tracking-[0.14em] text-accent-600 dark:text-accent-400">
+              {page.group}
+            </p>
+            <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100 sm:text-[44px]">
+              {page.hero.title}
+            </h1>
+            <p className="mt-5 max-w-lg text-lg leading-relaxed text-gray-600 dark:text-gray-400">
+              {page.hero.subtitle}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                to="/register"
+                data-testid={`detail-${page.slug}-getstarted-btn`}
+                className="btn btn-site inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
+              >
+                Start free — no card
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link
+                to="/pricing"
+                data-testid={`detail-${page.slug}-pricing-btn`}
+                className="btn inline-flex items-center gap-2 border border-accent-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 hover:bg-accent-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+              >
+                See pricing
+              </Link>
+            </div>
           </div>
 
-          {/* Product preview — shows the actual screen this page describes */}
-          <div className="relative mx-auto mt-14 max-w-2xl">
+          {/* Product preview — the actual app screen this page describes */}
+          <div className="relative">
             <div
               aria-hidden="true"
-              className="absolute -inset-4 rounded-3xl bg-accent-500/10 blur-2xl dark:bg-accent-500/15"
+              className="absolute -inset-3 rounded-3xl bg-gradient-to-br from-accent-500/25 to-transparent blur-md"
             />
             <div className="relative">
               <ProductVisual variant={page.visual} />
