@@ -456,10 +456,26 @@ export const FOOTER_LEGAL_LINKS = [
 // features in two categories. The remaining detail pages stay reachable via
 // "See all features", the footer columns, and the sitemap — the menu shows
 // what we believe matters most, without overwhelming a first-time visitor.
+// Emoji tiles from the approved landing design — one per nav item, rendered
+// in a soft accent-tinted rounded square by the navbar.
+const NAV_EMOJI = {
+  "trade-journal": "📓",
+  "trade-calendar": "📅",
+  "broker-sync": "🔗",
+  "performance-dashboard": "📊",
+  backtesting: "⏮️",
+  "risk-calculator": "🧮",
+  "day-traders": "⚡",
+  "futures-traders": "📈",
+  "forex-crypto-traders": "🌐",
+  "prop-firm-traders": "🏛️",
+};
+
 const featureNavItem = (page) => ({
   label: page.navLabel,
   description: page.navDescription,
   icon: page.icon,
+  emoji: NAV_EMOJI[page.slug],
   to: `/features/${page.slug}`,
 });
 
@@ -499,6 +515,7 @@ export const NAV_MENUS = [
     items: SOLUTION_PAGES.map((page) => ({
       label: page.navLabel,
       description: page.navDescription,
+      emoji: NAV_EMOJI[page.slug],
       to: `/solutions/${page.slug}`,
     })),
   },
@@ -507,15 +524,22 @@ export const NAV_MENUS = [
     label: "Company",
     type: "dropdown",
     items: [
-      { label: "About us", description: "Why we built Tradgella", to: "/about" },
+      {
+        label: "About us",
+        description: "Why we built Tradgella",
+        emoji: "🌱",
+        to: "/about",
+      },
       {
         label: "Contact & support",
         description: "Questions, feedback, help",
+        emoji: "📮",
         to: "/contact",
       },
       {
         label: "FAQ",
         description: "Common questions answered",
+        emoji: "💬",
         to: "/pricing#faq",
       },
     ],

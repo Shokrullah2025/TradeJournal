@@ -111,16 +111,26 @@ const SiteNavbar = () => {
       key={item.to}
       to={item.to}
       data-testid={`site-nav-${slugify(menuLabel)}-${slugify(item.label)}-link`}
-      className="group block rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+      className="group flex gap-3 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
     >
-      <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
-        {item.label}
-      </span>
-      {item.description && (
-        <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-          {item.description}
+      {item.emoji && (
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-100 text-lg dark:bg-accent-900/50"
+        >
+          {item.emoji}
         </span>
       )}
+      <span>
+        <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
+          {item.label}
+        </span>
+        {item.description && (
+          <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+            {item.description}
+          </span>
+        )}
+      </span>
     </Link>
   );
 
@@ -293,17 +303,18 @@ const SiteNavbar = () => {
                     <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       {group.heading}
                     </p>
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
+                    {group.items.map((item) => (
                         <Link
                           key={item.to}
                           to={item.to}
                           data-testid={`site-nav-${slugify(menu.label)}-${slugify(item.label)}-link`}
                           className="group -mx-3 flex gap-3 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                         >
-                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 dark:bg-accent-900/40 dark:text-accent-400">
-                            <Icon className="h-5 w-5" />
+                          <span
+                            aria-hidden="true"
+                            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-100 text-lg dark:bg-accent-900/50"
+                          >
+                            {item.emoji}
                           </span>
                           <span>
                             <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
@@ -314,8 +325,7 @@ const SiteNavbar = () => {
                             </span>
                           </span>
                         </Link>
-                      );
-                    })}
+                    ))}
                   </div>
                 ))}
 
@@ -420,8 +430,16 @@ const SiteNavbar = () => {
                           key={item.to}
                           to={item.to}
                           data-testid={`site-nav-mobile-${slugify(menu.label)}-${slugify(item.label)}-link`}
-                          className="block rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
+                          {item.emoji && (
+                            <span
+                              aria-hidden="true"
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accent-100 text-sm dark:bg-accent-900/50"
+                            >
+                              {item.emoji}
+                            </span>
+                          )}
                           {item.label}
                         </Link>
                       ))}
