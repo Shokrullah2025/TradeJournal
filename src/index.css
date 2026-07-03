@@ -85,10 +85,10 @@
     @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:focus:ring-indigo-400;
   }
 
-  /* Marketing-site primary CTA — the violet gradient from the landing design.
-     Used only under .site-shell; the app keeps .btn-primary. */
+  /* Marketing-site primary CTA — the Evergreen gradient from the landing
+     design. Used only under .site-shell; the app keeps .btn-primary. */
   .btn-site {
-    @apply text-white bg-gradient-to-br from-accent-500 via-accent-600 to-accent-800 shadow-lg shadow-accent-600/40 hover:brightness-110 hover:-translate-y-px focus:ring-accent-500;
+    @apply text-white bg-gradient-to-br from-accent-400 via-accent-500 to-accent-700 shadow-lg shadow-accent-600/40 hover:brightness-110 hover:-translate-y-px focus:ring-accent-500;
   }
 
   /* Brand green gradient — primary action buttons (Add Trade, Update Trade,

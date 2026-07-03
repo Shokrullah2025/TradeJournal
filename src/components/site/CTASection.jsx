@@ -4,8 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 /**
- * Bottom-of-page conversion band (landing design: violet gradient card with a
- * primary and a secondary action). Adapts to auth state so signed-in users
+ * Bottom-of-page conversion band (landing design: Evergreen gradient card with
+ * a primary and a secondary action). Adapts to auth state so signed-in users
  * get a path back into the app instead of a sign-up prompt.
  */
 const CTASection = () => {
@@ -16,7 +16,7 @@ const CTASection = () => {
       data-testid="site-cta-section"
       className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24"
     >
-      <div className="rounded-3xl bg-gradient-to-br from-accent-500 via-accent-600 to-accent-800 px-6 py-14 text-center text-white shadow-2xl shadow-accent-600/30 sm:px-12">
+      <div className="rounded-3xl bg-gradient-to-br from-accent-400 via-accent-500 to-accent-700 px-6 py-14 text-center text-white shadow-2xl shadow-accent-600/30 sm:px-12">
         <h2 className="mx-auto max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           Stop guessing. Start journaling with an edge.
         </h2>

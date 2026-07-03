@@ -5,19 +5,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Public marketing-site accent (violet "Signal" theme from the
+        // Public marketing-site accent (Evergreen teal theme from the
         // approved landing design). The authenticated app keeps `primary`.
         accent: {
-          50: "#f2f2fb",
-          100: "#e6e5f7",
-          200: "#cfcdf0",
-          300: "#a6a8f0",
-          400: "#8b88e5",
-          500: "#7276df",
-          600: "#5b57c9",
-          700: "#4a45ab",
-          800: "#454099",
-          900: "#312d6b",
+          50: "#eef5f2",
+          100: "#dcefeb",
+          200: "#b9e6db",
+          300: "#7fd1c2",
+          400: "#3fae9c",
+          500: "#2a9d8f",
+          600: "#158477",
+          700: "#147065",
+          800: "#0f5f5f",
+          900: "#0a403b",
         },
         primary: {
           50: "#f0f9ff",

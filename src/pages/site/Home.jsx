@@ -22,7 +22,7 @@ import { PRICING_TIERS, TESTIMONIALS, STATS_BAND } from "../../components/site/c
 
 /**
  * Public landing page (route "/") — implementation of the approved landing
- * design (violet "Signal" version): hero with a live-looking product mock,
+ * design (Evergreen version): hero with a live-looking product mock,
  * broker strip, gradient metrics band, AI Insights banner, feature bento
  * grid, journaling deep-dive, testimonials, pricing, and final CTA.
  *
@@ -50,7 +50,7 @@ const HOME_JSON_LD = [
 const EQUITY_AREA =
   "M0,80 L34,74 L68,78 L102,58 L136,63 L170,44 L204,49 L238,30 L272,34 L320,14";
 
-const GRADIENT = "bg-gradient-to-br from-accent-500 via-accent-600 to-accent-800";
+const GRADIENT = "bg-gradient-to-br from-accent-400 via-accent-500 to-accent-700";
 
 // ── Hero product mock ───────────────────────────────────────────────────────
 

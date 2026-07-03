@@ -26,7 +26,7 @@ const SiteFooter = () => {
               data-testid="site-footer-brand-link"
               className="flex items-center gap-2"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 via-accent-600 to-accent-800">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-700">
                 <TrendingUp className="h-4 w-4 text-white" />
               </span>
               <span className="font-display text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">
