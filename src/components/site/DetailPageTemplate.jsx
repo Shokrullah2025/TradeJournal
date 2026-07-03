@@ -6,6 +6,7 @@ import Seo from "../seo/Seo";
 import SectionHeading from "./SectionHeading";
 import FAQAccordion from "./FAQAccordion";
 import CTASection from "./CTASection";
+import ProductVisual from "./ProductVisual";
 import { getRelatedPage } from "./detailPages";
 import { absoluteUrl, SITE_NAME } from "../../utils/seo";
 
@@ -84,6 +85,17 @@ const DetailPageTemplate = ({ page, basePath }) => {
             >
               See pricing
             </Link>
+          </div>
+
+          {/* Product preview — shows the actual screen this page describes */}
+          <div className="relative mx-auto mt-14 max-w-2xl">
+            <div
+              aria-hidden="true"
+              className="absolute -inset-4 rounded-3xl bg-primary-500/10 blur-2xl dark:bg-primary-500/15"
+            />
+            <div className="relative">
+              <ProductVisual variant={page.visual} />
+            </div>
           </div>
         </div>
       </section>
@@ -218,6 +230,7 @@ DetailPageTemplate.propTypes = {
     slug: PropTypes.string.isRequired,
     group: PropTypes.string.isRequired,
     navLabel: PropTypes.string.isRequired,
+    visual: PropTypes.string.isRequired,
     seo: PropTypes.shape({
       title: PropTypes.string.isRequired,
       description: PropTypes.string.isRequired,

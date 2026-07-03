@@ -26,6 +26,7 @@ export const FEATURE_PAGES = [
   {
     slug: "trade-journal",
     group: "Journal & Tracking",
+    visual: "journal",
     icon: BookOpen,
     navLabel: "Trade Journal",
     navDescription: "Log every trade with notes & screenshots",
@@ -102,6 +103,7 @@ export const FEATURE_PAGES = [
   {
     slug: "trade-calendar",
     group: "Journal & Tracking",
+    visual: "calendar",
     icon: Calendar,
     navLabel: "Trade Calendar",
     navDescription: "Daily P&L heat-map at a glance",
@@ -161,6 +163,7 @@ export const FEATURE_PAGES = [
   {
     slug: "broker-sync",
     group: "Journal & Tracking",
+    visual: "sync",
     icon: Link2,
     navLabel: "Broker Sync & CSV Import",
     navDescription: "Auto-import from Tradovate & more",
@@ -236,6 +239,7 @@ export const FEATURE_PAGES = [
   {
     slug: "performance-dashboard",
     group: "Analytics",
+    visual: "dashboard",
     icon: BarChart3,
     navLabel: "Performance Dashboard",
     navDescription: "Win rate, profit factor, expectancy",
@@ -301,6 +305,7 @@ export const FEATURE_PAGES = [
   {
     slug: "advanced-reports",
     group: "Analytics",
+    visual: "reports",
     icon: LineChart,
     navLabel: "Advanced Reports",
     navDescription: "By strategy, instrument & time of day",
@@ -366,6 +371,7 @@ export const FEATURE_PAGES = [
   {
     slug: "ai-insights",
     group: "Analytics",
+    visual: "ai",
     icon: Lightbulb,
     navLabel: "AI Insights",
     navDescription: "Spot patterns in your winners & losers",
@@ -425,6 +431,7 @@ export const FEATURE_PAGES = [
   {
     slug: "backtesting",
     group: "Tools",
+    visual: "backtest",
     icon: Activity,
     navLabel: "Backtesting",
     navDescription: "Replay markets & test your edge",
@@ -489,6 +496,7 @@ export const FEATURE_PAGES = [
   {
     slug: "risk-calculator",
     group: "Tools",
+    visual: "calculator",
     icon: Calculator,
     navLabel: "Risk Calculator",
     navDescription: "Position sizing before you enter",
@@ -548,6 +556,7 @@ export const FEATURE_PAGES = [
   {
     slug: "pre-market-briefing",
     group: "Tools",
+    visual: "briefing",
     icon: Clock,
     navLabel: "Pre-Market Briefing",
     navDescription: "Start each session prepared",
@@ -604,6 +613,7 @@ export const SOLUTION_PAGES = [
   {
     slug: "day-traders",
     group: "Solutions",
+    visual: "calendar",
     icon: Zap,
     navLabel: "Day Traders",
     navDescription: "High-volume journaling & session review",
@@ -657,6 +667,7 @@ export const SOLUTION_PAGES = [
   {
     slug: "futures-traders",
     group: "Solutions",
+    visual: "sync",
     icon: CandlestickChart,
     navLabel: "Futures Traders",
     navDescription: "Tick values, contracts & Tradovate sync",
@@ -710,6 +721,7 @@ export const SOLUTION_PAGES = [
   {
     slug: "forex-crypto-traders",
     group: "Solutions",
+    visual: "journal",
     icon: Globe,
     navLabel: "Forex & Crypto",
     navDescription: "Fractional sizes, pips & 24/7 markets",
@@ -763,6 +775,7 @@ export const SOLUTION_PAGES = [
   {
     slug: "prop-firm-traders",
     group: "Solutions",
+    visual: "dashboard",
     icon: ShieldCheck,
     navLabel: "Prop Firm Traders",
     navDescription: "Track evaluations & stay within limits",

@@ -455,6 +455,11 @@ export const FOOTER_LINKS = [
 // "dropdown" a simple list, "link" a flat NavLink. Feature/solution items are
 // derived from the detail-page content module so the menu can never point at
 // a page that doesn't exist.
+//
+// The mega menu is deliberately curated, not exhaustive: the six flagship
+// features in two categories. The remaining detail pages stay reachable via
+// "See all features", the footer columns, and the sitemap — the menu shows
+// what we believe matters most, without overwhelming a first-time visitor.
 const featureNavItem = (page) => ({
   label: page.navLabel,
   description: page.navDescription,
@@ -462,14 +467,25 @@ const featureNavItem = (page) => ({
   to: `/features/${page.slug}`,
 });
 
+const NAV_FEATURE_GROUPS = [
+  {
+    heading: "Journal & Tracking",
+    slugs: ["trade-journal", "trade-calendar", "broker-sync"],
+  },
+  {
+    heading: "Analyze & Improve",
+    slugs: ["performance-dashboard", "backtesting", "risk-calculator"],
+  },
+];
+
 export const NAV_MENUS = [
   {
     label: "Features",
     type: "mega",
-    groups: ["Journal & Tracking", "Analytics", "Tools"].map((heading) => ({
+    groups: NAV_FEATURE_GROUPS.map(({ heading, slugs }) => ({
       heading,
-      items: FEATURE_PAGES.filter((page) => page.group === heading).map(
-        featureNavItem
+      items: slugs.map((slug) =>
+        featureNavItem(FEATURE_PAGES.find((page) => page.slug === slug))
       ),
     })),
     highlight: {
@@ -492,34 +508,20 @@ export const NAV_MENUS = [
   },
   { label: "Pricing", type: "link", to: "/pricing" },
   {
-    label: "Resources",
+    label: "Company",
     type: "dropdown",
     items: [
+      { label: "About us", description: "Why we built Tradgella", to: "/about" },
+      {
+        label: "Contact & support",
+        description: "Questions, feedback, help",
+        to: "/contact",
+      },
       {
         label: "FAQ",
         description: "Common questions answered",
         to: "/pricing#faq",
       },
-      {
-        label: "Help & support",
-        description: "Get in touch with the team",
-        to: "/contact",
-      },
-      {
-        label: "Financial disclaimer",
-        description: "What Tradgella is (and isn't)",
-        to: "/disclaimer",
-      },
-    ],
-  },
-  {
-    label: "Company",
-    type: "dropdown",
-    items: [
-      { label: "About us", description: "Why we built Tradgella", to: "/about" },
-      { label: "Contact", description: "Questions, feedback, support", to: "/contact" },
-      { label: "Privacy policy", description: "How your data is handled", to: "/privacy" },
-      { label: "Terms of service", description: "The fine print", to: "/terms" },
     ],
   },
 ];

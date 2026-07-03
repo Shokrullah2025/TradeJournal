@@ -7,6 +7,14 @@ import { NAV_MENUS } from "./content";
 
 const slugify = (label) => label.toLowerCase().replace(/\s+/g, "-");
 
+// Tailwind can't build class names from template strings, so the mega-menu
+// column count (groups + optional highlight card) maps to explicit classes.
+const MEGA_GRID_COLS = {
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+};
+
 /**
  * Public top navigation for the product website, with mega-menu dropdowns.
  *
@@ -246,10 +254,16 @@ const SiteNavbar = () => {
             data-testid={`site-nav-${slugify(menu.label)}-panel`}
             onMouseEnter={() => openNow(menu.label)}
             onMouseLeave={scheduleClose}
-            className="absolute inset-x-4 top-full hidden pt-3 lg:block"
+            className="absolute left-1/2 top-full hidden w-full max-w-4xl -translate-x-1/2 pt-3 lg:block"
           >
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
-              <div className="grid grid-cols-4">
+              <div
+                className={`grid ${
+                  MEGA_GRID_COLS[
+                    menu.groups.length + (menu.highlight ? 1 : 0)
+                  ] || "grid-cols-4"
+                }`}
+              >
                 {menu.groups.map((group, groupIndex) => (
                   <div
                     key={group.heading}
