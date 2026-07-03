@@ -108,7 +108,7 @@ const DashboardVisual = () => (
         <path
           d={`M${EQUITY_LINE.split(" ").join(" L")} L400,112 L0,112 Z`}
           fill="url(#pv-equity-fill)"
-          className="text-primary-500"
+          className="text-accent-500"
         />
         <polyline
           points={EQUITY_LINE}
@@ -117,7 +117,7 @@ const DashboardVisual = () => (
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-primary-500"
+          className="text-accent-500"
         />
       </svg>
     </div>
@@ -246,7 +246,7 @@ const SyncVisual = () => (
           {broker.live ? (
             <CheckCircle2 className="h-5 w-5 text-green-500" />
           ) : (
-            <RefreshCw className="h-5 w-5 animate-spin text-primary-500" />
+            <RefreshCw className="h-5 w-5 animate-spin text-accent-500" />
           )}
           <div>
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -261,7 +261,7 @@ const SyncVisual = () => (
           className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
             broker.live
               ? "bg-green-500/10 text-green-700 dark:bg-green-500/15 dark:text-green-400"
-              : "bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
+              : "bg-accent-50 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300"
           }`}
         >
           {broker.status}
@@ -375,7 +375,7 @@ const AiVisual = () => (
         key={insight.slice(0, 24)}
         className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-800/60"
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/40 dark:text-primary-400">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 dark:bg-accent-900/40 dark:text-accent-400">
           <Lightbulb className="h-4 w-4" />
         </span>
         <p className="text-xs leading-relaxed text-gray-700 dark:text-gray-300">
@@ -410,7 +410,7 @@ const BacktestVisual = () => (
       <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
         NQ — bar replay · 5 min
       </p>
-      <span className="rounded bg-primary-50 px-2 py-0.5 text-[10px] font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+      <span className="rounded bg-accent-50 px-2 py-0.5 text-[10px] font-bold text-accent-700 dark:bg-accent-900/40 dark:text-accent-300">
         SIM
       </span>
     </div>
@@ -423,7 +423,7 @@ const BacktestVisual = () => (
         stroke="currentColor"
         strokeWidth="1"
         strokeDasharray="5 4"
-        className="text-primary-400"
+        className="text-accent-400"
       />
       <text
         x="398"
@@ -432,7 +432,7 @@ const BacktestVisual = () => (
         fontSize="9"
         fontWeight="600"
         fill="currentColor"
-        className="text-primary-600 dark:text-primary-400"
+        className="text-accent-600 dark:text-accent-400"
       >
         Entry 21,412.25
       </text>
@@ -457,7 +457,7 @@ const BacktestVisual = () => (
     </svg>
     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-700/60">
       <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-600 text-white">
           <Play className="h-3.5 w-3.5" />
         </span>
         <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
@@ -494,12 +494,12 @@ const CalculatorVisual = () => (
         </span>
       </div>
     ))}
-    <div className="rounded-xl bg-primary-600 px-4 py-4 text-center">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-primary-100">
+    <div className="rounded-xl bg-accent-600 px-4 py-4 text-center">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-accent-100">
         Position size
       </p>
       <p className="mt-1 text-2xl font-bold text-white">4 contracts</p>
-      <p className="mt-1 text-[11px] text-primary-100">
+      <p className="mt-1 text-[11px] text-accent-100">
         2.0R target = +$500 · max loss capped at $250
       </p>
     </div>
@@ -517,7 +517,7 @@ const BRIEFING_ITEMS = [
 const BriefingVisual = () => (
   <div className="space-y-2.5">
     <div className="flex items-center gap-2">
-      <CalendarClock className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+      <CalendarClock className="h-4 w-4 text-accent-600 dark:text-accent-400" />
       <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
         Today&apos;s briefing
       </p>

@@ -43,6 +43,20 @@
     --surface-text: #e6edf3;
   }
 
+  /* Public marketing site typography (landing design): Space Grotesk for
+     headings, IBM Plex Sans for body copy. Scoped to .site-shell so the
+     authenticated app keeps Inter. */
+  .site-shell {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  .site-shell h1,
+  .site-shell h2,
+  .site-shell h3,
+  .site-shell h4 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
   /* Smooth theme transition */
   .theme-transition * {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
@@ -69,6 +83,12 @@
   
   .btn-accent {
     @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:focus:ring-indigo-400;
+  }
+
+  /* Marketing-site primary CTA — the violet gradient from the landing design.
+     Used only under .site-shell; the app keeps .btn-primary. */
+  .btn-site {
+    @apply text-white bg-gradient-to-br from-accent-500 via-accent-600 to-accent-800 shadow-lg shadow-accent-600/40 hover:brightness-110 hover:-translate-y-px focus:ring-accent-500;
   }
 
   /* Brand green gradient — primary action buttons (Add Trade, Update Trade,

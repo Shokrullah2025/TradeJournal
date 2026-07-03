@@ -43,7 +43,7 @@ const About = () => (
       path="/about"
     />
     {/* Header */}
-    <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
+    <section className="bg-gradient-to-b from-accent-50 to-white dark:from-gray-900 dark:to-gray-900">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
         <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl">
           Built by traders, for{" "}
@@ -94,7 +94,7 @@ const About = () => (
               "Anyone serious about turning trading into a repeatable process.",
             ].map((item) => (
               <li key={item} className="flex items-start gap-3">
-                <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" />
+                <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-accent-500" />
                 {item}
               </li>
             ))}
@@ -116,7 +116,7 @@ const About = () => (
               key={value.title}
               className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
             >
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-accent-100 text-accent-600 dark:bg-accent-900/30 dark:text-accent-400">
                 <value.icon className="h-6 w-6" />
               </span>
               <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-gray-100">

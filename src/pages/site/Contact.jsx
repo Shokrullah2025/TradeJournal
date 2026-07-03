@@ -85,7 +85,7 @@ const Contact = () => {
         path="/contact"
       />
       {/* Header */}
-      <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
+      <section className="bg-gradient-to-b from-accent-50 to-white dark:from-gray-900 dark:to-gray-900">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl">
             Get in <span className="text-gradient">touch</span>
@@ -111,7 +111,7 @@ const Contact = () => {
             <ul className="mt-8 space-y-6">
               {contactInfo.map((item) => (
                 <li key={item.title} className="flex items-start gap-4">
-                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-accent-100 text-accent-600 dark:bg-accent-900/30 dark:text-accent-400">
                     <item.icon className="h-5 w-5" />
                   </span>
                   <div>
@@ -130,7 +130,7 @@ const Contact = () => {
               <Link
                 to="/pricing"
                 data-testid="contact-faq-link"
-                className="font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                className="font-semibold text-accent-600 hover:text-accent-700 dark:text-accent-400"
               >
                 pricing FAQ
               </Link>
@@ -247,7 +247,7 @@ const Contact = () => {
                 type="submit"
                 data-testid="contact-submit-btn"
                 disabled={isSubmitting}
-                className="btn btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 py-3 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="btn btn-site mt-6 inline-flex w-full items-center justify-center gap-2 py-3 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 <Send className="h-4 w-4" />
                 {isSubmitting ? "Sending…" : "Send message"}

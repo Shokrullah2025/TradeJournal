@@ -10,7 +10,7 @@ const SitePageFallback = () => (
     data-testid="site-page-loading"
     className="flex min-h-[60vh] items-center justify-center"
   >
-    <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-600" />
+    <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-accent-600" />
   </div>
 );
 
@@ -42,7 +42,7 @@ const SiteLayout = () => {
 
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen flex-col bg-white dark:bg-gray-900">
+      <div className="site-shell flex min-h-screen flex-col bg-accent-50 dark:bg-gray-950">
         <SiteNavbar />
         <main className="flex-1">
           <Suspense fallback={<SitePageFallback />}>

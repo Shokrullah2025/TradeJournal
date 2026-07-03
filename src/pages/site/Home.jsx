@@ -1,21 +1,33 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Link2, Zap, ShieldCheck } from "lucide-react";
+import PropTypes from "prop-types";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Check,
+  AlertTriangle,
+  TrendingDown,
+  Sparkles,
+  BookOpen,
+  Calendar,
+  BarChart3,
+  History,
+  Calculator,
+  Link2,
+} from "lucide-react";
 import Seo from "../../components/seo/Seo";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "../../utils/seo";
-import Hero from "../../components/site/Hero";
-import StatsBand from "../../components/site/StatsBand";
-import SectionHeading from "../../components/site/SectionHeading";
-import FeatureGrid from "../../components/site/FeatureGrid";
-import StepCard from "../../components/site/StepCard";
-import Testimonials from "../../components/site/Testimonials";
 import CTASection from "../../components/site/CTASection";
-import { HIGHLIGHT_FEATURES, STEPS } from "../../components/site/content";
+import { PRICING_TIERS, TESTIMONIALS, STATS_BAND } from "../../components/site/content";
 
 /**
- * Public landing page (route "/"). Sequences the hero, social proof, feature
- * highlights, how-it-works, an auto-sync spotlight, testimonials, and a final
- * call-to-action.
+ * Public landing page (route "/") — implementation of the approved landing
+ * design (violet "Signal" version): hero with a live-looking product mock,
+ * broker strip, gradient metrics band, AI Insights banner, feature bento
+ * grid, journaling deep-dive, testimonials, pricing, and final CTA.
+ *
+ * The section sub-components below are tightly coupled to this page and never
+ * used independently, so they live in this file (CLAUDE.md §5).
  */
 const HOME_JSON_LD = [
   {
@@ -34,6 +46,360 @@ const HOME_JSON_LD = [
   },
 ];
 
+// Representative example values shown in the product mock — decorative only.
+const EQUITY_AREA =
+  "M0,80 L34,74 L68,78 L102,58 L136,63 L170,44 L204,49 L238,30 L272,34 L320,14";
+
+const GRADIENT = "bg-gradient-to-br from-accent-500 via-accent-600 to-accent-800";
+
+// ── Hero product mock ───────────────────────────────────────────────────────
+
+const HeroMock = () => (
+  <div className="relative" aria-hidden="true">
+    <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-accent-500/25 to-transparent blur-md" />
+    <div className="relative overflow-hidden rounded-2xl border border-accent-100 bg-white shadow-2xl shadow-accent-900/20 dark:border-gray-700 dark:bg-gray-900">
+      {/* Browser chrome */}
+      <div className="flex items-center gap-2 border-b border-accent-100 bg-accent-50/60 px-4 py-3 dark:border-gray-800 dark:bg-gray-800/60">
+        <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+        <span className="ml-2 font-nums text-xs text-gray-400 dark:text-gray-500">
+          tradgella.com / dashboard
+        </span>
+      </div>
+      <div className="p-4 sm:p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Net P&amp;L · this month
+            </p>
+            <p className="mt-0.5 font-nums text-2xl font-semibold text-green-600 dark:text-green-400 sm:text-3xl">
+              +$8,420.50
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Win rate</p>
+            <p className="mt-0.5 font-nums text-xl font-semibold text-gray-900 dark:text-gray-100">
+              63.4%
+            </p>
+          </div>
+        </div>
+
+        {/* Equity curve */}
+        <div className="my-4 rounded-xl border border-accent-100 bg-accent-50/50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
+          <svg viewBox="0 0 320 96" className="h-24 w-full" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="home-hero-eq" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="currentColor" stopOpacity="0.28" />
+                <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              d={`${EQUITY_AREA} L320,96 L0,96 Z`}
+              fill="url(#home-hero-eq)"
+              className="text-accent-500"
+            />
+            <path
+              d={EQUITY_AREA}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-accent-500"
+            />
+          </svg>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            { label: "Profit factor", value: "2.41", tone: "" },
+            { label: "Expectancy", value: "+$132", tone: "text-green-600 dark:text-green-400" },
+            { label: "Avg R", value: "1.9R", tone: "" },
+          ].map((tile) => (
+            <div
+              key={tile.label}
+              className="rounded-lg border border-accent-100 bg-accent-50/50 p-2.5 dark:border-gray-700 dark:bg-gray-800/60"
+            >
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">{tile.label}</p>
+              <p
+                className={`mt-0.5 font-nums text-base font-semibold ${
+                  tile.tone || "text-gray-900 dark:text-gray-100"
+                }`}
+              >
+                {tile.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Floating cards */}
+    <div className="absolute -left-4 top-20 hidden animate-fade-in rounded-xl border border-accent-100 bg-white px-4 py-3 shadow-xl dark:border-gray-700 dark:bg-gray-900 sm:block lg:-left-7">
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">Golden hour</p>
+      <p className="text-base font-bold text-gray-900 dark:text-gray-100">9:30–10:15 AM</p>
+      <p className="mt-0.5 text-[11px] font-medium text-green-600 dark:text-green-400">
+        75% win · +$67 avg
+      </p>
+    </div>
+    <div className="absolute -bottom-5 -right-2 hidden animate-fade-in items-center gap-3 rounded-xl border border-accent-100 bg-white px-4 py-3 shadow-xl dark:border-gray-700 dark:bg-gray-900 sm:flex lg:-right-5">
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-100 text-accent-600 dark:bg-accent-900/50 dark:text-accent-300">
+        <Sparkles className="h-4 w-4" />
+      </span>
+      <span>
+        <span className="block text-[11px] text-gray-500 dark:text-gray-400">AI Insight</span>
+        <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+          Cut 12–1 PM trades
+        </span>
+      </span>
+    </div>
+  </div>
+);
+
+// ── Bento mini-visuals ──────────────────────────────────────────────────────
+
+const MiniTradeRows = () => (
+  <div className="mt-4 space-y-2">
+    {[
+      { sym: "NQ", label: "Long · Breakout", pnl: "+$584" },
+      { sym: "ES", label: "Short · Reversal", pnl: "+$212" },
+    ].map((row) => (
+      <div
+        key={row.sym}
+        className="flex items-center gap-2.5 rounded-lg border border-accent-100 bg-accent-50/50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800/60"
+      >
+        <span className="rounded bg-accent-100 px-1.5 py-0.5 font-nums text-[11px] font-semibold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">
+          {row.sym}
+        </span>
+        <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+          {row.label}
+        </span>
+        <span className="ml-auto font-nums text-xs font-medium text-green-600 dark:text-green-400">
+          {row.pnl}
+        </span>
+      </div>
+    ))}
+  </div>
+);
+
+// 0 = flat, 1 = small win, 2 = big win, -1 = loss
+const HEAT_CELLS = [1, 0, -1, 1, 1, 0, 2, -1, 1, 2, 0, 1, 1, -1, 0, 2, 1, 1, -1, 0, 2];
+const HEAT_CLASS = {
+  2: "bg-accent-500",
+  1: "bg-accent-200 dark:bg-accent-800",
+  0: "bg-gray-200 dark:bg-gray-700",
+  "-1": "bg-red-200 dark:bg-red-900/60",
+};
+
+const MiniHeatmap = () => (
+  <div className="mt-4 grid grid-cols-7 gap-1.5">
+    {HEAT_CELLS.map((value, index) => (
+      <span
+        key={index}
+        className={`aspect-square rounded ${HEAT_CLASS[String(value)]}`}
+      />
+    ))}
+  </div>
+);
+
+const BAR_HEIGHTS = ["40%", "62%", "48%", "78%", "55%", "90%", "70%", "84%"];
+
+const MiniBars = () => (
+  <div className="mt-4 flex h-[70px] items-end gap-1.5">
+    {BAR_HEIGHTS.map((height, index) => (
+      <span
+        key={index}
+        className={`flex-1 rounded-t ${GRADIENT}`}
+        style={{ height }}
+      />
+    ))}
+  </div>
+);
+
+// [up?, height%, align] — align: c center, fs top, fe bottom
+const CANDLE_DATA = [
+  [1, 55, "c"], [0, 42, "c"], [1, 60, "c"], [1, 48, "fe"], [0, 52, "c"],
+  [1, 68, "c"], [0, 45, "c"], [1, 72, "fs"], [1, 58, "c"], [0, 50, "c"],
+  [1, 64, "c"], [1, 80, "c"], [0, 46, "c"], [1, 70, "c"],
+];
+const ALIGN_CLASS = { c: "self-center", fs: "self-start", fe: "self-end" };
+
+const MiniCandles = () => (
+  <div className="mt-4 flex h-[70px] items-stretch gap-1 rounded-lg border border-accent-100 bg-accent-50/50 px-2.5 dark:border-gray-700 dark:bg-gray-800/60">
+    {CANDLE_DATA.map(([up, height, align], index) => (
+      <span
+        key={index}
+        className={`flex-1 rounded-sm ${ALIGN_CLASS[align]} ${
+          up ? "bg-green-500" : "bg-red-500"
+        }`}
+        style={{ height: `${height}%` }}
+      />
+    ))}
+  </div>
+);
+
+const MiniRiskBox = () => (
+  <div className="mt-4 rounded-lg border border-accent-100 bg-accent-50/50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
+    <div className="flex justify-between text-[11px] text-gray-500 dark:text-gray-400">
+      <span>Risk 2%</span>
+      <span>R:R</span>
+    </div>
+    <div className="mt-0.5 flex items-baseline justify-between">
+      <span className="font-nums text-base font-semibold text-red-600 dark:text-red-400">
+        -$1,000
+      </span>
+      <span className="font-nums text-base font-semibold text-green-600 dark:text-green-400">
+        1:3.0
+      </span>
+    </div>
+    <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+      <span className="block h-full w-[28%] bg-accent-500" />
+    </div>
+  </div>
+);
+
+const MiniSyncRows = () => (
+  <div className="mt-4 space-y-2">
+    {[
+      { name: "Tradovate", when: "just now" },
+      { name: "Apex", when: "2m ago" },
+    ].map((broker) => (
+      <div
+        key={broker.name}
+        className="flex items-center gap-2 rounded-lg border border-accent-100 bg-accent-50/50 px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-800/60"
+      >
+        <span className="h-2 w-2 rounded-full bg-green-500" />
+        <span className="font-semibold text-gray-800 dark:text-gray-200">{broker.name}</span>
+        <span className="text-gray-500 dark:text-gray-400">connected</span>
+        <span className="ml-auto font-nums text-gray-400 dark:text-gray-500">{broker.when}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const BENTO_CARDS = [
+  {
+    icon: BookOpen,
+    title: "Trade Journal",
+    description: "Log every trade with notes, screenshots & tags in seconds.",
+    to: "/features/trade-journal",
+    visual: MiniTradeRows,
+  },
+  {
+    icon: Calendar,
+    title: "P&L Calendar",
+    description: "A daily heat-map that shows your rhythm at a glance.",
+    to: "/features/trade-calendar",
+    visual: MiniHeatmap,
+  },
+  {
+    icon: BarChart3,
+    title: "Performance Analytics",
+    description: "Win rate, profit factor, expectancy & Sharpe — auto-calculated.",
+    to: "/features/performance-dashboard",
+    visual: MiniBars,
+  },
+  {
+    icon: History,
+    title: "Backtest Replay",
+    description: "Replay markets bar-by-bar and prove your edge before you risk a cent.",
+    to: "/features/backtesting",
+    visual: MiniCandles,
+  },
+  {
+    icon: Calculator,
+    title: "Risk Calculator",
+    description: "Position sizing & R:R worked out before you enter.",
+    to: "/features/risk-calculator",
+    visual: MiniRiskBox,
+  },
+  {
+    icon: Link2,
+    title: "Broker Sync & Import",
+    description: "Auto-import fills from Tradovate, prop firms & CSV.",
+    to: "/features/broker-sync",
+    visual: MiniSyncRows,
+  },
+];
+
+const BentoCard = ({ card }) => {
+  const Icon = card.icon;
+  const Visual = card.visual;
+  return (
+    <Link
+      to={card.to}
+      data-testid={`home-bento-${card.to.split("/").pop()}-link`}
+      className="group rounded-2xl border border-accent-100 bg-white p-5 transition-colors hover:border-accent-400 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-accent-500"
+    >
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-100 text-accent-600 dark:bg-accent-900/50 dark:text-accent-300">
+        <Icon className="h-5 w-5" />
+      </span>
+      <h3 className="mt-4 text-lg font-bold text-gray-900 group-hover:text-accent-600 dark:text-gray-100 dark:group-hover:text-accent-300">
+        {card.title}
+      </h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+        {card.description}
+      </p>
+      <Visual />
+    </Link>
+  );
+};
+
+BentoCard.propTypes = {
+  card: PropTypes.shape({
+    icon: PropTypes.elementType.isRequired,
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string.isRequired,
+    to: PropTypes.string.isRequired,
+    visual: PropTypes.elementType.isRequired,
+  }).isRequired,
+};
+
+// ── Deep dive: recent trades card ───────────────────────────────────────────
+
+const RECENT_TRADES = [
+  { sym: "NQ", name: "NQ · Long", setup: "Breakout · 9:41 AM", px: "2,290 → 2,318", pnl: "+$584", win: true },
+  { sym: "ES", name: "ES · Short", setup: "Reversal · 10:02 AM", px: "4,215 → 4,201", pnl: "+$212", win: true },
+  { sym: "NQ", name: "NQ · Long", setup: "Pullback · 11:20 AM", px: "2,290 → 2,276", pnl: "-$91", win: false },
+  { sym: "MNQ", name: "MNQ · Long", setup: "Trend · 1:15 PM", px: "2,290 → 2,340", pnl: "+$100", win: true },
+  { sym: "NVDA", name: "NVDA · Long", setup: "Breakout · open", px: "140 → live", pnl: "Open", win: null },
+];
+
+const JOURNAL_POINTS = [
+  { title: "Quick & Advanced entry", detail: "Log a trade in seconds, or capture full stops, targets & risk." },
+  { title: "Chart screenshots", detail: "Attach & auto-optimise images so your journal stays fast." },
+  { title: "Tags & templates", detail: "Label by setup, session or mistake and reuse instantly." },
+];
+
+// ── Insight examples for the AI banner ──────────────────────────────────────
+
+const AI_EXAMPLES = [
+  {
+    icon: AlertTriangle,
+    text: "Your 12–1 PM trades win only 0% of the time across 25 trades. Consider sitting them out.",
+  },
+  {
+    icon: CheckCircle2,
+    text: "Breakouts on NQ before 10:15 AM carry a 2.4 profit factor — your real edge.",
+  },
+  {
+    icon: TrendingDown,
+    text: "Position size jumps 3× right after a loss. That's revenge risk.",
+  },
+];
+
+const BROKERS = ["Tradovate", "Apex Trader Funding", "Topstep", "MyFundedFutures", "CSV & Excel"];
+
+// ── Page ────────────────────────────────────────────────────────────────────
+
+const initials = (name) =>
+  name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
 const Home = () => (
   <div data-testid="site-home-page">
     <Seo
@@ -41,136 +407,397 @@ const Home = () => (
       path="/"
       jsonLd={HOME_JSON_LD}
     />
-    <Hero />
-    <StatsBand />
 
-    {/* Feature highlights */}
-    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-      <SectionHeading
-        eyebrow="Everything in one place"
-        title="The complete trading journal"
-        subtitle="From the first note to a fully analysed track record — Tradgella covers the entire loop."
+    {/* HERO */}
+    <section className="relative overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-40 left-1/2 h-[560px] w-[820px] -translate-x-1/2 rounded-full bg-accent-200/60 blur-3xl dark:bg-accent-900/30"
       />
-      <div className="mt-12">
-        <FeatureGrid features={HIGHLIGHT_FEATURES} idPrefix="home-feature" />
-      </div>
-      <div className="mt-10 text-center">
-        <Link
-          to="/features"
-          data-testid="home-explore-features-link"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
-        >
-          Explore every feature
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </section>
-
-    {/* How it works */}
-    <section className="bg-gray-50 dark:bg-gray-800/40">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        <SectionHeading
-          eyebrow="How it works"
-          title="Four steps to a sharper edge"
-          subtitle="A simple loop that compounds: capture, document, analyse, improve."
-        />
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((step, index) => (
-            <StepCard
-              key={step.number}
-              number={step.number}
-              title={step.title}
-              description={step.description}
-              testId={`home-step-${index}`}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-
-    {/* Auto-sync spotlight */}
-    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-      <div className="grid items-center gap-12 lg:grid-cols-2">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8 lg:py-20">
         <div>
-          <SectionHeading
-            align="left"
-            eyebrow="Broker auto-sync"
-            title="Stop copying trades from statements"
-            subtitle="Connect Tradovate and popular prop firms once. New fills flow into your journal automatically, deduplicated and ready to analyse."
-          />
-          <ul className="mt-8 space-y-4">
-            {[
-              {
-                icon: Link2,
-                text: "Secure connection to Tradovate and prop-firm evaluation accounts.",
-              },
-              {
-                icon: Zap,
-                text: "Real-time imports that never double-count a fill.",
-              },
-              {
-                icon: ShieldCheck,
-                text: "Clear connection status so you always trust your data.",
-              },
-            ].map((item) => (
-              <li key={item.text} className="flex items-start gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
-                  <item.icon className="h-5 w-5" />
-                </span>
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  {item.text}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <Link
-            to="/features"
-            data-testid="home-autosync-link"
-            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+          <div className="inline-flex items-center gap-2 rounded-full border border-accent-100 bg-white py-1.5 pl-4 pr-1.5 text-xs text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 sm:text-[13px]">
+            Built for futures, forex &amp; crypto traders
+            <span className="rounded-full bg-accent-100 px-2.5 py-1 text-xs font-semibold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">
+              Free to start
+            </span>
+          </div>
+
+          <h1 className="mt-6 text-4xl font-bold leading-[1.05] tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl lg:text-[56px]">
+            Every trade,
+            <br />
+            every edge,
+            <br />
+            <span className="text-accent-600 dark:text-accent-400">one clear journal.</span>
+          </h1>
+          <p className="mt-5 max-w-lg text-lg leading-relaxed text-gray-600 dark:text-gray-400">
+            Log trades in seconds, sync your broker automatically, and let the
+            analytics show you exactly what&apos;s working — and what&apos;s
+            quietly costing you money.
+          </p>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              to="/register"
+              data-testid="home-hero-getstarted-btn"
+              className="btn btn-site inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold"
+            >
+              Start free — no card
+            </Link>
+            <Link
+              to="/features"
+              data-testid="home-hero-features-btn"
+              className="btn inline-flex items-center gap-2 border border-accent-200 bg-white px-6 py-3.5 text-base font-semibold text-gray-900 hover:bg-accent-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+            >
+              Explore the features
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-gray-600 dark:text-gray-400">
+            <span className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+              Auto-sync Tradovate &amp; top prop firms
+            </span>
+            <span className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+              Bank-level encryption
+            </span>
+          </div>
+        </div>
+
+        <HeroMock />
+      </div>
+    </section>
+
+    {/* BROKER STRIP */}
+    <section className="mx-auto max-w-7xl px-4 pb-2 pt-6 sm:px-6 lg:px-8">
+      <p className="text-center text-xs font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+        Syncs automatically with your broker
+      </p>
+      <div
+        data-testid="home-broker-strip"
+        className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-3 opacity-70"
+      >
+        {BROKERS.map((broker) => (
+          <span
+            key={broker}
+            className="font-display text-lg font-semibold text-gray-700 dark:text-gray-300"
           >
-            See all integrations
+            {broker}
+          </span>
+        ))}
+      </div>
+    </section>
+
+    {/* METRICS BAND */}
+    <section className="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div
+        data-testid="home-stats-band"
+        className={`grid grid-cols-2 gap-6 rounded-3xl p-8 shadow-2xl shadow-accent-600/30 sm:p-9 lg:grid-cols-4 ${GRADIENT}`}
+      >
+        {STATS_BAND.map((stat) => (
+          <div key={stat.value} className="text-center text-white">
+            <p className="font-nums text-2xl font-semibold sm:text-3xl">{stat.value}</p>
+            <p className="mt-1 text-[13px] opacity-85">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* FEATURES */}
+    <section className="mx-auto max-w-7xl px-4 pb-5 pt-20 sm:px-6 lg:px-8">
+      <div className="mx-auto mb-11 max-w-2xl text-center">
+        <p className="font-nums text-xs font-semibold uppercase tracking-[0.14em] text-accent-600 dark:text-accent-400">
+          The full toolkit
+        </p>
+        <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl">
+          Everything you need to
+          <br className="hidden sm:block" /> trade with discipline
+        </h2>
+        <p className="mt-4 text-lg leading-relaxed text-gray-600 dark:text-gray-400">
+          One place to log, review, and sharpen your edge — from a quick
+          scribble to a fully documented setup.
+        </p>
+      </div>
+
+      {/* AI banner */}
+      <div
+        data-testid="home-ai-banner"
+        className={`mb-5 grid items-center gap-7 rounded-3xl p-8 text-white shadow-2xl shadow-accent-600/30 sm:p-9 lg:grid-cols-[1.2fr,0.9fr] ${GRADIENT}`}
+      >
+        <div>
+          <span className="inline-block rounded-md bg-white/20 px-2.5 py-1 font-nums text-[11px] font-semibold tracking-[0.12em]">
+            NEW · AI TRADE INSIGHTS
+          </span>
+          <h3 className="mt-4 text-2xl font-bold leading-tight sm:text-[28px]">
+            Your journal, read back to you in plain English
+          </h3>
+          <p className="mt-2.5 max-w-md text-[15px] leading-relaxed opacity-90">
+            Tradgella scans every trade and surfaces the patterns you can&apos;t
+            see — losing time windows, revenge-trading streaks, and the setups
+            quietly draining your account.
+          </p>
+          <Link
+            to="/features/ai-insights"
+            data-testid="home-ai-insights-link"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-accent-700 transition-transform hover:-translate-y-px"
+          >
+            Generate my insights
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-
-        {/* Decorative broker-sync card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-          <div className="space-y-3">
-            {[
-              { name: "Tradovate", status: "Connected", ok: true },
-              { name: "Apex", status: "Connected", ok: true },
-              { name: "Topstep", status: "Syncing…", ok: true },
-              { name: "MyFundedFutures", status: "Available", ok: false },
-            ].map((broker) => (
+        <div className="rounded-2xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm sm:p-5">
+          {AI_EXAMPLES.map((example) => {
+            const Icon = example.icon;
+            return (
               <div
-                key={broker.name}
-                className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/40"
+                key={example.text.slice(0, 24)}
+                className="mb-3 flex items-start gap-3 last:mb-0"
               >
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {broker.name}
-                </span>
-                <span
-                  className={`flex items-center gap-2 text-xs font-semibold ${
-                    broker.ok
-                      ? "text-success-600 dark:text-success-400"
-                      : "text-gray-400 dark:text-gray-500"
-                  }`}
-                >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      broker.ok ? "bg-success-500" : "bg-gray-300 dark:bg-gray-600"
-                    }`}
-                  />
-                  {broker.status}
-                </span>
+                <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <p className="text-[13px] leading-relaxed">{example.text}</p>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
+      </div>
+
+      {/* Bento grid */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {BENTO_CARDS.map((card) => (
+          <BentoCard key={card.to} card={card} />
+        ))}
       </div>
     </section>
 
-    <Testimonials />
+    {/* DEEP DIVE — journaling */}
+    <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8">
+      <div>
+        <p className="font-nums text-xs font-semibold uppercase tracking-[0.14em] text-accent-600 dark:text-accent-400">
+          Journaling
+        </p>
+        <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100 sm:text-[34px]">
+          Capture every trade, exactly how it happened
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-gray-600 dark:text-gray-400">
+          A frictionless journal that adapts to how you trade — from a one-tap
+          Quick log to a fully documented setup with charts, tags, and reusable
+          templates.
+        </p>
+        <div className="mt-6 space-y-4">
+          {JOURNAL_POINTS.map((point) => (
+            <div key={point.title} className="flex items-start gap-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-accent-100 text-accent-600 dark:bg-accent-900/50 dark:text-accent-300">
+                <Check className="h-3.5 w-3.5" />
+              </span>
+              <span>
+                <span className="block text-[15px] font-semibold text-gray-900 dark:text-gray-100">
+                  {point.title}
+                </span>
+                <span className="mt-0.5 block text-sm text-gray-600 dark:text-gray-400">
+                  {point.detail}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <Link
+          to="/features/trade-journal"
+          data-testid="home-journal-link"
+          className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-accent-600 hover:text-accent-700 dark:text-accent-400"
+        >
+          More about the journal
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-accent-100 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-center justify-between border-b border-accent-100 px-5 py-4 dark:border-gray-800">
+          <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+            Recent Trades
+          </span>
+          <span className="font-nums text-xs text-gray-500 dark:text-gray-400">
+            45 total · 63% win
+          </span>
+        </div>
+        {RECENT_TRADES.map((trade) => (
+          <div
+            key={`${trade.sym}-${trade.setup}`}
+            className="flex items-center gap-3 border-b border-accent-50 px-5 py-3 last:border-0 dark:border-gray-800"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-100 font-nums text-xs font-semibold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">
+              {trade.sym}
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {trade.name}
+              </span>
+              <span className="block text-xs text-gray-500 dark:text-gray-400">
+                {trade.setup}
+              </span>
+            </span>
+            <span className="ml-auto hidden font-nums text-xs text-gray-500 dark:text-gray-400 sm:block">
+              {trade.px}
+            </span>
+            <span
+              className={`min-w-[64px] text-right font-nums text-sm font-semibold ${
+                trade.win === null
+                  ? "text-gray-400 dark:text-gray-500"
+                  : trade.win
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-red-600 dark:text-red-400"
+              }`}
+            >
+              {trade.pnl}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* TESTIMONIALS */}
+    <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+      <div className="mb-10 text-center">
+        <p className="font-nums text-xs font-semibold uppercase tracking-[0.14em] text-accent-600 dark:text-accent-400">
+          Loved by disciplined traders
+        </p>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl">
+          The habit that changed their P&amp;L
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        {TESTIMONIALS.map((quote) => (
+          <div
+            key={quote.name}
+            data-testid={`home-testimonial-${initials(quote.name).toLowerCase()}`}
+            className="flex flex-col rounded-2xl border border-accent-100 bg-white p-6 dark:border-gray-700 dark:bg-gray-900"
+          >
+            <span className="tracking-[2px] text-accent-500 dark:text-accent-400">
+              ★★★★★
+            </span>
+            <p className="mt-3.5 flex-1 text-[15px] leading-relaxed text-gray-700 dark:text-gray-300">
+              &ldquo;{quote.quote}&rdquo;
+            </p>
+            <div className="mt-4 flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-100 text-sm font-semibold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">
+                {initials(quote.name)}
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {quote.name}
+                </span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">
+                  {quote.role}
+                </span>
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* PRICING */}
+    <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
+      <div className="mb-10 text-center">
+        <p className="font-nums text-xs font-semibold uppercase tracking-[0.14em] text-accent-600 dark:text-accent-400">
+          Pricing
+        </p>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl">
+          Start free. Upgrade when it pays for itself.
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-3">
+        {PRICING_TIERS.map((tier) => {
+          const dark = tier.id === "enterprise";
+          return (
+            <div
+              key={tier.id}
+              data-testid={`home-pricing-${tier.id}-card`}
+              className={`relative rounded-2xl border p-6 ${
+                dark
+                  ? "border-gray-900 bg-gray-900 dark:border-gray-700 dark:bg-gray-950"
+                  : tier.popular
+                    ? "border-accent-500 bg-white shadow-2xl shadow-accent-600/25 dark:bg-gray-900"
+                    : "border-accent-100 bg-white dark:border-gray-700 dark:bg-gray-900"
+              }`}
+            >
+              {tier.popular && (
+                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-accent-600 px-3 py-1 font-nums text-[11px] font-semibold tracking-wide text-white">
+                  MOST POPULAR
+                </span>
+              )}
+              <p
+                className={`text-[15px] font-semibold ${
+                  dark
+                    ? "text-white"
+                    : tier.popular
+                      ? "text-accent-600 dark:text-accent-400"
+                      : "text-gray-900 dark:text-gray-100"
+                }`}
+              >
+                {tier.name}
+              </p>
+              <p className="mt-3 flex items-baseline gap-1">
+                <span
+                  className={`font-nums text-4xl font-semibold ${
+                    dark ? "text-white" : "text-gray-900 dark:text-gray-100"
+                  }`}
+                >
+                  ${tier.monthlyPrice}
+                </span>
+                <span className={dark ? "text-sm text-gray-400" : "text-sm text-gray-500 dark:text-gray-400"}>
+                  {tier.monthlyPrice === 0 ? "/forever" : "/mo"}
+                </span>
+              </p>
+              <p className={`mt-1.5 text-[13px] ${dark ? "text-gray-400" : "text-gray-500 dark:text-gray-400"}`}>
+                {tier.description}
+              </p>
+              <Link
+                to={tier.id === "enterprise" ? "/contact" : "/register"}
+                data-testid={`home-pricing-${tier.id}-btn`}
+                className={`mt-5 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
+                  tier.popular || dark
+                    ? "btn-site"
+                    : "border border-accent-200 bg-accent-50 text-gray-900 hover:bg-accent-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                }`}
+              >
+                {tier.cta}
+              </Link>
+              <div className={`my-5 h-px ${dark ? "bg-white/15" : "bg-accent-100 dark:bg-gray-700"}`} />
+              <ul className="space-y-2.5">
+                {tier.features.map((feature) => (
+                  <li
+                    key={feature}
+                    className={`flex items-start gap-2.5 text-[13px] ${
+                      dark ? "text-gray-300" : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    <Check
+                      className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${
+                        dark ? "text-accent-300" : "text-accent-600 dark:text-accent-400"
+                      }`}
+                    />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-8 text-center">
+        <Link
+          to="/pricing"
+          data-testid="home-pricing-full-link"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-accent-600 hover:text-accent-700 dark:text-accent-400"
+        >
+          See full pricing, annual billing &amp; FAQ
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </p>
+    </section>
+
     <CTASection />
   </div>
 );

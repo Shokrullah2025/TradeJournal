@@ -401,53 +401,49 @@ export const TESTIMONIALS = [
 ];
 
 // ── Footer link columns ───────────────────────────────────────────────────
-// Feature/solution detail pages are linked here too: footer links appear on
-// every public page, giving crawlers (and readers) a persistent path to the
-// deep content pages.
+// Three curated columns (landing design). Feature/solution detail pages keep
+// a crawl path via the nav mega menu, "See all features", related-page cards,
+// and the sitemap; legal pages live in FOOTER_LEGAL_LINKS on the bottom line.
 export const FOOTER_LINKS = [
   {
     heading: "Product",
     links: [
       { label: "Features", to: "/features" },
       { label: "Pricing", to: "/pricing" },
+      { label: "Broker Sync", to: "/features/broker-sync" },
+      { label: "AI Trade Insights", to: "/features/ai-insights" },
+    ],
+  },
+  {
+    heading: "Resources",
+    links: [
+      { label: "FAQ", to: "/pricing#faq" },
+      { label: "Help center", to: "/contact" },
+      { label: "Risk Calculator", to: "/features/risk-calculator" },
+      { label: "Backtesting", to: "/features/backtesting" },
+    ],
+  },
+  {
+    heading: "Company",
+    links: [
       { label: "About", to: "/about" },
       { label: "Contact", to: "/contact" },
-      { label: "Sign in", to: "/login" },
-      { label: "Get started", to: "/register" },
+      { label: "Privacy", to: "/privacy" },
+      { label: "Terms", to: "/terms" },
     ],
   },
-  {
-    heading: "Features",
-    links: [
-      { label: "Trade Journal", to: "/features/trade-journal" },
-      { label: "Broker Auto-Sync", to: "/features/broker-sync" },
-      { label: "Performance Dashboard", to: "/features/performance-dashboard" },
-      { label: "Backtesting", to: "/features/backtesting" },
-      { label: "Risk Calculator", to: "/features/risk-calculator" },
-      { label: "AI Insights", to: "/features/ai-insights" },
-    ],
-  },
-  {
-    heading: "Solutions",
-    links: [
-      { label: "Day Traders", to: "/solutions/day-traders" },
-      { label: "Futures Traders", to: "/solutions/futures-traders" },
-      { label: "Forex & Crypto", to: "/solutions/forex-crypto-traders" },
-      { label: "Prop Firm Traders", to: "/solutions/prop-firm-traders" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Terms of Service", to: "/terms" },
-      { label: "Privacy Policy", to: "/privacy" },
-      { label: "Financial Disclaimer", to: "/disclaimer" },
-      { label: "Cookie Policy", to: "/cookies" },
-      { label: "Refund & Billing", to: "/refund" },
-      { label: "Acceptable Use", to: "/aup" },
-      { label: "DMCA / Copyright", to: "/dmca" },
-    ],
-  },
+];
+
+// Compact legal row rendered under the footer columns — keeps every legal
+// page one click (and one crawl hop) from any public page.
+export const FOOTER_LEGAL_LINKS = [
+  { label: "Terms", to: "/terms" },
+  { label: "Privacy", to: "/privacy" },
+  { label: "Disclaimer", to: "/disclaimer" },
+  { label: "Cookies", to: "/cookies" },
+  { label: "Refunds", to: "/refund" },
+  { label: "Acceptable Use", to: "/aup" },
+  { label: "DMCA", to: "/dmca" },
 ];
 
 // ── Primary navigation (navbar) ───────────────────────────────────────────

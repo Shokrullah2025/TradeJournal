@@ -95,7 +95,7 @@ const SiteNavbar = () => {
   const linkClass = ({ isActive }) =>
     `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
       isActive
-        ? "text-primary-600 dark:text-primary-400"
+        ? "text-accent-600 dark:text-accent-400"
         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
     }`;
 
@@ -113,7 +113,7 @@ const SiteNavbar = () => {
       data-testid={`site-nav-${slugify(menuLabel)}-${slugify(item.label)}-link`}
       className="group block rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
     >
-      <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+      <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
         {item.label}
       </span>
       {item.description && (
@@ -125,10 +125,27 @@ const SiteNavbar = () => {
   );
 
   return (
+    <>
+      {/* Announcement bar — scrolls away; only the nav below is sticky */}
+      <div
+        data-testid="site-announcement-bar"
+        className="bg-accent-600 px-4 py-2 text-center text-[13px] text-white"
+      >
+        New — <strong className="font-semibold">AI Trade Insights</strong> now
+        reads your journal and tells you exactly where you leak money.{" "}
+        <Link
+          to="/features/ai-insights"
+          data-testid="site-announcement-link"
+          className="underline underline-offset-2"
+        >
+          See how →
+        </Link>
+      </div>
+
     <header
       ref={headerRef}
       data-testid="site-navbar"
-      className="sticky top-0 z-40 w-full border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md"
+      className="sticky top-0 z-40 w-full border-b border-accent-100 dark:border-gray-800 bg-accent-50/85 dark:bg-gray-950/85 backdrop-blur-md"
     >
       <nav className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
@@ -138,11 +155,11 @@ const SiteNavbar = () => {
             data-testid="site-nav-brand-link"
             className="flex items-center gap-2"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-600">
               <TrendingUp className="h-5 w-5 text-white" />
             </span>
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              Trad<span className="text-primary-600 dark:text-primary-400">gella</span>
+            <span className="font-display text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+              Trad<span className="text-accent-600 dark:text-accent-400">gella</span>
             </span>
           </Link>
 
@@ -219,9 +236,9 @@ const SiteNavbar = () => {
             <Link
               to="/register"
               data-testid="site-nav-getstarted-btn"
-              className="btn btn-primary btn-sm"
+              className="btn btn-site btn-sm"
             >
-              Get started
+              Get started free
             </Link>
           </div>
 
@@ -285,11 +302,11 @@ const SiteNavbar = () => {
                           data-testid={`site-nav-${slugify(menu.label)}-${slugify(item.label)}-link`}
                           className="group -mx-3 flex gap-3 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                         >
-                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/40 dark:text-primary-400">
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 dark:bg-accent-900/40 dark:text-accent-400">
                             <Icon className="h-5 w-5" />
                           </span>
                           <span>
-                            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
                               {item.label}
                             </span>
                             <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
@@ -305,7 +322,7 @@ const SiteNavbar = () => {
                 {/* Highlight card */}
                 {menu.highlight && (
                   <div className="flex flex-col bg-gray-50 p-6 dark:bg-gray-900/60">
-                    <span className="mb-3 inline-flex w-fit items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-semibold text-primary-700 dark:bg-primary-900/60 dark:text-primary-300">
+                    <span className="mb-3 inline-flex w-fit items-center rounded-full bg-accent-100 px-2.5 py-0.5 text-xs font-semibold text-accent-700 dark:bg-accent-900/60 dark:text-accent-300">
                       {menu.highlight.badge}
                     </span>
                     <h4 className="mb-1 text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -317,7 +334,7 @@ const SiteNavbar = () => {
                     <Link
                       to={menu.highlight.to}
                       data-testid={`site-nav-${slugify(menu.label)}-highlight-link`}
-                      className="mt-auto text-sm font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                      className="mt-auto text-sm font-semibold text-accent-600 hover:underline dark:text-accent-400"
                     >
                       Learn more →
                     </Link>
@@ -334,7 +351,7 @@ const SiteNavbar = () => {
                   <Link
                     to={menu.footerLink.to}
                     data-testid={`site-nav-${slugify(menu.label)}-all-link`}
-                    className="text-xs font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                    className="text-xs font-semibold text-accent-600 hover:underline dark:text-accent-400"
                   >
                     {menu.footerLink.label} →
                   </Link>
@@ -362,7 +379,7 @@ const SiteNavbar = () => {
                     className={({ isActive }) =>
                       `block rounded-lg px-3 py-3 text-base font-medium ${
                         isActive
-                          ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+                          ? "bg-accent-50 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300"
                           : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                       }`
                     }
@@ -426,15 +443,16 @@ const SiteNavbar = () => {
               <Link
                 to="/register"
                 data-testid="site-nav-mobile-getstarted-btn"
-                className="btn btn-primary w-full justify-center"
+                className="btn btn-site w-full justify-center"
               >
-                Get started
+                Get started free
               </Link>
             </div>
           </div>
         </div>
       )}
     </header>
+    </>
   );
 };
 

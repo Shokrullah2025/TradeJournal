@@ -58,9 +58,9 @@ const DetailPageTemplate = ({ page, basePath }) => {
       />
 
       {/* Hero */}
-      <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-900">
+      <section className="bg-gradient-to-b from-accent-50 to-white dark:from-gray-900 dark:to-gray-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 mb-3">
+          <p className="text-sm font-semibold uppercase tracking-wider text-accent-600 dark:text-accent-400 mb-3">
             {page.group}
           </p>
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl">
@@ -73,7 +73,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
             <Link
               to="/register"
               data-testid={`detail-${page.slug}-getstarted-btn`}
-              className="btn btn-primary inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
+              className="btn btn-site inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
             >
               Start free
               <ArrowRight className="h-5 w-5" />
@@ -91,7 +91,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
           <div className="relative mx-auto mt-14 max-w-2xl">
             <div
               aria-hidden="true"
-              className="absolute -inset-4 rounded-3xl bg-primary-500/10 blur-2xl dark:bg-primary-500/15"
+              className="absolute -inset-4 rounded-3xl bg-accent-500/10 blur-2xl dark:bg-accent-500/15"
             />
             <div className="relative">
               <ProductVisual variant={page.visual} />
@@ -111,7 +111,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
               key={bullet}
               className="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-4"
             >
-              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
+              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-accent-600 dark:text-accent-400" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 {bullet}
               </span>
@@ -156,7 +156,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
                 key={step.title}
                 className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-6"
               >
-                <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                <span className="text-sm font-bold text-accent-600 dark:text-accent-400">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <h3 className="mt-2 text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -197,12 +197,12 @@ const DetailPageTemplate = ({ page, basePath }) => {
                   key={slug}
                   to={related.to}
                   data-testid={`detail-${page.slug}-related-${slug}`}
-                  className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-6 transition-colors hover:border-primary-300 dark:hover:border-primary-700"
+                  className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-6 transition-colors hover:border-accent-300 dark:hover:border-accent-700"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-900/40 text-accent-600 dark:text-accent-400">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                  <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
                     {related.navLabel}
                   </h3>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">

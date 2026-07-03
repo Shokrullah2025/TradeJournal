@@ -5,6 +5,20 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Public marketing-site accent (violet "Signal" theme from the
+        // approved landing design). The authenticated app keeps `primary`.
+        accent: {
+          50: "#f2f2fb",
+          100: "#e6e5f7",
+          200: "#cfcdf0",
+          300: "#a6a8f0",
+          400: "#8b88e5",
+          500: "#7276df",
+          600: "#5b57c9",
+          700: "#4a45ab",
+          800: "#454099",
+          900: "#312d6b",
+        },
         primary: {
           50: "#f0f9ff",
           100: "#e0f2fe",
@@ -56,6 +70,11 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui"],
+        // Marketing-site typography (landing design): Space Grotesk headings,
+        // IBM Plex Sans body, IBM Plex Mono for tabular numbers.
+        display: ['"Space Grotesk"', "ui-sans-serif", "system-ui"],
+        body: ['"IBM Plex Sans"', "ui-sans-serif", "system-ui"],
+        nums: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-in-out",
