@@ -7,7 +7,6 @@ import { Eye, EyeOff, Lock, TrendingUp } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { emitNotification } from "../utils/notifications";
-import ThemeToggle from "../components/common/ThemeToggle";
 
 const resetPasswordSchema = z.object({
   password: z
@@ -125,7 +124,7 @@ const ResetPassword = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" data-testid="reset-password-checking-spinner" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4" data-testid="reset-password-checking-spinner" />
           <p className="text-gray-600 dark:text-gray-400">Verifying reset link...</p>
         </div>
       </div>
@@ -135,14 +134,10 @@ const ResetPassword = () => {
   if (!validSession) {
     return (
       <div className="min-h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <div className="absolute top-4 right-4 z-10">
-          <ThemeToggle size="md" showLabel />
-        </div>
-
         <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
           <div className="mx-auto w-full max-w-sm lg:w-96">
             <div className="flex items-center mb-6">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg">
+              <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
                 <TrendingUp className="w-8 h-8 text-white" />
               </div>
               <h1 className="ml-3 text-2xl font-bold">Tradgella</h1>
@@ -158,7 +153,7 @@ const ResetPassword = () => {
               </p>
               <button
                 onClick={() => navigate("/login")}
-                className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 data-testid="reset-password-back-to-login-btn"
               >
                 Back to Login
@@ -172,16 +167,12 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen flex bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle size="md" showLabel />
-      </div>
-
       {/* Left — Reset Password Form */}
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
           {/* Logo */}
           <div className="flex items-center mb-6">
-            <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg">
+            <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
             <h1 className="ml-3 text-2xl font-bold">Tradgella</h1>
@@ -207,7 +198,7 @@ const ResetPassword = () => {
                   {...register("password")}
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
-                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Enter new password"
                   data-testid="reset-password-password-input"
                 />
@@ -243,7 +234,7 @@ const ResetPassword = () => {
                   {...register("confirmPassword")}
                   type={showConfirmPassword ? "text" : "password"}
                   autoComplete="new-password"
-                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Confirm new password"
                   data-testid="reset-password-confirm-password-input"
                 />
@@ -270,7 +261,7 @@ const ResetPassword = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="reset-password-submit-btn"
             >
               {isSubmitting ? (
@@ -288,11 +279,11 @@ const ResetPassword = () => {
 
       {/* Right — Feature highlight */}
       <div className="hidden lg:block relative w-0 flex-1">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-700 dark:to-primary-900 flex items-center justify-center">
           <div className="text-center text-white px-8">
             <div className="text-6xl mb-6">🔒</div>
             <h2 className="text-3xl font-bold mb-4">Secure Your Account</h2>
-            <p className="text-xl text-blue-100">
+            <p className="text-xl text-primary-100">
               Choose a strong password to protect your trading data and analytics.
             </p>
           </div>

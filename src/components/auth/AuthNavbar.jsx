@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { TrendingUp, Home } from "lucide-react";
-import ThemeToggle from "../common/ThemeToggle";
 
 /**
  * Slim top navigation for the authentication pages (Login / Register).
@@ -36,8 +35,6 @@ const AuthNavbar = () => (
 
         {/* Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <ThemeToggle size="sm" />
-
           {/* Home — primary action back to the marketing site, in the slot the
               dashboard CTA used to occupy. */}
           <Link

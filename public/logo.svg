@@ -1,12 +1,12 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tradgella">
   <defs>
-    <!-- Warm sunrise gradient: brand blue -> success green -> warm amber -->
+    <!-- Brand Evergreen gradient: primary-500 -> primary-700, matching the
+         in-app logo tile (bg-gradient-to-br from-primary-500 to-primary-700) -->
     <linearGradient id="tile" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0ea5e9" />
-      <stop offset="0.38" stop-color="#22c55e" />
-      <stop offset="1" stop-color="#f59e0b" />
+      <stop offset="0" stop-color="#2a9d8f" />
+      <stop offset="1" stop-color="#147065" />
     </linearGradient>
-    <!-- Soft shadow so the white candlesticks lift off the tile -->
+    <!-- Soft shadow so the white mark lifts off the tile -->
     <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.18" />
     </filter>
@@ -18,18 +18,10 @@
   <!-- Subtle top sheen for depth -->
   <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="#ffffff" opacity="0.06" />
 
-  <!-- Ascending candlesticks = upward trend -->
-  <g fill="#ffffff" filter="url(#softShadow)">
-    <!-- Candle 1 (lowest) -->
-    <rect x="148" y="222" width="14" height="132" rx="7" />
-    <rect x="127" y="252" width="56" height="78" rx="14" />
-
-    <!-- Candle 2 (mid) -->
-    <rect x="249" y="172" width="14" height="160" rx="7" />
-    <rect x="228" y="200" width="56" height="106" rx="14" />
-
-    <!-- Candle 3 (highest) -->
-    <rect x="350" y="128" width="14" height="186" rx="7" />
-    <rect x="329" y="150" width="56" height="138" rx="14" />
+  <!-- TrendingUp mark (lucide geometry) - the same icon the app uses everywhere -->
+  <g transform="translate(106 106) scale(12.5)" filter="url(#softShadow)"
+     stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+    <polyline points="16 7 22 7 22 13" />
   </g>
 </svg>

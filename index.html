@@ -4,11 +4,70 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tradgella</title>
+
+    <!-- Primary SEO baseline.
+         NOTE: per-page <title>, description, canonical, and robots are owned at
+         runtime by react-helmet-async (see src/components/seo/Seo.jsx) so each
+         route gets its own values. Those page-specific tags are intentionally
+         NOT hardcoded here — duplicating them would create conflicting canonical
+         tags and shadow the per-page description for crawlers that run JS.
+         The og:/twitter: block below is a site-level fallback so JS-blind social
+         crawlers (Facebook, LinkedIn, Slack, Discord) still get a branded
+         preview card; JS-running crawlers (Googlebot) read the per-page tags. -->
+    <title>Tradgella — Trading Journal & Analytics for Serious Traders</title>
+    <meta name="theme-color" content="#158477" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Tradgella" />
+    <meta
+      property="og:title"
+      content="Tradgella — Trading Journal & Analytics for Serious Traders"
+    />
+    <meta
+      property="og:description"
+      content="Auto-sync your broker, journal every trade, and turn your track record into real, measurable analytics."
+    />
+    <meta property="og:url" content="https://tradgella.com/" />
+    <meta property="og:image" content="https://tradgella.com/og-image.png" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@tradgella" />
+    <meta
+      name="twitter:title"
+      content="Tradgella — Trading Journal & Analytics for Serious Traders"
+    />
+    <meta
+      name="twitter:description"
+      content="Auto-sync your broker, journal every trade, and turn your track record into real, measurable analytics."
+    />
+    <meta name="twitter:image" content="https://tradgella.com/og-image.png" />
+
+    <!-- Structured data: the product/organisation. Helps Google understand the
+         brand and can power rich results. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Tradgella",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "url": "https://tradgella.com/",
+        "description": "A data-driven trading journal with broker auto-sync, performance analytics, backtesting, and risk management.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>

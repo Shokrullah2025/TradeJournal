@@ -30,6 +30,8 @@ const Admin = React.lazy(() => import("./pages/Admin"));
 import SiteLayout from "./components/site/SiteLayout";
 const Home = React.lazy(() => import("./pages/site/Home"));
 const Features = React.lazy(() => import("./pages/site/Features"));
+const FeatureDetail = React.lazy(() => import("./pages/site/FeatureDetail"));
+const SolutionDetail = React.lazy(() => import("./pages/site/SolutionDetail"));
 const Pricing = React.lazy(() => import("./pages/site/Pricing"));
 const About = React.lazy(() => import("./pages/site/About"));
 const Contact = React.lazy(() => import("./pages/site/Contact"));
@@ -119,6 +121,8 @@ function App() {
                     <Route element={<SiteLayout />}>
                       <Route path="/" element={<Home />} />
                       <Route path="/features" element={<Features />} />
+                      <Route path="/features/:slug" element={<FeatureDetail />} />
+                      <Route path="/solutions/:slug" element={<SolutionDetail />} />
                       <Route path="/pricing" element={<Pricing />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />

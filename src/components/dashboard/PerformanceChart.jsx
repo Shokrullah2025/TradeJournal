@@ -35,8 +35,8 @@ const PerformanceChart = ({ trades }) => {
   const colors = {
     grid: isDarkMode ? "#374151" : "#f0f0f0",
     axis: isDarkMode ? "#9ca3af" : "#666666",
-    line: isDarkMode ? "#60a5fa" : "#0ea5e9",
-    dot: isDarkMode ? "#60a5fa" : "#0ea5e9",
+    line: isDarkMode ? "#7fd1c2" : "#2a9d8f",
+    dot: isDarkMode ? "#7fd1c2" : "#2a9d8f",
   };
 
   // Generate data for the last 30 days

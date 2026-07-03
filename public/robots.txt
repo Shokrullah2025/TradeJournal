@@ -1,0 +1,36 @@
+# Tradgella robots.txt
+# Public marketing & legal pages are crawlable; the authenticated app is not.
+
+User-agent: *
+Allow: /$
+Allow: /features
+Allow: /solutions
+Allow: /pricing
+Allow: /about
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /disclaimer
+Allow: /cookies
+Allow: /refund
+Allow: /aup
+Allow: /dmca
+
+# Keep the app, auth, and admin areas out of the index.
+Disallow: /dashboard
+Disallow: /trades
+Disallow: /trade-entry
+Disallow: /backtest
+Disallow: /brokers
+Disallow: /analytics
+Disallow: /risk-calculator
+Disallow: /settings
+Disallow: /profile
+Disallow: /billing
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /verify-email
+
+Sitemap: https://tradgella.com/sitemap.xml

@@ -26,7 +26,7 @@ const NEG = "#ef4444";
 const GRID = "#eef1f6";
 
 const COLORS = [
-  "#0ea5e9", // Primary blue
+  "#2a9d8f", // Brand teal
   "#22c55e", // Success green
   "#f59e0b", // Warning amber
   "#ef4444", // Danger red

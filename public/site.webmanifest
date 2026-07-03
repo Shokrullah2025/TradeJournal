@@ -1,0 +1,17 @@
+{
+  "name": "Tradgella — Trading Journal & Analytics",
+  "short_name": "Tradgella",
+  "description": "A data-driven trading journal: auto-sync your broker, journal every trade, and turn your track record into real analytics.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#158477",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

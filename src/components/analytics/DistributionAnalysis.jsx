@@ -21,7 +21,7 @@ import { Target, TrendingDown, Activity, Info } from "lucide-react";
 
 const POS = "#22c55e";
 const NEG = "#ef4444";
-const NEUTRAL = "#0ea5e9";
+const NEUTRAL = "#2a9d8f";
 // Subtle, light grid so rows are barely there but axis numbers stay readable.
 const GRID = "#eef1f6";
 const AXIS_LABEL_STYLE = {

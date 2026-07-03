@@ -1,12 +1,12 @@
 /* Design Tokens - CSS Custom Properties */
 :root {
   /* Colors */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-500: #0ea5e9;
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
-  --color-primary-900: #0c4a6e;
+  --color-primary-50: #eef5f2;
+  --color-primary-100: #dcefeb;
+  --color-primary-500: #2a9d8f;
+  --color-primary-600: #158477;
+  --color-primary-700: #147065;
+  --color-primary-900: #0a403b;
 
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;

@@ -5,17 +5,33 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Public marketing-site accent (Evergreen teal theme from the
+        // approved landing design). The authenticated app keeps `primary`.
+        accent: {
+          50: "#eef5f2",
+          100: "#dcefeb",
+          200: "#b9e6db",
+          300: "#7fd1c2",
+          400: "#3fae9c",
+          500: "#2a9d8f",
+          600: "#158477",
+          700: "#147065",
+          800: "#0f5f5f",
+          900: "#0a403b",
+        },
+        // Brand Evergreen teal — same scale as `accent` so the authenticated
+        // app matches the marketing site (was sky blue before 2026-07).
         primary: {
-          50: "#f0f9ff",
-          100: "#e0f2fe",
-          200: "#bae6fd",
-          300: "#7dd3fc",
-          400: "#38bdf8",
-          500: "#0ea5e9",
-          600: "#0284c7",
-          700: "#0369a1",
-          800: "#075985",
-          900: "#0c4a6e",
+          50: "#eef5f2",
+          100: "#dcefeb",
+          200: "#b9e6db",
+          300: "#7fd1c2",
+          400: "#3fae9c",
+          500: "#2a9d8f",
+          600: "#158477",
+          700: "#147065",
+          800: "#0f5f5f",
+          900: "#0a403b",
         },
         success: {
           50: "#f0fdf4",
@@ -56,6 +72,11 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui"],
+        // Marketing-site typography (landing design): Space Grotesk headings,
+        // IBM Plex Sans body, IBM Plex Mono for tabular numbers.
+        display: ['"Space Grotesk"', "ui-sans-serif", "system-ui"],
+        body: ['"IBM Plex Sans"', "ui-sans-serif", "system-ui"],
+        nums: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-in-out",

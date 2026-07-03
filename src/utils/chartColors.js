@@ -2,7 +2,7 @@
 export const CHART_COLORS = {
   // Primary color palette - accessible contrast ratios
   primary: [
-    "#0ea5e9", // Sky blue
+    "#2a9d8f", // Brand teal (Evergreen)
     "#22c55e", // Green
     "#f59e0b", // Amber
     "#ef4444", // Red
@@ -33,8 +33,8 @@ export const CHART_COLORS = {
       to: "#fecaca",   // Red-200
     },
     primary: {
-      from: "#e0f2fe", // Sky-100
-      to: "#bae6fd",   // Sky-200
+      from: "#dcefeb", // Teal-100 (brand)
+      to: "#b9e6db",   // Teal-200 (brand)
     },
     warning: {
       from: "#fef3c7", // Amber-100
@@ -46,8 +46,8 @@ export const CHART_COLORS = {
   schemes: {
     // High contrast for bar charts
     bars: {
-      fill: "#0ea5e9",
-      stroke: "#0284c7",
+      fill: "#2a9d8f",
+      stroke: "#158477",
       strokeWidth: 1,
     },
     

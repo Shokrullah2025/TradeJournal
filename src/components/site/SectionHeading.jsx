@@ -10,7 +10,7 @@ const SectionHeading = ({ eyebrow, title, subtitle, align = "center" }) => {
   return (
     <div className={`max-w-2xl ${alignment}`}>
       {eyebrow && (
-        <p className="text-sm font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 mb-3">
+        <p className="text-sm font-semibold uppercase tracking-wider text-accent-600 dark:text-accent-400 mb-3">
           {eyebrow}
         </p>
       )}

@@ -22,6 +22,7 @@ import {
   Zap,
   TrendingUp,
 } from "lucide-react";
+import { FEATURE_PAGES, SOLUTION_PAGES } from "./detailPages";
 
 // ── Top feature highlights shown on the Home page ─────────────────────────
 export const HIGHLIGHT_FEATURES = [
@@ -353,7 +354,7 @@ export const FAQS = [
   {
     question: "Is there a free plan?",
     answer:
-      "Yes. The Basic plan is free forever and includes up to 50 trades a month with the core analytics dashboard — no credit card required.",
+      "Yes. The Basic plan is free forever and includes up to 50 trades a month with the core analytics dashboard. A card is captured at sign-up to verify your account, but you're never charged on the free plan.",
   },
   {
     question: "Can I cancel anytime?",
@@ -400,14 +401,26 @@ export const TESTIMONIALS = [
 ];
 
 // ── Footer link columns ───────────────────────────────────────────────────
+// Three curated columns (landing design). Feature/solution detail pages keep
+// a crawl path via the nav mega menu, "See all features", related-page cards,
+// and the sitemap; legal pages live in FOOTER_LEGAL_LINKS on the bottom line.
 export const FOOTER_LINKS = [
   {
     heading: "Product",
     links: [
       { label: "Features", to: "/features" },
       { label: "Pricing", to: "/pricing" },
-      { label: "Sign in", to: "/login" },
-      { label: "Get started", to: "/register" },
+      { label: "Broker Sync", to: "/features/broker-sync" },
+      { label: "AI Trade Insights", to: "/features/ai-insights" },
+    ],
+  },
+  {
+    heading: "Resources",
+    links: [
+      { label: "FAQ", to: "/pricing#faq" },
+      { label: "Help center", to: "/contact" },
+      { label: "Risk Calculator", to: "/features/risk-calculator" },
+      { label: "Backtesting", to: "/features/backtesting" },
     ],
   },
   {
@@ -415,26 +428,120 @@ export const FOOTER_LINKS = [
     links: [
       { label: "About", to: "/about" },
       { label: "Contact", to: "/contact" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Terms of Service", to: "/terms" },
-      { label: "Privacy Policy", to: "/privacy" },
-      { label: "Financial Disclaimer", to: "/disclaimer" },
-      { label: "Cookie Policy", to: "/cookies" },
-      { label: "Refund & Billing", to: "/refund" },
-      { label: "Acceptable Use", to: "/aup" },
-      { label: "DMCA / Copyright", to: "/dmca" },
+      { label: "Privacy", to: "/privacy" },
+      { label: "Terms", to: "/terms" },
     ],
   },
 ];
 
-// ── Primary nav links (navbar) ────────────────────────────────────────────
-export const NAV_LINKS = [
-  { label: "Features", to: "/features" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "About", to: "/about" },
-  { label: "Contact", to: "/contact" },
+// Compact legal row rendered under the footer columns — keeps every legal
+// page one click (and one crawl hop) from any public page.
+export const FOOTER_LEGAL_LINKS = [
+  { label: "Terms", to: "/terms" },
+  { label: "Privacy", to: "/privacy" },
+  { label: "Disclaimer", to: "/disclaimer" },
+  { label: "Cookies", to: "/cookies" },
+  { label: "Refunds", to: "/refund" },
+  { label: "Acceptable Use", to: "/aup" },
+  { label: "DMCA", to: "/dmca" },
+];
+
+// ── Primary navigation (navbar) ───────────────────────────────────────────
+// The navbar is menu-driven: "mega" renders the multi-column Features panel,
+// "dropdown" a simple list, "link" a flat NavLink. Feature/solution items are
+// derived from the detail-page content module so the menu can never point at
+// a page that doesn't exist.
+//
+// The mega menu is deliberately curated, not exhaustive: the six flagship
+// features in two categories. The remaining detail pages stay reachable via
+// "See all features", the footer columns, and the sitemap — the menu shows
+// what we believe matters most, without overwhelming a first-time visitor.
+// Emoji tiles from the approved landing design — one per nav item, rendered
+// in a soft accent-tinted rounded square by the navbar.
+const NAV_EMOJI = {
+  "trade-journal": "📓",
+  "trade-calendar": "📅",
+  "broker-sync": "🔗",
+  "performance-dashboard": "📊",
+  backtesting: "⏮️",
+  "risk-calculator": "🧮",
+  "day-traders": "⚡",
+  "futures-traders": "📈",
+  "forex-crypto-traders": "🌐",
+  "prop-firm-traders": "🏛️",
+};
+
+const featureNavItem = (page) => ({
+  label: page.navLabel,
+  description: page.navDescription,
+  icon: page.icon,
+  emoji: NAV_EMOJI[page.slug],
+  to: `/features/${page.slug}`,
+});
+
+const NAV_FEATURE_GROUPS = [
+  {
+    heading: "Journal & Tracking",
+    slugs: ["trade-journal", "trade-calendar", "broker-sync"],
+  },
+  {
+    heading: "Analyze & Improve",
+    slugs: ["performance-dashboard", "backtesting", "risk-calculator"],
+  },
+];
+
+export const NAV_MENUS = [
+  {
+    label: "Features",
+    type: "mega",
+    groups: NAV_FEATURE_GROUPS.map(({ heading, slugs }) => ({
+      heading,
+      items: slugs.map((slug) =>
+        featureNavItem(FEATURE_PAGES.find((page) => page.slug === slug))
+      ),
+    })),
+    highlight: {
+      badge: "NEW",
+      title: "AI Trade Insights",
+      description:
+        "Let AI review your journal and tell you exactly where you're leaking money.",
+      to: "/features/ai-insights",
+    },
+    footerLink: { label: "See all features", to: "/features" },
+  },
+  {
+    label: "Solutions",
+    type: "dropdown",
+    items: SOLUTION_PAGES.map((page) => ({
+      label: page.navLabel,
+      description: page.navDescription,
+      emoji: NAV_EMOJI[page.slug],
+      to: `/solutions/${page.slug}`,
+    })),
+  },
+  { label: "Pricing", type: "link", to: "/pricing" },
+  {
+    label: "Company",
+    type: "dropdown",
+    items: [
+      {
+        label: "About us",
+        description: "Why we built Tradgella",
+        emoji: "🌱",
+        to: "/about",
+      },
+      {
+        label: "Contact & support",
+        description: "Questions, feedback, help",
+        emoji: "📮",
+        to: "/contact",
+      },
+      {
+        label: "FAQ",
+        description: "Common questions answered",
+        emoji: "💬",
+        to: "/pricing#faq",
+      },
+    ],
+  },
 ];
