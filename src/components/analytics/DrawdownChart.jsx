@@ -15,7 +15,7 @@ import { TrendingDown, BarChart3, Info } from "lucide-react";
 
 // Shared visual language with the Overview (PnLOverviewHero / DistributionAnalysis).
 const POS = "#22c55e";
-const PRIMARY = "#0ea5e9";
+const PRIMARY = "#2a9d8f";
 const GRID = "#eef1f6";
 
 // Full-precision currency, matching PerformanceMetrics / PnLOverviewHero.
