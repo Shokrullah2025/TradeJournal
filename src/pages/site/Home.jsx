@@ -438,11 +438,11 @@ const Home = () => (
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              to="/register"
+              to="/login"
               data-testid="home-hero-getstarted-btn"
               className="btn btn-site inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold"
             >
-              Start free — no card
+              Start free
             </Link>
             <Link
               to="/features"
@@ -754,7 +754,7 @@ const Home = () => (
                 {tier.description}
               </p>
               <Link
-                to={tier.id === "enterprise" ? "/contact" : "/register"}
+                to={tier.id === "enterprise" ? "/contact" : "/login"}
                 data-testid={`home-pricing-${tier.id}-btn`}
                 className={`mt-5 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                   tier.popular || dark

@@ -21,8 +21,8 @@ const CTASection = () => {
           Stop guessing. Start journaling with an edge.
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-base opacity-90 sm:text-lg">
-          Turn scattered notes into a measurable, repeatable process. It&apos;s
-          free to begin — no credit card required.
+          Turn scattered notes into a measurable, repeatable process. Start on
+          the free plan and upgrade only when it pays for itself.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           {isAuthenticated ? (
@@ -36,11 +36,11 @@ const CTASection = () => {
             </Link>
           ) : (
             <Link
-              to="/register"
+              to="/login"
               data-testid="site-cta-getstarted-btn"
               className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-accent-700 transition-transform hover:-translate-y-px"
             >
-              Start free — no card
+              Start free
               <ArrowRight className="h-5 w-5" />
             </Link>
           )}
