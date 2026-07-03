@@ -40,7 +40,11 @@
     --surface-border-soft: #1b212b;
     --surface-border: #20262f;
     --surface-input-border: #232b36;
-    --surface-text: #e6edf3;
+    /* Softened ink: body text sits a step below white so long reading sessions
+       don't glare on the near-black surfaces; headings/key values use the
+       brighter step to keep hierarchy. */
+    --surface-text: #c6d0da;
+    --surface-text-bright: #dfe7ee;
   }
 
   /* Public marketing site typography (landing design): Space Grotesk for
@@ -305,10 +309,13 @@
 /* Focus ring surface */
 .dark .app-shell .dark\:ring-gray-800 { --tw-ring-color: var(--surface-border); }
 
-/* Crisp primary text to match the calculator (#e6edf3). Secondary grays
-   (400/500/300) already read well on the deeper surfaces, so leave them. */
+/* Softened primary text: body copy maps to --surface-text, headings and pure
+   white to the brighter step — pure #fff on near-black is harsh on the eyes.
+   Secondary grays (400/500/300) already read well on the deeper surfaces, so
+   leave them. */
 .dark .app-shell .dark\:text-gray-100 { color: var(--surface-text); }
-.dark .app-shell .dark\:text-gray-50  { color: #f0f4f8; }
+.dark .app-shell .dark\:text-gray-50  { color: var(--surface-text-bright); }
+.dark .app-shell .dark\:text-white    { color: var(--surface-text-bright); }
 
 /* Modals render through ModalPortal into document.body — outside .app-shell —
    so retint them globally. The public site does not open these app modals. */

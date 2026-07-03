@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
+import { ThemeProvider } from "../../contexts/ThemeContext";
 import TradeScatterChart from "./TradeScatterChart";
+
+// The chart reads its colors from ThemeContext (light/dark), so tests render
+// inside the real provider (matchMedia is mocked in tests/setup.js).
+const render = (ui) => rtlRender(<ThemeProvider>{ui}</ThemeProvider>);
 
 // TradeScatterChart plots one dot per closed trade (x=exit time, y=P&L).
 // It needs at least two valid points to render; otherwise an empty state.

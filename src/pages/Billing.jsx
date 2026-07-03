@@ -18,6 +18,34 @@ import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
 import StripePaymentForm from "../components/billing/StripePaymentForm";
 
+// Static class strings per plan accent — Tailwind's scanner can't see
+// dynamically-built classes like `bg-${plan.color}-600`, so they'd be purged
+// from the bundle. Premium uses the brand teal; Enterprise gets amber so the
+// two paid tiers stay visually distinct.
+const PLAN_STYLES = {
+  gray: {
+    selectedBorder: "border-gray-500 dark:border-gray-400",
+    solidBtn:
+      "bg-gray-600 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600",
+    outlineBtn:
+      "border border-gray-600 dark:border-gray-400 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900/20",
+  },
+  primary: {
+    selectedBorder: "border-primary-500 dark:border-primary-400",
+    solidBtn:
+      "bg-primary-600 dark:bg-primary-700 text-white hover:bg-primary-700 dark:hover:bg-primary-600",
+    outlineBtn:
+      "border border-primary-600 dark:border-primary-400 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20",
+  },
+  amber: {
+    selectedBorder: "border-amber-500 dark:border-amber-400",
+    solidBtn:
+      "bg-amber-600 dark:bg-amber-700 text-white hover:bg-amber-700 dark:hover:bg-amber-600",
+    outlineBtn:
+      "border border-amber-600 dark:border-amber-400 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20",
+  },
+};
+
 const Billing = () => {
   const { user } = useAuth();
   const {
@@ -119,7 +147,7 @@ const Billing = () => {
         "API access",
         "Real-time sync",
       ],
-      color: "blue",
+      color: "primary",
       popular: true,
     },
     {
@@ -138,7 +166,7 @@ const Billing = () => {
         "Custom training sessions",
         "White-label options",
       ],
-      color: "purple",
+      color: "amber",
       popular: false,
     },
   ];
@@ -179,7 +207,7 @@ const Billing = () => {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg p-4 text-white">
+                <div className="bg-gradient-to-r from-primary-400 to-primary-600 rounded-lg p-4 text-white">
                   <div className="flex items-center">
                     <Users className="h-8 w-8" />
                     <div className="ml-3">
@@ -191,7 +219,7 @@ const Billing = () => {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-purple-400 to-purple-600 rounded-lg p-4 text-white">
+                <div className="bg-gradient-to-r from-amber-400 to-amber-600 rounded-lg p-4 text-white">
                   <div className="flex items-center">
                     <TrendingUp className="h-8 w-8" />
                     <div className="ml-3">
@@ -351,13 +379,13 @@ const Billing = () => {
 
           {/* Current Subscription Status — admins only at top; users see it inside the Payment tab */}
           {user?.role === "admin" && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-6">
+            <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-medium text-blue-900 dark:text-blue-200">
+                  <h3 className="text-lg font-medium text-primary-900 dark:text-primary-200">
                     Current Subscription
                   </h3>
-                  <p className="text-blue-700 dark:text-blue-300">
+                  <p className="text-primary-700 dark:text-primary-300">
                     You're currently on the{" "}
                     <span className="font-semibold capitalize">
                       {currentPlanSlug}
@@ -366,7 +394,7 @@ const Billing = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">
+                  <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
                     $
                     {currentPlanSlug === "basic"
                       ? "0"
@@ -374,7 +402,7 @@ const Billing = () => {
                       ? "29"
                       : "99"}
                   </div>
-                  <div className="text-sm text-blue-600 dark:text-blue-300">
+                  <div className="text-sm text-primary-600 dark:text-primary-300">
                     per month
                   </div>
                 </div>
@@ -390,7 +418,7 @@ const Billing = () => {
                   onClick={() => setActiveTab("payment")}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === "payment"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
@@ -400,7 +428,7 @@ const Billing = () => {
                   onClick={() => setActiveTab("plans")}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === "plans"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
@@ -410,7 +438,7 @@ const Billing = () => {
                   onClick={() => setActiveTab("invoices")}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === "invoices"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
@@ -427,13 +455,13 @@ const Billing = () => {
               {activeTab === "payment" && (
                 <div className="space-y-8">
                   {/* Current Subscription Status */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-6">
+                  <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-medium text-blue-900 dark:text-blue-200">
+                        <h3 className="text-lg font-medium text-primary-900 dark:text-primary-200">
                           Current Subscription
                         </h3>
-                        <p className="text-blue-700 dark:text-blue-300">
+                        <p className="text-primary-700 dark:text-primary-300">
                           You're currently on the{" "}
                           <span className="font-semibold capitalize">
                             {currentPlanSlug}
@@ -442,7 +470,7 @@ const Billing = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">
+                        <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
                           $
                           {currentPlanSlug === "basic"
                             ? "0"
@@ -450,7 +478,7 @@ const Billing = () => {
                             ? "29"
                             : "99"}
                         </div>
-                        <div className="text-sm text-blue-600 dark:text-blue-300">
+                        <div className="text-sm text-primary-600 dark:text-primary-300">
                           per month
                         </div>
                       </div>
@@ -485,7 +513,7 @@ const Billing = () => {
                               </div>
                             </div>
                             {pm.is_default && (
-                              <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 px-2 py-1 rounded-full font-medium">
+                              <span className="text-xs bg-primary-100 dark:bg-primary-800 text-primary-700 dark:text-primary-200 px-2 py-1 rounded-full font-medium">
                                 Default
                               </span>
                             )}
@@ -507,7 +535,7 @@ const Billing = () => {
                       <button
                         onClick={handleOpenPortal}
                         disabled={portalLoading}
-                        className="inline-flex items-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-2 bg-primary-600 dark:bg-primary-700 text-white px-6 py-2 rounded-lg hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                         data-testid="billing-update-payment-btn"
                       >
                         {portalLoading ? (
@@ -568,13 +596,13 @@ const Billing = () => {
                         key={plan.id}
                         className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 transition-all ${
                           selectedPlan === plan.id
-                            ? `border-${plan.color}-500 dark:border-${plan.color}-400`
+                            ? PLAN_STYLES[plan.color].selectedBorder
                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                         }`}
                       >
                         {plan.popular && (
                           <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                            <span className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-1 text-sm font-medium rounded-full">
+                            <span className="bg-primary-500 dark:bg-primary-600 text-white px-4 py-1 text-sm font-medium rounded-full">
                               Most Popular
                             </span>
                           </div>
@@ -640,8 +668,8 @@ const Billing = () => {
                                 plan.id === currentPlanSlug || plan.id === "basic"
                                   ? "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                                   : selectedPlan === plan.id
-                                  ? `bg-${plan.color}-600 dark:bg-${plan.color}-700 text-white hover:bg-${plan.color}-700 dark:hover:bg-${plan.color}-600`
-                                  : `border border-${plan.color}-600 dark:border-${plan.color}-400 text-${plan.color}-600 dark:text-${plan.color}-400 hover:bg-${plan.color}-50 dark:hover:bg-${plan.color}-900/20`
+                                  ? PLAN_STYLES[plan.color].solidBtn
+                                  : PLAN_STYLES[plan.color].outlineBtn
                               }`}
                               data-testid={`billing-plan-select-${plan.id}-btn`}
                             >
@@ -696,14 +724,14 @@ const Billing = () => {
 
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                      <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg p-4">
                         <div className="flex items-center">
-                          <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
-                            <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                          <div className="p-2 bg-primary-100 dark:bg-primary-800 rounded-lg">
+                            <DollarSign className="w-6 h-6 text-primary-600 dark:text-primary-400" />
                           </div>
                           <div className="ml-4">
-                            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Total Paid</p>
-                            <p className="text-2xl font-bold text-blue-900 dark:text-blue-200" data-testid="invoices-total-paid">
+                            <p className="text-sm font-medium text-primary-900 dark:text-primary-200">Total Paid</p>
+                            <p className="text-2xl font-bold text-primary-900 dark:text-primary-200" data-testid="invoices-total-paid">
                               $
                               {userInvoices
                                 .filter((inv) => inv.status === "paid")
@@ -748,7 +776,7 @@ const Billing = () => {
                     {/* Invoice Table */}
                     {isLoading ? (
                       <div className="text-center py-12" data-testid="invoices-loading-spinner">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
                       </div>
                     ) : userInvoices.length > 0 ? (
                       <div className="overflow-x-auto" data-testid="invoices-table">
@@ -816,7 +844,7 @@ const Billing = () => {
                         </p>
                         <button
                           onClick={() => setActiveTab("plans")}
-                          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600"
+                          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600"
                         >
                           View Plans
                         </button>
@@ -884,9 +912,9 @@ const Billing = () => {
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${
                               payment.plan === "premium"
-                                ? "bg-blue-100 text-blue-800"
+                                ? "bg-primary-100 text-primary-800"
                                 : payment.plan === "enterprise"
-                                ? "bg-purple-100 text-purple-800"
+                                ? "bg-amber-100 text-amber-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
                           >

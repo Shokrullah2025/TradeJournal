@@ -61,13 +61,15 @@ const SECONDARY_BTN =
   "btn flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 const Trades = () => {
-  const { filteredTrades, trades, importTrades } = useTrades();
+  const { filteredTrades, trades, importTrades, searchTerm, setSearchTerm } =
+    useTrades();
   const location = useLocation();
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingTrade, setEditingTrade] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  // searchTerm/setSearchTerm come from TradeContext so the header search bar
+  // and this page's input drive the same filter.
   const [selectedDate, setSelectedDate] = useState(null);
   // A trade clicked from the Dashboard arrives via navigation state. Capture it
   // once into local state so it survives clearing the history entry below.
@@ -75,9 +77,12 @@ const Trades = () => {
     location.state?.highlightTradeId ?? null,
   );
   // Land on the List view when asked to highlight a specific trade (the row to
-  // scroll to lives there, not in the calendar).
+  // scroll to lives there, not in the calendar) or when arriving from the
+  // header search bar (matches are rows, not calendar days).
   const [activeView, setActiveView] = useState(
-    location.state?.highlightTradeId ? "list" : "calendar",
+    location.state?.highlightTradeId || location.state?.fromHeaderSearch
+      ? "list"
+      : "calendar",
   );
 
   // Handle OAuth success message
@@ -248,7 +253,7 @@ const Trades = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
-              placeholder="Search trades..."
+              placeholder="Search symbol, strategy, notes, tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               data-testid="trades-search-input"
@@ -354,6 +359,7 @@ const Trades = () => {
               trades={filteredAndSearchedTrades}
               onEditTrade={handleEditTrade}
               highlightTradeId={highlightTradeId}
+              searchTerm={searchTerm}
             />
           </div>
           <div className="xl:col-span-1">

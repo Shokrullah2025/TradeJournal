@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { render as rtlRender } from "@testing-library/react";
+import { ThemeProvider } from "../../contexts/ThemeContext";
 import {
   MiniLineChart,
   MiniBarChart,
@@ -8,6 +9,11 @@ import {
   MiniRiskRewardChart,
   MiniDrawdownChart,
 } from "./MiniCharts";
+
+// MiniDrawdownChart reads its colors from ThemeContext (light/dark), so all
+// mini charts render inside the real provider (matchMedia is mocked in
+// tests/setup.js).
+const render = (ui) => rtlRender(<ThemeProvider>{ui}</ThemeProvider>);
 
 // The mini charts are tiny SVG sparklines used inside the stats cards. Each
 // guards against empty/invalid data by returning null. These tests verify the

@@ -1135,7 +1135,7 @@ const Settings = () => {
           {activeTab === "general" && (
             <div className="max-w-3xl space-y-6" data-testid="settings-general-panel">
               {/* Header + Save — title hidden on mobile (the top app bar already
-                  names the page); Save uses the platform blue and goes full-width
+                  names the page); Save uses the brand teal and goes full-width
                   on mobile. */}
               <div className="flex items-center justify-between gap-6">
                 <div className="hidden lg:block">
@@ -1595,7 +1595,7 @@ const Settings = () => {
                         </button>
                         <button
                           onClick={() => handleEditTemplate(template)}
-                          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
+                          className="text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400"
                           title="Edit template"
                           data-testid={`settings-template-edit-btn-${template.id}`}
                         >
@@ -1780,7 +1780,7 @@ const Settings = () => {
                           className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white"
                         >
                           <div className="flex items-center space-x-3">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
                             <span className="font-medium text-gray-900">
                               {strategy}
                             </span>
@@ -1962,7 +1962,7 @@ const Settings = () => {
                                       e.target.value
                                     )
                                   }
-                                  className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                                   step="0.1"
                                 />
                                 <select
@@ -1974,7 +1974,7 @@ const Settings = () => {
                                       e.target.value
                                     )
                                   }
-                                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 >
                                   <option value="%">%</option>
                                   <option value="$">$</option>
@@ -2187,7 +2187,7 @@ const Settings = () => {
                       ),
                     }));
                   }}
-                  className="text-sm bg-blue-50 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+                  className="text-sm bg-primary-50 text-primary-700 px-3 py-2 rounded-lg hover:bg-primary-100 transition-colors"
                 >
                   Select All Fields
                 </button>
@@ -2262,7 +2262,7 @@ const Settings = () => {
                                   onChange={() =>
                                     toggleFieldVisibility(fieldKey)
                                   }
-                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 w-4 h-4"
                                 />
                                 <div className="flex-1">
                                   <span className="text-sm text-gray-700 font-medium">
@@ -2288,7 +2288,7 @@ const Settings = () => {
 
               {/* Custom Fields Section */}
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
+                <div className="bg-primary-50 px-4 py-3 border-b border-primary-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span className="text-lg">⚙️</span>
@@ -2298,7 +2298,7 @@ const Settings = () => {
                     </div>
                     <button
                       onClick={addCustomField}
-                      className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                      className="text-sm bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 transition-colors"
                     >
                       + Add Field
                     </button>
@@ -2395,7 +2395,7 @@ const Settings = () => {
                   onClick={() => setActiveTemplateTab("basic")}
                   className={`px-6 py-3 text-sm font-medium ${
                     activeTemplateTab === "basic"
-                      ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                      ? "text-primary-600 border-b-2 border-primary-600 bg-primary-50"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                   }`}
                 >
@@ -2405,7 +2405,7 @@ const Settings = () => {
                   onClick={() => setActiveTemplateTab("fields")}
                   className={`px-6 py-3 text-sm font-medium ${
                     activeTemplateTab === "fields"
-                      ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                      ? "text-primary-600 border-b-2 border-primary-600 bg-primary-50"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                   }`}
                 >
@@ -2432,7 +2432,7 @@ const Settings = () => {
                           name: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       placeholder="Enter template name"
                     />
                     <div className="text-right text-sm text-gray-500 mt-1">
@@ -2465,7 +2465,7 @@ const Settings = () => {
                           </label>
                           <div className="relative">
                             <div
-                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-primary-400"
                               onClick={() => { setInstrumentTypeDropdownOpen((p) => !p); setTradeTypeDropdownOpen(false); setMarketConditionDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); }}
                             >
                               <span className={`flex-1 text-sm ${templateFormData.fields.instrumentType ? "text-gray-900" : "text-gray-400"}`}>
@@ -2483,7 +2483,7 @@ const Settings = () => {
                                   <div className="max-h-44 overflow-y-auto">
                                     <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("instrumentType", ""); setInstrumentTypeDropdownOpen(false); }}>— None —</div>
                                     {userInstrumentTypes.map((item) => (
-                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.instrumentType === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.instrumentType === item ? "bg-primary-50 text-primary-700" : "hover:bg-gray-50 text-gray-700"}`}>
                                         <span className="flex-1" onClick={() => { handleTemplateFieldChange("instrumentType", item); setInstrumentTypeDropdownOpen(false); }}>{item}</span>
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteInstrumentType(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
                                       </div>
@@ -2491,11 +2491,11 @@ const Settings = () => {
                                   </div>
                                   <div className="border-t border-gray-100 p-2">
                                     {!showCustomInstrumentTypeInput ? (
-                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomInstrumentTypeInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom type</span></button>
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomInstrumentTypeInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom type</span></button>
                                     ) : (
                                       <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                        <input type="text" value={customInstrumentTypeValue} onChange={(e) => setCustomInstrumentTypeValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomInstrumentType(); if (e.key === "Escape") { setShowCustomInstrumentTypeInput(false); setCustomInstrumentTypeValue(""); } }} placeholder="Type name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
-                                        <button type="button" onClick={handleAddCustomInstrumentType} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <input type="text" value={customInstrumentTypeValue} onChange={(e) => setCustomInstrumentTypeValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomInstrumentType(); if (e.key === "Escape") { setShowCustomInstrumentTypeInput(false); setCustomInstrumentTypeValue(""); } }} placeholder="Type name" className="flex-1 px-2 py-1 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomInstrumentType} className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700">Add</button>
                                         <button type="button" onClick={() => { setShowCustomInstrumentTypeInput(false); setCustomInstrumentTypeValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
                                       </div>
                                     )}
@@ -2516,7 +2516,7 @@ const Settings = () => {
                           </label>
                           <div className="relative">
                             <div
-                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-primary-400"
                               onClick={() => { setTradeTypeDropdownOpen((p) => !p); setInstrumentTypeDropdownOpen(false); setMarketConditionDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); }}
                             >
                               <span className={`flex-1 text-sm ${templateFormData.fields.tradeType ? "text-gray-900" : "text-gray-400"}`}>
@@ -2534,7 +2534,7 @@ const Settings = () => {
                                   <div className="max-h-44 overflow-y-auto">
                                     <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("tradeType", ""); setTradeTypeDropdownOpen(false); }}>— None —</div>
                                     {userTradeTypes.map((item) => (
-                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.tradeType === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.tradeType === item ? "bg-primary-50 text-primary-700" : "hover:bg-gray-50 text-gray-700"}`}>
                                         <span className="flex-1" onClick={() => { handleTemplateFieldChange("tradeType", item); setTradeTypeDropdownOpen(false); }}>{item}</span>
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteTradeType(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
                                       </div>
@@ -2542,11 +2542,11 @@ const Settings = () => {
                                   </div>
                                   <div className="border-t border-gray-100 p-2">
                                     {!showCustomTradeTypeInput ? (
-                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomTradeTypeInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom type</span></button>
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomTradeTypeInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom type</span></button>
                                     ) : (
                                       <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                        <input type="text" value={customTradeTypeValue} onChange={(e) => setCustomTradeTypeValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomTradeType(); if (e.key === "Escape") { setShowCustomTradeTypeInput(false); setCustomTradeTypeValue(""); } }} placeholder="Type name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
-                                        <button type="button" onClick={handleAddCustomTradeType} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <input type="text" value={customTradeTypeValue} onChange={(e) => setCustomTradeTypeValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomTradeType(); if (e.key === "Escape") { setShowCustomTradeTypeInput(false); setCustomTradeTypeValue(""); } }} placeholder="Type name" className="flex-1 px-2 py-1 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomTradeType} className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700">Add</button>
                                         <button type="button" onClick={() => { setShowCustomTradeTypeInput(false); setCustomTradeTypeValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
                                       </div>
                                     )}
@@ -2566,7 +2566,7 @@ const Settings = () => {
                           </label>
                           <div className="relative">
                             <div
-                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-primary-400"
                               onClick={() => {
                                 setStrategyDropdownOpen((p) => !p);
                                 setSetupDropdownOpen(false);
@@ -2621,7 +2621,7 @@ const Settings = () => {
                                         key={strategy}
                                         className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${
                                           templateFormData.fields.strategy === strategy
-                                            ? "bg-blue-50 text-blue-700"
+                                            ? "bg-primary-50 text-primary-700"
                                             : "hover:bg-gray-50 text-gray-700"
                                         }`}
                                       >
@@ -2656,7 +2656,7 @@ const Settings = () => {
                                           e.stopPropagation();
                                           setShowCustomStrategyInput(true);
                                         }}
-                                        className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                                        className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded"
                                       >
                                         <Plus className="w-3.5 h-3.5" />
                                         <span>Add custom strategy</span>
@@ -2678,13 +2678,13 @@ const Settings = () => {
                                             }
                                           }}
                                           placeholder="Strategy name"
-                                          className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          className="flex-1 px-2 py-1 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                                           autoFocus
                                         />
                                         <button
                                           type="button"
                                           onClick={handleAddCustomStrategy}
-                                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                          className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
                                         >
                                           Add
                                         </button>
@@ -2716,7 +2716,7 @@ const Settings = () => {
                           </label>
                           <div className="relative">
                             <div
-                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-primary-400"
                               onClick={() => {
                                 setSetupDropdownOpen((p) => !p);
                                 setStrategyDropdownOpen(false);
@@ -2771,7 +2771,7 @@ const Settings = () => {
                                         key={setup}
                                         className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${
                                           templateFormData.fields.setup === setup
-                                            ? "bg-blue-50 text-blue-700"
+                                            ? "bg-primary-50 text-primary-700"
                                             : "hover:bg-gray-50 text-gray-700"
                                         }`}
                                       >
@@ -2806,7 +2806,7 @@ const Settings = () => {
                                           e.stopPropagation();
                                           setShowCustomSetupInput(true);
                                         }}
-                                        className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                                        className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded"
                                       >
                                         <Plus className="w-3.5 h-3.5" />
                                         <span>Add custom setup</span>
@@ -2828,13 +2828,13 @@ const Settings = () => {
                                             }
                                           }}
                                           placeholder="Setup name"
-                                          className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          className="flex-1 px-2 py-1 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                                           autoFocus
                                         />
                                         <button
                                           type="button"
                                           onClick={handleAddCustomSetup}
-                                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                          className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
                                         >
                                           Add
                                         </button>
@@ -2867,7 +2867,7 @@ const Settings = () => {
                           </label>
                           <div className="relative">
                             <div
-                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-primary-400"
                               onClick={() => { setMarketConditionDropdownOpen((p) => !p); setInstrumentTypeDropdownOpen(false); setTradeTypeDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); }}
                             >
                               <span className={`flex-1 text-sm ${templateFormData.fields.marketCondition ? "text-gray-900" : "text-gray-400"}`}>
@@ -2885,7 +2885,7 @@ const Settings = () => {
                                   <div className="max-h-44 overflow-y-auto">
                                     <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("marketCondition", ""); setMarketConditionDropdownOpen(false); }}>— None —</div>
                                     {userMarketConditions.map((item) => (
-                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.marketCondition === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.marketCondition === item ? "bg-primary-50 text-primary-700" : "hover:bg-gray-50 text-gray-700"}`}>
                                         <span className="flex-1" onClick={() => { handleTemplateFieldChange("marketCondition", item); setMarketConditionDropdownOpen(false); }}>{item}</span>
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteMarketCondition(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
                                       </div>
@@ -2893,11 +2893,11 @@ const Settings = () => {
                                   </div>
                                   <div className="border-t border-gray-100 p-2">
                                     {!showCustomMarketConditionInput ? (
-                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomMarketConditionInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom</span></button>
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomMarketConditionInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom</span></button>
                                     ) : (
                                       <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                        <input type="text" value={customMarketConditionValue} onChange={(e) => setCustomMarketConditionValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomMarketCondition(); if (e.key === "Escape") { setShowCustomMarketConditionInput(false); setCustomMarketConditionValue(""); } }} placeholder="Condition name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
-                                        <button type="button" onClick={handleAddCustomMarketCondition} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <input type="text" value={customMarketConditionValue} onChange={(e) => setCustomMarketConditionValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomMarketCondition(); if (e.key === "Escape") { setShowCustomMarketConditionInput(false); setCustomMarketConditionValue(""); } }} placeholder="Condition name" className="flex-1 px-2 py-1 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomMarketCondition} className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700">Add</button>
                                         <button type="button" onClick={() => { setShowCustomMarketConditionInput(false); setCustomMarketConditionValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
                                       </div>
                                     )}
@@ -2918,7 +2918,7 @@ const Settings = () => {
                           </label>
                           <div className="relative">
                             <div
-                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-primary-400"
                               onClick={() => { setMarketDirectionDropdownOpen((p) => !p); setMarketConditionDropdownOpen(false); setInstrumentTypeDropdownOpen(false); setTradeTypeDropdownOpen(false); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); setRrDropdownOpen(false); }}
                             >
                               <span className={`flex-1 text-sm ${templateFormData.fields.marketDirection ? "text-gray-900" : "text-gray-400"}`}>
@@ -2936,7 +2936,7 @@ const Settings = () => {
                                   <div className="max-h-44 overflow-y-auto">
                                     <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("marketDirection", ""); setMarketDirectionDropdownOpen(false); }}>— None —</div>
                                     {userMarketDirections.map((item) => (
-                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.marketDirection === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.marketDirection === item ? "bg-primary-50 text-primary-700" : "hover:bg-gray-50 text-gray-700"}`}>
                                         <span className="flex-1" onClick={() => { handleTemplateFieldChange("marketDirection", item); setMarketDirectionDropdownOpen(false); }}>{item}</span>
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteMarketDirection(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
                                       </div>
@@ -2944,11 +2944,11 @@ const Settings = () => {
                                   </div>
                                   <div className="border-t border-gray-100 p-2">
                                     {!showCustomMarketDirectionInput ? (
-                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomMarketDirectionInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom direction</span></button>
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomMarketDirectionInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom direction</span></button>
                                     ) : (
                                       <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                        <input type="text" value={customMarketDirectionValue} onChange={(e) => setCustomMarketDirectionValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomMarketDirection(); if (e.key === "Escape") { setShowCustomMarketDirectionInput(false); setCustomMarketDirectionValue(""); } }} placeholder="Direction name" className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
-                                        <button type="button" onClick={handleAddCustomMarketDirection} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <input type="text" value={customMarketDirectionValue} onChange={(e) => setCustomMarketDirectionValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomMarketDirection(); if (e.key === "Escape") { setShowCustomMarketDirectionInput(false); setCustomMarketDirectionValue(""); } }} placeholder="Direction name" className="flex-1 px-2 py-1 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomMarketDirection} className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700">Add</button>
                                         <button type="button" onClick={() => { setShowCustomMarketDirectionInput(false); setCustomMarketDirectionValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
                                       </div>
                                     )}
@@ -2973,8 +2973,8 @@ const Settings = () => {
                                 onClick={() => { setRrMode(key); setRrDropdownOpen(false); setShowCustomRRInput(false); setCustomRRValue(""); }}
                                 className={`px-2.5 py-1 text-xs rounded-full border font-medium transition-colors ${
                                   rrMode === key
-                                    ? "bg-blue-600 text-white border-blue-600"
-                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                                    ? "bg-primary-600 text-white border-primary-600"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600"
                                 }`}
                               >{mode.label}</button>
                             ))}
@@ -2983,7 +2983,7 @@ const Settings = () => {
                           {/* Value dropdown */}
                           <div className="relative">
                             <div
-                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-blue-400"
+                              className="flex items-center w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-primary-400"
                               onClick={() => { setRrDropdownOpen((p) => !p); setStrategyDropdownOpen(false); setSetupDropdownOpen(false); setInstrumentTypeDropdownOpen(false); setTradeTypeDropdownOpen(false); setMarketConditionDropdownOpen(false); setMarketDirectionDropdownOpen(false); }}
                             >
                               <span className={`flex-1 text-sm ${templateFormData.fields.riskRewardRatio ? "text-gray-900" : "text-gray-400"}`}>
@@ -3001,7 +3001,7 @@ const Settings = () => {
                                   <div className="max-h-44 overflow-y-auto">
                                     <div className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer" onClick={() => { handleTemplateFieldChange("riskRewardRatio", ""); setRrDropdownOpen(false); }}>— None —</div>
                                     {(rrListsByMode[rrMode] || []).map((item) => (
-                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.riskRewardRatio === item ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`}>
+                                      <div key={item} className={`flex items-center group px-3 py-2 cursor-pointer text-sm ${templateFormData.fields.riskRewardRatio === item ? "bg-primary-50 text-primary-700" : "hover:bg-gray-50 text-gray-700"}`}>
                                         <span className="flex-1" onClick={() => { handleTemplateFieldChange("riskRewardRatio", item); setRrDropdownOpen(false); }}>{item}</span>
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteRRRatio(item); }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded" title="Delete"><Trash2 className="w-3 h-3" /></button>
                                       </div>
@@ -3009,11 +3009,11 @@ const Settings = () => {
                                   </div>
                                   <div className="border-t border-gray-100 p-2">
                                     {!showCustomRRInput ? (
-                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomRRInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom</span></button>
+                                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowCustomRRInput(true); }} className="w-full flex items-center space-x-2 px-2 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded"><Plus className="w-3.5 h-3.5" /><span>Add custom</span></button>
                                     ) : (
                                       <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                        <input type="text" value={customRRValue} onChange={(e) => setCustomRRValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomRR(); if (e.key === "Escape") { setShowCustomRRInput(false); setCustomRRValue(""); } }} placeholder={RR_MODES[rrMode].placeholder} className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
-                                        <button type="button" onClick={handleAddCustomRR} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                                        <input type="text" value={customRRValue} onChange={(e) => setCustomRRValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomRR(); if (e.key === "Escape") { setShowCustomRRInput(false); setCustomRRValue(""); } }} placeholder={RR_MODES[rrMode].placeholder} className="flex-1 px-2 py-1 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500" autoFocus />
+                                        <button type="button" onClick={handleAddCustomRR} className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700">Add</button>
                                         <button type="button" onClick={() => { setShowCustomRRInput(false); setCustomRRValue(""); }} className="px-2 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50">×</button>
                                       </div>
                                     )}
@@ -3041,7 +3041,7 @@ const Settings = () => {
                         }))
                       }
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       placeholder="Describe when to use this template"
                     />
                   </div>
@@ -3055,7 +3055,7 @@ const Settings = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900">Field Configuration</h4>
-                      <p className="text-xs text-blue-600 mt-0.5">
+                      <p className="text-xs text-primary-600 mt-0.5">
                         {getVisibleFieldsCount()} of {Object.keys(availableFields).length} fields enabled for trade entry
                       </p>
                     </div>
@@ -3067,7 +3067,7 @@ const Settings = () => {
                           value={fieldSearchQuery}
                           onChange={(e) => setFieldSearchQuery(e.target.value)}
                           placeholder="Search fields..."
-                          className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-40"
+                          className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 w-40"
                         />
                       </div>
                       <button
@@ -3079,7 +3079,7 @@ const Settings = () => {
                             visibleFields: allFields.reduce((acc, f) => ({ ...acc, [f]: true }), {}),
                           }));
                         }}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
+                        className="text-xs text-primary-600 hover:text-primary-800 font-medium whitespace-nowrap"
                       >
                         Select all
                       </button>
@@ -3116,7 +3116,7 @@ const Settings = () => {
                         {/* Category header */}
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-2">
-                            <Icon className="w-4 h-4 text-blue-600" />
+                            <Icon className="w-4 h-4 text-primary-600" />
                             <span className="text-sm font-semibold text-gray-800">{category.label}</span>
                           </div>
                           <span className="text-xs text-gray-400 font-medium">{enabledCount}/{filtered.length} on</span>
@@ -3132,7 +3132,7 @@ const Settings = () => {
                                 key={fieldKey}
                                 className={`rounded-xl border p-4 transition-all duration-200 ${
                                   isEnabled
-                                    ? "border-blue-200 bg-blue-50"
+                                    ? "border-primary-200 bg-primary-50"
                                     : "border-gray-200 bg-white"
                                 }`}
                               >
@@ -3151,7 +3151,7 @@ const Settings = () => {
                                     type="button"
                                     onClick={() => toggleFieldVisibility(fieldKey)}
                                     className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
-                                      isEnabled ? "bg-blue-600" : "bg-gray-300"
+                                      isEnabled ? "bg-primary-600" : "bg-gray-300"
                                     }`}
                                     aria-pressed={isEnabled}
                                     data-testid={`template-field-toggle-${fieldKey}`}
@@ -3167,7 +3167,7 @@ const Settings = () => {
 
                                 {/* Default value row */}
                                 <div className="flex items-center gap-2 mt-auto">
-                                  <span className="text-xs font-medium text-blue-600 shrink-0">Default</span>
+                                  <span className="text-xs font-medium text-primary-600 shrink-0">Default</span>
                                   <input
                                     type="text"
                                     value={prefilledValue}
@@ -3178,7 +3178,7 @@ const Settings = () => {
                                       }))
                                     }
                                     placeholder="—"
-                                    className="flex-1 min-w-0 px-2 py-1 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-300"
+                                    className="flex-1 min-w-0 px-2 py-1 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-primary-400 focus:border-primary-400 placeholder-gray-300"
                                   />
                                 </div>
                               </div>
@@ -3250,7 +3250,7 @@ const Settings = () => {
                   value={newStrategyName}
                   onChange={(e) => setNewStrategyName(e.target.value)}
                   onKeyDown={handleStrategyModalKeyDown}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="e.g., Momentum Breakout"
                   autoFocus
                 />
@@ -3264,7 +3264,7 @@ const Settings = () => {
                   value={newStrategyDescription}
                   onChange={(e) => setNewStrategyDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Describe your strategy..."
                 />
               </div>
@@ -3282,7 +3282,7 @@ const Settings = () => {
                 disabled={!newStrategyName.trim()}
                 className={`px-6 py-2 rounded-md transition-colors flex items-center space-x-2 ${
                   newStrategyName.trim()
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    ? "bg-primary-600 text-white hover:bg-primary-700"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
@@ -3324,7 +3324,7 @@ const Settings = () => {
                   value={newSetupName}
                   onChange={(e) => setNewSetupName(e.target.value)}
                   onKeyDown={handleSetupModalKeyDown}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="e.g., Bull Flag"
                   autoFocus
                 />
@@ -3338,7 +3338,7 @@ const Settings = () => {
                   value={newSetupDescription}
                   onChange={(e) => setNewSetupDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Describe your setup..."
                 />
               </div>
@@ -3356,7 +3356,7 @@ const Settings = () => {
                 disabled={!newSetupName.trim()}
                 className={`px-6 py-2 rounded-md transition-colors flex items-center space-x-2 ${
                   newSetupName.trim()
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    ? "bg-primary-600 text-white hover:bg-primary-700"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
@@ -3398,7 +3398,7 @@ const Settings = () => {
                   value={newRiskParamName}
                   onChange={(e) => setNewRiskParamName(e.target.value)}
                   onKeyDown={handleRiskParamModalKeyDown}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="e.g., Risk per Trade"
                   autoFocus
                 />
@@ -3414,7 +3414,7 @@ const Settings = () => {
                     value={newRiskParamValue}
                     onChange={(e) => setNewRiskParamValue(e.target.value)}
                     onKeyDown={handleRiskParamModalKeyDown}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     placeholder="2.0"
                     step="0.1"
                   />
@@ -3427,7 +3427,7 @@ const Settings = () => {
                   <select
                     value={newRiskParamUnit}
                     onChange={(e) => setNewRiskParamUnit(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="%">% (Percentage)</option>
                     <option value="$">$ (Dollar)</option>
@@ -3446,7 +3446,7 @@ const Settings = () => {
                   value={newRiskParamDescription}
                   onChange={(e) => setNewRiskParamDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Describe this risk parameter..."
                 />
               </div>
@@ -3464,7 +3464,7 @@ const Settings = () => {
                 disabled={!newRiskParamName.trim() || !newRiskParamValue.trim()}
                 className={`px-6 py-2 rounded-md transition-colors flex items-center space-x-2 ${
                   newRiskParamName.trim() && newRiskParamValue.trim()
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    ? "bg-primary-600 text-white hover:bg-primary-700"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >

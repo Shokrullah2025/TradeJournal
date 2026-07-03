@@ -18,12 +18,9 @@ import {
   Label,
 } from "recharts";
 import { Target, TrendingDown, Activity, Info } from "lucide-react";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
-const POS = "#22c55e";
-const NEG = "#ef4444";
-const NEUTRAL = "#2a9d8f";
-// Subtle, light grid so rows are barely there but axis numbers stay readable.
-const GRID = "#eef1f6";
 const AXIS_LABEL_STYLE = {
   fill: "#9ca3af",
   fontSize: 10,
@@ -112,6 +109,10 @@ const ChartTooltipOverlay = ({ hovered }) => (
 );
 
 const DistributionAnalysis = ({ trades = [] }) => {
+  const { isDark } = useTheme();
+  // Subtle grid so rows are barely there but axis numbers stay readable;
+  // pos/neg/primary mirror the Overview's visual language.
+  const c = getChartColors(isDark);
   // Hovered bar, captured from the Bar's own mouse events (fire only over the
   // rectangle) so the banner never shows over empty parts of a column.
   const [hovered, setHovered] = useState(null);
@@ -345,24 +346,24 @@ const DistributionAnalysis = ({ trades = [] }) => {
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke={GRID}
+                    stroke={c.grid}
                     vertical={false}
                   />
                   <XAxis
                     dataKey="label"
-                    stroke="#9ca3af"
+                    stroke={c.axis}
                     fontSize={11}
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                    tick={{ fill: c.tick, fontFamily: "monospace" }}
                   />
                   <YAxis
                     allowDecimals={false}
-                    stroke="#9ca3af"
+                    stroke={c.axis}
                     fontSize={11}
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#6b7280" }}
+                    tick={{ fill: c.tick }}
                     width={40}
                   >
                     <Label
@@ -383,7 +384,7 @@ const DistributionAnalysis = ({ trades = [] }) => {
                       dataKey="count"
                       position="top"
                       style={{
-                        fill: "#6b7280",
+                        fill: c.tick,
                         fontSize: 11,
                         fontFamily: "monospace",
                         fontWeight: 600,
@@ -394,10 +395,10 @@ const DistributionAnalysis = ({ trades = [] }) => {
                         key={`r-cell-${index}`}
                         fill={
                           bin.tone === "pos"
-                            ? POS
+                            ? c.pos
                             : bin.tone === "neg"
-                            ? NEG
-                            : NEUTRAL
+                            ? c.neg
+                            : c.primary
                         }
                         fillOpacity={0.85}
                       />
@@ -437,31 +438,31 @@ const DistributionAnalysis = ({ trades = [] }) => {
               >
                 <defs>
                   <linearGradient id="uwGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={NEG} stopOpacity={0.32} />
-                    <stop offset="100%" stopColor={NEG} stopOpacity={0.04} />
+                    <stop offset="0%" stopColor={c.neg} stopOpacity={0.32} />
+                    <stop offset="100%" stopColor={c.neg} stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke={GRID}
+                  stroke={c.grid}
                   vertical={false}
                 />
                 <XAxis
                   dataKey="index"
-                  stroke="#9ca3af"
+                  stroke={c.axis}
                   fontSize={10}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#9ca3af", fontFamily: "monospace" }}
+                  tick={{ fill: c.tick, fontFamily: "monospace" }}
                   tickFormatter={(v) => `#${v}`}
                   minTickGap={40}
                 />
                 <YAxis
-                  stroke="#9ca3af"
+                  stroke={c.axis}
                   fontSize={10}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#9ca3af" }}
+                  tick={{ fill: c.tick }}
                   tickFormatter={(v) => formatK(v)}
                   width={52}
                 >
@@ -473,11 +474,11 @@ const DistributionAnalysis = ({ trades = [] }) => {
                   />
                 </YAxis>
                 <Tooltip content={<UnderwaterTooltip />} />
-                <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1} />
+                <ReferenceLine y={0} stroke={c.zeroLine} strokeWidth={1} />
                 <Area
                   type="monotone"
                   dataKey="drawdown"
-                  stroke={NEG}
+                  stroke={c.neg}
                   strokeWidth={2}
                   fill="url(#uwGradient)"
                   dot={false}
@@ -517,16 +518,16 @@ const DistributionAnalysis = ({ trades = [] }) => {
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 8, right: 16, left: 8, bottom: 18 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
                 <XAxis
                   type="number"
                   dataKey="hold"
                   name="Hold time"
-                  stroke="#9ca3af"
+                  stroke={c.axis}
                   fontSize={11}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                  tick={{ fill: c.tick, fontFamily: "monospace" }}
                   tickFormatter={formatHold}
                   height={36}
                 >
@@ -541,11 +542,11 @@ const DistributionAnalysis = ({ trades = [] }) => {
                   type="number"
                   dataKey="pnl"
                   name="P&L"
-                  stroke="#9ca3af"
+                  stroke={c.axis}
                   fontSize={11}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#6b7280" }}
+                  tick={{ fill: c.tick }}
                   tickFormatter={(v) => formatK(v)}
                   width={56}
                 >
@@ -557,13 +558,13 @@ const DistributionAnalysis = ({ trades = [] }) => {
                   />
                 </YAxis>
                 <ZAxis type="number" dataKey="size" range={[40, 360]} />
-                <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1} strokeDasharray="4 4" />
+                <ReferenceLine y={0} stroke={c.zeroLine} strokeWidth={1} strokeDasharray="4 4" />
                 <Tooltip
                   content={<ScatterTooltip />}
                   cursor={{ strokeDasharray: "3 3" }}
                 />
-                <Scatter data={winScatter} fill={POS} fillOpacity={0.5} stroke={POS} />
-                <Scatter data={lossScatter} fill={NEG} fillOpacity={0.5} stroke={NEG} />
+                <Scatter data={winScatter} fill={c.pos} fillOpacity={0.5} stroke={c.pos} />
+                <Scatter data={lossScatter} fill={c.neg} fillOpacity={0.5} stroke={c.neg} />
               </ScatterChart>
             </ResponsiveContainer>
           </div>

@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
+import { ThemeProvider } from "../../contexts/ThemeContext";
 import CumulativePnLChart from "./CumulativePnLChart";
+
+// The chart reads its colors from ThemeContext (light/dark), so tests render
+// inside the real provider (matchMedia is mocked in tests/setup.js).
+const render = (ui) => rtlRender(<ThemeProvider>{ui}</ThemeProvider>);
 
 // CumulativePnLChart is a controlled chart: it receives pre-aggregated
 // `data` (running totals) and matching `dates`. Tests cover the <2-point

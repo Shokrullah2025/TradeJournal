@@ -517,13 +517,13 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                 }}
                 maxLength={30}
                 placeholder={tags.length === 0 ? "Add a tag…" : "Add another…"}
-                className="text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:border-blue-400 w-28"
+                className="text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:border-primary-400 w-28"
               />
               {tagInput.trim() && (
                 <button
                   data-testid="history-modal-add-tag-btn"
                   onClick={() => addTag(tagInput)}
-                  className="text-xs px-2 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 font-medium"
+                  className="text-xs px-2 py-1 rounded-full bg-primary-600 text-white hover:bg-primary-700 font-medium"
                 >
                   Add
                 </button>
@@ -537,7 +537,7 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
                     key={s}
                     data-testid={`history-modal-suggested-tag-${s}`}
                     onClick={() => addTag(s)}
-                    className="text-xs px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+                    className="text-xs px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
                   >
                     + {s}
                   </button>
@@ -3160,7 +3160,7 @@ const Backtest = () => {
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#1E53E5" }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-primary-500 to-primary-700 shadow-md shadow-primary-600/30">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -3194,13 +3194,13 @@ const Backtest = () => {
           {isLoadingSessions ? (
             /* ── Loading — prevent flash of empty state while DB query is in-flight ── */
             <div className="flex items-center justify-center py-32">
-              <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#1E53E5" }} />
+              <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400" />
             </div>
           ) : sessionHistory.length === 0 ? (
             /* ── Empty state for first-time users ── */
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-20 h-20 rounded-2xl mb-6 flex items-center justify-center" style={{ background: "#e8f0fe" }}>
-                <TrendingUp className="w-10 h-10" style={{ color: "#1E53E5" }} />
+              <div className="w-20 h-20 rounded-2xl mb-6 flex items-center justify-center bg-primary-100 dark:bg-primary-900/20">
+                <TrendingUp className="w-10 h-10 text-primary-600 dark:text-primary-400" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                 Start your first backtest
@@ -3239,13 +3239,13 @@ const Backtest = () => {
                         onChange={(e) => setBalanceInput(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") confirmBalanceChange(); if (e.key === "Escape") setIsEditingBalance(false); }}
                         autoFocus
-                        className="w-24 px-2 py-0.5 rounded border border-blue-500 outline-none text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-24 px-2 py-0.5 rounded border border-primary-500 outline-none text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                       <button onClick={confirmBalanceChange} className="px-1.5 py-0.5 rounded text-xs text-white" style={{ background: "#089981" }}>✓</button>
                       <button onClick={() => setIsEditingBalance(false)} className="px-1.5 py-0.5 rounded text-xs text-gray-500 bg-gray-100 dark:bg-gray-700">✕</button>
                     </div>
                   ) : (
-                    <button onClick={() => { setBalanceInput(balance.toFixed(2)); setIsEditingBalance(true); }} className="flex items-center gap-1 group font-mono font-semibold text-gray-900 dark:text-white hover:text-blue-600 transition-colors">
+                    <button onClick={() => { setBalanceInput(balance.toFixed(2)); setIsEditingBalance(true); }} className="flex items-center gap-1 group font-mono font-semibold text-gray-900 dark:text-white hover:text-primary-600 transition-colors">
                       ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
                     </button>
@@ -3261,8 +3261,8 @@ const Backtest = () => {
                   { icon: ArrowUpDown, title: "Multi-chart analysis", desc: "Compare up to 3 instruments side-by-side with synced cursor." },
                 ].map(({ icon: Icon, title, desc }) => (
                   <div key={title} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 text-left">
-                    <div className="w-8 h-8 rounded-lg mb-3 flex items-center justify-center" style={{ background: "#e8f0fe" }}>
-                      <Icon className="w-4 h-4" style={{ color: "#1E53E5" }} />
+                    <div className="w-8 h-8 rounded-lg mb-3 flex items-center justify-center bg-primary-100 dark:bg-primary-900/20">
+                      <Icon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                     </div>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
@@ -3311,7 +3311,7 @@ const Backtest = () => {
                           onChange={(e) => setBalanceInput(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") confirmBalanceChange(); if (e.key === "Escape") setIsEditingBalance(false); }}
                           autoFocus
-                          className="w-full px-2 py-1 rounded border border-blue-500 outline-none text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          className="w-full px-2 py-1 rounded border border-primary-500 outline-none text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
                         <button onClick={confirmBalanceChange} className="px-1.5 py-1 rounded text-xs text-white flex-shrink-0" style={{ background: "#089981" }}>✓</button>
                         <button onClick={() => setIsEditingBalance(false)} className="px-1.5 py-1 rounded text-xs flex-shrink-0 text-gray-500 bg-gray-100 dark:bg-gray-700">✕</button>
@@ -3324,7 +3324,7 @@ const Backtest = () => {
                         {editable ? (
                           <button
                             onClick={() => { setBalanceInput(balance.toFixed(2)); setIsEditingBalance(true); }}
-                            className="flex items-center gap-1 group hover:text-blue-600 transition-colors"
+                            className="flex items-center gap-1 group hover:text-primary-600 transition-colors"
                           >
                             {value}
                             <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
@@ -3345,7 +3345,7 @@ const Backtest = () => {
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <BarChart2 className="w-4 h-4" style={{ color: "#1E53E5" }} />
+                      <BarChart2 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                       <h2 className="text-base font-semibold text-gray-900 dark:text-white">Edge Analytics</h2>
                     </div>
                     <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -3457,7 +3457,7 @@ const Backtest = () => {
                     <div
                       key={s.id}
                       onClick={() => setHistoryModal({ ...s, trades: s.trades || [] })}
-                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 group"
+                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600 group"
                     >
                       {/* Left accent bar */}
                       <div
@@ -3467,8 +3467,7 @@ const Backtest = () => {
 
                       {/* Symbol chip */}
                       <div
-                        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                        style={{ background: "#e8f0fe", color: "#1E53E5" }}
+                        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
                       >
                         {s.symbol ?? "—"}
                       </div>
@@ -3543,7 +3542,7 @@ const Backtest = () => {
                             e.stopPropagation();
                             setChartModalSession(s);
                           }}
-                          className="flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60 transition-colors"
+                          className="flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/40 dark:text-primary-300 dark:hover:bg-primary-900/60 transition-colors"
                           aria-label="Play session chart"
                           title="Replay session"
                         >
@@ -3551,7 +3550,7 @@ const Backtest = () => {
                         </button>
                       )}
 
-                      <ChevronRight className="hidden sm:block w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 flex-shrink-0 transition-colors" />
+                      <ChevronRight className="hidden sm:block w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-primary-400 flex-shrink-0 transition-colors" />
                     </div>
                   );
                 })}
@@ -3586,7 +3585,7 @@ const Backtest = () => {
                           onClick={() => setSessionsPage(i)}
                           className={`min-w-[2.25rem] h-9 px-2 rounded-lg text-sm font-medium transition-colors ${
                             i === sessionsPage
-                              ? "bg-blue-600 text-white"
+                              ? "bg-primary-600 text-white"
                               : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                           }`}
                         >
@@ -3675,7 +3674,7 @@ const Backtest = () => {
           <div className="mb-8">
             <button
               onClick={() => setCurrentView("sessions")}
-              className="flex items-center text-blue-600 hover:text-blue-700 mb-4"
+              className="flex items-center text-primary-600 hover:text-primary-700 mb-4"
             >
               <ChevronRight className="w-4 h-4 rotate-180 mr-1" />
               Back to Sessions
@@ -3685,7 +3684,7 @@ const Backtest = () => {
                 Create Backtest Session
               </h1>
               <div className="group relative">
-                <Info className="w-5 h-5 text-gray-400 hover:text-blue-500 cursor-help" />
+                <Info className="w-5 h-5 text-gray-400 hover:text-primary-500 cursor-help" />
                 <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                   Configure your backtesting environment and strategy.
                 </div>
@@ -3695,7 +3694,7 @@ const Backtest = () => {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
             {/* Header Section */}
-            <div className="bg-blue-600 dark:bg-blue-700 px-8 py-6 text-white">
+            <div className="bg-primary-600 dark:bg-primary-700 px-8 py-6 text-white">
               <h2 className="text-2xl font-bold">Session Configuration</h2>
             </div>
 
@@ -3705,7 +3704,7 @@ const Backtest = () => {
                 {/* Session Name */}
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Settings className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                       Session Details
                     </h3>
@@ -3719,7 +3718,7 @@ const Backtest = () => {
                       value={sessionName}
                       onChange={(e) => setSessionName(e.target.value)}
                       placeholder="e.g., ES Scalping Test, AAPL Swing Analysis"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
                     />
                   </div>
                 </div>
@@ -3727,7 +3726,7 @@ const Backtest = () => {
                 {/* Template Quick Setup */}
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Layers className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                       Quick Setup
                     </h3>
@@ -3741,7 +3740,7 @@ const Backtest = () => {
                         Use Template
                       </label>
                       <div className="group relative">
-                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
+                        <Info className="w-4 h-4 text-gray-400 hover:text-primary-500 cursor-help" />
                         <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                           Auto-fill this form from a saved template. Templates are stored on your account and available across all devices — create or edit them in Settings.
                         </div>
@@ -3756,7 +3755,7 @@ const Backtest = () => {
                           applyTemplate(e.target.value);
                         }
                       }}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors disabled:opacity-60"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white transition-colors disabled:opacity-60"
                     >
                       <option value="">
                         {templatesLoading
@@ -3778,7 +3777,7 @@ const Backtest = () => {
               {/* Market & Instrument Selection */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-8">
                 <div className="flex items-center space-x-2 mb-6">
-                  <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <Globe className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Market & Instrument
                   </h3>
@@ -3794,7 +3793,7 @@ const Backtest = () => {
                         setSelectedMarket(e.target.value);
                         setSelectedInstruments([]);
                       }}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white transition-colors"
                     >
                       <option value="">Select Market Type</option>
                       {Object.entries(MARKET_CONFIG).map(([key, market]) => (
@@ -3812,7 +3811,7 @@ const Backtest = () => {
                           Instruments *
                         </label>
                         <div className="group relative">
-                          <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
+                          <Info className="w-4 h-4 text-gray-400 hover:text-primary-500 cursor-help" />
                           <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                             Select up to 3 assets at a time — each opens in its own chart window.
                           </div>
@@ -3849,8 +3848,8 @@ const Backtest = () => {
                               }
                               className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                                 isSelected
-                                  ? "bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500"
-                                  : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:border-blue-400"
+                                  ? "bg-primary-600 text-white border-primary-600 dark:bg-primary-500 dark:border-primary-500"
+                                  : "bg-white text-gray-700 border-gray-300 hover:border-primary-400 hover:text-primary-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:border-primary-400"
                               }`}
                             >
                               {instrument.symbol}
@@ -3871,7 +3870,7 @@ const Backtest = () => {
               {/* Trading Strategy & Setup */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-8">
                 <div className="flex items-center space-x-2 mb-6">
-                  <Strategy className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <Strategy className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Trading Strategy
                   </h3>
@@ -3883,7 +3882,7 @@ const Backtest = () => {
                         Strategy *
                       </label>
                       <div className="group relative">
-                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-500 cursor-help" />
+                        <Info className="w-4 h-4 text-gray-400 hover:text-primary-500 cursor-help" />
                         <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                           Select your trading strategy. This helps categorize
                           and analyze your backtest results based on the trading
@@ -3928,7 +3927,7 @@ const Backtest = () => {
               {/* Additional Settings */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-8">
                 <div className="flex items-center space-x-2 mb-6">
-                  <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Date Range
                   </h3>
@@ -3948,8 +3947,8 @@ const Backtest = () => {
                           onClick={() => applyDateRangePreset(key)}
                           className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
                             isActive
-                              ? "bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500"
-                              : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:border-blue-400"
+                              ? "bg-primary-600 text-white border-primary-600 dark:bg-primary-500 dark:border-primary-500"
+                              : "bg-white text-gray-700 border-gray-300 hover:border-primary-400 hover:text-primary-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:border-primary-400"
                           }`}
                         >
                           {label}
@@ -4042,9 +4041,16 @@ const Backtest = () => {
 
     return (
       <>
+      {/* Fills the viewport below the 64px app header at any resolution
+          (HD, 4K, ...). The shell wraps pages in a plain block div, so
+          `flex-1` has no flex parent here and never stretched — an explicit
+          viewport height is what makes the inner flex chain (and the
+          autoSize'd chart) actually fill the screen. Negative margins cancel
+          the shell's p-6 padding; in fullscreen mode the browser's
+          `:fullscreen` min-height:100% takes over. */}
       <div
         ref={chartContainerRef}
-        className="-mx-6 -my-6 flex-1 flex flex-col overflow-hidden"
+        className="-m-4 sm:-m-6 h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
         style={{ background: theme.bg, color: theme.text }}
       >
         {/* ── Top bar — TradingView light toolbar style ── */}
@@ -4074,9 +4080,12 @@ const Backtest = () => {
                 setCurrentView("sessions");
               }}
               className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded transition-colors flex-shrink-0"
-              style={{ color: "#1E53E5", background: "#e8f0fe" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#dce6fd")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8f0fe")}
+              style={{
+                color: isDark ? "#7fd1c2" : "#147065",
+                background: isDark ? "rgba(42,157,143,0.15)" : "#dcefeb",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(42,157,143,0.25)" : "#b9e6db")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? "rgba(42,157,143,0.15)" : "#dcefeb")}
             >
               ← Sessions
             </button>
@@ -5053,7 +5062,7 @@ const Backtest = () => {
                 >
                   <Loader2
                     className="w-8 h-8 animate-spin mb-3"
-                    style={{ color: "#1E53E5" }}
+                    style={{ color: "#2a9d8f" }}
                   />
                   <p className="text-sm" style={{ color: theme.textMuted }}>
                     Loading real market data…
@@ -5575,7 +5584,7 @@ const Backtest = () => {
 
                   {isLoadingData2 ? (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: theme.bg }}>
-                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#1E53E5" }} />
+                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#2a9d8f" }} />
                     </div>
                   ) : chartData2.length === 0 ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ background: theme.bg }}>
@@ -5711,7 +5720,7 @@ const Backtest = () => {
 
                   {isLoadingData3 ? (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: theme.bg }}>
-                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#1E53E5" }} />
+                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#2a9d8f" }} />
                     </div>
                   ) : chartData3.length === 0 ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ background: theme.bg }}>

@@ -46,7 +46,7 @@ const SetupForm = ({ onPaymentMethodAdded }) => {
       <button
         type="submit"
         disabled={!stripe || isLoading}
-        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
         data-testid="payment-method-submit-btn"
       >
         {isLoading ? (
@@ -93,7 +93,7 @@ const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mx-auto">
+          <div className="flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mx-auto">
             <CreditCard className="w-8 h-8 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
@@ -104,14 +104,14 @@ const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
           </p>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
           <div className="flex items-center">
-            <Shield className="w-5 h-5 text-blue-600 mr-2" />
-            <span className="text-sm font-medium text-blue-800">
+            <Shield className="w-5 h-5 text-primary-600 mr-2" />
+            <span className="text-sm font-medium text-primary-800">
               Secured by Stripe
             </span>
           </div>
-          <p className="mt-1 text-sm text-blue-700">
+          <p className="mt-1 text-sm text-primary-700">
             Card details go directly to Stripe's servers via an encrypted iframe — they never touch our servers.
           </p>
         </div>
@@ -125,7 +125,7 @@ const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
           </div>
         ) : isInitializing ? (
           <div className="flex justify-center py-8" data-testid="payment-method-loading">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
           </div>
         ) : initError ? (
           <div
@@ -148,9 +148,9 @@ const PaymentMethodForm = ({ onPaymentMethodAdded }) => {
 
         <p className="text-center text-xs text-gray-500">
           By adding your payment method, you agree to our{" "}
-          <a href="#" className="text-blue-600 hover:text-blue-500">Terms of Service</a>
+          <a href="#" className="text-primary-600 hover:text-primary-500">Terms of Service</a>
           {" "}and{" "}
-          <a href="#" className="text-blue-600 hover:text-blue-500">Privacy Policy</a>
+          <a href="#" className="text-primary-600 hover:text-primary-500">Privacy Policy</a>
         </p>
       </div>
     </div>

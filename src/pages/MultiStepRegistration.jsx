@@ -72,7 +72,7 @@ const MultiStepRegistration = () => {
     if (password.match(/[^a-zA-Z0-9]/)) score++;
 
     const labels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
-    const colors = ["red", "orange", "yellow", "blue", "green"];
+    const colors = ["red", "orange", "yellow", "primary", "green"];
 
     return {
       score,
@@ -110,12 +110,12 @@ const MultiStepRegistration = () => {
     setRegistrationData((prev) => ({ ...prev, emailVerified: true, userId }));
 
     // Supabase Auth manages the session automatically — no token storage needed.
-    // Send the user to the dashboard. They have no subscription yet, so
-    // RequireSubscription renders it behind the TrialGate overlay where they
-    // start their 7-day free trial (card up front). A full reload ensures the
+    // Offer the 2FA setup wizard first (it has "Skip for now"); from there the
+    // user continues to the dashboard, where RequireSubscription shows the
+    // TrialGate overlay until they add a card. A full reload ensures the
     // FeatureFlag audience re-resolves to "free" so the gate appears.
-    toast.success("Email verified! Add a card to start your free trial.");
-    window.location.assign("/dashboard");
+    toast.success("Email verified! Let's secure your account.");
+    window.location.assign("/security/2fa?onboarding=1");
   };
 
   const handleResendEmail = () => {
@@ -139,7 +139,7 @@ const MultiStepRegistration = () => {
           >
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-2xl">
               <div
-                className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
+                className="h-10 w-10 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"
                 data-testid="register-loading-spinner"
               />
               <p className="text-sm font-medium text-gray-700">
@@ -151,13 +151,18 @@ const MultiStepRegistration = () => {
       <div className="min-h-screen flex">
         {/* Left side - Feature Highlight */}
         <div className="hidden lg:block relative w-0 flex-1">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-800 flex items-center justify-center">
-            <div className="text-center text-white px-8">
-              <div className="text-6xl mb-6">�</div>
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-400 via-primary-600 to-primary-900 flex items-center justify-center overflow-hidden">
+            {/* Soft glows so the panel reads as a rich gradient, not a flat fill. */}
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+              <div className="absolute -top-24 -left-20 h-96 w-96 rounded-full bg-primary-200/25 blur-3xl" />
+              <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-primary-900/40 blur-3xl" />
+            </div>
+            <div className="relative text-center text-white px-8">
+              <div className="text-6xl mb-6">📈</div>
               <h2 className="text-3xl font-bold mb-4">
                 Professional Trading Journal
               </h2>
-              <p className="text-xl text-blue-100 mb-8">
+              <p className="text-xl text-primary-100 mb-8">
                 Join thousands of traders who trust our platform to track and
                 improve their trading performance.
               </p>
@@ -199,7 +204,7 @@ const MultiStepRegistration = () => {
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center ${
                           isActive
-                            ? "bg-blue-600 text-white"
+                            ? "bg-primary-600 text-white"
                             : isCompleted
                             ? "bg-green-600 text-white"
                             : "bg-gray-300 text-gray-500"
@@ -213,7 +218,7 @@ const MultiStepRegistration = () => {
                       </div>
                       <span
                         className={`text-xs mt-1 ${
-                          isActive ? "text-blue-600" : "text-gray-500"
+                          isActive ? "text-primary-600" : "text-gray-500"
                         }`}
                       >
                         {step.title}
@@ -224,7 +229,7 @@ const MultiStepRegistration = () => {
               </div>
               <div className="mt-2 bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                   style={{
                     width: `${(currentStepIndex / (steps.length - 1)) * 100}%`,
                   }}
@@ -234,7 +239,7 @@ const MultiStepRegistration = () => {
 
             <div>
               <div className="flex items-center">
-                <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg">
+                <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
                   <TrendingUp className="w-8 h-8 text-white" />
                 </div>
                 <h1 className="ml-3 text-2xl font-bold text-gray-900">
@@ -248,7 +253,7 @@ const MultiStepRegistration = () => {
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="font-medium text-primary-600 hover:text-primary-500"
                 >
                   Sign in here
                 </Link>
@@ -273,7 +278,7 @@ const MultiStepRegistration = () => {
                         {...register("firstName")}
                         type="text"
                         autoComplete="given-name"
-                        className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         placeholder="John"
                       />
                       {errors.firstName && (
@@ -296,7 +301,7 @@ const MultiStepRegistration = () => {
                         {...register("lastName")}
                         type="text"
                         autoComplete="family-name"
-                        className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         placeholder="Doe"
                       />
                       {errors.lastName && (
@@ -320,7 +325,7 @@ const MultiStepRegistration = () => {
                       {...register("email")}
                       type="email"
                       autoComplete="email"
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="john@example.com"
                     />
                     {errors.email && (
@@ -343,7 +348,7 @@ const MultiStepRegistration = () => {
                       {...register("password")}
                       type={showPassword ? "text" : "password"}
                       autoComplete="new-password"
-                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="Create a password"
                     />
                     <button
@@ -399,7 +404,7 @@ const MultiStepRegistration = () => {
                       {...register("confirmPassword")}
                       type={showConfirmPassword ? "text" : "password"}
                       autoComplete="new-password"
-                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="Confirm your password"
                     />
                     <button
@@ -428,7 +433,7 @@ const MultiStepRegistration = () => {
                     {...register("agreeToTerms")}
                     id="agreeToTerms"
                     type="checkbox"
-                    className="h-4 w-4 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 mt-0.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     data-testid="register-form-terms-checkbox"
                   />
                   <label
@@ -440,7 +445,7 @@ const MultiStepRegistration = () => {
                       to="/terms"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-500 underline"
+                      className="text-primary-600 hover:text-primary-500 underline"
                     >
                       Terms of Service
                     </Link>{" "}
@@ -449,7 +454,7 @@ const MultiStepRegistration = () => {
                       to="/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-500 underline"
+                      className="text-primary-600 hover:text-primary-500 underline"
                     >
                       Privacy Policy
                     </Link>
@@ -466,7 +471,7 @@ const MultiStepRegistration = () => {
                     {...register("agreeToRefundPolicy")}
                     id="agreeToRefundPolicy"
                     type="checkbox"
-                    className="h-4 w-4 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 mt-0.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     data-testid="register-form-refund-ack-checkbox"
                   />
                   <label
@@ -480,7 +485,7 @@ const MultiStepRegistration = () => {
                       to="/refund"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-500 underline"
+                      className="text-primary-600 hover:text-primary-500 underline"
                     >
                       Refund & Billing Policy
                     </Link>
@@ -497,7 +502,7 @@ const MultiStepRegistration = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

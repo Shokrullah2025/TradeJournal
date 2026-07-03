@@ -36,7 +36,6 @@ export const ThemeProvider = ({ children }) => {
         }
 
         setTheme(initialTheme);
-        applyTheme(initialTheme);
 
         // Save to localStorage if not already saved
         if (!savedTheme) {
@@ -45,7 +44,6 @@ export const ThemeProvider = ({ children }) => {
       } catch (error) {
         console.error("Error initializing theme:", error);
         setTheme("light");
-        applyTheme("light");
       } finally {
         setIsLoading(false);
       }
@@ -61,7 +59,6 @@ export const ThemeProvider = ({ children }) => {
       if (!savedTheme) {
         const newTheme = e.matches ? "dark" : "light";
         setTheme(newTheme);
-        applyTheme(newTheme);
       }
     };
 
@@ -76,28 +73,14 @@ export const ThemeProvider = ({ children }) => {
     }
   }, []);
 
-  const applyTheme = (newTheme) => {
-    const root = document.documentElement;
-
-    if (newTheme === "dark") {
-      root.classList.add("dark");
-      root.classList.remove("light");
-    } else {
-      root.classList.add("light");
-      root.classList.remove("dark");
-    }
-
-    // Add smooth transition class
-    root.classList.add("theme-transition");
-    setTimeout(() => {
-      root.classList.remove("theme-transition");
-    }, 300);
-  };
+  // NOTE: this context only tracks the theme *preference* (state +
+  // localStorage). The <html> class is applied by ThemeScope (inside the
+  // Router), which scopes the dark theme to the authenticated app only — the
+  // public site and auth pages always render light.
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
-    applyTheme(newTheme);
 
     try {
       localStorage.setItem("tradeJournalTheme", newTheme);
@@ -109,7 +92,6 @@ export const ThemeProvider = ({ children }) => {
   const setSpecificTheme = (newTheme) => {
     if (newTheme === "light" || newTheme === "dark") {
       setTheme(newTheme);
-      applyTheme(newTheme);
       try {
         localStorage.setItem("tradeJournalTheme", newTheme);
       } catch (error) {

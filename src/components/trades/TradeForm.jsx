@@ -1274,7 +1274,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex items-center justify-center border border-gray-200 dark:border-gray-700 overflow-hidden"
         >
           <div
-            className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
+            className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"
             data-testid="trade-form-loading-spinner"
           />
         </div>
@@ -1294,7 +1294,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
         <div className="flex flex-col md:flex-row md:items-stretch border-b border-gray-100 dark:border-gray-700">
           {/* Left zone — mirrors the form column (its own row on mobile) */}
           <div className="flex-1 min-w-0 flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4">
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-600/30 flex-shrink-0">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
@@ -1359,7 +1359,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 data-testid="trade-form-tab-quick"
                 className={`flex flex-1 md:flex-none items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                   activeTab === "quick"
-                    ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}
               >
@@ -1372,7 +1372,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 data-testid="trade-form-tab-advanced"
                 className={`flex flex-1 md:flex-none items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                   activeTab === "advanced"
-                    ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}
               >
@@ -1407,7 +1407,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 {/* ── 1 · Setup ── */}
                 <section>
                   <div className="flex items-center gap-2 mb-3 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                    <span className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-md bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center">
                       1
                     </span>
                     Setup
@@ -1582,7 +1582,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 {/* ── 2 · Position ── */}
                 <section>
                   <div className="flex items-center gap-2 mb-3 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                    <span className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-md bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center">
                       2
                     </span>
                     Position
@@ -1622,7 +1622,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 {watchedStatus === "closed" && (
                   <section>
                     <div className="flex items-center gap-2 mb-3 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                      <span className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      <span className="w-5 h-5 rounded-md bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center">
                         3
                       </span>
                       Exit
@@ -1706,8 +1706,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                           <div
                             className={`w-full h-20 flex flex-col items-center justify-center border-2 border-dashed rounded-xl overflow-hidden relative cursor-pointer group transition-colors ${
                               isDragOver
-                                ? "border-blue-400 ring-2 ring-blue-400"
-                                : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
+                                ? "border-primary-400 ring-2 ring-primary-400"
+                                : "border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500"
                             }`}
                             draggable={!!img?.previewUrl}
                             onClick={() => handleSlotClick(slotIndex, img)}
@@ -1768,7 +1768,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   <button
                     type="button"
                     onClick={() => setShowImageUploader(true)}
-                    className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    className="mt-2 text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium"
                     data-testid="screenshot-manage-btn"
                   >
                     Manage screenshots
@@ -1794,8 +1794,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                             onClick={() => setRrMode(key)}
                             className={`px-3 py-1 text-xs rounded-full border font-medium transition-colors ${
                               rrMode === key
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:text-blue-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                                ? "bg-primary-600 text-white border-primary-600"
+                                : "bg-white text-gray-500 border-gray-300 hover:border-primary-400 hover:text-primary-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
                             }`}
                           >{mode.label}</button>
                         );
@@ -1928,7 +1928,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   {/* Timing & Details */}
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center">
-                      <Clock className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+                      <Clock className="w-5 h-5 mr-2 text-primary-600 dark:text-primary-400" />
                       Timing & Details
                     </h4>
 
@@ -1990,7 +1990,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                   {/* Risk Management */}
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center">
-                      <BarChart3 className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+                      <BarChart3 className="w-5 h-5 mr-2 text-primary-600 dark:text-primary-400" />
                       Risk Management
                     </h4>
 

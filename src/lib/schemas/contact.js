@@ -25,3 +25,14 @@ export const contactSchema = z.object({
     .min(10, "Please share a little more detail (10+ characters).")
     .max(2000, "Message is too long (2000 characters max)."),
 });
+
+// Validation for an admin's reply to a contact submission. Sent to the
+// contact-reply Edge Function, which re-validates server-side.
+export const contactReplySchema = z.object({
+  submissionId: z.string().uuid(),
+  message: z
+    .string()
+    .trim()
+    .min(1, "Please enter a reply.")
+    .max(5000, "Reply is too long (5000 characters max)."),
+});

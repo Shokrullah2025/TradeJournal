@@ -283,7 +283,7 @@ const TradeManagement = () => {
           </button>
           <button
             onClick={handleAddTrade}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Trade
@@ -302,7 +302,7 @@ const TradeManagement = () => {
                 placeholder="Search by symbol, strategy, or setup..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -310,7 +310,7 @@ const TradeManagement = () => {
             <select
               value={selectedFilter}
               onChange={(e) => setSelectedFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               {filters.map((filter) => (
                 <option key={filter.value} value={filter.value}>
@@ -512,7 +512,7 @@ const TradeManagement = () => {
                           ? "bg-yellow-100 text-yellow-800"
                           : trade.status === "Closed"
                           ? "bg-gray-100 text-gray-800"
-                          : "bg-blue-100 text-blue-800"
+                          : "bg-primary-100 text-primary-800"
                       }`}
                     >
                       {trade.status}
@@ -522,7 +522,7 @@ const TradeManagement = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEditTrade(trade)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-primary-600 hover:text-primary-900"
                       >
                         <Edit3 className="h-4 w-4" />
                       </button>
@@ -588,7 +588,7 @@ const TradeManagement = () => {
                         symbol: e.target.value.toUpperCase(),
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="e.g., AAPL"
                   />
                 </div>
@@ -606,7 +606,7 @@ const TradeManagement = () => {
                           instrumentType: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       {instrumentTypes.map((type) => (
                         <option key={type} value={type}>
@@ -628,7 +628,7 @@ const TradeManagement = () => {
                           tradeType: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       {tradeTypes.map((type) => (
                         <option key={type} value={type}>
@@ -652,7 +652,7 @@ const TradeManagement = () => {
                           strategy: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="">Select strategy</option>
                       {strategies.map((strategy) => (
@@ -675,7 +675,7 @@ const TradeManagement = () => {
                           setup: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="">Select setup</option>
                       {setups.map((setup) => (
@@ -699,7 +699,7 @@ const TradeManagement = () => {
                         status: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     {statuses.map((status) => (
                       <option key={status} value={status}>
@@ -726,7 +726,7 @@ const TradeManagement = () => {
                           entryDate: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
 
@@ -743,7 +743,7 @@ const TradeManagement = () => {
                           entryTime: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                 </div>
@@ -763,7 +763,7 @@ const TradeManagement = () => {
                           entryPrice: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="0.00"
                     />
                   </div>
@@ -781,7 +781,7 @@ const TradeManagement = () => {
                           quantity: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="100"
                     />
                   </div>
@@ -802,7 +802,7 @@ const TradeManagement = () => {
                             exitDate: e.target.value,
                           }))
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
 
@@ -820,7 +820,7 @@ const TradeManagement = () => {
                             exitPrice: e.target.value,
                           }))
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                         placeholder="0.00"
                       />
                     </div>
@@ -842,7 +842,7 @@ const TradeManagement = () => {
                           stopLoss: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="0.00"
                     />
                   </div>
@@ -861,7 +861,7 @@ const TradeManagement = () => {
                           takeProfit: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="0.00"
                     />
                   </div>
@@ -881,7 +881,7 @@ const TradeManagement = () => {
                         commission: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="0.00"
                   />
                 </div>
@@ -899,7 +899,7 @@ const TradeManagement = () => {
                       }))
                     }
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="Trade notes and observations..."
                   />
                 </div>
@@ -916,7 +916,7 @@ const TradeManagement = () => {
               </button>
               <button
                 onClick={handleSaveTrade}
-                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
               >
                 {editingTrade ? "Update Trade" : "Add Trade"}
               </button>

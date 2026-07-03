@@ -1,4 +1,6 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 const PAD = { l: 34, r: 8, t: 8, b: 22 };
 const MAX_POINTS = 150;
@@ -29,6 +31,10 @@ const niceCeil = (v) => {
  * losses are capped at a glance.
  */
 const TradeScatterChart = ({ trades = [] }) => {
+  const { isDark } = useTheme();
+  const c = getChartColors(isDark);
+  // Match CumulativePnLChart: green-600 dots in light, lighter tint in dark.
+  const dotGreen = isDark ? c.pos : "#16a34a";
   const wrapRef = useRef(null);
   const [dims, setDims] = useState(null);
   const [hover, setHover] = useState(null); // { idx, x, y }
@@ -125,7 +131,7 @@ const TradeScatterChart = ({ trades = [] }) => {
                   x2={PAD.l + chartW}
                   y1={y.toFixed(1)}
                   y2={y.toFixed(1)}
-                  stroke={v === 0 ? "#d1d5db" : "#f3f4f6"}
+                  stroke={v === 0 ? c.zeroLine : c.grid}
                   strokeWidth="1"
                   strokeDasharray={v === 0 ? "4,3" : undefined}
                 />
@@ -135,7 +141,7 @@ const TradeScatterChart = ({ trades = [] }) => {
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fontSize="9.5"
-                  fill="#374151"
+                  fill={c.tick}
                   fontFamily="inherit"
                 >
                   {fmtK(v)}
@@ -151,9 +157,9 @@ const TradeScatterChart = ({ trades = [] }) => {
               cx={px(p).toFixed(1)}
               cy={py(p).toFixed(1)}
               r={hover?.idx === i ? 4.5 : 3}
-              fill={p.pnl >= 0 ? "#16a34a" : "#ef4444"}
+              fill={p.pnl >= 0 ? dotGreen : c.neg}
               opacity={hover !== null && hover.idx !== i ? 0.35 : 0.8}
-              stroke={hover?.idx === i ? "#fff" : "none"}
+              stroke={hover?.idx === i ? c.dotRing : "none"}
               strokeWidth="1.5"
               className="cursor-pointer transition-opacity duration-100"
               onMouseEnter={(e) => {
@@ -173,7 +179,7 @@ const TradeScatterChart = ({ trades = [] }) => {
               y={PAD.t + chartH + 13}
               textAnchor={k === 0 ? "start" : k === 2 ? "end" : "middle"}
               fontSize="9.5"
-              fill="#374151"
+              fill={c.tick}
               fontFamily="inherit"
             >
               {fmtDate(points[i].date)}

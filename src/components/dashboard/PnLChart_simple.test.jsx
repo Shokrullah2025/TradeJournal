@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
+import { ThemeProvider } from "../../contexts/ThemeContext";
 import PnLChart from "./PnLChart_simple";
+
+// The chart reads its colors from ThemeContext (light/dark), so tests render
+// inside the real provider (matchMedia is mocked in tests/setup.js).
+const render = (ui) => rtlRender(<ThemeProvider>{ui}</ThemeProvider>);
 
 // PnLChart aggregates closed trades into per-day bars. Tests cover the empty
 // state, aggregation/rendering of bars, filtering of invalid/zero-pnl data,

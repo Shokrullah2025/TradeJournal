@@ -51,7 +51,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
               Verifying your email...
             </h2>
@@ -80,7 +80,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
             <div className="mt-6">
               <button
                 onClick={() => window.location.assign("/dashboard")}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 Start Your Free Trial
               </button>
@@ -108,7 +108,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
               <button
                 onClick={handleResendVerification}
                 disabled={isResending}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
               >
                 {isResending ? (
                   <RefreshCw className="h-5 w-5 animate-spin" />
@@ -131,7 +131,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <Mail className="h-16 w-16 text-blue-500 mx-auto" />
+          <Mail className="h-16 w-16 text-primary-500 mx-auto" />
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Check your email
           </h2>
@@ -149,7 +149,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
           <button
             onClick={handleResendVerification}
             disabled={isResending}
-            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
           >
             {isResending ? (
               <RefreshCw className="h-5 w-5 animate-spin" />
@@ -163,7 +163,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
 
           <button
             onClick={() => navigate("/register")}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Back to Registration
           </button>
@@ -174,7 +174,7 @@ const EmailVerification = ({ email, onVerified, onResendEmail }) => {
               setVerificationStatus("success");
               onVerified?.(Date.now().toString());
             }}
-            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Skip Email Verification (Dev Mode)
           </button>

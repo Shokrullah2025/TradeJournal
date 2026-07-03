@@ -198,6 +198,9 @@ export const TradeProvider = ({ children }) => {
   const { createNotification } = useNotifications();
   const [state, dispatch] = useReducer(tradeReducer, initialState);
   const [localMigrationDone, setLocalMigrationDone] = useState(false);
+  // Free-text trade search. Lives in context (not page state) so the header
+  // search bar and the Trades page input stay in sync.
+  const [searchTerm, setSearchTerm] = useState("");
   // In-session guard so milestone checks don't re-query the DB on every recompute.
   const firedMilestonesRef = useRef(new Set());
 
@@ -569,6 +572,8 @@ export const TradeProvider = ({ children }) => {
     trades:          state.trades,
     filteredTrades:  getFilteredTrades(),
     filters:         state.filters,
+    searchTerm,
+    setSearchTerm,
     stats:           state.stats,
     loading:         state.loading,
     defaultAccountId: state.defaultAccountId,

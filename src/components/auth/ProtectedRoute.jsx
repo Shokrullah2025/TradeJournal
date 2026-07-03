@@ -13,7 +13,7 @@ const LoadingScreen = () => (
   >
     <div className="text-center">
       <div
-        className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"
+        className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"
         data-testid="auth-loading-spinner"
       />
       <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>

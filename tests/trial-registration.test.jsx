@@ -51,6 +51,26 @@ import TrialActivation from "../src/components/auth/TrialActivation";
 const renderWithRouter = (component) =>
   render(<BrowserRouter>{component}</BrowserRouter>);
 
+// jsdom marks window.location unforgeable, so vi.spyOn can't patch `assign`.
+// Swap the whole location object for one with a mock assign; the caller must
+// invoke the returned restore() at the end of the test.
+const mockLocationAssign = () => {
+  const original = window.location;
+  const assign = vi.fn();
+  Object.defineProperty(window, "location", {
+    value: { ...original, assign },
+    writable: true,
+    configurable: true,
+  });
+  const restore = () =>
+    Object.defineProperty(window, "location", {
+      value: original,
+      writable: true,
+      configurable: true,
+    });
+  return { assign, restore };
+};
+
 describe("Registration & Trial Flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -220,7 +240,10 @@ describe("Registration & Trial Flow", () => {
       expect(screen.getByTestId("trial-activate-submit-btn")).toBeInTheDocument();
     });
 
-    it("collects a card then starts the trial and shows success (happy path)", async () => {
+    it("collects a card then starts the trial and goes straight to the dashboard (happy path)", async () => {
+      // Users must NOT see a "Welcome / trial activated" interstitial after
+      // adding their card — success navigates directly into the app.
+      const { assign: assignSpy, restore } = mockLocationAssign();
       const onTrialActivated = vi.fn();
       renderWithRouter(<TrialActivation onTrialActivated={onTrialActivated} />);
 
@@ -243,11 +266,13 @@ describe("Registration & Trial Flow", () => {
         expect(billingApi.startTrial).toHaveBeenCalledWith("premium", "monthly", "pm_123", "cus_123");
       });
 
-      expect(
-        await screen.findByTestId("trial-activated-state")
-      ).toBeInTheDocument();
-      expect(screen.getByText("Welcome to Tradgella!")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(assignSpy).toHaveBeenCalledWith("/dashboard");
+      });
       expect(onTrialActivated).toHaveBeenCalled();
+      // The old success interstitial must be gone.
+      expect(screen.queryByText("Welcome to Tradgella!")).not.toBeInTheDocument();
+      restore();
     });
 
     it("refuses to start (no SetupIntent) when there is no session (edge case)", async () => {
@@ -269,6 +294,7 @@ describe("Registration & Trial Flow", () => {
 
     it("shows the error message when starting the trial fails (error state)", async () => {
       // e.g. the anti-abuse 409 — user has already used their free trial.
+      const { assign: assignSpy, restore } = mockLocationAssign();
       billingApi.startTrial.mockRejectedValueOnce(
         new Error("You've already used your free trial.")
       );
@@ -281,7 +307,9 @@ describe("Registration & Trial Flow", () => {
       expect(await screen.findByTestId("trial-error-message")).toHaveTextContent(
         "You've already used your free trial."
       );
-      expect(screen.queryByTestId("trial-activated-state")).not.toBeInTheDocument();
+      // A failed activation must NOT navigate into the app.
+      expect(assignSpy).not.toHaveBeenCalled();
+      restore();
     });
   });
 });

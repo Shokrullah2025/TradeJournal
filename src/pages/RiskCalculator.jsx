@@ -17,15 +17,15 @@ const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 const makePalette = (isDark) =>
   isDark
     ? {
-        panel: "#0d1117",
-        topbar: "#0f141b",
-        left: "#0b0f15",
-        card: "#11161e",
-        border: "#20262f",
-        borderSoft: "#1b212b",
-        inputBorder: "#232b36",
-        inputBg: "#11161e",
-        segBg: "#10151d",
+        panel: "#0c1210",
+        topbar: "linear-gradient(135deg,#10201c 0%,#0c1210 70%)",
+        left: "#0a1411",
+        card: "#101815",
+        border: "#1f2b27",
+        borderSoft: "#1a2521",
+        inputBorder: "#22302b",
+        inputBg: "#101815",
+        segBg: "#0f1a16",
         text: "#e6edf3",
         textStrong: "#cdd4de",
         textMid: "#9aa3b2",
@@ -36,26 +36,26 @@ const makePalette = (isDark) =>
         gaugeMark: "#3a4452",
         green: "#2ebd85",
         red: "#f6465d",
-        blue: "#5b9bff",
-        segActiveText: "#06140d",
-        btnText: "#06140d",
-        tileGlow: "rgba(45,141,255,0.10)",
-        tileAccent: "rgba(45,141,255,0.30)",
-        shadow: "0 30px 60px -28px rgba(13,17,23,0.5)",
-        infoBg: "rgba(45,141,255,0.07)",
-        infoBorder: "rgba(45,141,255,0.16)",
-        infoText: "#8ab4ff",
+        accent: "#3fae9c",
+        tileGlow: "rgba(42,157,143,0.10)",
+        tileAccent: "rgba(42,157,143,0.30)",
+        shadow: "0 30px 60px -28px rgba(6,20,13,0.6)",
+        tileShadow: "0 10px 24px -18px rgba(42,157,143,0.25)",
+        btnShadow: "0 10px 22px -10px rgba(42,157,143,0.35)",
+        infoBg: "rgba(42,157,143,0.07)",
+        infoBorder: "rgba(42,157,143,0.16)",
+        infoText: "#7fd1c2",
       }
     : {
         panel: "#ffffff",
-        topbar: "#fafbfc",
-        left: "#f7f8fa",
-        card: "#fafbfc",
-        border: "#e9ebf0",
-        borderSoft: "#f0f1f4",
-        inputBorder: "#e4e7ec",
+        topbar: "linear-gradient(135deg,#eef5f2 0%,#ffffff 70%)",
+        left: "#f5faf8",
+        card: "#fbfdfc",
+        border: "#e3ece8",
+        borderSoft: "#edf3f0",
+        inputBorder: "#dfe9e5",
         inputBg: "#ffffff",
-        segBg: "#f4f5f8",
+        segBg: "#f1f7f4",
         text: "#0f172a",
         textStrong: "#334155",
         textMid: "#475569",
@@ -66,15 +66,15 @@ const makePalette = (isDark) =>
         gaugeMark: "#cbd5e1",
         green: "#16a34a",
         red: "#e11d48",
-        blue: "#2563eb",
-        segActiveText: "#ffffff",
-        btnText: "#ffffff",
-        tileGlow: "rgba(37,99,235,0.07)",
-        tileAccent: "rgba(37,99,235,0.30)",
-        shadow: "0 24px 50px -30px rgba(15,23,42,0.25)",
-        infoBg: "#eff4ff",
-        infoBorder: "#dbe6ff",
-        infoText: "#2563eb",
+        accent: "#158477",
+        tileGlow: "rgba(21,132,119,0.07)",
+        tileAccent: "rgba(21,132,119,0.30)",
+        shadow: "0 24px 50px -30px rgba(21,132,119,0.30)",
+        tileShadow: "0 10px 24px -18px rgba(21,132,119,0.35)",
+        btnShadow: "0 10px 22px -10px rgba(20,112,101,0.45)",
+        infoBg: "#eef5f2",
+        infoBorder: "#b9e6db",
+        infoText: "#147065",
       };
 
 const fmtMoney = (n) =>
@@ -200,6 +200,7 @@ const StatTile = ({ c, label, value, sub, valueColor, accent, testId }) => (
       padding: "15px 16px",
       position: "relative",
       overflow: "hidden",
+      boxShadow: c.tileShadow,
     }}
   >
     {accent && (
@@ -229,7 +230,7 @@ const StatTile = ({ c, label, value, sub, valueColor, accent, testId }) => (
         <div
           style={{
             fontSize: 11,
-            color: valueColor === c.blue ? c.blue : c.muted,
+            color: valueColor === c.accent ? c.accent : c.muted,
             marginTop: 5,
           }}
         >
@@ -630,7 +631,7 @@ const RiskCalculator = () => {
 
   const rrQuality =
     view.riskRewardRatio >= 2
-      ? { label: "favorable", color: c.blue }
+      ? { label: "favorable", color: c.accent }
       : view.riskRewardRatio >= 1.5
       ? { label: "acceptable", color: c.green }
       : { label: "unfavorable", color: c.red };
@@ -685,13 +686,14 @@ const RiskCalculator = () => {
                 width: 34,
                 height: 34,
                 borderRadius: 9,
-                background: "linear-gradient(145deg,#2ebd85,#1f8f64)",
+                background: "linear-gradient(145deg,#2a9d8f,#147065)",
+                boxShadow: c.btnShadow,
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M4 16 L10 10 L14 14 L20 7"
-                  stroke="#06140d"
+                  stroke="#ffffff"
                   strokeWidth="2.4"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -786,8 +788,11 @@ const RiskCalculator = () => {
                     style={{
                       fontSize: 13,
                       fontWeight: active ? 600 : 500,
-                      color: active ? c.segActiveText : c.textMid,
-                      background: active ? c.green : "transparent",
+                      color: active ? "#ffffff" : c.textMid,
+                      background: active
+                        ? "linear-gradient(145deg,#2a9d8f,#147065)"
+                        : "transparent",
+                      boxShadow: active ? c.btnShadow : "none",
                       padding: "8px 0",
                       borderRadius: 7,
                       cursor: "pointer",
@@ -1073,14 +1078,15 @@ const RiskCalculator = () => {
               className="w-full"
               style={{
                 marginTop: 22,
-                background: "linear-gradient(145deg,#2ebd85,#1f8f64)",
-                color: c.btnText,
+                background: "linear-gradient(145deg,#2a9d8f,#147065)",
+                color: "#ffffff",
                 fontWeight: 600,
                 fontSize: 14,
                 padding: "12px 0",
                 borderRadius: 10,
                 border: "none",
                 cursor: "pointer",
+                boxShadow: c.btnShadow,
               }}
             >
               Calculate Risk &amp; Reward
@@ -1477,14 +1483,15 @@ const RiskCalculator = () => {
                 onClick={() => setShowRiskWarning(false)}
                 data-testid="risk-calculator-risk-warning-dismiss-btn"
                 style={{
-                  background: "linear-gradient(145deg,#2ebd85,#1f8f64)",
-                  color: c.btnText,
+                  background: "linear-gradient(145deg,#2a9d8f,#147065)",
+                  color: "#ffffff",
                   fontWeight: 600,
                   fontSize: 13.5,
                   padding: "9px 20px",
                   borderRadius: 9,
                   border: "none",
                   cursor: "pointer",
+                  boxShadow: c.btnShadow,
                 }}
               >
                 Got it
@@ -1611,7 +1618,7 @@ const PayoffPlot = ({ c, results }) => {
       <polyline
         points={g.coords.map((d) => `${d.x},${d.y}`).join(" ")}
         fill="none"
-        stroke={c.blue}
+        stroke={c.accent}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"

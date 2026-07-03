@@ -122,4 +122,43 @@ export const CHART_THEME = {
   },
 };
 
+/**
+ * Theme-aware structural chart colors shared by the Dashboard and Analytics
+ * charts (gridlines, zero/level reference lines, axes, tick labels, series).
+ *
+ * Light values match the palette the charts originally hardcoded, so the
+ * light theme is unchanged. Dark values are tuned for the app-shell
+ * "trading terminal" surfaces (#0d1117 bg / #11161e cards): recessive
+ * translucent slate for grid/axis lines, a slightly stronger zero line,
+ * readable slate ticks, and one-step-lighter series tints so green/red/teal
+ * don't vibrate on near-black.
+ *
+ * Usage: const { isDark } = useTheme(); const c = getChartColors(isDark);
+ */
+export function getChartColors(isDark) {
+  return isDark
+    ? {
+        grid: "rgba(148, 163, 184, 0.10)",
+        zeroLine: "rgba(148, 163, 184, 0.35)",
+        axis: "rgba(148, 163, 184, 0.25)",
+        tick: "#94a3b8",
+        pos: "#4ade80",
+        neg: "#f87171",
+        primary: "#7fd1c2",
+        // Ring around hovered/emphasized data points — matches the card
+        // surface so the dot reads as punched out, not glowing white.
+        dotRing: "#11161e",
+      }
+    : {
+        grid: "#eef1f6",
+        zeroLine: "#d1d5db",
+        axis: "#9ca3af",
+        tick: "#6b7280",
+        pos: "#22c55e",
+        neg: "#ef4444",
+        primary: "#2a9d8f",
+        dotRing: "#ffffff",
+      };
+}
+
 export default CHART_COLORS;

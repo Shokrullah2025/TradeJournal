@@ -24,6 +24,8 @@ import AuthConfirm from "./pages/AuthConfirm";
 const Profile = React.lazy(() => import("./pages/Profile"));
 // Lazy — admin bundle (charts, tables) only loads for admins who open it.
 const Admin = React.lazy(() => import("./pages/Admin"));
+// Lazy — 2FA setup wizard, only loaded when a user actually enrolls.
+const AuthenticatorSetup = React.lazy(() => import("./pages/AuthenticatorSetup"));
 
 // Public product website — lazy-loaded so the marketing-free landing pages
 // stay out of the authenticated app bundle (CLAUDE.md §3).
@@ -48,11 +50,13 @@ import { TradeProvider } from "./context/TradeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { FeatureFlagProvider } from "./context/FeatureFlagContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { ContactInboxProvider } from "./context/ContactInboxContext";
 import { BillingProvider } from "./context/BillingContext";
 import { BrokerProvider } from "./context/BrokerContext";
 import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import ThemeScope from "./components/common/ThemeScope";
 import FeatureGate from "./components/common/FeatureGate";
 import {
   ProtectedRoute,
@@ -71,11 +75,15 @@ function App() {
       <AuthProvider>
         <FeatureFlagProvider>
         <NotificationProvider>
+          <ContactInboxProvider>
           <BillingProvider>
             <TradeProvider>
               <BrokerProvider>
                 <BacktestProvider>
                 <Router>
+                  {/* Applies the dark class to <html> on app routes only —
+                      the public site and auth pages always render light. */}
+                  <ThemeScope />
                   <Routes>
                     {/* Public routes */}
                     <Route
@@ -136,6 +144,28 @@ function App() {
                       <Route path="/aup" element={<AcceptableUsePolicy />} />
                       <Route path="/dmca" element={<DMCAPolicy />} />
                     </Route>
+
+                    {/* Authenticator (2FA) setup wizard. Full-screen and OUTSIDE
+                        the app shell + RequireSubscription on purpose: it's
+                        offered right after email confirmation, before the user
+                        has started a trial, and securing the account must never
+                        sit behind the TrialGate. */}
+                    <Route
+                      path="/security/2fa"
+                      element={
+                        <ProtectedRoute>
+                          <Suspense
+                            fallback={
+                              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+                              </div>
+                            }
+                          >
+                            <AuthenticatorSetup />
+                          </Suspense>
+                        </ProtectedRoute>
+                      }
+                    />
 
                     {/* Trial activation is no longer a standalone page. A "free"
                         user (no card, no live trial) is shown the app shell with
@@ -285,6 +315,7 @@ function App() {
               </BrokerProvider>
             </TradeProvider>
           </BillingProvider>
+          </ContactInboxProvider>
         </NotificationProvider>
         </FeatureFlagProvider>
       </AuthProvider>

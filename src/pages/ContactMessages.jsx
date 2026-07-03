@@ -8,9 +8,12 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Send,
   X,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { contactReplySchema } from "../lib/schemas/contact";
+import { useContactInbox } from "../context/ContactInboxContext";
 import { toast } from "react-hot-toast";
 
 const PAGE_SIZE = 50;
@@ -46,6 +49,11 @@ const ContactMessages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  // Keeps the sidebar's aggregated unread badge instantly in sync when we triage
+  // here (realtime also refreshes it, but this makes the change immediate).
+  const { refresh: refreshContactBadge } = useContactInbox();
 
   const load = useCallback(async () => {
     const from = page * PAGE_SIZE;
@@ -96,6 +104,7 @@ const ContactMessages = () => {
         prev.map((s) => (s.id === id ? { ...s, status } : s)),
       );
       setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+      refreshContactBadge();
       toast.success(`Marked as ${status}.`);
     } catch (err) {
       console.error("[ContactMessages] update error:", err.message);
@@ -105,7 +114,74 @@ const ContactMessages = () => {
 
   const openMessage = (submission) => {
     setSelected(submission);
+    setReplyText("");
     if (submission.status === "new") updateStatus(submission.id, "read");
+  };
+
+  // Send an in-app reply: emails the submitter from the support address via the
+  // contact-reply Edge Function. No mail client involved (CLAUDE.md §2 — identity
+  // and admin check are enforced server-side).
+  const sendReply = async () => {
+    if (!selected) return;
+    const parsed = contactReplySchema.safeParse({
+      submissionId: selected.id,
+      message: replyText,
+    });
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? "Please enter a reply.");
+      return;
+    }
+
+    setSendingReply(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "contact-reply",
+        { body: parsed.data },
+      );
+
+      // A non-2xx response comes back as fnError (FunctionsHttpError) with the
+      // real message in error.context — surface it so failures are diagnosable
+      // (e.g. "Email sending isn't configured yet") instead of a generic toast.
+      if (fnError) {
+        let serverMessage = fnError.message;
+        try {
+          const errBody = await fnError.context?.json?.();
+          if (errBody?.error) serverMessage = errBody.error;
+        } catch {
+          // response body wasn't JSON (e.g. function not deployed → 404 HTML)
+        }
+        throw new Error(serverMessage);
+      }
+      if (!data?.success) throw new Error(data?.error ?? "send_failed");
+
+      toast.success("Reply sent.");
+      const sentReply = { at: new Date().toISOString(), message: parsed.data.message };
+      setReplyText("");
+      // The function marks the submission read and appends the reply to
+      // metadata.replies; mirror both locally so the thread shows immediately and
+      // survives reopening the message without a reload.
+      const appendReply = (s) => ({
+        ...s,
+        status: "read",
+        metadata: {
+          ...(s.metadata ?? {}),
+          replies: [...(s.metadata?.replies ?? []), sentReply],
+        },
+      });
+      setSubmissions((prev) =>
+        prev.map((s) => (s.id === selected.id ? appendReply(s) : s)),
+      );
+      setSelected((prev) => (prev ? appendReply(prev) : prev));
+    } catch (err) {
+      console.error("[ContactMessages] reply error:", err.message);
+      toast.error(
+        err.message && err.message !== "send_failed"
+          ? err.message
+          : "Couldn't send the reply. Please try again.",
+      );
+    } finally {
+      setSendingReply(false);
+    }
   };
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -204,7 +280,8 @@ const ContactMessages = () => {
                 <tr
                   key={s.id}
                   data-testid={`admin-contact-row-${s.id}`}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700/40"
+                  onClick={() => openMessage(s)}
+                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -214,8 +291,18 @@ const ContactMessages = () => {
                       {s.email}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
-                    {s.subject}
+                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{s.subject}</span>
+                      {s.metadata?.replies?.length > 0 && (
+                        <span
+                          data-testid={`admin-contact-replied-${s.id}`}
+                          className="shrink-0 inline-flex items-center gap-1 rounded-full bg-success-100 dark:bg-success-900/30 px-2 py-0.5 text-[11px] font-medium text-success-700 dark:text-success-300"
+                        >
+                          <CheckCircle className="h-3 w-3" /> Replied
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {new Date(s.created_at).toLocaleString()}
@@ -233,7 +320,10 @@ const ContactMessages = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       data-testid={`admin-contact-view-btn-${s.id}`}
-                      onClick={() => openMessage(s)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMessage(s);
+                      }}
                       className="text-primary-600 dark:text-primary-400 hover:underline"
                     >
                       View
@@ -310,7 +400,68 @@ const ContactMessages = () => {
               {selected.message}
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-2">
+            {/* Reply thread — the support replies sent for this message are kept
+                here so the whole conversation stays with the original email. */}
+            {selected.metadata?.replies?.length > 0 && (
+              <div
+                data-testid="admin-contact-thread"
+                className="mt-4 space-y-3"
+              >
+                {selected.metadata.replies.map((r, i) => (
+                  <div
+                    key={i}
+                    data-testid={`admin-contact-thread-reply-${i}`}
+                    className="rounded-lg border border-primary-200 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 p-3"
+                  >
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-primary-700 dark:text-primary-300">
+                        You replied
+                      </span>
+                      <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                        {new Date(r.at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                      {r.message}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Reply composer — emails the customer from support@ via the
+                contact-reply Edge Function. No mail client, no personal email. */}
+            <div className="mt-6">
+              <label htmlFor="admin-contact-reply" className="label">
+                Reply to {selected.name}
+              </label>
+              <textarea
+                id="admin-contact-reply"
+                data-testid="admin-contact-reply-input"
+                rows={4}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder={`Write a reply — it'll be emailed to ${selected.email} from support.`}
+                className="textarea mt-1"
+              />
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                Sent from support@tradgella.com — the customer can reply directly
+                to that address.
+              </p>
+              <button
+                type="button"
+                data-testid="admin-contact-send-reply-btn"
+                onClick={sendReply}
+                disabled={sendingReply || replyText.trim().length === 0}
+                className="btn btn-primary mt-3 inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" />
+                {sendingReply ? "Sending…" : "Send reply"}
+              </button>
+            </div>
+
+            {/* Triage */}
+            <div className="mt-6 flex flex-wrap gap-2 border-t border-gray-200 dark:border-gray-700 pt-4">
               <button
                 data-testid="admin-contact-mark-read-btn"
                 onClick={() => updateStatus(selected.id, "read")}
@@ -332,13 +483,6 @@ const ContactMessages = () => {
               >
                 <ShieldAlert className="h-4 w-4" /> Spam
               </button>
-              <a
-                data-testid="admin-contact-reply-btn"
-                href={`mailto:${selected.email}?subject=Re: ${encodeURIComponent(selected.subject)}`}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
-              >
-                <Mail className="h-4 w-4" /> Reply
-              </a>
             </div>
           </div>
         </div>

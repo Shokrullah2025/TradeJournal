@@ -132,7 +132,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
           <div className="flex items-center space-x-2">
-            <TrendingUp className="w-6 h-6 text-blue-600" />
+            <TrendingUp className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               {isConnected ? "Broker Connection" : "Connect Broker"}
             </h2>
@@ -240,7 +240,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                       id="autoSync"
                       checked={autoSync}
                       onChange={(e) => toggleAutoSync(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       data-testid="broker-autosync-toggle"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Auto-sync</span>
@@ -301,7 +301,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                           key={type}
                           className={`p-3 border-2 rounded-xl cursor-pointer transition-all text-center ${
                             selectedAccountType === type
-                              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                               : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                           }`}
                         >
@@ -334,7 +334,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                           onClick={() => handleBrokerClick(brokerKey)}
                           className={`p-4 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${
                             selectedBrokerKey === brokerKey
-                              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                              ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                               : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                           }`}
                           data-testid={`broker-option-${brokerKey}`}
@@ -347,7 +347,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                             </div>
                           </div>
                           {broker.propFirms && (
-                            <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-lg">
+                            <div className="text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-1 rounded-lg">
                               <Building2 className="w-3 h-3 inline mr-1" />
                               Apex, MyFundedFutures, Topstep +more
                             </div>
@@ -400,7 +400,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                         onClick={() => setSelectedFirm(firm.id)}
                         className={`p-3 border-2 rounded-xl cursor-pointer transition-all hover:shadow-sm ${
                           selectedFirm === firm.id
-                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                            ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                         }`}
                         data-testid={`prop-firm-option-${firm.id}`}
