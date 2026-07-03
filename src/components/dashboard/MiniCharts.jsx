@@ -1,4 +1,6 @@
 import React from "react";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 // Mini Line Chart for trends
 export const MiniLineChart = ({ data, color = "blue", positive = true }) => {
@@ -210,6 +212,8 @@ export const MiniRiskRewardChart = ({ winAmount, lossAmount, color = "blue" }) =
 
 // Drawdown Chart showing underwater curve
 export const MiniDrawdownChart = ({ drawdownData, color = "red" }) => {
+  const { isDark } = useTheme();
+  const c = getChartColors(isDark);
   if (!drawdownData || drawdownData.length === 0) return null;
   
   const max = Math.max(...drawdownData);
@@ -227,7 +231,7 @@ export const MiniDrawdownChart = ({ drawdownData, color = "red" }) => {
     <div className="w-16 h-8">
       <svg viewBox="0 0 100 100" className="w-full h-full">
         {/* Zero line */}
-        <line x1="0" y1="100" x2="100" y2="100" stroke="#374151" strokeWidth="1" opacity="0.3" />
+        <line x1="0" y1="100" x2="100" y2="100" stroke={c.zeroLine} strokeWidth="1" opacity={isDark ? 1 : 0.3} />
         <defs>
           <linearGradient id={`drawdown-gradient-${Math.random()}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" style={{stopColor: '#ef4444', stopOpacity: 0.4}} />

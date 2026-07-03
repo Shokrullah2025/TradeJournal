@@ -53,6 +53,7 @@ import { BrokerProvider } from "./context/BrokerContext";
 import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import ThemeScope from "./components/common/ThemeScope";
 import FeatureGate from "./components/common/FeatureGate";
 import {
   ProtectedRoute,
@@ -76,6 +77,9 @@ function App() {
               <BrokerProvider>
                 <BacktestProvider>
                 <Router>
+                  {/* Applies the dark class to <html> on app routes only —
+                      the public site and auth pages always render light. */}
+                  <ThemeScope />
                   <Routes>
                     {/* Public routes */}
                     <Route

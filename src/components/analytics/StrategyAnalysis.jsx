@@ -19,11 +19,8 @@ import {
   BarChart3,
   Info,
 } from "lucide-react";
-
-// Shared visual language with the Overview (PnLOverviewHero / DistributionAnalysis).
-const POS = "#22c55e";
-const NEG = "#ef4444";
-const GRID = "#eef1f6";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 const COLORS = [
   "#2a9d8f", // Brand teal
@@ -185,6 +182,9 @@ const ChartTooltipOverlay = ({ hovered }) => (
 );
 
 const StrategyAnalysis = ({ trades = [], detailed = false }) => {
+  const { isDark } = useTheme();
+  // Shared visual language with the Overview (PnLOverviewHero / DistributionAnalysis).
+  const c = getChartColors(isDark);
   // Hovered bar, captured from the Bar's own mouse events (fire only over the
   // rectangle) so the banner never shows over empty parts of a row.
   const [hovered, setHovered] = useState(null);
@@ -328,29 +328,29 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke={GRID}
+                stroke={c.grid}
                 horizontal={false}
               />
               <YAxis
                 type="category"
                 dataKey="name"
-                stroke="#9ca3af"
+                stroke={c.axis}
                 fontSize={12}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#6b7280" }}
+                tick={{ fill: c.tick }}
                 width={130}
               />
               <XAxis
                 type="number"
-                stroke="#9ca3af"
+                stroke={c.axis}
                 fontSize={11}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value) => formatK(value)}
-                tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                tick={{ fill: c.tick, fontFamily: "monospace" }}
               />
-              <ReferenceLine x={0} stroke="#d1d5db" strokeWidth={1} />
+              <ReferenceLine x={0} stroke={c.zeroLine} strokeWidth={1} />
               <Bar
                 dataKey="totalPnL"
                 radius={[0, 5, 5, 0]}
@@ -361,7 +361,7 @@ const StrategyAnalysis = ({ trades = [], detailed = false }) => {
                 {strategyData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.totalPnL >= 0 ? POS : NEG}
+                    fill={entry.totalPnL >= 0 ? c.pos : c.neg}
                     fillOpacity={0.85}
                   />
                 ))}

@@ -12,11 +12,8 @@ import {
 } from "recharts";
 import { format, getHours, getDay } from "date-fns";
 import { Clock, TrendingUp, Lightbulb, Info } from "lucide-react";
-
-// Shared visual language with the Overview (PnLOverviewHero / DistributionAnalysis).
-const POS = "#22c55e";
-const NEG = "#ef4444";
-const GRID = "#eef1f6";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 // Full-precision currency, matching PerformanceMetrics / PnLOverviewHero.
 const formatMoney = (value, decimals = 2) => {
@@ -159,7 +156,7 @@ const ChartTooltipOverlay = ({ hovered }) => (
 
 // Floating value label a few px outside each bar's tip (above for gains,
 // below for losses) so the number never overlaps the bar.
-const ValueLabel = ({ x, y, width, height, value }) => {
+const ValueLabel = ({ x, y, width, height, value, pos, neg }) => {
   if (!value) return null;
   const cx = x + width / 2;
   const positive = value >= 0;
@@ -176,7 +173,7 @@ const ValueLabel = ({ x, y, width, height, value }) => {
       fontSize={11}
       fontWeight={600}
       fontFamily="monospace"
-      fill={positive ? POS : NEG}
+      fill={positive ? pos : neg}
     >
       {formatK(value)}
     </text>
@@ -184,6 +181,9 @@ const ValueLabel = ({ x, y, width, height, value }) => {
 };
 
 const TimeAnalysis = ({ trades = [], detailed = false }) => {
+  const { isDark } = useTheme();
+  // Shared visual language with the Overview (PnLOverviewHero / DistributionAnalysis).
+  const c = getChartColors(isDark);
   // Hovered candle (per chart). Captured from the Bar's own mouse events, which
   // fire only over the actual rectangle — so the banner never shows when the
   // cursor is in the empty part of a column.
@@ -369,28 +369,28 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke={GRID}
+                  stroke={c.grid}
                   vertical={false}
                 />
                 <XAxis
                   dataKey="displayHour"
-                  stroke="#9ca3af"
+                  stroke={c.axis}
                   fontSize={11}
                   axisLine={false}
                   tickLine={false}
                   tickMargin={12}
-                  tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                  tick={{ fill: c.tick, fontFamily: "monospace" }}
                 />
                 <YAxis
-                  stroke="#9ca3af"
+                  stroke={c.axis}
                   fontSize={11}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(value) => formatK(value)}
-                  tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                  tick={{ fill: c.tick, fontFamily: "monospace" }}
                   width={56}
                 />
-                <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1} />
+                <ReferenceLine y={0} stroke={c.zeroLine} strokeWidth={1} />
                 <Bar
                   dataKey="totalPnL"
                   radius={[4, 4, 0, 0]}
@@ -401,11 +401,11 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
                   {hourlyData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={entry.totalPnL >= 0 ? POS : NEG}
+                      fill={entry.totalPnL >= 0 ? c.pos : c.neg}
                       fillOpacity={0.85}
                     />
                   ))}
-                  <LabelList dataKey="totalPnL" content={<ValueLabel />} />
+                  <LabelList dataKey="totalPnL" content={<ValueLabel pos={c.pos} neg={c.neg} />} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -440,12 +440,12 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke={GRID}
+                      stroke={c.grid}
                       vertical={false}
                     />
                     <XAxis
                       dataKey="displayMonth"
-                      stroke="#9ca3af"
+                      stroke={c.axis}
                       fontSize={11}
                       axisLine={false}
                       tickLine={false}
@@ -453,18 +453,18 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
                       textAnchor="end"
                       interval={0}
                       tickMargin={12}
-                      tick={{ fill: "#6b7280" }}
+                      tick={{ fill: c.tick }}
                     />
                     <YAxis
-                      stroke="#9ca3af"
+                      stroke={c.axis}
                       fontSize={11}
                       axisLine={false}
                       tickLine={false}
                       tickFormatter={(value) => formatK(value)}
-                      tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                      tick={{ fill: c.tick, fontFamily: "monospace" }}
                       width={56}
                     />
-                    <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1} />
+                    <ReferenceLine y={0} stroke={c.zeroLine} strokeWidth={1} />
                     <Bar
                       dataKey="totalPnL"
                       radius={[5, 5, 0, 0]}
@@ -475,11 +475,11 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
                       {monthlyData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={entry.totalPnL >= 0 ? POS : NEG}
+                          fill={entry.totalPnL >= 0 ? c.pos : c.neg}
                           fillOpacity={0.85}
                         />
                       ))}
-                      <LabelList dataKey="totalPnL" content={<ValueLabel />} />
+                      <LabelList dataKey="totalPnL" content={<ValueLabel pos={c.pos} neg={c.neg} />} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
