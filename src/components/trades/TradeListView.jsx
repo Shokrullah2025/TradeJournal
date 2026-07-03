@@ -189,7 +189,7 @@ GroupHeader.propTypes = {
   testId: PropTypes.string,
 };
 
-const TradeListView = ({ trades, onEditTrade, highlightTradeId }) => {
+const TradeListView = ({ trades, onEditTrade, highlightTradeId, searchTerm }) => {
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
 
@@ -302,10 +302,14 @@ const TradeListView = ({ trades, onEditTrade, highlightTradeId }) => {
       {ordered.length === 0 ? (
         <div className="card text-center py-12" data-testid="trades-empty-state">
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-            No trades found
+            {searchTerm
+              ? `No trades match “${searchTerm}”`
+              : "No trades found"}
           </h3>
           <p className="text-gray-500 dark:text-gray-400">
-            Try a different filter or add your first trade.
+            {searchTerm
+              ? "Search looks at symbol, strategy, notes and tags — try a different term or clear the search."
+              : "Try a different filter or add your first trade."}
           </p>
         </div>
       ) : (
@@ -422,6 +426,7 @@ TradeListView.propTypes = {
   trades: PropTypes.array.isRequired,
   onEditTrade: PropTypes.func,
   highlightTradeId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  searchTerm: PropTypes.string,
 };
 
 export default TradeListView;
