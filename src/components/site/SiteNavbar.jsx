@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { TrendingUp, Menu, X, ChevronDown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import ThemeToggle from "../common/ThemeToggle";
 import { NAV_MENUS } from "./content";
 
 const slugify = (label) => label.toLowerCase().replace(/\s+/g, "-");
@@ -234,7 +233,6 @@ const SiteNavbar = () => {
 
           {/* Desktop actions — pushed to the right edge */}
           <div className="ml-auto hidden items-center gap-3 lg:flex">
-            <ThemeToggle size="sm" />
             <button
               type="button"
               onClick={handleSignIn}
@@ -254,7 +252,6 @@ const SiteNavbar = () => {
 
           {/* Mobile toggle */}
           <div className="ml-auto flex items-center gap-2 lg:hidden">
-            <ThemeToggle size="sm" />
             <button
               type="button"
               onClick={() => setMobileOpen((o) => !o)}
