@@ -1,20 +1,19 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
-  BookOpen,
-  BarChart3,
-  Calculator,
-  Settings,
+  Gauge,
+  CandlestickChart,
+  FlaskConical,
+  PlugZap,
+  Radar,
+  Scale,
+  SlidersHorizontal,
+  ShieldCheck,
+  Inbox,
   TrendingUp,
   X,
-  Shield,
-  Mail,
-  Link,
-  Activity,
   ChevronLeft,
   ChevronRight,
-  Menu,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
@@ -27,26 +26,36 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   // feature for the current user's audience (plan/role/trial), the item is
   // hidden. Items with no `feature` are always available.
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Trades", href: "/trades", icon: BookOpen },
-    { name: "Backtest", href: "/backtest", icon: Activity, feature: "backtesting" },
-    { name: "Brokers", href: "/brokers", icon: Link, feature: "broker_sync" },
-    { name: "Analytics", href: "/analytics", icon: BarChart3, feature: "advanced_analytics" },
-    { name: "Risk Calculator", href: "/risk-calculator", icon: Calculator, feature: "risk_calculator" },
-    { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Dashboard", href: "/dashboard", icon: Gauge },
+    { name: "Trades", href: "/trades", icon: CandlestickChart },
+    { name: "Backtest", href: "/backtest", icon: FlaskConical, feature: "backtesting" },
+    { name: "Brokers", href: "/brokers", icon: PlugZap, feature: "broker_sync" },
+    { name: "Analytics", href: "/analytics", icon: Radar, feature: "advanced_analytics" },
+    { name: "Risk Calculator", href: "/risk-calculator", icon: Scale, feature: "risk_calculator" },
+    { name: "Settings", href: "/settings", icon: SlidersHorizontal },
   ].filter((item) => !item.feature || isFeatureEnabled(item.feature));
 
   const adminNavigation = [
     // `end` keeps "/admin" from matching its nested routes (e.g. the Contact
     // Inbox path), so only one admin item is highlighted at a time.
-    { name: "Admin Panel", href: "/admin", icon: Shield, adminOnly: true, end: true },
+    { name: "Admin Panel", href: "/admin", icon: ShieldCheck, adminOnly: true, end: true },
     {
       name: "Contact Inbox",
       href: "/admin/contact-submissions",
-      icon: Mail,
+      icon: Inbox,
       adminOnly: true,
     },
   ];
+
+  // Icon tile — mirrors the marketing mega-menu's tinted tiles. The active
+  // route's tile fills with the brand gradient; inactive tiles stay a soft
+  // teal tint that deepens on hover.
+  const iconTile = (isActive) =>
+    `flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${
+      isActive
+        ? "bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-md shadow-primary-600/30"
+        : "bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-300 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50"
+    }`;
 
   return (
     <>
@@ -79,18 +88,18 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                 title="Expand Sidebar"
               >
                 {/* App Logo - visible by default, hidden on hover */}
-                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg group-hover:opacity-0 transition-opacity duration-200">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 shadow-md shadow-primary-600/30 rounded-xl group-hover:opacity-0 transition-opacity duration-200">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-                
+
                 {/* Expand icon - hidden by default, visible on hover, same size as logo */}
-                <div className="absolute flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-blue-700 transition-all duration-200">
+                <div className="absolute flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl opacity-0 group-hover:opacity-100 hover:brightness-110 transition-all duration-200">
                   <ChevronRight className="w-6 h-6 text-white" />
                 </div>
               </button>
             ) : (
               <>
-                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 shadow-md shadow-primary-600/30 rounded-xl">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -139,24 +148,26 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                   className={({ isActive }) =>
                     `group flex items-center text-sm font-medium rounded-lg transition-all duration-200 ${
-                      isCollapsed ? "px-3 py-2" : "px-3 py-2"
+                      isCollapsed ? "px-2 py-1.5 justify-center" : "px-2 py-1.5"
                     } ${
                       isActive
-                        ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                        ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`
                   }
                   title={isCollapsed ? item.name : ""}
                 >
-                  <Icon
-                    className={`h-5 w-5 flex-shrink-0 ${
-                      isCollapsed ? "" : "mr-3"
-                    }`}
-                  />
-                  {!isCollapsed && (
-                    <span className="transition-opacity duration-300 whitespace-nowrap overflow-hidden text-ellipsis">
-                      {item.name}
-                    </span>
+                  {({ isActive }) => (
+                    <>
+                      <span className={`${iconTile(isActive)} ${isCollapsed ? "" : "mr-3"}`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      {!isCollapsed && (
+                        <span className="transition-opacity duration-300 whitespace-nowrap overflow-hidden text-ellipsis">
+                          {item.name}
+                        </span>
+                      )}
+                    </>
                   )}
                 </NavLink>
               );
@@ -180,17 +191,31 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       onClick={() => onClose()}
                       data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                       className={({ isActive }) =>
-                        `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        `group flex items-center px-2 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                           isActive
-                            ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                            ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                         }`
                       }
                     >
-                      <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-                        {item.name}
-                      </span>
+                      {({ isActive }) => (
+                        <>
+                          <span className={`${iconTile(isActive)} mr-3`}>
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                            {item.name}
+                          </span>
+                          {item.badge > 0 && (
+                            <span
+                              data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-badge`}
+                              className="ml-2 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-danger-500 text-[11px] font-semibold text-white"
+                            >
+                              {item.badge > 99 ? "99+" : item.badge}
+                            </span>
+                          )}
+                        </>
+                      )}
                     </NavLink>
                   );
                 })}
@@ -211,15 +236,33 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                     onClick={() => onClose()}
                     data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link-collapsed`}
                     className={({ isActive }) =>
-                      `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      `group flex items-center justify-center px-2 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive
-                          ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                          ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`
                     }
-                    title={item.name}
+                    title={
+                      item.badge > 0
+                        ? `${item.name} (${item.badge} new)`
+                        : item.name
+                    }
                   >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    {({ isActive }) => (
+                      <div className="relative">
+                        <span className={iconTile(isActive)}>
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        {item.badge > 0 && (
+                          <span
+                            data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-dot`}
+                            className="absolute -top-1.5 -right-1.5 min-w-[1rem] h-4 px-1 flex items-center justify-center rounded-full bg-danger-500 text-[9px] font-semibold text-white"
+                          >
+                            {item.badge > 9 ? "9+" : item.badge}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </NavLink>
                 );
               })}
