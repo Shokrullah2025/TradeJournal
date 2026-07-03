@@ -96,7 +96,7 @@ export default function TradeClosedToast({
           <button
             onClick={() => { onOpenAnalytics(); onClose(); }}
             className="text-xs px-2 py-1 rounded font-medium"
-            style={{ background: "#e8f0fe", color: "#1E53E5" }}
+            style={{ background: "rgba(42,157,143,0.15)", color: "#2a9d8f" }}
             data-testid="trade-toast-stats-btn"
           >
             Stats

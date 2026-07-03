@@ -90,26 +90,26 @@ const OAuthCallback = () => {
   const getStatusIcon = () => {
     switch (status) {
       case "processing":
-        return <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />;
+        return <Loader2 className="w-12 h-12 text-primary-500 animate-spin" />;
       case "success":
         return <CheckCircle className="w-12 h-12 text-green-500" />;
       case "error":
         return <XCircle className="w-12 h-12 text-red-500" />;
       default:
-        return <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />;
+        return <Loader2 className="w-12 h-12 text-primary-500 animate-spin" />;
     }
   };
 
   const getStatusColor = () => {
     switch (status) {
       case "processing":
-        return "text-blue-600";
+        return "text-primary-600";
       case "success":
         return "text-green-600";
       case "error":
         return "text-red-600";
       default:
-        return "text-blue-600";
+        return "text-primary-600";
     }
   };
 

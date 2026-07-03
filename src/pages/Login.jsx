@@ -111,7 +111,7 @@ const Login = () => {
                       type="email"
                       value={forgotEmail}
                       onChange={e => setForgotEmail(e.target.value)}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="Enter your email"
                       data-testid="forgot-password-email-input"
                     />
@@ -119,7 +119,7 @@ const Login = () => {
                   <button
                     type="submit"
                     disabled={!forgotEmail}
-                    className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500"
                     data-testid="forgot-password-submit-btn"
                   >
                     Send Reset Link
@@ -129,7 +129,7 @@ const Login = () => {
 
               <button
                 onClick={() => { setShowForgotPassword(false); setResetSent(false); setForgotEmail(""); }}
-                className="mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                className="mt-4 text-sm text-primary-600 dark:text-primary-400 hover:underline"
                 data-testid="back-to-login-btn"
               >
                 ← Back to sign in
@@ -139,11 +139,11 @@ const Login = () => {
             <>
               {showVerifyNotice && (
                 <div
-                  className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-200"
+                  className="mb-6 flex items-start gap-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 p-4 text-sm text-primary-800 dark:text-primary-200"
                   data-testid="login-verify-email-notice"
                   role="status"
                 >
-                  <MailCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                  <MailCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
                   <div className="flex-1">
                     <p className="font-medium">Verify your email to sign in</p>
                     <p className="mt-1">
@@ -155,7 +155,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowVerifyNotice(false)}
-                    className="flex-shrink-0 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+                    className="flex-shrink-0 text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
                     aria-label="Dismiss"
                     data-testid="login-verify-email-notice-dismiss-btn"
                   >
@@ -169,7 +169,7 @@ const Login = () => {
                 Don't have an account?{" "}
                 <Link
                   to="/register"
-                  className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500"
+                  className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500"
                   data-testid="go-to-register-link"
                 >
                   Sign up for free
@@ -190,7 +190,7 @@ const Login = () => {
                     {...register("email")}
                     type="email"
                     autoComplete="email"
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     placeholder="Enter your email"
                     data-testid="login-email-input"
                   />
@@ -211,7 +211,7 @@ const Login = () => {
                       {...register("password")}
                       type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
-                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="Enter your password"
                       data-testid="login-password-input"
                     />
@@ -241,7 +241,7 @@ const Login = () => {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={e => setRememberMe(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded cursor-pointer"
+                      className="h-4 w-4 text-primary-600 border-gray-300 rounded cursor-pointer"
                       data-testid="login-remember-me-checkbox"
                     />
                     Remember me
@@ -249,7 +249,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
-                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500"
+                    className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500"
                     data-testid="forgot-password-link"
                   >
                     Forgot password?
@@ -260,7 +260,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting || loading}
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="login-submit-btn"
                 >
                   {isSubmitting || loading ? (
@@ -280,17 +280,22 @@ const Login = () => {
 
       {/* Right — Feature highlight */}
       <div className="hidden lg:block relative w-0 flex-1">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 flex items-center justify-center">
-          <div className="text-center text-white px-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-400 via-primary-600 to-primary-900 flex items-center justify-center overflow-hidden">
+          {/* Soft glows so the panel reads as a rich gradient, not a flat fill. */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <div className="absolute -top-24 -left-20 h-96 w-96 rounded-full bg-primary-200/25 blur-3xl" />
+            <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-primary-900/40 blur-3xl" />
+          </div>
+          <div className="relative text-center text-white px-8">
             <div className="text-6xl mb-6">📊</div>
             <h2 className="text-3xl font-bold mb-4">Track Your Trading Success</h2>
-            <p className="text-xl text-blue-100 mb-8">
+            <p className="text-xl text-primary-100 mb-8">
               Professional tools for analyzing your trading performance and maximizing profits.
             </p>
             <div className="grid grid-cols-1 gap-4 text-left max-w-md">
               {["Advanced Analytics Dashboard", "Risk Management Tools", "Performance Tracking", "Export & Reporting"].map(f => (
                 <div key={f} className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-300 rounded-full" />
+                  <div className="w-2 h-2 bg-primary-300 rounded-full" />
                   <span>{f}</span>
                 </div>
               ))}

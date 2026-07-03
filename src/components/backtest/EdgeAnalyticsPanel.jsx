@@ -122,7 +122,7 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
         style={{ borderColor: theme.border }}
       >
         <div className="flex items-center gap-1.5">
-          <BarChart2 className="w-3.5 h-3.5" style={{ color: "#1E53E5" }} />
+          <BarChart2 className="w-3.5 h-3.5" style={{ color: "#2a9d8f" }} />
           <span className="text-xs font-semibold" style={{ color: theme.text }}>Edge Analytics</span>
         </div>
         <button
@@ -145,8 +145,8 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
             onClick={() => setActiveTab(key)}
             className="flex-1 py-1.5 text-xs font-medium border-b-2 transition-colors"
             style={{
-              color: activeTab === key ? "#1E53E5" : theme.textMuted,
-              borderBottomColor: activeTab === key ? "#1E53E5" : "transparent",
+              color: activeTab === key ? "#2a9d8f" : theme.textMuted,
+              borderBottomColor: activeTab === key ? "#2a9d8f" : "transparent",
               background: "transparent",
             }}
           >
@@ -353,7 +353,7 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
                         {label && (
                           <span
                             className="px-1 py-0.5 rounded"
-                            style={{ background: isDark ? "#1e222d" : "#e8f0fe", color: "#1E53E5", fontSize: 9 }}
+                            style={{ background: isDark ? "#1e222d" : "#dcefeb", color: "#2a9d8f", fontSize: 9 }}
                           >
                             {label}
                           </span>

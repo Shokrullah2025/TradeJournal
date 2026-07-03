@@ -35,8 +35,7 @@ function MobileSessionCard({ session: s, onOpen, onPlay }) {
       {/* Header: symbol chip + name/date + P&L */}
       <div className="flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
-          style={{ background: "#e8f0fe", color: "#1E53E5" }}
+          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
         >
           {s.symbol ?? "—"}
         </div>
@@ -125,7 +124,7 @@ function MobileSessionCard({ session: s, onOpen, onPlay }) {
             e.stopPropagation();
             onPlay(s);
           }}
-          className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 text-sm font-medium transition-colors active:bg-blue-100 dark:active:bg-blue-900/60"
+          className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300 text-sm font-medium transition-colors active:bg-primary-100 dark:active:bg-primary-900/60"
           aria-label="Play session chart"
         >
           <Play className="w-4 h-4" fill="currentColor" />
