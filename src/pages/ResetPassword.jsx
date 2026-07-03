@@ -279,8 +279,13 @@ const ResetPassword = () => {
 
       {/* Right — Feature highlight */}
       <div className="hidden lg:block relative w-0 flex-1">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-700 dark:to-primary-900 flex items-center justify-center">
-          <div className="text-center text-white px-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-400 via-primary-600 to-primary-900 flex items-center justify-center overflow-hidden">
+          {/* Soft glows so the panel reads as a rich gradient, not a flat fill. */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <div className="absolute -top-24 -left-20 h-96 w-96 rounded-full bg-primary-200/25 blur-3xl" />
+            <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-primary-900/40 blur-3xl" />
+          </div>
+          <div className="relative text-center text-white px-8">
             <div className="text-6xl mb-6">🔒</div>
             <h2 className="text-3xl font-bold mb-4">Secure Your Account</h2>
             <p className="text-xl text-primary-100">

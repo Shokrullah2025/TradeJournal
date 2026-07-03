@@ -123,7 +123,7 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitL
         <button
           type="submit"
           disabled={!stripe || isProcessing}
-          className="flex-1 py-2 px-4 bg-blue-600 dark:bg-blue-700 text-white rounded-md text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
+          className="flex-1 py-2 px-4 bg-primary-600 dark:bg-primary-700 text-white rounded-md text-sm font-medium hover:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50"
           data-testid="stripe-payment-submit-btn"
         >
           {isProcessing ? (

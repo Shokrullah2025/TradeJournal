@@ -305,7 +305,7 @@ const TemplateCreation = () => {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Enter template name"
                 />
               </div>
@@ -323,7 +323,7 @@ const TemplateCreation = () => {
                     }))
                   }
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Describe when to use this template"
                 />
               </div>
@@ -338,7 +338,7 @@ const TemplateCreation = () => {
                     <button
                       type="button"
                       onClick={selectAllFields}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-xs text-primary-600 hover:text-primary-800 font-medium"
                     >
                       Select All
                     </button>
@@ -373,7 +373,7 @@ const TemplateCreation = () => {
                                 key={field.key}
                                 className={`flex items-center justify-between space-x-2 text-sm cursor-pointer hover:bg-gray-100 p-2 rounded border-2 transition-all duration-200 ${
                                   includedFields.has(field.key)
-                                    ? "border-blue-200 bg-blue-50"
+                                    ? "border-primary-200 bg-primary-50"
                                     : "border-transparent"
                                 }`}
                               >
@@ -382,7 +382,7 @@ const TemplateCreation = () => {
                                     type="checkbox"
                                     checked={includedFields.has(field.key)}
                                     onChange={() => toggleField(field.key)}
-                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                                   />
                                   <span
                                     className={
@@ -395,7 +395,7 @@ const TemplateCreation = () => {
                                   </span>
                                 </div>
                                 {includedFields.has(field.key) && (
-                                  <Check className="w-4 h-4 text-blue-600" />
+                                  <Check className="w-4 h-4 text-primary-600" />
                                 )}
                               </label>
                             ))}
@@ -431,7 +431,7 @@ const TemplateCreation = () => {
                         onChange={(e) =>
                           handleFieldChange("instrumentType", e.target.value)
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
                         <option value="">Select type</option>
                         {instrumentTypes.map((type) => (
@@ -453,7 +453,7 @@ const TemplateCreation = () => {
                         onChange={(e) =>
                           handleFieldChange("tradeType", e.target.value)
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
                         <option value="">Select type</option>
                         {tradeTypes.map((type) => (
@@ -475,7 +475,7 @@ const TemplateCreation = () => {
                         onChange={(e) =>
                           handleFieldChange("strategy", e.target.value)
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
                         <option value="">Select strategy</option>
                         {strategies.map((strategy) => (
@@ -497,7 +497,7 @@ const TemplateCreation = () => {
                         onChange={(e) =>
                           handleFieldChange("setup", e.target.value)
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
                         <option value="">Select setup</option>
                         {setups.map((setup) => (
@@ -519,7 +519,7 @@ const TemplateCreation = () => {
                         onChange={(e) =>
                           handleFieldChange("marketCondition", e.target.value)
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
                         <option value="">Select condition</option>
                         {marketConditions.map((condition) => (
@@ -544,7 +544,7 @@ const TemplateCreation = () => {
                           handleFieldChange("entryPrice", e.target.value)
                         }
                         placeholder="0.00"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   )}
@@ -563,7 +563,7 @@ const TemplateCreation = () => {
                               e.target.value
                             )
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                           <option value="">Select risk profile</option>
                           {riskProfiles.map((profile) => (
@@ -597,7 +597,7 @@ const TemplateCreation = () => {
                           handleFieldChange("stopLoss", e.target.value)
                         }
                         placeholder="0.00"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   )}
@@ -615,7 +615,7 @@ const TemplateCreation = () => {
                           handleFieldChange("takeProfit", e.target.value)
                         }
                         placeholder="0.00"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   )}
@@ -632,7 +632,7 @@ const TemplateCreation = () => {
                           handleFieldChange("quantity", e.target.value)
                         }
                         placeholder="100"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   )}
@@ -647,7 +647,7 @@ const TemplateCreation = () => {
                         onChange={(e) =>
                           handleFieldChange("status", e.target.value)
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
                         {statuses.map((status) => (
                           <option key={status} value={status}>
@@ -666,13 +666,13 @@ const TemplateCreation = () => {
           <div className="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
             <button
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="btn-gradient-blue inline-flex items-center px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="btn-gradient-blue inline-flex items-center px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               <Save className="mr-2 h-4 w-4" />
               {editingTemplate ? "Update Template" : "Create Template"}
@@ -723,7 +723,7 @@ const TemplateCreation = () => {
                 {/* Show included fields count */}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Included Fields:</span>
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
                     {template.includedFields
                       ? template.includedFields.length
                       : Object.keys(template.fields).filter(
@@ -787,7 +787,7 @@ const TemplateCreation = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => handleEdit(template)}
-                  className="text-gray-400 hover:text-blue-600"
+                  className="text-gray-400 hover:text-primary-600"
                   title="Edit template"
                 >
                   <Edit3 className="w-4 h-4" />
@@ -808,7 +808,7 @@ const TemplateCreation = () => {
                 </button>
               </div>
               <button
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className="text-sm text-primary-600 hover:text-primary-800 font-medium"
                 title="Use template"
               >
                 Use Template
@@ -831,7 +831,7 @@ const TemplateCreation = () => {
           <div className="mt-6">
             <button
               onClick={handleCreateNew}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
             >
               <Plus className="mr-2 h-4 w-4" />
               Create Template

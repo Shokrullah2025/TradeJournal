@@ -132,7 +132,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
                 onClick={() => setTf(t)}
                 className={`px-3 py-1 text-xs font-semibold transition-colors ${
                   tf === t
-                    ? "bg-blue-600 text-white"
+                    ? "bg-primary-600 text-white"
                     : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
@@ -153,7 +153,7 @@ function HistorySessionChart({ session, autoOpen = false }) {
             <button
               data-testid="history-chart-play-btn"
               onClick={() => setOpened(true)}
-              className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 text-white hover:bg-blue-700 shadow-lg transition-colors"
+              className="flex items-center justify-center w-14 h-14 rounded-full bg-primary-600 text-white hover:bg-primary-700 shadow-lg transition-colors"
               aria-label="Load session chart"
             >
               <Play className="w-6 h-6 ml-0.5" fill="currentColor" />
