@@ -1,4 +1,6 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
 const DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -7,6 +9,8 @@ const DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const PAD   = { l: 30, r: 4, t: 6, b: 36 };
 
 const WhenYouWinChart = ({ trades = [] }) => {
+  const { isDark } = useTheme();
+  const c = getChartColors(isDark);
   const wrapRef = useRef(null);
   const [dims,  setDims] = useState(null);
 
@@ -157,7 +161,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
               textAnchor="end"
               dominantBaseline="middle"
               fontSize="9.5"
-              fill="#374151"
+              fill={c.tick}
               fontFamily="inherit"
             >
               {d}
@@ -175,7 +179,7 @@ const WhenYouWinChart = ({ trades = [] }) => {
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="9.5"
-                fill="#374151"
+                fill={c.tick}
                 fontFamily="inherit"
               >
                 {hr}

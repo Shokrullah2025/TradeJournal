@@ -19,13 +19,19 @@ vi.mock("../context/AuthContext", () => ({
 }));
 
 import Dashboard from "./Dashboard";
+import { ThemeProvider } from "../contexts/ThemeContext";
 
 // RecentTrades calls useNavigate(), so the page must render inside a Router.
+// The dashboard charts read their colors from ThemeContext (light/dark), so
+// the page also renders inside the real provider (matchMedia is mocked in
+// tests/setup.js).
 const renderDashboard = () =>
   render(
-    <MemoryRouter>
-      <Dashboard />
-    </MemoryRouter>,
+    <ThemeProvider>
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 
 const closed = (date, pnl, overrides = {}) => ({

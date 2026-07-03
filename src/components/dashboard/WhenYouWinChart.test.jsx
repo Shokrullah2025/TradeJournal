@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { ThemeProvider } from "../../contexts/ThemeContext";
 import WhenYouWinChart from "./WhenYouWinChart";
+
+// The chart reads its colors from ThemeContext (light/dark), so tests render
+// inside the real provider (matchMedia is mocked in tests/setup.js).
+const render = (ui) => rtlRender(<ThemeProvider>{ui}</ThemeProvider>);
 
 // WhenYouWinChart buckets closed trades into a day-of-week x trading-hour
 // heatmap. Weekends and out-of-session hours (before 9 / after 16) are

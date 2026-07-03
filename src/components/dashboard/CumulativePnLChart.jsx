@@ -1,4 +1,6 @@
 import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 const PAD_LEFT   = 38;
 const PAD_RIGHT  = 12;
@@ -36,6 +38,13 @@ const CumulativePnLChart = ({
   minSpacing = 60,
 }) => {
   const uid     = useId().replace(/:/g, '_');
+  const { isDark } = useTheme();
+  const c = getChartColors(isDark);
+  // This chart's light theme uses green-600 for the line (slightly deeper than
+  // the shared pos color); in dark mode lift it to the shared lighter tint so
+  // it doesn't muddy against the near-black card.
+  const lineGreen = isDark ? c.pos : "#16a34a";
+  const lineRed   = c.neg;
   const wrapRef = useRef(null);
   const [hover, setHover] = useState({ idx: null, x: 0, y: 0 });
   const [dims,  setDims]  = useState(null);
@@ -200,13 +209,13 @@ const CumulativePnLChart = ({
         <defs>
           {/* Green fill — fades from top */}
           <linearGradient id={`cpg_${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#16a34a" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="#16a34a" stopOpacity="0.02" />
+            <stop offset="0%"   stopColor={lineGreen} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={lineGreen} stopOpacity="0.02" />
           </linearGradient>
           {/* Red fill — fades to bottom */}
           <linearGradient id={`crg_${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#ef4444" stopOpacity="0.02" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.20" />
+            <stop offset="0%"   stopColor={lineRed} stopOpacity="0.02" />
+            <stop offset="100%" stopColor={lineRed} stopOpacity="0.20" />
           </linearGradient>
           {/* Clip above the zero line — 2px headroom so the stroke at the
               domain max isn't shaved in half by the clip edge */}
@@ -246,7 +255,7 @@ const CumulativePnLChart = ({
                 x2={PAD_LEFT + chartW}
                 y1={y.toFixed(1)}
                 y2={y.toFixed(1)}
-                stroke={isZero ? '#d1d5db' : '#f3f4f6'}
+                stroke={isZero ? c.zeroLine : c.grid}
                 strokeWidth="1"
                 strokeDasharray={isZero ? '4,3' : undefined}
                 mask={`url(#gm_${uid})`}
@@ -257,7 +266,7 @@ const CumulativePnLChart = ({
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="9.5"
-                fill="#374151"
+                fill={c.tick}
                 fontFamily="inherit"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
                 data-testid={`cumulative-pnl-chart-ylabel-${i}`}
@@ -286,7 +295,7 @@ const CumulativePnLChart = ({
           <path
             d={linePath}
             fill="none"
-            stroke="#16a34a"
+            stroke={lineGreen}
             strokeWidth="1.5"
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -295,7 +304,7 @@ const CumulativePnLChart = ({
           <path
             d={linePath}
             fill="none"
-            stroke="#ef4444"
+            stroke={lineRed}
             strokeWidth="1.5"
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -312,7 +321,7 @@ const CumulativePnLChart = ({
                 <line
                   x1={ix.toFixed(1)} x2={ix.toFixed(1)}
                   y1={PAD_TOP} y2={PAD_TOP + chartH}
-                  stroke="#9ca3af"
+                  stroke={c.axis}
                   strokeWidth="1"
                   strokeDasharray="3,2"
                 />
@@ -320,8 +329,8 @@ const CumulativePnLChart = ({
                   cx={ix.toFixed(1)}
                   cy={iy.toFixed(1)}
                   r="3.5"
-                  fill={pos ? "#16a34a" : "#ef4444"}
-                  stroke="white"
+                  fill={pos ? lineGreen : lineRed}
+                  stroke={c.dotRing}
                   strokeWidth="1.5"
                 />
               </g>
@@ -344,7 +353,7 @@ const CumulativePnLChart = ({
                 textAnchor="end"
                 dominantBaseline="middle"
                 fontSize="9.5"
-                fill="#374151"
+                fill={c.tick}
                 fontFamily="inherit"
               >
                 {fmtDate(dates[i])}

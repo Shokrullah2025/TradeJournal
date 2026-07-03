@@ -5,6 +5,8 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 const BAR_W       = 10;   // px — fixed bar width at every screen size
 const BAR_GAP     = 1;    // 1px visual gap between bars
@@ -55,6 +57,10 @@ function labelSet(n) {
 }
 
 const PnLChart = ({ trades = [] }) => {
+  const { isDark } = useTheme();
+  const c = getChartColors(isDark);
+  // Match CumulativePnLChart: green-600 bars in light, lighter tint in dark.
+  const barGreen = isDark ? c.pos : "#16a34a";
   const [hover, setHover] = useState({ idx: null, x: 0, y: 0 });
   const [size, setSize]   = useState({ w: 400, h: 280 });
   const ref               = useRef(null);
@@ -246,7 +252,7 @@ const PnLChart = ({ trades = [] }) => {
               x2="100%"
               y1={y}
               y2={y}
-              stroke={isZero ? "#e5e7eb" : "#f3f4f6"}
+              stroke={isZero ? c.zeroLine : c.grid}
               strokeWidth={isZero ? 1.5 : 1}
             />
           );
@@ -263,7 +269,7 @@ const PnLChart = ({ trades = [] }) => {
               textAnchor="middle"
               dominantBaseline="middle"
               fontSize="9.5"
-              fill="#374151"
+              fill={c.tick}
               fontFamily="inherit"
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
@@ -306,7 +312,7 @@ const PnLChart = ({ trades = [] }) => {
                 width={Math.max(1, BAR_W - BAR_GAP)}
                 height={bh}
                 rx="1.5"
-                fill={d.pnl >= 0 ? "#16a34a" : "#ef4444"}
+                fill={d.pnl >= 0 ? barGreen : c.neg}
                 opacity={dimmed ? 0.7 : 1}
                 className="transition-opacity duration-150"
                 data-testid={`pnl-chart-bar-${i}`}
@@ -341,7 +347,7 @@ const PnLChart = ({ trades = [] }) => {
                 textAnchor="end"
                 dominantBaseline="middle"
                 fontSize="9.5"
-                fill="#374151"
+                fill={c.tick}
                 fontFamily="inherit"
               >
                 {fmtDate(visibleData[i].date)}

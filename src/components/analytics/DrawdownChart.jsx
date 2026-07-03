@@ -12,11 +12,8 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { TrendingDown, BarChart3, Info } from "lucide-react";
-
-// Shared visual language with the Overview (PnLOverviewHero / DistributionAnalysis).
-const POS = "#22c55e";
-const PRIMARY = "#2a9d8f";
-const GRID = "#eef1f6";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getChartColors } from "../../utils/chartColors";
 
 // Full-precision currency, matching PerformanceMetrics / PnLOverviewHero.
 const formatMoney = (value, decimals = 2) => {
@@ -98,6 +95,9 @@ const SectionHeader = ({ icon: Icon, tone, title, subtitle, info, right }) => {
 };
 
 const DrawdownChart = ({ trades = [] }) => {
+  const { isDark } = useTheme();
+  // Shared visual language with the Overview (PnLOverviewHero / DistributionAnalysis).
+  const c = getChartColors(isDark);
   const { drawdownData, peak, maxDrawdown } = useMemo(() => {
     // Match the Overview: only closed trades contribute to the equity curve.
     const sortedTrades = trades
@@ -212,35 +212,35 @@ const DrawdownChart = ({ trades = [] }) => {
             >
               <defs>
                 <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={POS} stopOpacity={0.32} />
-                  <stop offset="95%" stopColor={POS} stopOpacity={0.04} />
+                  <stop offset="5%" stopColor={c.pos} stopOpacity={0.32} />
+                  <stop offset="95%" stopColor={c.pos} stopOpacity={0.04} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={c.grid} vertical={false} />
               <XAxis
                 dataKey="displayDate"
-                stroke="#9ca3af"
+                stroke={c.axis}
                 fontSize={11}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                tick={{ fill: c.tick, fontFamily: "monospace" }}
                 minTickGap={40}
               />
               <YAxis
-                stroke="#9ca3af"
+                stroke={c.axis}
                 fontSize={11}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value) => formatK(value)}
-                tick={{ fill: "#6b7280", fontFamily: "monospace" }}
+                tick={{ fill: c.tick, fontFamily: "monospace" }}
                 width={56}
               />
               <Tooltip content={<CustomTooltip />} />
-              <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={c.zeroLine} strokeWidth={1} />
               <Area
                 type="monotone"
                 dataKey="runningPnL"
-                stroke={POS}
+                stroke={c.pos}
                 strokeWidth={2}
                 fill="url(#pnlGradient)"
                 name="Running P&L"
@@ -249,7 +249,7 @@ const DrawdownChart = ({ trades = [] }) => {
               <Line
                 type="monotone"
                 dataKey="peak"
-                stroke={PRIMARY}
+                stroke={c.primary}
                 strokeWidth={1.5}
                 strokeDasharray="5 5"
                 dot={false}
