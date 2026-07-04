@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import ModalPortal from "../common/ModalPortal";
 import { RR_MODES, QUICK_MODES, ADVANCED_RR_MODES, getDefaultModeForInstrument, getUserRRList, parseRRValue } from "../../utils/rrModes";
+import { FUTURES_POINT_VALUES, FUTURES_TICK_SIZES, calculatePnL } from "../../utils/pnl";
 import { useTemplates } from "../../hooks/useTemplates";
 import { useUserSettings } from "../../hooks/useUserSettings";
 import { isFieldVisible as isFieldVisibleForConfig } from "../../utils/templateFields";
@@ -224,25 +225,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     options: ["SPY", "QQQ", "IWM", "AAPL", "TSLA", "AMC", "GME", "NVDA"],
   };
 
-  // Dollar value per 1 point of price move per 1 contract
-  const FUTURES_POINT_VALUES = {
-    // E-mini (standard)
-    ES: 50, NQ: 20, YM: 5, RTY: 50,
-    // Micro E-mini (1/10th of standard)
-    MES: 5, MNQ: 2, MYM: 0.5, M2K: 5,
-    // Commodities (standard)
-    CL: 1000, GC: 100, SI: 5000, NG: 10000,
-    // Micro commodities
-    MCL: 100, MGC: 10,
-  };
-
-  // Smallest price increment per futures contract — powers the Ticks/Points toggle
-  const FUTURES_TICK_SIZES = {
-    ES: 0.25, NQ: 0.25, YM: 1, RTY: 0.1,
-    MES: 0.25, MNQ: 0.25, MYM: 1, M2K: 0.1,
-    CL: 0.01, GC: 0.1, SI: 0.005, NG: 0.001,
-    MCL: 0.01, MGC: 0.1,
-  };
+  // Point values & tick sizes now live in utils/pnl.js so the Risk/Reward
+  // panel and the saved P&L use the same numbers (imported at top of file).
 
   // Use strategies and setups from settings by default, with fallback to localStorage and hardcoded defaults
   const strategies =
@@ -1069,13 +1053,16 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       };
 
       if (formattedData.exitPrice && formattedData.status === "closed") {
-        const pnlCalculation =
-          formattedData.tradeType === "long"
-            ? (formattedData.exitPrice - formattedData.entryPrice) *
-              formattedData.quantity
-            : (formattedData.entryPrice - formattedData.exitPrice) *
-              formattedData.quantity;
-        formattedData.pnl = pnlCalculation;
+        // Shared formula (utils/pnl.js) applies the futures point value —
+        // e.g. NQ = $20/pt — so the saved P&L matches the Risk/Reward panel.
+        formattedData.pnl = calculatePnL({
+          tradeType: formattedData.tradeType,
+          entryPrice: formattedData.entryPrice,
+          exitPrice: formattedData.exitPrice,
+          quantity: formattedData.quantity,
+          instrumentType: formattedData.instrumentType,
+          instrument: formattedData.instrument,
+        });
       }
 
       let savedTradeId;
