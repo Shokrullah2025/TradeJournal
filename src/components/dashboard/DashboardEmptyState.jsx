@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
-import { Plus, BarChart3 } from "lucide-react";
+import { Link2, BarChart3 } from "lucide-react";
 
 // Grayscale ghost previews shown when the user has no trades yet. Each card
 // keeps the live dashboard's slot but fills only its top half with a faded
@@ -255,7 +255,7 @@ GhostStatCard.propTypes = {
 
 const DashboardEmptyState = () => {
   const navigate = useNavigate();
-  const addTrade = () => navigate("/trade-entry");
+  const connectBroker = () => navigate("/brokers");
 
   return (
     <div className="space-y-6" data-testid="dashboard-empty-state">
@@ -272,18 +272,18 @@ const DashboardEmptyState = () => {
             No trades yet
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            The gray previews show what each card will look like once you start
-            journaling.
+            The gray previews show what each card will look like once your
+            trades come in.
           </p>
         </div>
         <button
           type="button"
-          onClick={addTrade}
+          onClick={connectBroker}
           className="btn btn-primary flex items-center gap-1.5 self-start sm:self-auto"
-          data-testid="empty-state-add-trade-btn"
+          data-testid="empty-state-connect-broker-btn"
         >
-          <Plus className="w-4 h-4" />
-          Add your first trade
+          <Link2 className="w-4 h-4" />
+          Connect your broker
         </button>
       </div>
 
@@ -396,16 +396,16 @@ const DashboardEmptyState = () => {
               Your trade history lives here
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              Every trade you log appears in this list.
+              Connect your broker and your trades import automatically.
             </p>
             <button
               type="button"
-              onClick={addTrade}
+              onClick={connectBroker}
               className="btn btn-primary inline-flex items-center gap-1.5 mt-3"
-              data-testid="empty-recent-trades-add-btn"
+              data-testid="empty-recent-trades-connect-broker-btn"
             >
-              <Plus className="w-4 h-4" />
-              Add your first trade
+              <Link2 className="w-4 h-4" />
+              Connect your broker
             </button>
           </div>
         </div>

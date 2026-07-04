@@ -168,18 +168,18 @@ describe("Dashboard page", () => {
     expect(screen.queryByTestId("recent-trades-card")).not.toBeInTheDocument();
   });
 
-  it("navigates to trade entry from the ghost-state CTA buttons", () => {
+  it("navigates to broker selection from the ghost-state CTA buttons", () => {
     ctx.stats = emptyStats;
     ctx.trades = [];
 
     renderDashboard();
 
-    fireEvent.click(screen.getByTestId("empty-state-add-trade-btn"));
-    expect(navSpy).toHaveBeenCalledWith("/trade-entry");
+    fireEvent.click(screen.getByTestId("empty-state-connect-broker-btn"));
+    expect(navSpy).toHaveBeenCalledWith("/brokers");
 
     navSpy.mockClear();
-    fireEvent.click(screen.getByTestId("empty-recent-trades-add-btn"));
-    expect(navSpy).toHaveBeenCalledWith("/trade-entry");
+    fireEvent.click(screen.getByTestId("empty-recent-trades-connect-broker-btn"));
+    expect(navSpy).toHaveBeenCalledWith("/brokers");
   });
 
   it("does not show the ghost state while trades are still loading (edge case)", () => {
