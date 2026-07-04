@@ -29,6 +29,24 @@ const toLocalDateStr = (d) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
+// Which Exit Price mode does a stored trade's exit price actually match?
+// Editing must reopen in the mode the trade was saved with — defaulting to
+// "stopLoss" silently rewrote the exit price (and therefore the P&L) with
+// the stop loss the moment the edit modal mounted.
+const deriveExitPriceMode = (trade) => {
+  if (!trade) return "custom";
+  const exit = parseFloat(trade.exitPrice);
+  if (!isFinite(exit) || exit === 0) return "custom";
+  const near = (v) => {
+    const n = parseFloat(v);
+    return isFinite(n) && Math.abs(n - exit) < 0.005;
+  };
+  if (near(trade.takeProfit)) return "takeProfit";
+  if (near(trade.stopLoss)) return "stopLoss";
+  if (near(trade.entryPrice)) return "breakeven";
+  return "custom";
+};
+
 // Helper functions
 const getUserOptions = (type) => {
   const stored = localStorage.getItem(`tradeForm_${type}`);
@@ -54,7 +72,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   // Per-field visibility coming from the applied template's Configure Fields config.
   // null = no config → show every field (default/legacy behavior).
   const [fieldVisibility, setFieldVisibility] = useState(null);
-  const [exitPriceMode, setExitPriceMode] = useState("stopLoss"); // "stopLoss", "takeProfit", "custom"
+  // "stopLoss" | "takeProfit" | "breakeven" | "custom" — derived from the
+  // trade being edited; "custom" for new trades so typing a stop loss never
+  // silently becomes the exit price.
+  const [exitPriceMode, setExitPriceMode] = useState(() => deriveExitPriceMode(trade));
   const [rrUnit, setRrUnit] = useState("points"); // Risk/Reward hub display unit: "points" | "ticks"
   const [rrMode, setRrMode] = useState(() => getDefaultModeForInstrument("stocks"));
   const [rrListsByMode, setRrListsByMode] = useState(() =>
@@ -742,8 +763,16 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     }
   }, [watchedEntryDate, watchedStatus, setValue]);
 
-  // Update exit price when stop loss or take profit changes and mode is set to those values
+  // Update exit price when stop loss or take profit changes and mode is set
+  // to those values. Skips the mount run: firing on mount overwrote an edited
+  // trade's real exit price with its stop loss (and the P&L recompute on save
+  // then persisted the wrong number).
+  const exitSyncReady = useRef(false);
   useEffect(() => {
+    if (!exitSyncReady.current) {
+      exitSyncReady.current = true;
+      return;
+    }
     if (watchedStatus === "closed") {
       if (exitPriceMode === "stopLoss" && watchedStopLoss) {
         setValue("exitPrice", parseFloat(watchedStopLoss));
