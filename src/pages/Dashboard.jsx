@@ -14,6 +14,10 @@ const CUMULATIVE_RANGE_OPTIONS = [
   { value: 30, label: "30D" },
   { value: 60, label: "60D" },
   { value: 365, label: "1Y" },
+  // "all" skips the cutoff entirely — the only view that shows true lifetime
+  // performance (windowed ranges silently drop older trades, which confused
+  // users comparing this chart against all-time views elsewhere).
+  { value: "all", label: "All" },
 ];
 
 const fmtK = (v) => {
@@ -42,10 +46,12 @@ const Dashboard = () => {
 
   // Pre-aggregate cumulative data so CumulativePnLChart receives clean arrays
   // rather than raw trades — this keeps the chart component stateless and testable.
-  const { cumData, cumDates, sessionCount } = useMemo(() => {
+  const { cumData, cumDates, cumDaily, sessionCount } = useMemo(() => {
+    // "all" = lifetime: no cutoff. Numeric ranges window to the last N days.
+    const isAll = cumulativeRange === "all";
     const cutoff = new Date();
     cutoff.setHours(0, 0, 0, 0);
-    cutoff.setDate(cutoff.getDate() - cumulativeRange);
+    if (!isAll) cutoff.setDate(cutoff.getDate() - cumulativeRange);
 
     const byDate = {};
     (trades || [])
@@ -58,7 +64,7 @@ const Dashboard = () => {
           trade.created_at;
         if (!raw) return;
         const parsed = new Date(raw);
-        if (isNaN(parsed.getTime()) || parsed < cutoff) return;
+        if (isNaN(parsed.getTime()) || (!isAll && parsed < cutoff)) return;
         // Local-day key — toISOString() shifted the day for UTC+ timezones
         const key = toLocalDateKey(parsed);
         byDate[key] = (byDate[key] || 0) + (trade.pnl || 0);
@@ -71,9 +77,11 @@ const Dashboard = () => {
     let cum = 0;
     const cumData  = [];
     const cumDates = [];
+    const cumDaily = []; // per-session P&L, parallel to cumData — feeds tooltip
     sorted.forEach(([date, daily]) => {
       cum += daily;
       cumData.push(cum);
+      cumDaily.push(daily);
       // Noon UTC avoids timezone-boundary issues when constructing from date string
       cumDates.push(new Date(`${date}T12:00:00Z`));
     });
@@ -83,8 +91,9 @@ const Dashboard = () => {
       anchor.setDate(anchor.getDate() - 1);
       cumData.unshift(0);
       cumDates.unshift(anchor);
+      cumDaily.unshift(null); // baseline point has no session P&L
     }
-    return { cumData, cumDates, sessionCount };
+    return { cumData, cumDates, cumDaily, sessionCount };
   }, [trades, cumulativeRange]);
 
   // Recent = most recent by entry date, matching the order the Trades page and
@@ -304,7 +313,7 @@ const Dashboard = () => {
               })}
             </div>
           </div>
-          <CumulativePnLChart data={cumData} dates={cumDates} />
+          <CumulativePnLChart data={cumData} dates={cumDates} daily={cumDaily} />
         </div>
 
         {/* When You Win — heatmap of avg P&L by day of week × trading hour.

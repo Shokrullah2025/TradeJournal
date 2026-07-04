@@ -68,11 +68,14 @@ const monotonePath = (xs, ys) => {
  * Props
  *   data        number[]   — cumulative running totals, one per trading day
  *   dates       Date[]     — matching Date objects (same length as data)
+ *   daily       (number|null)[] — that session's own P&L, parallel to data
+ *                (null for the zero-baseline anchor point)
  *   minSpacing  number     — minimum px between x-axis date labels (default 60)
  */
 const CumulativePnLChart = ({
   data = [],
   dates = [],
+  daily = [],
   minSpacing = 60,
 }) => {
   const uid     = useId().replace(/:/g, '_');
@@ -208,7 +211,10 @@ const CumulativePnLChart = ({
 
   const aboveH  = Math.max(0, zeroY - PAD_TOP);
   const belowH  = Math.max(0, PAD_TOP + chartH - zeroY);
-  const hovered = hover.idx !== null ? { v: data[hover.idx], d: dates[hover.idx] } : null;
+  const hovered =
+    hover.idx !== null
+      ? { v: data[hover.idx], d: dates[hover.idx], day: daily[hover.idx] ?? null }
+      : null;
 
   return (
     <div
@@ -431,22 +437,45 @@ const CumulativePnLChart = ({
             transform: "translate(-50%, -100%)",
           }}
         >
-          <div
-            className={
-              hovered.v >= 0
-                ? "font-semibold text-green-400 dark:text-green-600"
-                : "font-semibold text-red-400 dark:text-red-600"
-            }
-            data-testid="cumulative-pnl-chart-tooltip-value"
-          >
-            {fmtFull(hovered.v)}
-          </div>
           {hovered.d && (
-            <div className="opacity-75 mt-0.5">
+            <div className="opacity-75 mb-0.5">
               {hovered.d.toLocaleDateString("en-US", { weekday: "short" })},{" "}
               {fmtDate(hovered.d)}
             </div>
           )}
+          {/* That session's own result — the number users expect to match the
+              trades calendar. Baseline anchor point (day === null) skips it. */}
+          {hovered.day !== null && (
+            <div
+              className="flex items-baseline justify-between gap-3"
+              data-testid="cumulative-pnl-chart-tooltip-day"
+            >
+              <span className="opacity-75">Day</span>
+              <span
+                className={
+                  hovered.day >= 0
+                    ? "font-semibold text-green-400 dark:text-green-600"
+                    : "font-semibold text-red-400 dark:text-red-600"
+                }
+              >
+                {fmtFull(hovered.day)}
+              </span>
+            </div>
+          )}
+          {/* Running total up to this session — what the line itself plots */}
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="opacity-75">Total</span>
+            <span
+              className={
+                hovered.v >= 0
+                  ? "font-semibold text-green-400 dark:text-green-600"
+                  : "font-semibold text-red-400 dark:text-red-600"
+              }
+              data-testid="cumulative-pnl-chart-tooltip-value"
+            >
+              {fmtFull(hovered.v)}
+            </span>
+          </div>
         </div>
       )}
     </div>
