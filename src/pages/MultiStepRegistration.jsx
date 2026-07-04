@@ -110,12 +110,12 @@ const MultiStepRegistration = () => {
     setRegistrationData((prev) => ({ ...prev, emailVerified: true, userId }));
 
     // Supabase Auth manages the session automatically — no token storage needed.
-    // Send the user to the dashboard. They have no subscription yet, so
-    // RequireSubscription renders it behind the TrialGate overlay where they
-    // start their 7-day free trial (card up front). A full reload ensures the
+    // Offer the 2FA setup wizard first (it has "Skip for now"); from there the
+    // user continues to the dashboard, where RequireSubscription shows the
+    // TrialGate overlay until they add a card. A full reload ensures the
     // FeatureFlag audience re-resolves to "free" so the gate appears.
-    toast.success("Email verified! Add a card to start your free trial.");
-    window.location.assign("/dashboard");
+    toast.success("Email verified! Let's secure your account.");
+    window.location.assign("/security/2fa?onboarding=1");
   };
 
   const handleResendEmail = () => {
