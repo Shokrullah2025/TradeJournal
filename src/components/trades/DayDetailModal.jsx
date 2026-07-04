@@ -6,7 +6,6 @@ import {
   Edit,
   Plus,
   Trash2,
-  AlertTriangle,
   Camera,
   ChevronDown,
   ChevronUp,
@@ -560,6 +559,38 @@ const DayDetailModal = ({
                             <Edit className="w-3.5 h-3.5" />
                             Edit
                           </button>
+                          {confirmDeleteId === trade.id ? (
+                            <div
+                              className="flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => handleDelete(trade.id)}
+                                data-testid={`trade-row-delete-confirm-${trade.id}`}
+                                className="h-8 px-3 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="h-8 px-3 rounded-lg text-xs font-semibold text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDeleteId(trade.id);
+                              }}
+                              data-testid={`trade-row-delete-${trade.id}`}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 transition-colors"
+                              title="Delete trade"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           {detail && (
                             <button
                               onClick={(e) => {
@@ -675,6 +706,38 @@ const DayDetailModal = ({
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
+                        {confirmDeleteId === trade.id ? (
+                          <div
+                            className="flex items-center gap-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => handleDelete(trade.id)}
+                              data-testid={`trade-row-delete-confirm-${trade.id}`}
+                              className="h-7 px-2 rounded-md text-[11px] font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="h-7 px-2 rounded-md text-[11px] font-bold text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteId(trade.id);
+                            }}
+                            data-testid={`trade-row-delete-${trade.id}`}
+                            className="w-7 h-7 rounded-md text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center transition-colors"
+                            title="Delete trade"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {detail && (
                           <button
                             onClick={(e) => {
@@ -739,37 +802,6 @@ const DayDetailModal = ({
                           </div>
                         )}
 
-                        <div className="flex items-start">
-                          {confirmDeleteId === trade.id ? (
-                            <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-1.5">
-                              <AlertTriangle className="w-4 h-4 text-red-500" />
-                              <span className="text-xs text-red-700 dark:text-red-300 font-medium">
-                                Delete?
-                              </span>
-                              <button
-                                onClick={() => handleDelete(trade.id)}
-                                className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-2 py-0.5 rounded transition-colors"
-                              >
-                                Yes
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-800 px-2 py-0.5 rounded transition-colors"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setConfirmDeleteId(trade.id)}
-                              data-testid={`trade-row-delete-${trade.id}`}
-                              className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400 hover:text-red-600 hover:border-red-300 flex items-center justify-center transition-colors"
-                              title="Delete trade"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
                       </div>
                     )}
                   </div>
