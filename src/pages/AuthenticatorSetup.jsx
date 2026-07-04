@@ -32,7 +32,8 @@ import TotpCodeInput from "../components/auth/TotpCodeInput";
 // Routed at /security/2fa OUTSIDE the app shell so it works for brand-new
 // accounts that haven't started a trial yet (RequireSubscription would blur it
 // behind the TrialGate). Reached from:
-//   • post-registration email confirmation (?onboarding=1 → offers "Skip for now")
+//   • the first sign-in after email confirmation — Login routes here when the
+//     account has no authenticator (?onboarding=1 → offers "Skip for now")
 //   • Settings → Security → "Set up"
 // All Supabase MFA calls go through src/utils/mfa.js.
 

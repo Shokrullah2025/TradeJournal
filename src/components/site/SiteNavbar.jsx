@@ -246,7 +246,7 @@ const SiteNavbar = () => {
               data-testid="site-nav-getstarted-btn"
               className="btn btn-site btn-sm"
             >
-              Get started free
+              Get Started
             </Link>
           </div>
 
@@ -460,7 +460,7 @@ const SiteNavbar = () => {
                 data-testid="site-nav-mobile-getstarted-btn"
                 className="btn btn-site w-full justify-center"
               >
-                Get started free
+                Get Started
               </Link>
             </div>
           </div>

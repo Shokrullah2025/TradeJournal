@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { Clock, CheckCircle, Star, ArrowRight, CreditCard } from "lucide-react";
+import { CheckCircle, Star, CreditCard } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { format } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { useBilling } from "../../context/BillingContext";
+import { hardNavigate } from "../../utils/navigation";
 import StripePaymentForm from "../billing/StripePaymentForm";
 
 const TrialActivation = ({
@@ -16,7 +16,8 @@ const TrialActivation = ({
   // "page" renders full-screen (standalone route); "overlay" renders just the
   // card panel so it can sit inside the blurred TrialGate over the dashboard.
   const isOverlay = variant === "overlay";
-  // intro → card (collect card) → activated. `error` shows a recoverable message.
+  // intro → card (collect card); a successful activation leaves the page with
+  // a full reload straight into the dashboard — there is no "activated" step.
   const [trialStatus, setTrialStatus] = useState("intro");
   const [isWorking, setIsWorking] = useState(false);
   const [clientSecret, setClientSecret] = useState(null);
@@ -25,7 +26,6 @@ const TrialActivation = ({
   // this customer saved previously, for one-click checkout. Null when they have
   // none (or session creation failed); the card form still works without it.
   const [customerSessionClientSecret, setCustomerSessionClientSecret] = useState(null);
-  const [trialEnd, setTrialEnd] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   // Set once the card is verified (SetupIntent succeeded). Its presence means we
   // no longer need the card form — a failed trial start can be retried directly.
@@ -34,10 +34,9 @@ const TrialActivation = ({
 
   // After the trial is activated the user's subscription becomes "trialing", but
   // the in-memory FeatureFlag audience is still "free" until the app re-resolves
-  // it. Navigate with a full reload so RequireSubscription reads the fresh
-  // entitlement and lets the user into the app instead of bouncing them back
-  // here. (A client-side navigate would loop against the route guard.)
-  const goWithReload = (path) => window.location.assign(path);
+  // it. hardNavigate reloads so RequireSubscription reads the fresh entitlement
+  // and lets the user into the app instead of bouncing them back here. (A
+  // client-side navigate would loop against the route guard.)
 
   // Step 1 — create a SetupIntent so the user can enter a card without being charged.
   const beginTrial = async () => {
@@ -79,10 +78,12 @@ const TrialActivation = ({
     setErrorMessage("");
     try {
       const result = await startTrial(planSlug, billingCycle, pmId, customerId);
-      setTrialEnd(result?.trialEnd ?? null);
-      setTrialStatus("activated");
       toast.success("Your 7-day free trial has started!");
       onTrialActivated?.(result);
+      // Straight into the app — no interstitial "welcome / complete your
+      // profile" page. Full reload so RequireSubscription reads the fresh
+      // entitlement (see the note above).
+      hardNavigate("/dashboard");
     } catch (err) {
       setErrorMessage(err.message || "We couldn't start your trial. Please try again.");
       toast.error(err.message || "We couldn't start your trial. Please try again.");
@@ -142,93 +143,6 @@ const TrialActivation = ({
       description: "Get help when you need it with our dedicated support team",
     },
   ];
-
-  if (trialStatus === "activated") {
-    return (
-      <div
-        className={
-          isOverlay
-            ? "w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
-            : "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
-        }
-        data-testid="trial-activated-state"
-      >
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center w-16 h-16 bg-green-600 rounded-full mx-auto">
-              <CheckCircle className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Welcome to Tradgella!
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Your 7-day free trial has been successfully activated.
-            </p>
-          </div>
-
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <Clock className="w-5 h-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium text-green-800">
-                  Trial Period
-                </span>
-              </div>
-              <span className="text-sm font-bold text-green-800">
-                7 Days Remaining
-              </span>
-            </div>
-            <p className="text-sm text-green-700" data-testid="trial-end-date">
-              {trialEnd
-                ? `Your card will be charged on ${format(new Date(trialEnd), "MMM d, yyyy")} unless you cancel before then. You have full access to all Pro features until your trial ends.`
-                : "You'll have full access to all Pro features during your trial. Cancel anytime before it ends to avoid being charged."}
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 text-center">
-              What's included in your trial:
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-              {trialFeatures.slice(0, 4).map((feature, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  {feature.icon}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">
-                      {feature.title}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {feature.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-sm text-gray-600 text-center">
-              + All premium features and unlimited access
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={() => goWithReload("/dashboard")}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Get Started
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => goWithReload("/profile")}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Complete Your Profile
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div

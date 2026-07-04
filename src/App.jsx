@@ -145,8 +145,8 @@ function App() {
 
                     {/* Authenticator (2FA) setup wizard. Full-screen and OUTSIDE
                         the app shell + RequireSubscription on purpose: it's
-                        offered right after email confirmation, before the user
-                        has started a trial, and securing the account must never
+                        offered on the user's first sign-in, before they have
+                        started a trial, and securing the account must never
                         sit behind the TrialGate. */}
                     <Route
                       path="/security/2fa"

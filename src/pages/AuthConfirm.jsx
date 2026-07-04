@@ -34,7 +34,7 @@ const isAlreadyUsed = ({ errorCode, errorText }) => {
 const AuthConfirm = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { verifyEmail } = useAuth();
+  const { verifyEmail, discardSession } = useAuth();
   const [status, setStatus] = useState("processing"); // processing | success | used | error
   const [message, setMessage] = useState("Confirming your email…");
 
@@ -96,13 +96,14 @@ const AuthConfirm = () => {
           if (!session) throw new Error("no-session");
         }
 
-        // Email confirmed → offer 2FA setup before the dashboard. The wizard's
-        // onboarding mode has a "Skip for now" that continues to the dashboard.
-        finish("success", "Your email is verified. Let's secure your account…");
-        setTimeout(
-          () => navigate("/security/2fa?onboarding=1", { replace: true }),
-          1500
-        );
+        // Email confirmed. The link's only job is verifying the address — the
+        // session Supabase creates as a side effect is discarded so the user
+        // signs in explicitly via the button below. discardSession (not raw
+        // signOut) resets the in-memory auth state synchronously, so PublicRoute
+        // can't bounce the "Sign in" click to /dashboard off a stale flag. The
+        // authenticator setup offer happens on that first real login.
+        await discardSession();
+        finish("success", "Your email address is confirmed. Sign in to continue.");
       } catch (err) {
         if (isAlreadyUsed({ errorText: err?.message })) {
           finish("used", USED_MSG);
@@ -119,7 +120,7 @@ const AuthConfirm = () => {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, navigate, verifyEmail]);
+  }, [searchParams, navigate, verifyEmail, discardSession]);
 
   const icon =
     status === "success" ? (
@@ -167,13 +168,20 @@ const AuthConfirm = () => {
           {message}
         </p>
 
-        {(status === "error" || status === "used") && (
+        {status !== "processing" && (
           <button
-            onClick={() => navigate("/login", { replace: true })}
+            onClick={() =>
+              navigate("/login", {
+                replace: true,
+                // The green "Email verified!" banner on the login page only
+                // makes sense when this link actually verified the address.
+                state: status === "success" ? { emailConfirmed: true } : undefined,
+              })
+            }
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             data-testid="auth-confirm-login-btn"
           >
-            Go to sign in
+            {status === "success" ? "Sign in" : "Go to sign in"}
           </button>
         )}
       </div>
