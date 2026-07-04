@@ -24,6 +24,7 @@ const fmtK = (v) => {
 };
 import { useTrades } from "../context/TradeContext";
 import { useAuth } from "../context/AuthContext";
+import { toLocalDateKey } from "../utils/date";
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentTrades from "../components/dashboard/RecentTrades";
 import PnLChart from "../components/dashboard/PnLChart_simple";
@@ -58,7 +59,8 @@ const Dashboard = () => {
         if (!raw) return;
         const parsed = new Date(raw);
         if (isNaN(parsed.getTime()) || parsed < cutoff) return;
-        const key = parsed.toISOString().split('T')[0];
+        // Local-day key — toISOString() shifted the day for UTC+ timezones
+        const key = toLocalDateKey(parsed);
         byDate[key] = (byDate[key] || 0) + (trade.pnl || 0);
       });
 
@@ -172,7 +174,7 @@ const Dashboard = () => {
               if (!rawDate) return;
               const parsed = new Date(rawDate);
               if (isNaN(parsed.getTime())) return;
-              const date = parsed.toISOString().split('T')[0];
+              const date = toLocalDateKey(parsed);
               dailyPnL[date] = (dailyPnL[date] || 0) + (trade.pnl || 0);
             });
 
