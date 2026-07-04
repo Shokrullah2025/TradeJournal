@@ -163,7 +163,7 @@ const TradePnLSummary = ({ trades, variant }) => {
         </div>
 
         <div
-          className={`text-2xl font-bold tracking-tight tabular-nums ${
+          className={`text-xl font-bold tracking-tight tabular-nums ${
             positive
               ? "text-success-600 dark:text-success-400"
               : "text-danger-600 dark:text-danger-400"
@@ -233,7 +233,7 @@ const TradePnLSummary = ({ trades, variant }) => {
       <div className="grid grid-cols-2 gap-4">
         {variant === "list" ? (
           <div className="card text-center" data-testid="pnl-summary-open-card">
-            <div className="text-xl font-bold tabular-nums text-primary-600 dark:text-primary-400">
+            <div className="text-lg font-bold tabular-nums text-primary-600 dark:text-primary-400">
               {stats.openPositions}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -242,7 +242,7 @@ const TradePnLSummary = ({ trades, variant }) => {
           </div>
         ) : (
           <div className="card text-center" data-testid="pnl-summary-total-card">
-            <div className="text-xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
+            <div className="text-lg font-bold tabular-nums text-gray-900 dark:text-gray-100">
               {stats.totalTrades}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -253,7 +253,7 @@ const TradePnLSummary = ({ trades, variant }) => {
 
         <div className="card text-center" data-testid="pnl-summary-monthly-card">
           <div
-            className={`text-xl font-bold tabular-nums ${
+            className={`text-lg font-bold tabular-nums ${
               stats.monthlyPnL >= 0
                 ? "text-success-600 dark:text-success-400"
                 : "text-danger-600 dark:text-danger-400"
