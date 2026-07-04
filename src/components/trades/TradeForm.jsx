@@ -1615,6 +1615,36 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         <p className="text-danger-600 text-xs mt-1">{errors.quantity.message}</p>
                       )}
                     </div>
+                    {/* SL / TP mirror the Risk/Reward panel fields: typing here
+                        updates the panel (and its R:R math) and vice-versa. */}
+                    <div>
+                      <label className="label">Stop Loss</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={watchedStopLoss || ""}
+                        onChange={(e) =>
+                          setValue("stopLoss", e.target.value, { shouldValidate: true })
+                        }
+                        className="input"
+                        placeholder="0.00"
+                        data-testid="trade-form-stop-loss-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Take Profit</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={watchedTakeProfit || ""}
+                        onChange={(e) =>
+                          setValue("takeProfit", e.target.value, { shouldValidate: true })
+                        }
+                        className="input"
+                        placeholder="0.00"
+                        data-testid="trade-form-take-profit-input"
+                      />
+                    </div>
                   </div>
                 </section>
 
