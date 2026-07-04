@@ -11,7 +11,10 @@ import { BrowserRouter } from "react-router-dom";
 //     fetch has been removed.
 // These tests cover the current implementations. Auth, billing, the supabase
 // singleton, Stripe and toast are all mocked so nothing hits the network.
-const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock } = vi.hoisted(() => ({
+const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock, hardNavigateMock } = vi.hoisted(() => ({
+  // jsdom's window.location is [LegacyUnforgeable] and can't be spied on, so
+  // the component routes hard reloads through src/utils/navigation — mock that.
+  hardNavigateMock: vi.fn(),
   authApi: {
     register: vi.fn(),
     sendEmailVerification: vi.fn(),
@@ -30,6 +33,7 @@ const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock } = v
 }));
 
 vi.mock("../src/context/AuthContext", () => ({ useAuth: () => authApi }));
+vi.mock("../src/utils/navigation", () => ({ hardNavigate: hardNavigateMock }));
 vi.mock("../src/context/BillingContext", () => ({ useBilling: () => billingApi }));
 vi.mock("../src/lib/supabase", () => ({ supabase: supabaseApi }));
 vi.mock("react-hot-toast", () => ({ toast: toastMock, default: toastMock }));
@@ -220,7 +224,7 @@ describe("Registration & Trial Flow", () => {
       expect(screen.getByTestId("trial-activate-submit-btn")).toBeInTheDocument();
     });
 
-    it("collects a card then starts the trial and shows success (happy path)", async () => {
+    it("collects a card then starts the trial and goes straight to the dashboard (happy path)", async () => {
       const onTrialActivated = vi.fn();
       renderWithRouter(<TrialActivation onTrialActivated={onTrialActivated} />);
 
@@ -243,10 +247,15 @@ describe("Registration & Trial Flow", () => {
         expect(billingApi.startTrial).toHaveBeenCalledWith("premium", "monthly", "pm_123", "cus_123");
       });
 
-      expect(
-        await screen.findByTestId("trial-activated-state")
-      ).toBeInTheDocument();
-      expect(screen.getByText("Welcome to Tradgella!")).toBeInTheDocument();
+      // No interstitial "welcome / complete your profile" page anymore —
+      // activation reloads straight into the dashboard so RequireSubscription
+      // re-resolves the fresh entitlement.
+      await waitFor(() => {
+        expect(hardNavigateMock).toHaveBeenCalledWith("/dashboard");
+      });
+      expect(toastMock.success).toHaveBeenCalledWith(
+        "Your 7-day free trial has started!"
+      );
       expect(onTrialActivated).toHaveBeenCalled();
     });
 
@@ -281,7 +290,8 @@ describe("Registration & Trial Flow", () => {
       expect(await screen.findByTestId("trial-error-message")).toHaveTextContent(
         "You've already used your free trial."
       );
-      expect(screen.queryByTestId("trial-activated-state")).not.toBeInTheDocument();
+      // A failed activation must not redirect into the app.
+      expect(hardNavigateMock).not.toHaveBeenCalled();
     });
   });
 });

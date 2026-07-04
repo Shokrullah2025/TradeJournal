@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LogIn, MailCheck, X } from "lucide-react";
+import { Eye, EyeOff, LogIn, MailCheck, CheckCircle, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { loginSchema } from "../utils/validation";
 import AuthNavbar from "../components/auth/AuthNavbar";
@@ -32,6 +32,13 @@ const Login = () => {
   );
   const verifyEmailAddress = location.state?.email || "";
 
+  // Shown once after the confirmation link is clicked: the address is verified
+  // and the user just needs to sign in (their first login offers the
+  // authenticator setup). Driven by navigation state from AuthConfirm.
+  const [showConfirmedNotice, setShowConfirmedNotice] = useState(
+    () => !!location.state?.emailConfirmed
+  );
+
   // Auto-dismiss the verify-email notice after 9s so it's readable but doesn't
   // linger forever. The X still lets the user close it sooner. Timer is cleared
   // on unmount / re-run to avoid setState after unmount.
@@ -58,8 +65,14 @@ const Login = () => {
       } else {
         localStorage.removeItem(REMEMBER_KEY);
       }
-      await login(email, password);
-      navigate(from, { replace: true });
+      const result = await login(email, password);
+      // First sign-in with no authenticator enrolled → one-time setup offer.
+      // The wizard's onboarding mode has "Skip for now" → dashboard.
+      if (result?.offerMfaSetup) {
+        navigate("/security/2fa?onboarding=1", { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch {
       // error already shown via toast in AuthContext
     }
@@ -137,6 +150,31 @@ const Login = () => {
             </div>
           ) : (
             <>
+              {showConfirmedNotice && (
+                <div
+                  className="mb-6 flex items-start gap-3 rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-800 dark:text-green-200"
+                  data-testid="login-email-confirmed-notice"
+                  role="status"
+                >
+                  <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
+                  <div className="flex-1">
+                    <p className="font-medium">Email verified!</p>
+                    <p className="mt-1">
+                      Your email address is confirmed. Sign in below to continue.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmedNotice(false)}
+                    className="flex-shrink-0 text-green-500 hover:text-green-700 dark:hover:text-green-300"
+                    aria-label="Dismiss"
+                    data-testid="login-email-confirmed-notice-dismiss-btn"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
               {showVerifyNotice && (
                 <div
                   className="mb-6 flex items-start gap-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 p-4 text-sm text-primary-800 dark:text-primary-200"
@@ -217,7 +255,7 @@ const Login = () => {
                     />
                     <button
                       type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
                       onClick={() => setShowPassword(p => !p)}
                       data-testid="login-toggle-password-btn"
                       aria-label={showPassword ? "Hide password" : "Show password"}

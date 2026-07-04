@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../utils/logActivity";
@@ -185,14 +185,25 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Monotonic counter that stamps each session resolution. fetchUserProfile is
+  // four network reads, so a SIGNED_IN resolution can still be in flight when a
+  // sign-out (or a newer event) supersedes it — its late SET_USER dispatch
+  // would re-authenticate the UI with no real session behind it (confirmed bug:
+  // the email-confirmation page discards the link's session, then the stale
+  // fetch landed and PublicRoute bounced "Sign in" to the TrialGate).
+  const sessionEpoch = useRef(0);
+
   // Resolve a session object into app state — shared by getSession() bootstrap
-  // and onAuthStateChange subsequent events.
+  // and onAuthStateChange subsequent events. Only the latest epoch may dispatch.
   const resolveSession = useCallback(async (session) => {
+    const epoch = ++sessionEpoch.current;
     if (session?.user) {
       try {
         const profile = await fetchUserProfile(session.user);
+        if (epoch !== sessionEpoch.current) return; // superseded while fetching
         dispatch({ type: ActionTypes.SET_USER, payload: profile });
       } catch (err) {
+        if (epoch !== sessionEpoch.current) return;
         console.error("[Auth] fetchUserProfile threw:", err);
         dispatch({ type: ActionTypes.SET_USER, payload: emptyProfile(session.user) });
       }
@@ -264,9 +275,21 @@ export const AuthProvider = ({ children }) => {
       logActivity(data.user.id, "login", {});
       notifyNewLogin(data.user.id);
     }
+    // No authenticator on the account (the aal2 branch above didn't fire) and
+    // the setup offer hasn't been shown yet → tell the caller to route into
+    // the 2FA wizard. The flag lives in auth user_metadata so the offer is
+    // one-time per account, across devices; "Skip for now" in the wizard
+    // continues to the dashboard.
+    let offerMfaSetup = false;
+    if (data.user && data.user.user_metadata?.mfa_setup_offered !== true) {
+      offerMfaSetup = true;
+      supabase.auth
+        .updateUser({ data: { mfa_setup_offered: true } })
+        .catch(() => {});
+    }
     // onAuthStateChange fires and sets the user — no manual dispatch needed
     toast.success("Welcome back!");
-    return { status: "ok" };
+    return { status: "ok", offerMfaSetup };
   }, []);
 
   // ── Register ─────────────────────────────────────────────────────────────
@@ -345,11 +368,27 @@ export const AuthProvider = ({ children }) => {
     if (error) throw new Error(friendlyError(error));
   }, []);
 
+  // ── Discard session (silent) ─────────────────────────────────────────────
+  // Drops the current session without the ceremony of logout(): no toast, no
+  // activity log, and the local auth state resets synchronously BEFORE the
+  // network sign-out. The email-confirmation flow uses this to throw away the
+  // session the link creates as a side effect — resetting state first stops
+  // PublicRoute from bouncing the user to /dashboard off a stale
+  // "authenticated" flag while signOut is still in flight.
+  const discardSession = useCallback(async () => {
+    // Bump the epoch FIRST so any in-flight profile fetch from the link's
+    // SIGNED_IN event is invalidated and can't re-authenticate the UI later.
+    sessionEpoch.current++;
+    dispatch({ type: ActionTypes.LOGOUT });
+    await supabase.auth.signOut();
+  }, []);
+
   // ── Logout ───────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) logActivity(session.user.id, "logout", {});
     await supabase.auth.signOut();
+    sessionEpoch.current++; // invalidate any in-flight profile fetch
     dispatch({ type: ActionTypes.LOGOUT });
     toast.success("Signed out successfully.");
   }, []);
@@ -594,6 +633,7 @@ export const AuthProvider = ({ children }) => {
     sendEmailVerification,
     verifyEmail,
     logout,
+    discardSession,
     sendPasswordReset,
     updateUserProfile,
     updateUser,

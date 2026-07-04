@@ -38,7 +38,7 @@ const MultiStepRegistration = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, discardSession } = useAuth();
 
   const {
     register,
@@ -109,13 +109,14 @@ const MultiStepRegistration = () => {
   const handleEmailVerified = (userId) => {
     setRegistrationData((prev) => ({ ...prev, emailVerified: true, userId }));
 
-    // Supabase Auth manages the session automatically — no token storage needed.
-    // Offer the 2FA setup wizard first (it has "Skip for now"); from there the
-    // user continues to the dashboard, where RequireSubscription shows the
-    // TrialGate overlay until they add a card. A full reload ensures the
-    // FeatureFlag audience re-resolves to "free" so the gate appears.
-    toast.success("Email verified! Let's secure your account.");
-    window.location.assign("/security/2fa?onboarding=1");
+    // Verifying only confirms the address — drop the session the verification
+    // created and require an explicit sign-in. discardSession resets the local
+    // auth state synchronously so PublicRoute doesn't bounce /login back to
+    // /dashboard. The authenticator setup offer happens on that first real
+    // login (see AuthContext.login), not here.
+    discardSession().catch(() => {});
+    toast.success("Email verified! Please sign in to continue.");
+    navigate("/login", { replace: true, state: { emailConfirmed: true } });
   };
 
   const handleResendEmail = () => {
@@ -353,8 +354,10 @@ const MultiStepRegistration = () => {
                     />
                     <button
                       type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      data-testid="register-form-toggle-password-btn"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5 text-gray-400" />
@@ -409,10 +412,14 @@ const MultiStepRegistration = () => {
                     />
                     <button
                       type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
+                      aria-label={
+                        showConfirmPassword ? "Hide password" : "Show password"
+                      }
+                      data-testid="register-form-toggle-confirm-password-btn"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-5 w-5 text-gray-400" />
@@ -433,7 +440,7 @@ const MultiStepRegistration = () => {
                     {...register("agreeToTerms")}
                     id="agreeToTerms"
                     type="checkbox"
-                    className="h-4 w-4 mt-0.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     data-testid="register-form-terms-checkbox"
                   />
                   <label
@@ -471,7 +478,7 @@ const MultiStepRegistration = () => {
                     {...register("agreeToRefundPolicy")}
                     id="agreeToRefundPolicy"
                     type="checkbox"
-                    className="h-4 w-4 mt-0.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     data-testid="register-form-refund-ack-checkbox"
                   />
                   <label
