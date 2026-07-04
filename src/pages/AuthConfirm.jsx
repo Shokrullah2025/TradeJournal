@@ -96,8 +96,13 @@ const AuthConfirm = () => {
           if (!session) throw new Error("no-session");
         }
 
-        finish("success", "Your email is verified. Taking you to your dashboard…");
-        setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
+        // Email confirmed → offer 2FA setup before the dashboard. The wizard's
+        // onboarding mode has a "Skip for now" that continues to the dashboard.
+        finish("success", "Your email is verified. Let's secure your account…");
+        setTimeout(
+          () => navigate("/security/2fa?onboarding=1", { replace: true }),
+          1500
+        );
       } catch (err) {
         if (isAlreadyUsed({ errorText: err?.message })) {
           finish("used", USED_MSG);
