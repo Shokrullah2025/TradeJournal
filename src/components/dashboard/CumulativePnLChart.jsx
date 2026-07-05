@@ -26,40 +26,13 @@ const fmtK = (v) => {
 const fmtFull = (v) =>
   `${v >= 0 ? '+' : '-'}$${Math.abs(v).toLocaleString()}`;
 
-// Monotone cubic (Fritsch–Carlson) path through screen-space points.
-// Rounds the day-to-day corners without overshooting the data — unlike a
-// plain bezier, the curve can never imply a P&L high or low that never
-// happened, which matters on a money chart.
-const monotonePath = (xs, ys) => {
-  const len = xs.length;
-  if (len < 2) return '';
-  if (len === 2)
-    return `M${xs[0].toFixed(1)},${ys[0].toFixed(1)} L${xs[1].toFixed(1)},${ys[1].toFixed(1)}`;
-  const dx = [];
-  const m = [];
-  for (let i = 0; i < len - 1; i++) {
-    dx.push(xs[i + 1] - xs[i]);
-    m.push((ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i] || 1));
-  }
-  // Tangent at each point: 0 at local extrema, weighted harmonic mean elsewhere
-  const t = [m[0]];
-  for (let i = 1; i < len - 1; i++) {
-    if (m[i - 1] * m[i] <= 0) {
-      t.push(0);
-    } else {
-      const w = dx[i - 1] + dx[i];
-      t.push((3 * w) / ((w + dx[i]) / m[i - 1] + (w + dx[i - 1]) / m[i]));
-    }
-  }
-  t.push(m[len - 2]);
+// Straight line segments between sessions — day-to-day moves keep their
+// sharp corners so the equity curve reads exactly as traded, no smoothing.
+const segmentPath = (xs, ys) => {
+  if (xs.length < 2) return '';
   let d = `M${xs[0].toFixed(1)},${ys[0].toFixed(1)}`;
-  for (let i = 0; i < len - 1; i++) {
-    const h = dx[i] / 3;
-    d += ` C${(xs[i] + h).toFixed(1)},${(ys[i] + h * t[i]).toFixed(1)} ${(
-      xs[i + 1] - h
-    ).toFixed(1)},${(ys[i + 1] - h * t[i + 1]).toFixed(1)} ${xs[i + 1].toFixed(1)},${ys[
-      i + 1
-    ].toFixed(1)}`;
+  for (let i = 1; i < xs.length; i++) {
+    d += ` L${xs[i].toFixed(1)},${ys[i].toFixed(1)}`;
   }
   return d;
 };
@@ -138,7 +111,7 @@ const CumulativePnLChart = ({
     if (n < 2) return '';
     const xs = data.map((_, i) => px(i));
     const ys = data.map((v) => py(v));
-    return monotonePath(xs, ys);
+    return segmentPath(xs, ys);
   }, [data, n, px, py]);
 
   // Area closes at chart bottom — clipPaths handle the green/red colour split.
