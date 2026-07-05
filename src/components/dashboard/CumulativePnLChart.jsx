@@ -219,7 +219,7 @@ const CumulativePnLChart = ({
   return (
     <div
       ref={wrapRef}
-      className="relative flex-1 min-h-0 w-full cursor-crosshair touch-pan-y"
+      className="relative flex-1 min-h-0 w-full cursor-pointer touch-pan-y"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchMove}
@@ -433,8 +433,11 @@ const CumulativePnLChart = ({
           className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
           data-testid="cumulative-pnl-chart-tooltip"
           style={{
-            left: hover.x,
-            top: hover.y - 10,
+            // Anchored to the hovered point on the line (not the cursor):
+            // centered on the snapped x, sitting just above the dot. The x is
+            // clamped so the tooltip can't spill past the card edges.
+            left: Math.max(70, Math.min((dims?.w ?? 0) - 70, px(hover.idx))),
+            top: py(data[hover.idx]) - 12,
             transform: "translate(-50%, -100%)",
           }}
         >
