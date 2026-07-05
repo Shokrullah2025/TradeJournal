@@ -192,7 +192,11 @@ function App() {
                                 onMenuClick={() => setSidebarOpen(true)}
                               />
 
-                              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+                              {/* App-wide page background: a light Evergreen-teal → cyan
+                                  wash in light mode; near-black with a faint teal glow
+                                  in dark. Pages must NOT paint their own opaque
+                                  full-page background or they'll cover it. */}
+                              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gradient-to-br from-primary-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-primary-900/30 transition-colors duration-300">
                                 <div className="flex-1 p-4 sm:p-6">
                                 <Routes>
                                   <Route

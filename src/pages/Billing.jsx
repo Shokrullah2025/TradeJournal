@@ -183,7 +183,7 @@ const Billing = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col lg:flex-row min-h-screen">
       {/* Admin Billing Overview Sidebar */}
       {user?.role === "admin" && (
         <div className="w-full lg:w-80 bg-white dark:bg-gray-800 shadow-lg border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 overflow-y-auto">

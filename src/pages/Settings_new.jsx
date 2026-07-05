@@ -1102,7 +1102,7 @@ const Settings = () => {
       {/* Tab Content — on mobile this is hidden until a section is opened from
           the drill-in menu; on lg+ it always shows beside the sidebar. */}
       <div
-        className={`flex-1 p-4 lg:p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900 lg:block ${
+        className={`flex-1 p-4 lg:p-6 overflow-y-auto lg:block ${
           isMobile && mobileShowMenu ? "hidden" : ""
         }`}
       >

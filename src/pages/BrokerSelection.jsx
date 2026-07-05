@@ -268,7 +268,10 @@ const BrokerSelection = () => {
   const headerSync = formatRelative(lastSync);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10">
+    // Transparent so the app shell's teal gradient (App.jsx <main>) shows
+    // through; negative margins cancel the shell's p-4/sm:p-6 so py-10 keeps
+    // the content exactly where it was.
+    <div className="min-h-screen -m-4 sm:-m-6 py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {view === "accounts" ? (
