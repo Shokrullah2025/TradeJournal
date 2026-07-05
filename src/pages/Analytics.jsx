@@ -14,6 +14,7 @@ import TimeAnalysis from "../components/analytics/TimeAnalysis";
 import InstrumentAnalysis from "../components/analytics/InstrumentAnalysis";
 import DistributionAnalysis from "../components/analytics/DistributionAnalysis";
 import DrawdownChart from "../components/analytics/DrawdownChart";
+import AnalyticsEmptyState from "../components/analytics/AnalyticsEmptyState";
 import { exportAnalyticsReport } from "../utils/exportUtils";
 import toast from "react-hot-toast";
 
@@ -34,9 +35,13 @@ const VIEW_OPTIONS = [
 ];
 
 const Analytics = () => {
-  const { trades, stats, refreshTrades } = useTrades();
+  const { trades, stats, refreshTrades, loading } = useTrades();
   const [timeRange, setTimeRange] = useState("all");
   const [analysisType, setAnalysisType] = useState("overview");
+
+  // Brand-new account: grayscale ghost previews instead of empty analytics.
+  // Gated on !loading so users with trades never see a ghost flash mid-fetch.
+  const showGhostState = !loading && trades.length === 0;
 
   const handleExportReport = async () => {
     try {
@@ -87,6 +92,12 @@ const Analytics = () => {
   const timeFilteredTrades = getFilteredTradesByTime();
   const timeLabel =
     TIME_OPTIONS.find((o) => o.value === timeRange)?.label || "All Time";
+
+  // No trades at all: the filter bar has nothing to filter or export, so the
+  // ghost previews replace the whole page body.
+  if (showGhostState) {
+    return <AnalyticsEmptyState />;
+  }
 
   return (
     <div className="space-y-[18px]">

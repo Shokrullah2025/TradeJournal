@@ -9,13 +9,25 @@ const ctx = vi.hoisted(() => ({
   trades: [],
   stats: {},
   user: null,
+  loading: false,
 }));
 
 vi.mock("../context/TradeContext", () => ({
-  useTrades: () => ({ trades: ctx.trades, stats: ctx.stats }),
+  useTrades: () => ({
+    trades: ctx.trades,
+    stats: ctx.stats,
+    loading: ctx.loading,
+  }),
 }));
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({ user: ctx.user }),
+}));
+
+// Spy on navigation so the empty-state CTA can be asserted without real routes.
+const navSpy = vi.hoisted(() => vi.fn());
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => navSpy,
 }));
 
 import Dashboard from "./Dashboard";
@@ -75,6 +87,7 @@ describe("Dashboard page", () => {
     ctx.trades = [];
     ctx.stats = emptyStats;
     ctx.user = { firstName: "Sam", email: "sam@example.com" };
+    ctx.loading = false;
     vi.clearAllMocks();
   });
 
@@ -108,27 +121,83 @@ describe("Dashboard page", () => {
     expect(screen.getByText("2.0:1")).toBeInTheDocument(); // avgWin/avgLoss
   });
 
+  // A single open trade keeps the live dashboard mounted (ghost previews only
+  // appear when the trade list is completely empty).
+  const openTrade = {
+    id: "open1",
+    status: "open",
+    instrument: "TSLA",
+    tradeType: "long",
+    entryDate: "2024-01-05T15:00:00Z",
+    createdAt: "2024-01-05T15:00:00Z",
+    quantity: 1,
+    entryPrice: 10,
+    pnl: 0,
+  };
+
   it("shows N/A for Avg Win/Loss when there are no wins or losses (edge case)", () => {
     ctx.stats = emptyStats;
-    ctx.trades = [];
+    ctx.trades = [openTrade];
 
     renderDashboard();
 
     expect(screen.getByText("N/A")).toBeInTheDocument();
   });
 
-  it("renders the recent-trades empty state when there are no trades (edge case)", () => {
+  it("renders the ghost empty state when there are no trades (happy path)", () => {
     ctx.stats = emptyStats;
     ctx.trades = [];
 
     renderDashboard();
 
+    expect(screen.getByTestId("dashboard-empty-state")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-state-banner")).toBeInTheDocument();
     expect(screen.getByText("No trades yet")).toBeInTheDocument();
+    // All ghost preview slots render
+    expect(screen.getByTestId("empty-stat-total-pnl-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-stat-win-rate-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-stat-max-drawdown-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-stat-avg-win-loss-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-chart-daily-pnl-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-chart-cumulative-pnl-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-chart-when-you-win-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-recent-trades-card")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-ai-insights-card")).toBeInTheDocument();
+    // The live charts must NOT be mounted behind the ghost state
+    expect(screen.queryByTestId("cumulative-pnl-range-toggle")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("recent-trades-card")).not.toBeInTheDocument();
+  });
+
+  it("navigates to broker selection from the ghost-state CTA buttons", () => {
+    ctx.stats = emptyStats;
+    ctx.trades = [];
+
+    renderDashboard();
+
+    fireEvent.click(screen.getByTestId("empty-state-connect-broker-btn"));
+    expect(navSpy).toHaveBeenCalledWith("/brokers");
+
+    navSpy.mockClear();
+    fireEvent.click(screen.getByTestId("empty-recent-trades-connect-broker-btn"));
+    expect(navSpy).toHaveBeenCalledWith("/brokers");
+  });
+
+  it("does not show the ghost state while trades are still loading (edge case)", () => {
+    ctx.stats = emptyStats;
+    ctx.trades = [];
+    ctx.loading = true;
+
+    renderDashboard();
+
+    expect(screen.queryByTestId("dashboard-empty-state")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Dashboard" })
+    ).toBeInTheDocument();
   });
 
   it("renders the cumulative chart empty state with no closed trades (edge case)", () => {
     ctx.stats = emptyStats;
-    ctx.trades = [];
+    ctx.trades = [openTrade];
 
     renderDashboard();
 
