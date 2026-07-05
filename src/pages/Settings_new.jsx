@@ -2151,8 +2151,8 @@ const Settings = () => {
       {showFieldModal && (
         <ModalPortal>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
+          <div className="settings-modal bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Field Configuration
@@ -2170,7 +2170,7 @@ const Settings = () => {
               </p>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
               {/* Quick Actions */}
               <div className="flex items-center space-x-4 mb-6">
                 <button
@@ -2342,9 +2342,9 @@ const Settings = () => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
+            <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
+                <div className="hidden sm:block text-sm text-gray-600">
                   <span className="font-medium">{getVisibleFieldsCount()}</span>{" "}
                   fields selected for this template
                 </div>
@@ -2367,8 +2367,11 @@ const Settings = () => {
       {showTemplateModal && (
         <ModalPortal>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
+          <div
+            className="settings-modal bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            data-testid="settings-template-modal"
+          >
+            <div className="p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -2389,7 +2392,7 @@ const Settings = () => {
             </div>
 
             {/* Tab Navigation */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-gray-200 flex-shrink-0">
               <nav className="flex" aria-label="Template Tabs">
                 <button
                   onClick={() => setActiveTemplateTab("basic")}
@@ -2414,7 +2417,11 @@ const Settings = () => {
               </nav>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+            {/* flex-1 + min-h-0: the body takes whatever height remains between
+                the fixed header/tabs and the footer, so the Save bar always
+                stays on screen — the old max-h calc clipped it on mobile where
+                the wrapped header is taller than 200px. */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
               {/* Basic Info Tab */}
               {activeTemplateTab === "basic" && (
                 <div className="space-y-6">
@@ -3192,21 +3199,23 @@ const Settings = () => {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+              <div className="flex items-center justify-between gap-3">
+                <p className="hidden sm:block text-sm text-gray-500">
                   <span className="font-medium text-gray-700">{getVisibleFieldsCount()} fields</span> will appear on the trade entry form
                 </p>
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-1 sm:flex-none items-center space-x-3">
                   <button
                     onClick={() => setShowTemplateModal(false)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm"
+                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm"
+                    data-testid="settings-template-cancel-btn"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveTemplate}
-                    className="btn-gradient-blue px-6 py-2 rounded-md transition-colors flex items-center space-x-2 text-sm"
+                    className="btn-gradient-blue flex-1 sm:flex-none justify-center px-6 py-2 rounded-md transition-colors flex items-center space-x-2 text-sm"
+                    data-testid="settings-template-save-btn"
                   >
                     <Save className="w-4 h-4" />
                     <span>
@@ -3225,7 +3234,7 @@ const Settings = () => {
       {showAddStrategyModal && (
         <ModalPortal>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          <div className="settings-modal bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -3299,7 +3308,7 @@ const Settings = () => {
       {showAddSetupModal && (
         <ModalPortal>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          <div className="settings-modal bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -3373,7 +3382,7 @@ const Settings = () => {
       {showAddRiskParamModal && (
         <ModalPortal>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          <div className="settings-modal bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">

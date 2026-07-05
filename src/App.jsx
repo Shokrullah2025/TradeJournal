@@ -300,6 +300,10 @@ function App() {
 
                   <Toaster
                     position="top-right"
+                    // Portal modals sit at z-[9999] and are appended to <body>
+                    // after this container, so toasts need a higher stacking
+                    // index or validation messages hide behind open modals.
+                    containerStyle={{ zIndex: 20000 }}
                     toastOptions={{
                       duration: 3000,
                       className: "toast-notification",

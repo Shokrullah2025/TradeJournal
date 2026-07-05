@@ -298,16 +298,20 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
     <ModalPortal>
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col"
+        // Mobile: the whole card scrolls as one column — with the desktop
+        // layout (fixed sections + inner-scrolling trades list), the stats,
+        // notes and tags blocks ate the 80vh and flexbox crushed the trades
+        // list to a barely-visible sliver on phones.
+        className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col ${isMobile ? "overflow-y-auto" : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`${isMobile ? "p-4" : "p-5"} border-b border-gray-200 dark:border-gray-700 flex items-start justify-between`}>
+        <div className={`${isMobile ? "p-3" : "p-5"} border-b border-gray-200 dark:border-gray-700 flex items-start justify-between flex-shrink-0`}>
           <div className="min-w-0">
-            <h2 className={`${isMobile ? "text-base truncate" : "text-lg"} font-bold text-gray-900 dark:text-white`}>{session.name}</h2>
-            <p className={`${isMobile ? "text-xs break-words" : "text-sm"} text-gray-500 dark:text-gray-400 mt-0.5`}>
+            <h2 className={`${isMobile ? "text-sm truncate" : "text-lg"} font-bold text-gray-900 dark:text-white`}>{session.name}</h2>
+            <p className={`${isMobile ? "text-[11px] break-words" : "text-sm"} text-gray-500 dark:text-gray-400 mt-0.5`}>
               {session.instrumentName} · {session.timeframe?.toUpperCase()} · {session.strategy} · {session.setup}
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            <p className={`${isMobile ? "text-[10px]" : "text-xs"} text-gray-400 dark:text-gray-500 mt-0.5`}>
               {new Date(session.createdAt).toLocaleString()}
             </p>
           </div>
@@ -560,7 +564,9 @@ function HistoryModal({ session, onClose, onSave, tagSuggestions = [] }) {
           )}
         </div>
 
-        <div className={`flex-1 overflow-y-auto ${isMobile ? "overflow-x-auto" : ""}`}>
+        {/* Mobile scrolls in the card itself (above), so the trades list keeps
+            its natural height there instead of being the shrinkable flex child. */}
+        <div className={isMobile ? "overflow-x-auto" : "flex-1 overflow-y-auto"}>
           {trades.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
               <p className="text-sm">No trades recorded for this session</p>
