@@ -2,10 +2,10 @@ import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState }
 import { useTheme } from "../../contexts/ThemeContext";
 import { getChartColors } from "../../utils/chartColors";
 
-const PAD_LEFT   = 38;
+const PAD_LEFT   = 40;
 const PAD_RIGHT  = 12;
 const PAD_TOP    = 20;
-const PAD_BOTTOM = 36;
+const PAD_BOTTOM = 38;
 
 const fmtDate = (d) => {
   if (!d) return '';
@@ -435,9 +435,13 @@ const CumulativePnLChart = ({
           style={{
             // Anchored to the hovered point on the line (not the cursor):
             // centered on the snapped x, sitting just above the dot. The x is
-            // clamped so the tooltip can't spill past the card edges.
+            // clamped so the tooltip can't spill past the card edges, and
+            // points near the bottom edge (deep losses) get extra lift so the
+            // banner clears the dot and the x-axis area.
             left: Math.max(70, Math.min((dims?.w ?? 0) - 70, px(hover.idx))),
-            top: py(data[hover.idx]) - 12,
+            top:
+              py(data[hover.idx]) -
+              (py(data[hover.idx]) > PAD_TOP + chartH - 20 ? 24 : 12),
             transform: "translate(-50%, -100%)",
           }}
         >
