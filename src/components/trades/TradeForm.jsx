@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import ModalPortal from "../common/ModalPortal";
 import { RR_MODES, QUICK_MODES, ADVANCED_RR_MODES, getDefaultModeForInstrument, getUserRRList, parseRRValue } from "../../utils/rrModes";
+import { FUTURES_POINT_VALUES, FUTURES_TICK_SIZES, calculatePnL } from "../../utils/pnl";
 import { useTemplates } from "../../hooks/useTemplates";
 import { useUserSettings } from "../../hooks/useUserSettings";
 import { isFieldVisible as isFieldVisibleForConfig } from "../../utils/templateFields";
@@ -29,6 +30,24 @@ const toLocalDateStr = (d) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
+// Which Exit Price mode does a stored trade's exit price actually match?
+// Editing must reopen in the mode the trade was saved with — defaulting to
+// "stopLoss" silently rewrote the exit price (and therefore the P&L) with
+// the stop loss the moment the edit modal mounted.
+const deriveExitPriceMode = (trade) => {
+  if (!trade) return "custom";
+  const exit = parseFloat(trade.exitPrice);
+  if (!isFinite(exit) || exit === 0) return "custom";
+  const near = (v) => {
+    const n = parseFloat(v);
+    return isFinite(n) && Math.abs(n - exit) < 0.005;
+  };
+  if (near(trade.takeProfit)) return "takeProfit";
+  if (near(trade.stopLoss)) return "stopLoss";
+  if (near(trade.entryPrice)) return "breakeven";
+  return "custom";
+};
+
 // Helper functions
 const getUserOptions = (type) => {
   const stored = localStorage.getItem(`tradeForm_${type}`);
@@ -54,7 +73,10 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
   // Per-field visibility coming from the applied template's Configure Fields config.
   // null = no config → show every field (default/legacy behavior).
   const [fieldVisibility, setFieldVisibility] = useState(null);
-  const [exitPriceMode, setExitPriceMode] = useState("stopLoss"); // "stopLoss", "takeProfit", "custom"
+  // "stopLoss" | "takeProfit" | "breakeven" | "custom" — derived from the
+  // trade being edited; "custom" for new trades so typing a stop loss never
+  // silently becomes the exit price.
+  const [exitPriceMode, setExitPriceMode] = useState(() => deriveExitPriceMode(trade));
   const [rrUnit, setRrUnit] = useState("points"); // Risk/Reward hub display unit: "points" | "ticks"
   const [rrMode, setRrMode] = useState(() => getDefaultModeForInstrument("stocks"));
   const [rrListsByMode, setRrListsByMode] = useState(() =>
@@ -203,25 +225,8 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     options: ["SPY", "QQQ", "IWM", "AAPL", "TSLA", "AMC", "GME", "NVDA"],
   };
 
-  // Dollar value per 1 point of price move per 1 contract
-  const FUTURES_POINT_VALUES = {
-    // E-mini (standard)
-    ES: 50, NQ: 20, YM: 5, RTY: 50,
-    // Micro E-mini (1/10th of standard)
-    MES: 5, MNQ: 2, MYM: 0.5, M2K: 5,
-    // Commodities (standard)
-    CL: 1000, GC: 100, SI: 5000, NG: 10000,
-    // Micro commodities
-    MCL: 100, MGC: 10,
-  };
-
-  // Smallest price increment per futures contract — powers the Ticks/Points toggle
-  const FUTURES_TICK_SIZES = {
-    ES: 0.25, NQ: 0.25, YM: 1, RTY: 0.1,
-    MES: 0.25, MNQ: 0.25, MYM: 1, M2K: 0.1,
-    CL: 0.01, GC: 0.1, SI: 0.005, NG: 0.001,
-    MCL: 0.01, MGC: 0.1,
-  };
+  // Point values & tick sizes now live in utils/pnl.js so the Risk/Reward
+  // panel and the saved P&L use the same numbers (imported at top of file).
 
   // Use strategies and setups from settings by default, with fallback to localStorage and hardcoded defaults
   const strategies =
@@ -742,8 +747,16 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     }
   }, [watchedEntryDate, watchedStatus, setValue]);
 
-  // Update exit price when stop loss or take profit changes and mode is set to those values
+  // Update exit price when stop loss or take profit changes and mode is set
+  // to those values. Skips the mount run: firing on mount overwrote an edited
+  // trade's real exit price with its stop loss (and the P&L recompute on save
+  // then persisted the wrong number).
+  const exitSyncReady = useRef(false);
   useEffect(() => {
+    if (!exitSyncReady.current) {
+      exitSyncReady.current = true;
+      return;
+    }
     if (watchedStatus === "closed") {
       if (exitPriceMode === "stopLoss" && watchedStopLoss) {
         setValue("exitPrice", parseFloat(watchedStopLoss));
@@ -1040,13 +1053,16 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       };
 
       if (formattedData.exitPrice && formattedData.status === "closed") {
-        const pnlCalculation =
-          formattedData.tradeType === "long"
-            ? (formattedData.exitPrice - formattedData.entryPrice) *
-              formattedData.quantity
-            : (formattedData.entryPrice - formattedData.exitPrice) *
-              formattedData.quantity;
-        formattedData.pnl = pnlCalculation;
+        // Shared formula (utils/pnl.js) applies the futures point value —
+        // e.g. NQ = $20/pt — so the saved P&L matches the Risk/Reward panel.
+        formattedData.pnl = calculatePnL({
+          tradeType: formattedData.tradeType,
+          entryPrice: formattedData.entryPrice,
+          exitPrice: formattedData.exitPrice,
+          quantity: formattedData.quantity,
+          instrumentType: formattedData.instrumentType,
+          instrument: formattedData.instrument,
+        });
       }
 
       let savedTradeId;
@@ -1614,6 +1630,36 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       {errors.quantity && (
                         <p className="text-danger-600 text-xs mt-1">{errors.quantity.message}</p>
                       )}
+                    </div>
+                    {/* SL / TP mirror the Risk/Reward panel fields: typing here
+                        updates the panel (and its R:R math) and vice-versa. */}
+                    <div>
+                      <label className="label">Stop Loss</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={watchedStopLoss || ""}
+                        onChange={(e) =>
+                          setValue("stopLoss", e.target.value, { shouldValidate: true })
+                        }
+                        className="input"
+                        placeholder="0.00"
+                        data-testid="trade-form-stop-loss-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Take Profit</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={watchedTakeProfit || ""}
+                        onChange={(e) =>
+                          setValue("takeProfit", e.target.value, { shouldValidate: true })
+                        }
+                        className="input"
+                        placeholder="0.00"
+                        data-testid="trade-form-take-profit-input"
+                      />
                     </div>
                   </div>
                 </section>
