@@ -250,15 +250,18 @@ const CumulativePnLChart = ({
         aria-label="Cumulative P&L over time"
       >
         <defs>
-          {/* Green fill — fades from top */}
+          {/* Green fill — a soft wash that dissolves toward zero (3 stops so
+              the fade reads silky instead of a flat tinted block) */}
           <linearGradient id={`cpg_${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor={lineGreen} stopOpacity="0.22" />
-            <stop offset="100%" stopColor={lineGreen} stopOpacity="0.02" />
+            <stop offset="0%"   stopColor={lineGreen} stopOpacity="0.18" />
+            <stop offset="55%"  stopColor={lineGreen} stopOpacity="0.07" />
+            <stop offset="100%" stopColor={lineGreen} stopOpacity="0" />
           </linearGradient>
-          {/* Red fill — fades to bottom */}
+          {/* Red fill — mirrors the green wash, deepening toward the bottom */}
           <linearGradient id={`crg_${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor={lineRed} stopOpacity="0.02" />
-            <stop offset="100%" stopColor={lineRed} stopOpacity="0.20" />
+            <stop offset="0%"   stopColor={lineRed} stopOpacity="0" />
+            <stop offset="45%"  stopColor={lineRed} stopOpacity="0.07" />
+            <stop offset="100%" stopColor={lineRed} stopOpacity="0.18" />
           </linearGradient>
           {/* Clip above the zero line — 6px headroom so the stroke AND the
               hover dot (r 3.5 + 1.5 ring ≈ 4.25px above the line) at the
@@ -301,7 +304,6 @@ const CumulativePnLChart = ({
                 y2={y.toFixed(1)}
                 stroke={isZero ? c.zeroLine : c.grid}
                 strokeWidth="1"
-                strokeDasharray={isZero ? '4,3' : undefined}
                 mask={`url(#gm_${uid})`}
               />
               <text
@@ -309,7 +311,7 @@ const CumulativePnLChart = ({
                 y={y}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize="9.5"
+                fontSize="10"
                 fill={c.tick}
                 fontFamily="inherit"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
@@ -334,6 +336,28 @@ const CumulativePnLChart = ({
           <path
             d={areaPath}
             fill={`url(#crg_${uid})`}
+            clipPath={`url(#cb_${uid})`}
+          />
+          {/* Soft under-glow — a wide, faint stroke beneath the 2px line gives
+              the curve depth without adding data-weight ink */}
+          <path
+            d={linePath}
+            fill="none"
+            stroke={lineGreen}
+            strokeWidth="6"
+            strokeOpacity="0.10"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            clipPath={`url(#ca_${uid})`}
+          />
+          <path
+            d={linePath}
+            fill="none"
+            stroke={lineRed}
+            strokeWidth="6"
+            strokeOpacity="0.10"
+            strokeLinejoin="round"
+            strokeLinecap="round"
             clipPath={`url(#cb_${uid})`}
           />
           <path
@@ -371,15 +395,14 @@ const CumulativePnLChart = ({
                 y1={PAD_TOP} y2={PAD_TOP + chartH}
                 stroke={c.axis}
                 strokeWidth="1"
-                strokeDasharray="3,2"
               />
               <circle
                 cx={ix.toFixed(1)}
                 cy={iy.toFixed(1)}
-                r="3.5"
+                r="4"
                 fill={pos ? lineGreen : lineRed}
                 stroke={c.dotRing}
-                strokeWidth="1.5"
+                strokeWidth="2"
               />
             </g>
           );
@@ -394,14 +417,14 @@ const CumulativePnLChart = ({
           const endColor = data[n - 1] >= 0 ? lineGreen : lineRed;
           return (
             <g data-testid="cumulative-pnl-chart-endpoint">
-              <circle cx={ex.toFixed(1)} cy={ey.toFixed(1)} r="7" fill={endColor} opacity="0.15" />
+              <circle cx={ex.toFixed(1)} cy={ey.toFixed(1)} r="8" fill={endColor} opacity="0.12" />
               <circle
                 cx={ex.toFixed(1)}
                 cy={ey.toFixed(1)}
-                r="3"
+                r="4"
                 fill={endColor}
                 stroke={c.dotRing}
-                strokeWidth="1.5"
+                strokeWidth="2"
               />
             </g>
           );
@@ -421,7 +444,7 @@ const CumulativePnLChart = ({
                 y={0}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fontSize="9.5"
+                fontSize="10"
                 fill={c.tick}
                 fontFamily="inherit"
               >
@@ -435,7 +458,7 @@ const CumulativePnLChart = ({
       {/* Hover tooltip */}
       {hovered && (
         <div
-          className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
+          className="absolute pointer-events-none z-20 px-3 py-2 rounded-xl bg-gray-900/95 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl ring-1 ring-white/10 dark:ring-black/5 backdrop-blur-sm text-xs whitespace-nowrap tabular-nums"
           data-testid="cumulative-pnl-chart-tooltip"
           style={{
             // Anchored to the hovered point on the line (not the cursor):
