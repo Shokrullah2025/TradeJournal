@@ -209,15 +209,27 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
                   }
                 }}
               >
-                {/* Plus button for empty days on hover */}
-                {!hasTrades && isHovered && (
+                {/* Plus button on hover — every day, so another trade can be
+                    added to a day that already has entries without going
+                    through the detail modal. stopPropagation keeps the click
+                    from also opening the day detail. */}
+                {isHovered && (
                   <div
                     className="absolute top-2 right-2 z-40 animate-in fade-in duration-200"
                     style={{ animationFillMode: "both" }}
                   >
-                    <div className="w-7 h-7 bg-primary-500 hover:bg-primary-300 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 border-2 border-white dark:border-gray-800">
+                    <button
+                      type="button"
+                      aria-label={`Add trade on ${format(day, "MMM d, yyyy")}`}
+                      data-testid={`calendar-day-add-btn-${format(day, "yyyy-MM-dd")}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddTrade(day);
+                      }}
+                      className="w-7 h-7 bg-primary-500 hover:bg-primary-300 dark:bg-primary-600 dark:hover:bg-primary-500 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 border-2 border-white dark:border-gray-800"
+                    >
                       <Plus className="w-4 h-4 text-white font-bold" />
-                    </div>
+                    </button>
                   </div>
                 )}
                 {/* Date number */}

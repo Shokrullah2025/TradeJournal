@@ -10,6 +10,7 @@ import {
   Shield,
   Clock,
   Briefcase,
+  Check,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
@@ -33,12 +34,10 @@ const buildFormData = (user) => ({
   state: user?.state || "",
   zipCode: user?.zipCode || "",
   country: user?.country || "",
-  bio: user?.bio || "",
   tradingExperience: user?.tradingExperience || "",
   preferredMarkets: user?.preferredMarkets || [],
   riskTolerance: user?.riskTolerance || "",
   investmentGoals: user?.investmentGoals || "",
-  timezone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
 });
 
 const tradingExperienceOptions = [
@@ -83,13 +82,14 @@ const Profile = () => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const handleMultiSelectChange = (e) => {
-    const { name } = e.target;
-    const selectedOptions = Array.from(
-      e.target.selectedOptions,
-      (option) => option.value
-    );
-    setFormData((prev) => ({ ...prev, [name]: selectedOptions }));
+  // Chip toggle for preferred markets — adds or removes a market from the list.
+  const toggleMarket = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      preferredMarkets: prev.preferredMarkets.includes(value)
+        ? prev.preferredMarkets.filter((m) => m !== value)
+        : [...prev.preferredMarkets, value],
+    }));
   };
 
   // States available for the currently selected country (empty if none/unknown).
@@ -370,43 +370,6 @@ const Profile = () => {
               />
             </div>
 
-            <div>
-              <label className="label">Timezone</label>
-              <select
-                name="timezone"
-                value={formData.timezone}
-                onChange={handleInputChange}
-                className="input w-auto max-w-full"
-                disabled={!isEditing}
-                data-testid="profile-timezone-select"
-              >
-                <option value="America/New_York">Eastern Time</option>
-                <option value="America/Chicago">Central Time</option>
-                <option value="America/Denver">Mountain Time</option>
-                <option value="America/Los_Angeles">Pacific Time</option>
-                <option value="Europe/London">London</option>
-                <option value="Europe/Paris">Paris</option>
-                <option value="Asia/Tokyo">Tokyo</option>
-                <option value="Asia/Shanghai">Shanghai</option>
-                <option value="Asia/Kolkata">Mumbai</option>
-                <option value="Australia/Sydney">Sydney</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="label">Bio</label>
-              <textarea
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                className="input resize-none"
-                rows="4"
-                placeholder="Tell us about yourself..."
-                disabled={!isEditing}
-                data-testid="profile-bio-input"
-              />
-              {fieldError("bio")}
-            </div>
           </div>
         </div>
 
@@ -568,24 +531,44 @@ const Profile = () => {
 
             <div className="md:col-span-2">
               <label className="label">Preferred Markets</label>
-              <select
-                name="preferredMarkets"
-                value={formData.preferredMarkets}
-                onChange={handleMultiSelectChange}
-                className="input"
-                multiple
-                disabled={!isEditing}
-                size="3"
-                data-testid="profile-preferredMarkets-select"
+              <div
+                className="flex flex-wrap gap-2"
+                data-testid="profile-preferredMarkets-group"
               >
-                {marketOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                {marketOptions.map((option) => {
+                  const selected = formData.preferredMarkets.includes(
+                    option.value
+                  );
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => toggleMarket(option.value)}
+                      disabled={!isEditing}
+                      aria-pressed={selected}
+                      data-testid={`profile-preferredMarkets-${option.value}-chip`}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                        selected
+                          ? "bg-primary-50 border-primary-500 text-primary-700 dark:bg-primary-900/30 dark:border-primary-400 dark:text-primary-300"
+                          : "bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                      } ${
+                        isEditing
+                          ? "cursor-pointer hover:border-primary-400 dark:hover:border-primary-500"
+                          : "cursor-default"
+                      }`}
+                    >
+                      {selected && <Check className="w-3.5 h-3.5" />}
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
               <p className="text-sm text-gray-500 mt-1">
-                Hold Ctrl/Cmd to select multiple markets
+                {isEditing
+                  ? "Tap to select the markets you trade."
+                  : formData.preferredMarkets.length === 0
+                    ? "No markets selected yet."
+                    : ""}
               </p>
             </div>
 

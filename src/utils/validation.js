@@ -95,12 +95,6 @@ export const profileFormSchema = z.object({
     .optional()
     .or(z.literal("")),
   birthday: z.string().optional().or(z.literal("")),
-  bio: z
-    .string()
-    .trim()
-    .max(1000, "Bio must be 1,000 characters or fewer")
-    .optional()
-    .or(z.literal("")),
   investmentGoals: z
     .string()
     .trim()

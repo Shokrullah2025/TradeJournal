@@ -30,6 +30,7 @@ import { useTrades } from "../context/TradeContext";
 import { useAuth } from "../context/AuthContext";
 import { toLocalDateKey } from "../utils/date";
 import StatsCard from "../components/dashboard/StatsCard";
+import DashboardEmptyState from "../components/dashboard/DashboardEmptyState";
 import RecentTrades from "../components/dashboard/RecentTrades";
 import PnLChart from "../components/dashboard/PnLChart_simple";
 import CumulativePnLChart from "../components/dashboard/CumulativePnLChart";
@@ -40,9 +41,13 @@ import AIInsights from "../components/dashboard/AIInsights";
 import { MiniLineChart, MiniBarChart, MiniDonutChart, MiniAreaChart, MiniRiskRewardChart, MiniDrawdownChart } from "../components/dashboard/MiniCharts";
 
 const Dashboard = () => {
-  const { trades, stats } = useTrades();
+  const { trades, stats, loading } = useTrades();
   const { user } = useAuth();
   const [cumulativeRange, setCumulativeRange] = useState(60);
+
+  // Brand-new account: show grayscale ghost previews instead of empty charts.
+  // Gated on !loading so users with trades never see a ghost flash mid-fetch.
+  const showGhostState = !loading && trades.length === 0;
 
   // Pre-aggregate cumulative data so CumulativePnLChart receives clean arrays
   // rather than raw trades — this keeps the chart component stateless and testable.
@@ -145,26 +150,38 @@ const Dashboard = () => {
     },
   ];
 
-  return (
-    <div className="dashboard space-y-6">
-      {/* Header */}
-      <div className="dashboard__header flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Track your trading performance and insights
-          </p>
-        </div>
+  const header = (
+    <div className="dashboard__header flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          Dashboard
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          Track your trading performance and insights
+        </p>
+      </div>
 
-        <div className="mt-4 sm:mt-0 flex items-center space-x-3">
-          <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-            <Calendar className="w-4 h-4" />
-            <span>Last updated: {new Date().toLocaleDateString()}</span>
-          </div>
+      <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+        <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+          <Calendar className="w-4 h-4" />
+          <span>Last updated: {new Date().toLocaleDateString()}</span>
         </div>
       </div>
+    </div>
+  );
+
+  if (showGhostState) {
+    return (
+      <div className="dashboard space-y-6">
+        {header}
+        <DashboardEmptyState />
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard space-y-6">
+      {header}
 
       {/* Pre-Market Briefing — daily personalized edge summary, dismissible */}
       <PreMarketBriefing trades={trades} user={user} />
