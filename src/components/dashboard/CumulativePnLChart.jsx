@@ -4,7 +4,7 @@ import { getChartColors } from "../../utils/chartColors";
 
 const PAD_LEFT   = 38;
 const PAD_RIGHT  = 12;
-const PAD_TOP    = 18;
+const PAD_TOP    = 20;
 const PAD_BOTTOM = 36;
 
 const fmtDate = (d) => {
@@ -258,10 +258,11 @@ const CumulativePnLChart = ({
             <stop offset="0%"   stopColor={lineRed} stopOpacity="0.02" />
             <stop offset="100%" stopColor={lineRed} stopOpacity="0.20" />
           </linearGradient>
-          {/* Clip above the zero line — 2px headroom so the stroke at the
-              domain max isn't shaved in half by the clip edge */}
+          {/* Clip above the zero line — 6px headroom so the stroke AND the
+              hover dot (r 3.5 + 1.5 ring ≈ 4.25px above the line) at the
+              domain max aren't shaved flat by the clip edge */}
           <clipPath id={`ca_${uid}`}>
-            <rect x={PAD_LEFT} y={PAD_TOP - 2} width={chartW} height={aboveH + 2} />
+            <rect x={PAD_LEFT} y={PAD_TOP - 6} width={chartW} height={aboveH + 6} />
           </clipPath>
           {/* Clip below the zero line */}
           <clipPath id={`cb_${uid}`}>
@@ -273,9 +274,9 @@ const CumulativePnLChart = ({
             />
           </clipPath>
           {/* Master chart area clip — prevents right-edge overflow; extends
-              2px above PAD_TOP to match the above-zero clip headroom */}
+              6px above PAD_TOP to match the above-zero clip headroom */}
           <clipPath id={`cm_${uid}`}>
-            <rect x={PAD_LEFT} y={PAD_TOP - 2} width={chartW} height={chartH + 2} />
+            <rect x={PAD_LEFT} y={PAD_TOP - 6} width={chartW} height={chartH + 6} />
           </clipPath>
           {/* Hides grid lines where the trend area sits, so they read as
               behind the chart instead of showing through the translucent fill */}
