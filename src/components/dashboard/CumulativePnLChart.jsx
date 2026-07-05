@@ -2,10 +2,12 @@ import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState }
 import { useTheme } from "../../contexts/ThemeContext";
 import { getChartColors } from "../../utils/chartColors";
 
-const PAD_LEFT   = 40;
+// Left/bottom gutters match the Daily P&L chart (PnLChart_simple) so the two
+// dashboard charts' plot areas line up.
+const PAD_LEFT   = 28;
 const PAD_RIGHT  = 12;
 const PAD_TOP    = 20;
-const PAD_BOTTOM = 38;
+const PAD_BOTTOM = 36;
 
 const fmtDate = (d) => {
   if (!d) return '';
