@@ -353,32 +353,35 @@ const CumulativePnLChart = ({
             clipPath={`url(#cb_${uid})`}
           />
 
-          {/* Hover indicator — vertical rule + dot */}
-          {hover.idx !== null && (() => {
-            const ix  = px(hover.idx);
-            const iy  = py(data[hover.idx]);
-            const pos = data[hover.idx] >= 0;
-            return (
-              <g>
-                <line
-                  x1={ix.toFixed(1)} x2={ix.toFixed(1)}
-                  y1={PAD_TOP} y2={PAD_TOP + chartH}
-                  stroke={c.axis}
-                  strokeWidth="1"
-                  strokeDasharray="3,2"
-                />
-                <circle
-                  cx={ix.toFixed(1)}
-                  cy={iy.toFixed(1)}
-                  r="3.5"
-                  fill={pos ? lineGreen : lineRed}
-                  stroke={c.dotRing}
-                  strokeWidth="1.5"
-                />
-              </g>
-            );
-          })()}
         </g>
+
+        {/* Hover indicator — vertical rule + dot. Outside the master clip so
+            the dot renders whole at the first/last day and at the domain
+            extremes instead of being shaved by the clip edge. */}
+        {hover.idx !== null && (() => {
+          const ix  = px(hover.idx);
+          const iy  = py(data[hover.idx]);
+          const pos = data[hover.idx] >= 0;
+          return (
+            <g>
+              <line
+                x1={ix.toFixed(1)} x2={ix.toFixed(1)}
+                y1={PAD_TOP} y2={PAD_TOP + chartH}
+                stroke={c.axis}
+                strokeWidth="1"
+                strokeDasharray="3,2"
+              />
+              <circle
+                cx={ix.toFixed(1)}
+                cy={iy.toFixed(1)}
+                r="3.5"
+                fill={pos ? lineGreen : lineRed}
+                stroke={c.dotRing}
+                strokeWidth="1.5"
+              />
+            </g>
+          );
+        })()}
 
         {/* Emphasized endpoint — where the equity curve stands today.
             Rendered outside the master clip so the dot isn't shaved at the
