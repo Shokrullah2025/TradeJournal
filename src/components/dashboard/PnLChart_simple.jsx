@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getChartColors } from "../../utils/chartColors";
+import { toLocalDateKey } from "../../utils/date";
 
 const BAR_W       = 10;   // px — fixed bar width at every screen size
 const BAR_GAP     = 1;    // 1px visual gap between bars
@@ -98,7 +99,8 @@ const PnLChart = ({ trades = [] }) => {
       if (!raw) return;
       const parsed = new Date(raw);
       if (isNaN(parsed.getTime())) return;
-      const key = parsed.toISOString().split("T")[0];
+      // Local-day key — toISOString() shifted the day for UTC+ timezones
+      const key = toLocalDateKey(parsed);
       byDate[key] = (byDate[key] || 0) + (trade.pnl || 0);
     });
 

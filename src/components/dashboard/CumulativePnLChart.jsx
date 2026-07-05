@@ -2,9 +2,11 @@ import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState }
 import { useTheme } from "../../contexts/ThemeContext";
 import { getChartColors } from "../../utils/chartColors";
 
-const PAD_LEFT   = 38;
+// Left/bottom gutters match the Daily P&L chart (PnLChart_simple) so the two
+// dashboard charts' plot areas line up.
+const PAD_LEFT   = 28;
 const PAD_RIGHT  = 12;
-const PAD_TOP    = 18;
+const PAD_TOP    = 20;
 const PAD_BOTTOM = 36;
 
 const fmtDate = (d) => {
@@ -24,17 +26,31 @@ const fmtK = (v) => {
 const fmtFull = (v) =>
   `${v >= 0 ? '+' : '-'}$${Math.abs(v).toLocaleString()}`;
 
+// Straight line segments between sessions — day-to-day moves keep their
+// sharp corners so the equity curve reads exactly as traded, no smoothing.
+const segmentPath = (xs, ys) => {
+  if (xs.length < 2) return '';
+  let d = `M${xs[0].toFixed(1)},${ys[0].toFixed(1)}`;
+  for (let i = 1; i < xs.length; i++) {
+    d += ` L${xs[i].toFixed(1)},${ys[i].toFixed(1)}`;
+  }
+  return d;
+};
+
 /**
  * Cumulative P&L line chart.
  *
  * Props
  *   data        number[]   — cumulative running totals, one per trading day
  *   dates       Date[]     — matching Date objects (same length as data)
+ *   daily       (number|null)[] — that session's own P&L, parallel to data
+ *                (null for the zero-baseline anchor point)
  *   minSpacing  number     — minimum px between x-axis date labels (default 60)
  */
 const CumulativePnLChart = ({
   data = [],
   dates = [],
+  daily = [],
   minSpacing = 60,
 }) => {
   const uid     = useId().replace(/:/g, '_');
@@ -93,20 +109,17 @@ const CumulativePnLChart = ({
 
   const linePath = useMemo(() => {
     if (n < 2) return '';
-    return data
-      .map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`)
-      .join(' ');
+    const xs = data.map((_, i) => px(i));
+    const ys = data.map((v) => py(v));
+    return segmentPath(xs, ys);
   }, [data, n, px, py]);
 
   // Area closes at chart bottom — clipPaths handle the green/red colour split.
   const areaPath = useMemo(() => {
     if (n < 2) return '';
     const bottom = (PAD_TOP + chartH).toFixed(1);
-    const pts = data
-      .map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`)
-      .join(' ');
-    return `${pts} L${px(n - 1).toFixed(1)},${bottom} L${px(0).toFixed(1)},${bottom} Z`;
-  }, [data, n, px, py, chartH]);
+    return `${linePath} L${px(n - 1).toFixed(1)},${bottom} L${px(0).toFixed(1)},${bottom} Z`;
+  }, [linePath, n, px, chartH]);
 
   // Date-label indices: start from step (never index 0), always show last.
   const labelIndices = useMemo(() => {
@@ -173,12 +186,15 @@ const CumulativePnLChart = ({
 
   const aboveH  = Math.max(0, zeroY - PAD_TOP);
   const belowH  = Math.max(0, PAD_TOP + chartH - zeroY);
-  const hovered = hover.idx !== null ? { v: data[hover.idx], d: dates[hover.idx] } : null;
+  const hovered =
+    hover.idx !== null
+      ? { v: data[hover.idx], d: dates[hover.idx], day: daily[hover.idx] ?? null }
+      : null;
 
   return (
     <div
       ref={wrapRef}
-      className="relative flex-1 min-h-0 w-full cursor-crosshair touch-pan-y"
+      className="relative flex-1 min-h-0 w-full cursor-pointer touch-pan-y"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchMove}
@@ -207,20 +223,24 @@ const CumulativePnLChart = ({
         aria-label="Cumulative P&L over time"
       >
         <defs>
-          {/* Green fill — fades from top */}
+          {/* Green fill — a soft wash that dissolves toward zero (3 stops so
+              the fade reads silky instead of a flat tinted block) */}
           <linearGradient id={`cpg_${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor={lineGreen} stopOpacity="0.22" />
-            <stop offset="100%" stopColor={lineGreen} stopOpacity="0.02" />
+            <stop offset="0%"   stopColor={lineGreen} stopOpacity="0.18" />
+            <stop offset="55%"  stopColor={lineGreen} stopOpacity="0.07" />
+            <stop offset="100%" stopColor={lineGreen} stopOpacity="0" />
           </linearGradient>
-          {/* Red fill — fades to bottom */}
+          {/* Red fill — mirrors the green wash, deepening toward the bottom */}
           <linearGradient id={`crg_${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor={lineRed} stopOpacity="0.02" />
-            <stop offset="100%" stopColor={lineRed} stopOpacity="0.20" />
+            <stop offset="0%"   stopColor={lineRed} stopOpacity="0" />
+            <stop offset="45%"  stopColor={lineRed} stopOpacity="0.07" />
+            <stop offset="100%" stopColor={lineRed} stopOpacity="0.18" />
           </linearGradient>
-          {/* Clip above the zero line — 2px headroom so the stroke at the
-              domain max isn't shaved in half by the clip edge */}
+          {/* Clip above the zero line — 6px headroom so the stroke AND the
+              hover dot (r 3.5 + 1.5 ring ≈ 4.25px above the line) at the
+              domain max aren't shaved flat by the clip edge */}
           <clipPath id={`ca_${uid}`}>
-            <rect x={PAD_LEFT} y={PAD_TOP - 2} width={chartW} height={aboveH + 2} />
+            <rect x={PAD_LEFT} y={PAD_TOP - 6} width={chartW} height={aboveH + 6} />
           </clipPath>
           {/* Clip below the zero line */}
           <clipPath id={`cb_${uid}`}>
@@ -232,9 +252,9 @@ const CumulativePnLChart = ({
             />
           </clipPath>
           {/* Master chart area clip — prevents right-edge overflow; extends
-              2px above PAD_TOP to match the above-zero clip headroom */}
+              6px above PAD_TOP to match the above-zero clip headroom */}
           <clipPath id={`cm_${uid}`}>
-            <rect x={PAD_LEFT} y={PAD_TOP - 2} width={chartW} height={chartH + 2} />
+            <rect x={PAD_LEFT} y={PAD_TOP - 6} width={chartW} height={chartH + 6} />
           </clipPath>
           {/* Hides grid lines where the trend area sits, so they read as
               behind the chart instead of showing through the translucent fill */}
@@ -257,7 +277,6 @@ const CumulativePnLChart = ({
                 y2={y.toFixed(1)}
                 stroke={isZero ? c.zeroLine : c.grid}
                 strokeWidth="1"
-                strokeDasharray={isZero ? '4,3' : undefined}
                 mask={`url(#gm_${uid})`}
               />
               <text
@@ -265,7 +284,7 @@ const CumulativePnLChart = ({
                 y={y}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize="9.5"
+                fontSize="10"
                 fill={c.tick}
                 fontFamily="inherit"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
@@ -292,11 +311,14 @@ const CumulativePnLChart = ({
             fill={`url(#crg_${uid})`}
             clipPath={`url(#cb_${uid})`}
           />
+          {/* Soft under-glow — a wide, faint stroke beneath the 2px line gives
+              the curve depth without adding data-weight ink */}
           <path
             d={linePath}
             fill="none"
             stroke={lineGreen}
-            strokeWidth="1.5"
+            strokeWidth="6"
+            strokeOpacity="0.10"
             strokeLinejoin="round"
             strokeLinecap="round"
             clipPath={`url(#ca_${uid})`}
@@ -305,38 +327,81 @@ const CumulativePnLChart = ({
             d={linePath}
             fill="none"
             stroke={lineRed}
-            strokeWidth="1.5"
+            strokeWidth="6"
+            strokeOpacity="0.10"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            clipPath={`url(#cb_${uid})`}
+          />
+          <path
+            d={linePath}
+            fill="none"
+            stroke={lineGreen}
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            clipPath={`url(#ca_${uid})`}
+          />
+          <path
+            d={linePath}
+            fill="none"
+            stroke={lineRed}
+            strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"
             clipPath={`url(#cb_${uid})`}
           />
 
-          {/* Hover indicator — vertical rule + dot */}
-          {hover.idx !== null && (() => {
-            const ix  = px(hover.idx);
-            const iy  = py(data[hover.idx]);
-            const pos = data[hover.idx] >= 0;
-            return (
-              <g>
-                <line
-                  x1={ix.toFixed(1)} x2={ix.toFixed(1)}
-                  y1={PAD_TOP} y2={PAD_TOP + chartH}
-                  stroke={c.axis}
-                  strokeWidth="1"
-                  strokeDasharray="3,2"
-                />
-                <circle
-                  cx={ix.toFixed(1)}
-                  cy={iy.toFixed(1)}
-                  r="3.5"
-                  fill={pos ? lineGreen : lineRed}
-                  stroke={c.dotRing}
-                  strokeWidth="1.5"
-                />
-              </g>
-            );
-          })()}
         </g>
+
+        {/* Hover indicator — vertical rule + dot. Outside the master clip so
+            the dot renders whole at the first/last day and at the domain
+            extremes instead of being shaved by the clip edge. */}
+        {hover.idx !== null && (() => {
+          const ix  = px(hover.idx);
+          const iy  = py(data[hover.idx]);
+          const pos = data[hover.idx] >= 0;
+          return (
+            <g>
+              <line
+                x1={ix.toFixed(1)} x2={ix.toFixed(1)}
+                y1={PAD_TOP} y2={PAD_TOP + chartH}
+                stroke={c.axis}
+                strokeWidth="1"
+              />
+              <circle
+                cx={ix.toFixed(1)}
+                cy={iy.toFixed(1)}
+                r="4"
+                fill={pos ? lineGreen : lineRed}
+                stroke={c.dotRing}
+                strokeWidth="2"
+              />
+            </g>
+          );
+        })()}
+
+        {/* Emphasized endpoint — where the equity curve stands today.
+            Rendered outside the master clip so the dot isn't shaved at the
+            right edge; a soft halo makes it read without shouting. */}
+        {(() => {
+          const ex = px(n - 1);
+          const ey = py(data[n - 1]);
+          const endColor = data[n - 1] >= 0 ? lineGreen : lineRed;
+          return (
+            <g data-testid="cumulative-pnl-chart-endpoint">
+              <circle cx={ex.toFixed(1)} cy={ey.toFixed(1)} r="8" fill={endColor} opacity="0.12" />
+              <circle
+                cx={ex.toFixed(1)}
+                cy={ey.toFixed(1)}
+                r="4"
+                fill={endColor}
+                stroke={c.dotRing}
+                strokeWidth="2"
+              />
+            </g>
+          );
+        })()}
 
         {/* Date labels — 45° rotated, outside master clip */}
         {labelIndices.map((i) => {
@@ -352,7 +417,7 @@ const CumulativePnLChart = ({
                 y={0}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fontSize="9.5"
+                fontSize="10"
                 fill={c.tick}
                 fontFamily="inherit"
               >
@@ -366,30 +431,60 @@ const CumulativePnLChart = ({
       {/* Hover tooltip */}
       {hovered && (
         <div
-          className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
+          className="absolute pointer-events-none z-20 px-3 py-2 rounded-xl bg-gray-900/95 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl ring-1 ring-white/10 dark:ring-black/5 backdrop-blur-sm text-xs whitespace-nowrap tabular-nums"
           data-testid="cumulative-pnl-chart-tooltip"
           style={{
-            left: hover.x,
-            top: hover.y - 10,
+            // Anchored to the hovered point on the line (not the cursor):
+            // centered on the snapped x, sitting just above the dot. The x is
+            // clamped so the tooltip can't spill past the card edges, and
+            // points near the bottom edge (deep losses) get extra lift so the
+            // banner clears the dot and the x-axis area.
+            left: Math.max(70, Math.min((dims?.w ?? 0) - 70, px(hover.idx))),
+            top:
+              py(data[hover.idx]) -
+              (py(data[hover.idx]) > PAD_TOP + chartH - 20 ? 24 : 12),
             transform: "translate(-50%, -100%)",
           }}
         >
-          <div
-            className={
-              hovered.v >= 0
-                ? "font-semibold text-green-400 dark:text-green-600"
-                : "font-semibold text-red-400 dark:text-red-600"
-            }
-            data-testid="cumulative-pnl-chart-tooltip-value"
-          >
-            {fmtFull(hovered.v)}
-          </div>
           {hovered.d && (
-            <div className="opacity-75 mt-0.5">
+            <div className="opacity-75 mb-0.5">
               {hovered.d.toLocaleDateString("en-US", { weekday: "short" })},{" "}
               {fmtDate(hovered.d)}
             </div>
           )}
+          {/* That session's own result — the number users expect to match the
+              trades calendar. Baseline anchor point (day === null) skips it. */}
+          {hovered.day !== null && (
+            <div
+              className="flex items-baseline justify-between gap-3"
+              data-testid="cumulative-pnl-chart-tooltip-day"
+            >
+              <span className="opacity-75">Day</span>
+              <span
+                className={
+                  hovered.day >= 0
+                    ? "font-semibold text-green-400 dark:text-green-600"
+                    : "font-semibold text-red-400 dark:text-red-600"
+                }
+              >
+                {fmtFull(hovered.day)}
+              </span>
+            </div>
+          )}
+          {/* Running total up to this session — what the line itself plots */}
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="opacity-75">Total</span>
+            <span
+              className={
+                hovered.v >= 0
+                  ? "font-semibold text-green-400 dark:text-green-600"
+                  : "font-semibold text-red-400 dark:text-red-600"
+              }
+              data-testid="cumulative-pnl-chart-tooltip-value"
+            >
+              {fmtFull(hovered.v)}
+            </span>
+          </div>
         </div>
       )}
     </div>
