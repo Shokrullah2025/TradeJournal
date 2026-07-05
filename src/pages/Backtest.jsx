@@ -3154,7 +3154,7 @@ const Backtest = () => {
 
     return (
       <>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen flex flex-col">
 
         {/* ── Top header bar ── */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
@@ -3669,7 +3669,7 @@ const Backtest = () => {
 
   if (currentView === "setup") {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
             <button
@@ -6116,7 +6116,7 @@ const Backtest = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">

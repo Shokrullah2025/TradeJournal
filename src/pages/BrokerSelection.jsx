@@ -268,12 +268,10 @@ const BrokerSelection = () => {
   const headerSync = formatRelative(lastSync);
 
   return (
-    // Light Evergreen-teal → cyan wash keeps the page airy in light mode;
-    // dark mode stays near-black with a faint teal glow toward the corner.
-    // Negative margins cancel the app shell's p-4/sm:p-6 content padding so
-    // the gradient bleeds to the header and sidebar edges (same trick as
-    // Backtest); py-10 keeps the content itself where it was.
-    <div className="min-h-screen -m-4 sm:-m-6 bg-gradient-to-br from-primary-50 via-white to-cyan-50 dark:from-gray-950 dark:via-gray-950 dark:to-primary-900/30 py-10">
+    // Transparent so the app shell's teal gradient (App.jsx <main>) shows
+    // through; negative margins cancel the shell's p-4/sm:p-6 so py-10 keeps
+    // the content exactly where it was.
+    <div className="min-h-screen -m-4 sm:-m-6 py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {view === "accounts" ? (
