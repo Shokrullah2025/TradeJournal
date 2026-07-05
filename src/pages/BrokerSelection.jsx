@@ -268,7 +268,9 @@ const BrokerSelection = () => {
   const headerSync = formatRelative(lastSync);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10">
+    // Light Evergreen-teal → cyan wash keeps the page airy in light mode;
+    // dark mode stays near-black with a faint teal glow toward the corner.
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-cyan-50 dark:from-gray-950 dark:via-gray-950 dark:to-primary-900/30 py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {view === "accounts" ? (
