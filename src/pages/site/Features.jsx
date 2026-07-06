@@ -13,7 +13,7 @@ const Features = () => (
   <div data-testid="site-features-page">
     <Seo
       title="Features"
-      description="Explore Tradgella's features: broker auto-sync, performance analytics, backtesting, risk management, and a fast, structured trade journal."
+      description="Explore ZalorTrade's features: broker auto-sync, performance analytics, backtesting, risk management, and a fast, structured trade journal."
       path="/features"
     />
     {/* Page header */}

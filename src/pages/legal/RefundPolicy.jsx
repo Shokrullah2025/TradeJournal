@@ -10,7 +10,7 @@ const RefundPolicy = () => (
     slug="refund"
   >
     <p>
-      This Refund & Billing Policy governs all payment, subscription, and billing matters for Tradgella, operated by <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company. This policy is incorporated by reference into our <Link to="/terms">Terms of Service</Link>.
+      This Refund & Billing Policy governs all payment, subscription, and billing matters for ZalorTrade, operated by <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company. This policy is incorporated by reference into our <Link to="/terms">Terms of Service</Link>.
     </p>
     <p>
       This policy complies with the Colorado Automatic Renewal Law (C.R.S. § 6-1-732), the Colorado Consumer Protection Act (C.R.S. § 6-1-105), the FTC's Negative Option Rule (16 C.F.R. Part 425), and applicable California automatic renewal law (Cal. Bus. & Prof. Code § 17600 et seq.) for California subscribers.
@@ -48,7 +48,7 @@ const RefundPolicy = () => (
       <strong>Required disclosure under Colorado Revised Statutes § 6-1-732 and FTC Negative Option Rule:</strong>
     </p>
     <ul>
-      <li>Your Tradgella subscription <strong>automatically renews</strong> at the end of each billing period (monthly or annual, as selected at checkout).</li>
+      <li>Your ZalorTrade subscription <strong>automatically renews</strong> at the end of each billing period (monthly or annual, as selected at checkout).</li>
       <li>You will be charged the <strong>then-current subscription rate</strong> for your plan at the start of each new billing period.</li>
       <li>By completing your purchase, you <strong>authorize us and Stripe, Inc.</strong> to charge your payment method on a recurring basis until you cancel.</li>
       <li>Charges will appear on your statement as <strong>[COMPANY LEGAL NAME]</strong> or a similar descriptor.</li>

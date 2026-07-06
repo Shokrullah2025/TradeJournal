@@ -43,7 +43,7 @@ const APP_NAV = [
 
 // Browser chrome + the app shell (mini sidebar with the active page
 // highlighted) around each preview, so every visual looks like the actual
-// Tradgella dashboard rather than a made-up panel.
+// ZalorTrade dashboard rather than a made-up panel.
 const Frame = ({ path, active, children }) => (
   <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-xl dark:border-gray-700 dark:bg-gray-900">
     <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-4 py-2.5 dark:border-gray-800 dark:bg-gray-800/60">
@@ -51,7 +51,7 @@ const Frame = ({ path, active, children }) => (
       <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
       <span className="h-2.5 w-2.5 rounded-full bg-green-400/80" />
       <span className="ml-3 flex-1 truncate rounded-md border border-gray-200 bg-white px-3 py-1 text-[11px] text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500">
-        app.tradgella.com{path}
+        app.zalortrade.com{path}
       </span>
     </div>
     <div className="flex">
@@ -61,7 +61,7 @@ const Frame = ({ path, active, children }) => (
             <TrendingUp className="h-3 w-3 text-white" />
           </span>
           <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100">
-            Tradgella
+            ZalorTrade
           </span>
         </div>
         {APP_NAV.map((item) => {

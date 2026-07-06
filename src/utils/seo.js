@@ -9,17 +9,17 @@
  * when composing canonical URLs.
  */
 
-export const SITE_NAME = "Tradgella";
+export const SITE_NAME = "ZalorTrade";
 
 // Absolute origin used for canonical URLs, sitemap entries, and og:url.
 export const SITE_URL = (
-  import.meta.env.VITE_SITE_URL || "https://tradgella.com"
+  import.meta.env.VITE_SITE_URL || "https://zalortrade.com"
 ).replace(/\/+$/, "");
 
 // One-line value proposition reused as the default meta description and the
 // homepage description.
 export const SITE_DESCRIPTION =
-  "Tradgella is a data-driven trading journal: auto-sync your broker, " +
+  "ZalorTrade is a data-driven trading journal: auto-sync your broker, " +
   "journal every trade, and turn your track record into real, measurable " +
   "analytics — win rate, profit factor, drawdown, and more.";
 
@@ -28,7 +28,7 @@ export const SITE_DESCRIPTION =
 // branded card; until then the logo is used as a safe fallback.
 export const DEFAULT_OG_IMAGE = "/og-image.png";
 
-export const TWITTER_HANDLE = "@tradgella";
+export const TWITTER_HANDLE = "@zalortrade";
 
 /**
  * Build an absolute URL from a route path (e.g. "/pricing"). Accepts an
@@ -42,8 +42,8 @@ export function absoluteUrl(path = "/") {
 
 /**
  * Compose the document title. Pass a page title to get
- * "Page Title | Tradgella"; omit it for the bare site name (used on the
- * homepage to avoid a redundant "Tradgella | Tradgella").
+ * "Page Title | ZalorTrade"; omit it for the bare site name (used on the
+ * homepage to avoid a redundant "ZalorTrade | ZalorTrade").
  */
 export function pageTitle(title) {
   return title ? `${title} | ${SITE_NAME}` : SITE_NAME;

@@ -227,7 +227,7 @@ export const FEATURE_CATEGORIES = [
     eyebrow: "Platform",
     title: "Fast, secure, and a joy to use",
     subtitle:
-      "The details that make Tradgella something you'll actually open every day.",
+      "The details that make ZalorTrade something you'll actually open every day.",
     features: [
       {
         icon: Calculator,
@@ -364,7 +364,7 @@ export const FAQS = [
   {
     question: "Which brokers can I connect?",
     answer:
-      "Tradgella syncs with Tradovate and popular futures prop firms such as Apex, Topstep, and MyFundedFutures. You can also import any history via CSV or Excel.",
+      "ZalorTrade syncs with Tradovate and popular futures prop firms such as Apex, Topstep, and MyFundedFutures. You can also import any history via CSV or Excel.",
   },
   {
     question: "Is my trading data secure?",
@@ -526,7 +526,7 @@ export const NAV_MENUS = [
     items: [
       {
         label: "About us",
-        description: "Why we built Tradgella",
+        description: "Why we built ZalorTrade",
         emoji: "🌱",
         to: "/about",
       },

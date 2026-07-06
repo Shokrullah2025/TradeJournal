@@ -10,7 +10,7 @@ const CookiePolicy = () => (
     slug="cookies"
   >
     <p>
-      This Cookie Policy explains how <strong>[COMPANY LEGAL NAME]</strong> ("Company," "we," "us," or "our") uses cookies and similar browser storage technologies on Tradgella (the "Service"). It should be read alongside our <Link to="/privacy">Privacy Policy</Link>.
+      This Cookie Policy explains how <strong>[COMPANY LEGAL NAME]</strong> ("Company," "we," "us," or "our") uses cookies and similar browser storage technologies on ZalorTrade (the "Service"). It should be read alongside our <Link to="/privacy">Privacy Policy</Link>.
     </p>
 
     <h2>1. What Are Cookies?</h2>
@@ -22,7 +22,7 @@ const CookiePolicy = () => (
     </p>
 
     <h2>2. Cookies We Use</h2>
-    <p>Tradgella uses only <strong>strictly necessary</strong> first-party cookies. We do not use analytics, advertising, or social media tracking cookies of any kind.</p>
+    <p>ZalorTrade uses only <strong>strictly necessary</strong> first-party cookies. We do not use analytics, advertising, or social media tracking cookies of any kind.</p>
 
     <h3>Strictly Necessary Cookies (Authentication Session)</h3>
     <div className="overflow-x-auto">
@@ -38,7 +38,7 @@ const CookiePolicy = () => (
         <tbody>
           <tr>
             <td className="px-3 py-2 border border-gray-300 dark:border-gray-600 font-mono text-xs"><code>sb-[project-ref]-auth-token</code></td>
-            <td className="px-3 py-2 border border-gray-300 dark:border-gray-600">Stores your authenticated session token, enabling you to stay logged in to Tradgella. Set by Supabase Auth. Required for the Service to function.</td>
+            <td className="px-3 py-2 border border-gray-300 dark:border-gray-600">Stores your authenticated session token, enabling you to stay logged in to ZalorTrade. Set by Supabase Auth. Required for the Service to function.</td>
             <td className="px-3 py-2 border border-gray-300 dark:border-gray-600">Strictly Necessary, First-Party</td>
             <td className="px-3 py-2 border border-gray-300 dark:border-gray-600">Persistent (expires with session or upon explicit sign-out)</td>
           </tr>
@@ -52,7 +52,7 @@ const CookiePolicy = () => (
 
     <h2>3. Local Storage (Not Cookies)</h2>
     <p>
-      In addition to cookies, Tradgella uses your browser's <code>localStorage</code> to remember certain non-sensitive preferences between sessions. localStorage data is stored entirely on your device and is not transmitted to our servers with every request. It is not a cookie.
+      In addition to cookies, ZalorTrade uses your browser's <code>localStorage</code> to remember certain non-sensitive preferences between sessions. localStorage data is stored entirely on your device and is not transmitted to our servers with every request. It is not a cookie.
     </p>
 
     <h3>What We Store in Local Storage</h3>
@@ -92,7 +92,7 @@ const CookiePolicy = () => (
 
     <h2>4. Third-Party Cookies</h2>
     <p>
-      Tradgella does <strong>not</strong> embed:
+      ZalorTrade does <strong>not</strong> embed:
     </p>
     <ul>
       <li>Google Analytics, Google Tag Manager, or any Google tracking code;</li>
@@ -103,7 +103,7 @@ const CookiePolicy = () => (
       <li>Any other third-party script that sets cookies on this domain.</li>
     </ul>
     <p>
-      As a result, no third-party cookies are set when you use Tradgella.
+      As a result, no third-party cookies are set when you use ZalorTrade.
     </p>
 
     <h2>5. Managing and Deleting Cookies</h2>
@@ -117,7 +117,7 @@ const CookiePolicy = () => (
       <li><strong>Microsoft Edge:</strong> Settings → Privacy, search, and services → Cookies</li>
     </ul>
     <p>
-      <strong>Please note:</strong> Blocking or deleting the authentication cookie (<code>sb-*-auth-token</code>) will prevent you from logging in to Tradgella. This is a strictly necessary cookie and the Service cannot function without it.
+      <strong>Please note:</strong> Blocking or deleting the authentication cookie (<code>sb-*-auth-token</code>) will prevent you from logging in to ZalorTrade. This is a strictly necessary cookie and the Service cannot function without it.
     </p>
     <p>
       To clear localStorage data, you can use your browser's developer tools (Application → Local Storage → Clear).

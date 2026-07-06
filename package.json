@@ -1,5 +1,5 @@
 {
-  "name": "tradgella",
+  "name": "zalortrade",
   "version": "1.0.0",
   "description": "A comprehensive trade journal application for tracking and analyzing trading performance",
   "main": "index.js",
@@ -67,6 +67,6 @@
     "react",
     "vite"
   ],
-  "author": "Tradgella",
+  "author": "ZalorTrade",
   "license": "MIT"
 }

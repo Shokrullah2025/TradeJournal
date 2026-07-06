@@ -19,7 +19,7 @@ import {
  * the static baseline in index.html covers crawlers that do not. Drop a single
  * <Seo .../> at the top of each public page.
  *
- * @param {string}  [title]        Page title; composed as "Title | Tradgella".
+ * @param {string}  [title]        Page title; composed as "Title | ZalorTrade".
  * @param {string}  [description]  Meta description (defaults to the site one).
  * @param {string}  [path]         Route path for the canonical/og:url, e.g. "/pricing".
  * @param {string}  [image]        Social-share image path or absolute URL.
