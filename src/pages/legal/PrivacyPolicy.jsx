@@ -10,7 +10,7 @@ const PrivacyPolicy = () => (
     slug="privacy"
   >
     <p>
-      This Privacy Policy describes how <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), collects, uses, stores, and shares personal information when you use Tradgella (the "Service"). Our principal place of business is <strong>[PRINCIPAL ADDRESS]</strong>.
+      This Privacy Policy describes how <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), collects, uses, stores, and shares personal information when you use ZalorTrade (the "Service"). Our principal place of business is <strong>[PRINCIPAL ADDRESS]</strong>.
     </p>
     <p>
       This policy is aligned with the <strong>Colorado Privacy Act (CPA)</strong> (C.R.S. § 24-73-101 et seq., effective July 1, 2023), the <strong>California Consumer Privacy Act (CCPA)</strong> and <strong>California Privacy Rights Act (CPRA)</strong> (Cal. Civ. Code § 1798.100 et seq.), and includes <strong>GDPR-readiness provisions</strong> for users in the European Economic Area (EEA) and United Kingdom. By using the Service, you acknowledge the collection and use of information as described in this policy.
@@ -222,7 +222,7 @@ const PrivacyPolicy = () => (
       <li><strong>Right to Access:</strong> You may request to know what personal data we hold about you.</li>
       <li><strong>Right to Correction:</strong> You may request correction of inaccurate personal data.</li>
       <li><strong>Right to Deletion:</strong> You may request deletion of your personal data, subject to certain exceptions (e.g., legal retention obligations).</li>
-      <li><strong>Right to Portability:</strong> You may request your data in a portable format. Tradgella offers a data export feature in your account settings.</li>
+      <li><strong>Right to Portability:</strong> You may request your data in a portable format. ZalorTrade offers a data export feature in your account settings.</li>
       <li><strong>Right to Opt Out of Targeted Advertising and Sale:</strong> We do not sell personal data or engage in targeted advertising, so this right is not applicable. You may still contact us to confirm this.</li>
     </ul>
     <p>

@@ -14,13 +14,13 @@ const Disclaimer = () => (
         IMPORTANT — READ BEFORE USING TRADE JOURNAL PRO
       </p>
       <p className="text-amber-800 dark:text-amber-300">
-        Tradgella is a trade recordkeeping and analytics tool. It does NOT provide investment advice, financial guidance, trading signals, or recommendations of any kind. All trading decisions are solely your responsibility.
+        ZalorTrade is a trade recordkeeping and analytics tool. It does NOT provide investment advice, financial guidance, trading signals, or recommendations of any kind. All trading decisions are solely your responsibility.
       </p>
     </div>
 
     <h2>1. Not Investment Advice</h2>
     <p>
-      Nothing contained in Tradgella, including but not limited to analytics outputs, win rate statistics, profit factor calculations, Sharpe ratio displays, drawdown charts, trade performance summaries, backtesting results, or any other data displayed by the Service, constitutes investment advice, financial advice, trading advice, legal advice, tax advice, or any other type of professional advice.
+      Nothing contained in ZalorTrade, including but not limited to analytics outputs, win rate statistics, profit factor calculations, Sharpe ratio displays, drawdown charts, trade performance summaries, backtesting results, or any other data displayed by the Service, constitutes investment advice, financial advice, trading advice, legal advice, tax advice, or any other type of professional advice.
     </p>
     <p>
       [COMPANY LEGAL NAME] provides the Service solely as a tool for users to record, organize, and analyze their own historical trading activity. The Service does not generate, suggest, or imply any recommendation to buy, sell, hold, short, or otherwise transact in any security, commodity, cryptocurrency, derivative, forex instrument, or other financial instrument.
@@ -51,7 +51,7 @@ const Disclaimer = () => (
 
     <h2>4. Backtesting and Simulation Limitations</h2>
     <p>
-      The backtesting feature in Tradgella allows you to simulate hypothetical trades on historical market data. <strong>Backtesting results are inherently hypothetical and simulated, not actual trading results.</strong> They are subject to significant limitations, including but not limited to:
+      The backtesting feature in ZalorTrade allows you to simulate hypothetical trades on historical market data. <strong>Backtesting results are inherently hypothetical and simulated, not actual trading results.</strong> They are subject to significant limitations, including but not limited to:
     </p>
     <ul>
       <li><strong>Slippage:</strong> In real trading, your order may be filled at a price different from the simulated entry or exit price, particularly in fast-moving or illiquid markets.</li>
@@ -64,7 +64,7 @@ const Disclaimer = () => (
       <li><strong>Overfitting:</strong> A strategy optimized on historical data may not generalize to future market conditions.</li>
     </ul>
     <p>
-      Backtesting results displayed in Tradgella are for <strong>educational and informational purposes only</strong>. They do not represent actual trading results and should not be used to make live trading decisions.
+      Backtesting results displayed in ZalorTrade are for <strong>educational and informational purposes only</strong>. They do not represent actual trading results and should not be used to make live trading decisions.
     </p>
 
     <h2>5. Trading Involves Substantial Risk of Loss</h2>
@@ -88,12 +88,12 @@ const Disclaimer = () => (
 
     <h2>7. Broker Integration Disclaimer</h2>
     <p>
-      Trade data imported from broker integrations (Tradovate, Alpaca, and others) is provided by those brokers' APIs "as is." We do not verify the accuracy, completeness, or timeliness of broker-provided data. Discrepancies between data in Tradgella and your official broker account statements may exist. Always rely on your official broker account statements for your definitive trading records.
+      Trade data imported from broker integrations (Tradovate, Alpaca, and others) is provided by those brokers' APIs "as is." We do not verify the accuracy, completeness, or timeliness of broker-provided data. Discrepancies between data in ZalorTrade and your official broker account statements may exist. Always rely on your official broker account statements for your definitive trading records.
     </p>
 
     <h2>8. User Assumes All Responsibility</h2>
     <p>
-      By using Tradgella, you acknowledge and agree that:
+      By using ZalorTrade, you acknowledge and agree that:
     </p>
     <ul>
       <li>All trading decisions you make are entirely your own and based on your own independent judgment and research;</li>
@@ -112,7 +112,7 @@ const Disclaimer = () => (
 
     <h2>10. Regulatory Information</h2>
     <p>
-      Tradgella operates as a software-as-a-service (SaaS) application providing recordkeeping and analytics functionality. It is <strong>not</strong> a broker-dealer, exchange, alternative trading system (ATS), or financial data vendor as defined by the SEC. No securities transactions occur on this platform.
+      ZalorTrade operates as a software-as-a-service (SaaS) application providing recordkeeping and analytics functionality. It is <strong>not</strong> a broker-dealer, exchange, alternative trading system (ATS), or financial data vendor as defined by the SEC. No securities transactions occur on this platform.
     </p>
 
     <h2>11. Limitation of Liability</h2>

@@ -63,7 +63,7 @@ const Contact = () => {
     {
       icon: Mail,
       title: "Email us",
-      detail: "support@tradgella.com",
+      detail: "support@zalortrade.com",
     },
     {
       icon: MessageSquare,
@@ -81,7 +81,7 @@ const Contact = () => {
     <div data-testid="site-contact-page">
       <Seo
         title="Contact"
-        description="Get in touch with the Tradgella team. Questions about pricing, feedback, or partnership ideas — we usually reply within one business day."
+        description="Get in touch with the ZalorTrade team. Questions about pricing, feedback, or partnership ideas — we usually reply within one business day."
         path="/contact"
       />
       {/* Header */}

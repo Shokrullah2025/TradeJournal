@@ -64,7 +64,7 @@ const HeroMock = () => (
         <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
         <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
         <span className="ml-2 font-nums text-xs text-gray-400 dark:text-gray-500">
-          tradgella.com / dashboard
+          zalortrade.com / dashboard
         </span>
       </div>
       <div className="p-4 sm:p-5">
@@ -534,7 +534,7 @@ const Home = () => (
             Your journal, read back to you in plain English
           </h3>
           <p className="mt-2.5 max-w-md text-[15px] leading-relaxed opacity-90">
-            Tradgella scans every trade and surfaces the patterns you can&apos;t
+            ZalorTrade scans every trade and surfaces the patterns you can&apos;t
             see — losing time windows, revenge-trading streaks, and the setups
             quietly draining your account.
           </p>

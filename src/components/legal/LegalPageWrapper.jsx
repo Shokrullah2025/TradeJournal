@@ -15,15 +15,15 @@ const LEGAL_LINKS = [
 // Short, page-specific meta descriptions keyed by slug. Falls back to a
 // generic legal-document description for any slug not listed.
 const LEGAL_DESCRIPTIONS = {
-  terms: "Read the Terms of Service governing your use of Tradgella.",
+  terms: "Read the Terms of Service governing your use of ZalorTrade.",
   privacy:
-    "How Tradgella collects, uses, and protects your personal data (CPA, CCPA/CPRA, and GDPR-ready).",
+    "How ZalorTrade collects, uses, and protects your personal data (CPA, CCPA/CPRA, and GDPR-ready).",
   disclaimer:
-    "Tradgella's financial disclaimer: the Service is for journaling and analysis, not financial advice.",
-  cookies: "How Tradgella uses cookies and similar technologies.",
-  refund: "Tradgella's refund, billing, and cancellation policy.",
-  aup: "Tradgella's Acceptable Use Policy — what is and isn't allowed on the Service.",
-  dmca: "Tradgella's DMCA and copyright policy, including how to file a notice.",
+    "ZalorTrade's financial disclaimer: the Service is for journaling and analysis, not financial advice.",
+  cookies: "How ZalorTrade uses cookies and similar technologies.",
+  refund: "ZalorTrade's refund, billing, and cancellation policy.",
+  aup: "ZalorTrade's Acceptable Use Policy — what is and isn't allowed on the Service.",
+  dmca: "ZalorTrade's DMCA and copyright policy, including how to file a notice.",
 };
 
 /**
@@ -42,7 +42,7 @@ const LegalPageWrapper = ({ title, effectiveDate, lastUpdated, children, slug })
         title={title}
         description={
           LEGAL_DESCRIPTIONS[slug] ||
-          `${title} for Tradgella — the data-driven trading journal.`
+          `${title} for ZalorTrade — the data-driven trading journal.`
         }
         path={slug ? `/${slug}` : "/"}
       />

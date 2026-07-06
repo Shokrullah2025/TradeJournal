@@ -1,4 +1,4 @@
-# Tradgella robots.txt
+# ZalorTrade robots.txt
 # Public marketing & legal pages are crawlable; the authenticated app is not.
 
 User-agent: *
@@ -33,4 +33,4 @@ Disallow: /register
 Disallow: /auth/
 Disallow: /verify-email
 
-Sitemap: https://tradgella.com/sitemap.xml
+Sitemap: https://zalortrade.com/sitemap.xml

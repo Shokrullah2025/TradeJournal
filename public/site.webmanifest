@@ -1,6 +1,6 @@
 {
-  "name": "Tradgella — Trading Journal & Analytics",
-  "short_name": "Tradgella",
+  "name": "ZalorTrade — Trading Journal & Analytics",
+  "short_name": "ZalorTrade",
   "description": "A data-driven trading journal: auto-sync your broker, journal every trade, and turn your track record into real analytics.",
   "start_url": "/",
   "display": "standalone",
