@@ -39,7 +39,7 @@ const About = () => (
   <div data-testid="site-about-page">
     <Seo
       title="About"
-      description="Tradgella is built by traders, for traders — to make keeping a disciplined trading journal effortless and turn your record into a measurable edge."
+      description="ZalorTrade is built by traders, for traders — to make keeping a disciplined trading journal effortless and turn your record into a measurable edge."
       path="/about"
     />
     {/* Header */}
@@ -51,7 +51,7 @@ const About = () => (
         </h1>
         <p className="mx-auto mt-6 text-lg text-gray-600 dark:text-gray-400">
           We believe the difference between a gambler and a professional is a
-          journal. Tradgella exists to make keeping one effortless — and
+          journal. ZalorTrade exists to make keeping one effortless — and
           to turn that record into a genuine, measurable edge.
         </p>
       </div>
@@ -68,7 +68,7 @@ const About = () => (
             subtitle="Most traders fail not from a lack of effort, but a lack of feedback. We close that loop."
           />
           <p className="mt-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-            Tradgella started from a simple frustration: spreadsheets are
+            ZalorTrade started from a simple frustration: spreadsheets are
             tedious, broker statements are messy, and the metrics that actually
             matter are buried. We set out to build the journal we wished we had —
             one that captures every trade automatically, calculates the stats

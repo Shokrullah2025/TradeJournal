@@ -26,6 +26,12 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validSession, setValidSession] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  // Recovery-link sessions are aal1. Accounts with a verified TOTP factor
+  // must upgrade to aal2 (challenge + code) before Supabase accepts a
+  // password update, so the form shows an extra authenticator-code field.
+  const [mfaFactorId, setMfaFactorId] = useState(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpError, setTotpError] = useState("");
   const navigate = useNavigate();
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
@@ -51,6 +57,15 @@ const ResetPassword = () => {
         }
 
         if (session) {
+          // 2FA accounts: find the verified TOTP factor so the form can ask
+          // for the authenticator code needed to reach aal2.
+          const { data: aal } =
+            await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
+            const { data: factors } = await supabase.auth.mfa.listFactors();
+            const totp = factors?.totp?.find((f) => f.status === "verified");
+            if (totp) setMfaFactorId(totp.id);
+          }
           setValidSession(true);
         } else {
           toast.error("Invalid or expired reset link. Please request a new one.");
@@ -70,6 +85,25 @@ const ResetPassword = () => {
 
   const onSubmit = async ({ password }) => {
     try {
+      // Upgrade the recovery session to aal2 first when the account has 2FA —
+      // Supabase rejects password updates from an aal1 session otherwise.
+      if (mfaFactorId) {
+        const code = totpCode.trim();
+        if (!/^\d{6}$/.test(code)) {
+          setTotpError("Enter the 6-digit code from your authenticator app.");
+          return;
+        }
+        const { error: mfaError } = await supabase.auth.mfa.challengeAndVerify({
+          factorId: mfaFactorId,
+          code,
+        });
+        if (mfaError) {
+          setTotpError("Invalid authentication code. Please try again.");
+          return;
+        }
+        setTotpError("");
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: password,
       });
@@ -77,6 +111,10 @@ const ResetPassword = () => {
       if (error) {
         if (error.message.includes("same")) {
           toast.error("New password must be different from your old password.");
+        } else if (error.message.toLowerCase().includes("aal2")) {
+          toast.error(
+            "Two-factor verification is required before changing your password. Please enter your authenticator code."
+          );
         } else {
           toast.error(error.message || "Failed to update password. Please try again.");
         }
@@ -140,7 +178,7 @@ const ResetPassword = () => {
               <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
                 <TrendingUp className="w-8 h-8 text-white" />
               </div>
-              <h1 className="ml-3 text-2xl font-bold">Tradgella</h1>
+              <h1 className="ml-3 text-2xl font-bold">ZalorTrade</h1>
             </div>
 
             <div
@@ -175,7 +213,7 @@ const ResetPassword = () => {
             <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
-            <h1 className="ml-3 text-2xl font-bold">Tradgella</h1>
+            <h1 className="ml-3 text-2xl font-bold">ZalorTrade</h1>
           </div>
 
           <h2 className="text-3xl font-extrabold mb-2">Set new password</h2>
@@ -256,6 +294,38 @@ const ResetPassword = () => {
                 </p>
               )}
             </div>
+
+            {/* Two-factor code — only for accounts with a verified TOTP factor */}
+            {mfaFactorId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Two-Factor Authentication Code
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={totpCode}
+                  onChange={(e) => {
+                    setTotpCode(e.target.value.replace(/\D/g, ""));
+                    if (totpError) setTotpError("");
+                  }}
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 tracking-widest focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  placeholder="123456"
+                  data-testid="reset-password-totp-input"
+                />
+                {totpError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-testid="reset-password-totp-error">
+                    {totpError}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Your account has two-factor authentication enabled. Enter the
+                  code from your authenticator app to confirm it's you.
+                </p>
+              </div>
+            )}
 
             {/* Submit */}
             <button

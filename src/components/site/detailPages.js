@@ -38,7 +38,7 @@ export const FEATURE_PAGES = [
     hero: {
       title: "A trading journal you'll actually keep",
       subtitle:
-        "Most traders quit journaling because it's slow. Tradgella makes logging a trade faster than tweeting about it — so your journal stays complete and your lessons stay captured.",
+        "Most traders quit journaling because it's slow. ZalorTrade makes logging a trade faster than tweeting about it — so your journal stays complete and your lessons stay captured.",
     },
     bullets: [
       "Quick entry logs a trade in under 15 seconds",
@@ -59,7 +59,7 @@ export const FEATURE_PAGES = [
       {
         heading: "What a complete trade record looks like",
         paragraphs: [
-          "A useful journal entry captures more than price and quantity. Tradgella records the full context: the instrument and direction, your planned stop and target, the setup tag, a chart screenshot taken at entry, and free-form notes on why you took the trade and how you felt.",
+          "A useful journal entry captures more than price and quantity. ZalorTrade records the full context: the instrument and direction, your planned stop and target, the setup tag, a chart screenshot taken at entry, and free-form notes on why you took the trade and how you felt.",
           "At review time, that context is what matters. Comparing your planned R-multiple to the realised one shows whether you're cutting winners early. Reading your own entry notes shows whether you followed your rules or chased. Screenshots let you replay the decision with fresh eyes.",
         ],
       },
@@ -67,7 +67,7 @@ export const FEATURE_PAGES = [
         heading: "Built for speed, so the habit sticks",
         paragraphs: [
           "The number-one reason journals die is friction. Quick mode asks for only the essentials and fills sensible defaults for the rest. Templates pre-fill your recurring setups. And if you connect your broker, fills arrive automatically and you only add the notes.",
-          "Your data stays yours: export the full journal to CSV or Excel at any time, and import old history the same way — so switching to Tradgella doesn't mean starting from zero.",
+          "Your data stays yours: export the full journal to CSV or Excel at any time, and import old history the same way — so switching to ZalorTrade doesn't mean starting from zero.",
         ],
       },
     ],
@@ -80,7 +80,7 @@ export const FEATURE_PAGES = [
       {
         question: "What should I write in a trading journal?",
         answer:
-          "At minimum: instrument, direction, entry, exit, position size, and the reason you took the trade. To get real value, add your planned stop and target, a setup tag, a chart screenshot, and one honest sentence about your state of mind. Tradgella structures all of this for you.",
+          "At minimum: instrument, direction, entry, exit, position size, and the reason you took the trade. To get real value, add your planned stop and target, a setup tag, a chart screenshot, and one honest sentence about your state of mind. ZalorTrade structures all of this for you.",
       },
       {
         question: "How long does it take to log a trade?",
@@ -197,31 +197,31 @@ export const FEATURE_PAGES = [
         heading: "Built for prop-firm evaluation accounts",
         paragraphs: [
           "If you're trading an Apex, Topstep, or MyFundedFutures evaluation, your journal is your early-warning system. Synced trades let you watch your daily loss usage and consistency in one place, and keep a permanent record that survives account resets.",
-          "Connections use OAuth — Tradgella never sees or stores your broker password — and every import is idempotent, so re-syncing never duplicates a trade.",
+          "Connections use OAuth — ZalorTrade never sees or stores your broker password — and every import is idempotent, so re-syncing never duplicates a trade.",
         ],
       },
       {
         heading: "No supported broker? CSV has you covered",
         paragraphs: [
-          "Every broker can export a statement. Tradgella's CSV and Excel import maps your columns, validates every row, and skips duplicates, so you can backfill years of history in one upload and keep any broker's trades flowing with a weekly export.",
+          "Every broker can export a statement. ZalorTrade's CSV and Excel import maps your columns, validates every row, and skips duplicates, so you can backfill years of history in one upload and keep any broker's trades flowing with a weekly export.",
         ],
       },
     ],
     steps: [
-      { title: "Connect", description: "Authorise Tradgella with your broker via OAuth — takes about a minute." },
+      { title: "Connect", description: "Authorise ZalorTrade with your broker via OAuth — takes about a minute." },
       { title: "Trade as usual", description: "Fills sync in real time; each round-trip becomes a journal entry." },
       { title: "Add your context", description: "Tag the setup and drop a note — the numbers are already there." },
     ],
     faqs: [
       {
-        question: "Which brokers does Tradgella sync with?",
+        question: "Which brokers does ZalorTrade sync with?",
         answer:
           "Tradovate direct, plus futures prop firms that run on it — including Apex, Topstep, and MyFundedFutures evaluation accounts. Any other broker works via CSV or Excel import.",
       },
       {
         question: "Is connecting my broker safe?",
         answer:
-          "Yes. Connections use OAuth, so you authorise access on your broker's own site — Tradgella never sees your password. Access is read-only for trade data and can be revoked anytime.",
+          "Yes. Connections use OAuth, so you authorise access on your broker's own site — ZalorTrade never sees your password. Access is read-only for trade data and can be revoked anytime.",
       },
       {
         question: "Will re-syncing create duplicate trades?",
@@ -265,7 +265,7 @@ export const FEATURE_PAGES = [
       {
         heading: "The four numbers that define your edge",
         paragraphs: [
-          "Win rate alone is a vanity metric — a 90% win rate loses money if the occasional loss is ten times the average win. The numbers that matter together are win rate, profit factor (gross profit ÷ gross loss), expectancy (average result per trade in R), and maximum drawdown. Tradgella computes all four continuously.",
+          "Win rate alone is a vanity metric — a 90% win rate loses money if the occasional loss is ten times the average win. The numbers that matter together are win rate, profit factor (gross profit ÷ gross loss), expectancy (average result per trade in R), and maximum drawdown. ZalorTrade computes all four continuously.",
           "Expectancy is the one to watch: a positive expectancy of even 0.2R per trade compounds into a serious edge across hundreds of trades, while a negative one guarantees eventual loss no matter how good the last week felt.",
         ],
       },
@@ -273,7 +273,7 @@ export const FEATURE_PAGES = [
         heading: "Your equity curve tells the truth",
         paragraphs: [
           "The equity curve is the most honest chart in trading: it shows your account over time with every decision priced in. A rising curve with shallow drawdowns means a repeatable process. A jagged curve with deep valleys means position sizing or discipline problems — even if the end point is green.",
-          "Tradgella draws it live from your journal, so after every session you see exactly what that day did to the shape of your curve.",
+          "ZalorTrade draws it live from your journal, so after every session you see exactly what that day did to the shape of your curve.",
         ],
       },
       {
@@ -332,7 +332,7 @@ export const FEATURE_PAGES = [
         heading: "Your P&L is an average of very different trades",
         paragraphs: [
           "A flat month rarely means every trade broke even. More often, one setup earned steadily while another gave it all back — netting to zero. Until performance is separated by strategy and instrument, the winner subsidises the loser and both stay invisible.",
-          "Tradgella's strategy comparison puts each tagged setup side by side: trade count, win rate, profit factor, expectancy, and total P&L. The usual result is uncomfortable and valuable — most traders discover one or two setups carry the entire account.",
+          "ZalorTrade's strategy comparison puts each tagged setup side by side: trade count, win rate, profit factor, expectancy, and total P&L. The usual result is uncomfortable and valuable — most traders discover one or two setups carry the entire account.",
         ],
       },
       {
@@ -625,7 +625,7 @@ export const SOLUTION_PAGES = [
     hero: {
       title: "A journal that keeps up with day trading",
       subtitle:
-        "Ten trades a session shouldn't mean thirty minutes of data entry. Tradgella syncs your fills in real time and turns high-volume days into clean, reviewable sessions.",
+        "Ten trades a session shouldn't mean thirty minutes of data entry. ZalorTrade syncs your fills in real time and turns high-volume days into clean, reviewable sessions.",
     },
     bullets: [
       "Real-time fill sync — no end-of-day typing",
@@ -657,7 +657,7 @@ export const SOLUTION_PAGES = [
           "Yes — with auto-sync, your fills import in real time and the numbers are done. You add tags and a session note at the close. High-volume traders typically spend under five minutes a day journaling.",
       },
       {
-        question: "Can Tradgella show my performance by time of day?",
+        question: "Can ZalorTrade show my performance by time of day?",
         answer:
           "Yes. Time analysis breaks your win rate and P&L down by hour and weekday, which is usually the most profitable report a day trader can read.",
       },
@@ -693,7 +693,7 @@ export const SOLUTION_PAGES = [
       {
         heading: "Futures P&L is tick maths — get it exact",
         paragraphs: [
-          "An ES point is $50, an NQ point $20, a CL tick $10 — and a journal that treats futures like shares gets every statistic wrong. Tradgella computes P&L and R-multiples from real tick and point values per contract, so a two-lot NQ scalp and a one-lot CL swing are measured on the same honest scale.",
+          "An ES point is $50, an NQ point $20, a CL tick $10 — and a journal that treats futures like shares gets every statistic wrong. ZalorTrade computes P&L and R-multiples from real tick and point values per contract, so a two-lot NQ scalp and a one-lot CL swing are measured on the same honest scale.",
           "Leverage makes risk discipline non-negotiable: one extra contract on a volatile open can be a week's P&L. The risk calculator sizes in whole contracts from your stop distance in ticks, before you're in the trade.",
         ],
       },
@@ -706,7 +706,7 @@ export const SOLUTION_PAGES = [
     ],
     faqs: [
       {
-        question: "Does Tradgella calculate futures P&L correctly?",
+        question: "Does ZalorTrade calculate futures P&L correctly?",
         answer:
           "Yes — P&L and R-multiples use each contract's real tick and point values (ES, NQ, YM, CL, GC, and more), not share-style price differences.",
       },
@@ -733,7 +733,7 @@ export const SOLUTION_PAGES = [
     hero: {
       title: "For markets that never close",
       subtitle:
-        "Pip values, fractional sizes, and sessions that span midnight — Tradgella handles the details that make journaling forex and crypto painful in spreadsheets.",
+        "Pip values, fractional sizes, and sessions that span midnight — ZalorTrade handles the details that make journaling forex and crypto painful in spreadsheets.",
     },
     bullets: [
       "Pip-based risk and P&L for forex pairs",
@@ -754,7 +754,7 @@ export const SOLUTION_PAGES = [
       {
         heading: "Fractional sizes and pip maths, handled",
         paragraphs: [
-          "Crypto positions of 0.037 BTC and forex risk measured in pips break most journals and every spreadsheet eventually. Tradgella validates fractional quantities natively and computes forex risk from pip value and stop distance, so your R-multiples stay honest across every pair and coin you trade.",
+          "Crypto positions of 0.037 BTC and forex risk measured in pips break most journals and every spreadsheet eventually. ZalorTrade validates fractional quantities natively and computes forex risk from pip value and stop distance, so your R-multiples stay honest across every pair and coin you trade.",
         ],
       },
     ],
@@ -787,7 +787,7 @@ export const SOLUTION_PAGES = [
     hero: {
       title: "Trade the evaluation like a professional",
       subtitle:
-        "Prop firms don't pay for hot streaks — they pay for consistency inside rules. Tradgella tracks your evaluation the way the firm does, so nothing surprises you.",
+        "Prop firms don't pay for hot streaks — they pay for consistency inside rules. ZalorTrade tracks your evaluation the way the firm does, so nothing surprises you.",
     },
     bullets: [
       "Auto-sync Apex, Topstep & MyFundedFutures accounts",
@@ -808,14 +808,14 @@ export const SOLUTION_PAGES = [
       {
         heading: "Your track record outlives any single account",
         paragraphs: [
-          "Evaluation accounts reset; your journal shouldn't. Tradgella keeps every account's history — failed evals included — as one continuous record. That data shows you why an attempt failed, and after funding, it's the documented consistency that justifies scaling up.",
+          "Evaluation accounts reset; your journal shouldn't. ZalorTrade keeps every account's history — failed evals included — as one continuous record. That data shows you why an attempt failed, and after funding, it's the documented consistency that justifies scaling up.",
           "Multiple evaluations run side by side stay cleanly separated, with per-account analytics and a combined view of your overall performance.",
         ],
       },
     ],
     faqs: [
       {
-        question: "Which prop firms does Tradgella work with?",
+        question: "Which prop firms does ZalorTrade work with?",
         answer:
           "Any firm running on Tradovate syncs automatically — including Apex, Topstep, and MyFundedFutures. Other firms work via CSV import of your trade history.",
       },

@@ -775,7 +775,7 @@ const Settings = () => {
           {/* About */}
           <div className="card">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              About Tradgella
+              About ZalorTrade
             </h2>
             <div className="space-y-2 text-sm text-gray-600">
               <p>Version 1.0.0</p>

@@ -17,6 +17,6 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     schema: 'public',
   },
   global: {
-    headers: { 'x-app-name': 'tradgella' },
+    headers: { 'x-app-name': 'zalortrade' },
   },
 })
