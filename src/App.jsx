@@ -56,6 +56,7 @@ import { BacktestProvider } from "./context/BacktestContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import ThemeScope from "./components/common/ThemeScope";
+import RecoveryRedirect from "./components/auth/RecoveryRedirect";
 import FeatureGate from "./components/common/FeatureGate";
 import {
   ProtectedRoute,
@@ -82,6 +83,10 @@ function App() {
                   {/* Applies the dark class to <html> on app routes only —
                       the public site and auth pages always render light. */}
                   <ThemeScope />
+                  {/* Routes a password-recovery email session to the reset
+                      page even when Supabase's redirect allowlist bounced the
+                      link to the Site URL instead of /auth/reset-password. */}
+                  <RecoveryRedirect />
                   <Routes>
                     {/* Public routes */}
                     <Route
