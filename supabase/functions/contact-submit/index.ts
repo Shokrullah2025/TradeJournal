@@ -4,7 +4,7 @@ import { z } from "https://esm.sh/zod@3";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-app-name",
 };
 
 // Server-side mirror of src/lib/schemas/contact.js. We re-validate here because
