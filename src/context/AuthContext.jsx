@@ -5,6 +5,12 @@ import { logActivity } from "../utils/logActivity";
 import { emitNotification } from "../utils/notifications";
 import { validateAdminUserUpdate } from "../lib/schemas/adminUser";
 import { getAal, listFactors, challengeAndVerify } from "../utils/mfa";
+import { withTimeout } from "../utils/withTimeout";
+
+// How long a single auth-bootstrap network call may block the loading screen
+// before we proceed with a fallback. Generous enough for slow connections;
+// a stalled request must never leave the app spinning forever.
+const AUTH_CALL_TIMEOUT_MS = 8000;
 
 // Fire-and-forget security notification on sign-in. Fetches the user's channel
 // prefs so the email decision is honored, then emits. Never blocks login.
@@ -38,6 +44,12 @@ const initialState = {
   user: null,
   isAuthenticated: false,
   loading: true,
+  // True once the initial session resolution has completed (signed in OR out).
+  // Distinguishes the bootstrap loading screen from a later in-flight sign-in:
+  // PublicRoute must blank the page during bootstrap (an already-signed-in
+  // user shouldn't see the login form flash) but must KEEP the form mounted
+  // while a sign-in is in progress, or the form vanishes mid-submit.
+  bootstrapped: false,
   // True when the signed-in session is still aal1 but the account has a verified
   // TOTP factor — i.e. the user must complete a 2FA code step before they're
   // allowed into protected routes. Drives the MfaStepUp gate in ProtectedRoute.
@@ -54,9 +66,9 @@ const ActionTypes = {
 const authReducer = (state, action) => {
   switch (action.type) {
     case ActionTypes.SET_USER:
-      return { ...state, user: action.payload, isAuthenticated: !!action.payload, loading: false };
+      return { ...state, user: action.payload, isAuthenticated: !!action.payload, loading: false, bootstrapped: true };
     case ActionTypes.LOGOUT:
-      return { ...state, user: null, isAuthenticated: false, loading: false, mfaRequired: false };
+      return { ...state, user: null, isAuthenticated: false, loading: false, bootstrapped: true, mfaRequired: false };
     case ActionTypes.SET_LOADING:
       return { ...state, loading: action.payload };
     case ActionTypes.SET_MFA_REQUIRED:
@@ -199,9 +211,44 @@ export const AuthProvider = ({ children }) => {
     const epoch = ++sessionEpoch.current;
     if (session?.user) {
       try {
-        const profile = await fetchUserProfile(session.user);
+        // The profile fetch is four parallel table reads; if any one of them
+        // stalls (never settles), awaiting it directly would keep `loading`
+        // true forever — the confirmed "stuck loading screen, refresh doesn't
+        // help" bug. Time-box it: proceed with a minimal profile so the app
+        // unblocks, then upgrade in place when the slow fetch finally lands.
+        const fetchPromise = fetchUserProfile(session.user);
+        // The 2FA step-up flag must land no later than SET_USER: if
+        // `isAuthenticated` flips while `mfaRequired` is still stale, the
+        // router briefly opens the dashboard (or re-renders the login form)
+        // before the MFA gate mounts — the reported post-submit flash. getAal
+        // inspects the local session, so this adds no meaningful wait.
+        const aalPromise = withTimeout(getAal(), AUTH_CALL_TIMEOUT_MS, { data: null })
+          .catch(() => ({ data: null }));
+        const [profile, { data: aal }] = await Promise.all([
+          withTimeout(fetchPromise, AUTH_CALL_TIMEOUT_MS, null),
+          aalPromise,
+        ]);
         if (epoch !== sessionEpoch.current) return; // superseded while fetching
-        dispatch({ type: ActionTypes.SET_USER, payload: profile });
+        // On aal=null (timed out) skip the dispatch — never overwrite a
+        // step-up requirement login() already flagged with a stale `false`.
+        if (aal) {
+          dispatch({
+            type: ActionTypes.SET_MFA_REQUIRED,
+            payload: aal.currentLevel === "aal1" && aal.nextLevel === "aal2",
+          });
+        }
+        dispatch({
+          type: ActionTypes.SET_USER,
+          payload: profile ?? emptyProfile(session.user),
+        });
+        if (!profile) {
+          fetchPromise
+            .then((late) => {
+              if (epoch !== sessionEpoch.current) return;
+              dispatch({ type: ActionTypes.SET_USER, payload: late });
+            })
+            .catch(() => {}); // already running on the fallback profile
+        }
       } catch (err) {
         if (epoch !== sessionEpoch.current) return;
         console.error("[Auth] fetchUserProfile threw:", err);
@@ -213,12 +260,20 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Read the stored session immediately from localStorage — no network call.
-    // This unblocks the loading screen right away instead of waiting for the
-    // JWT token refresh round-trip that onAuthStateChange requires first.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      resolveSession(session);
-    });
+    // Read the stored session immediately from localStorage — normally no
+    // network call. Two guards so bootstrap can never hang the loading screen:
+    // a timeout (getSession DOES hit the network when the stored token is
+    // expired, and that refresh can stall) and a catch (an unhandled rejection
+    // here would leave `loading` true forever). On either, resolve as signed
+    // out — if a slow refresh later succeeds, onAuthStateChange re-resolves.
+    withTimeout(supabase.auth.getSession(), AUTH_CALL_TIMEOUT_MS, { data: { session: null } })
+      .then(({ data: { session } }) => {
+        resolveSession(session);
+      })
+      .catch((err) => {
+        console.error("[Auth] getSession failed:", err);
+        resolveSession(null);
+      });
 
     // Handle all subsequent auth events (token refresh, sign-in, sign-out).
     // INITIAL_SESSION is skipped — already handled by getSession() above.
@@ -253,7 +308,15 @@ export const AuthProvider = ({ children }) => {
   // ── Login ────────────────────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Time-boxed like every other auth call: a stalled sign-in request must
+    // not leave the submit spinner running forever. The timeout fallback maps
+    // to the friendly network-error message; if the slow request later
+    // succeeds anyway, onAuthStateChange resolves the session normally.
+    const { data, error } = await withTimeout(
+      supabase.auth.signInWithPassword({ email, password }),
+      AUTH_CALL_TIMEOUT_MS,
+      { data: null, error: { message: "network request stalled" } }
+    );
     if (error) {
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       const msg = friendlyError(error);
@@ -263,11 +326,21 @@ export const AuthProvider = ({ children }) => {
     // A password sign-in only reaches aal1. If the account has a verified TOTP
     // factor, require the 6-digit code before completing login — defer the
     // activity log / new-login notification / welcome toast to completeMfaLogin().
-    const { data: aal } = await getAal();
+    // Both lookups are time-boxed so a stalled request can't leave the submit
+    // spinner running forever: if the AAL check times out we proceed as a
+    // normal login and the bootstrap MFA effect re-gates once it resolves; a
+    // missing factorId is fine because MfaStepUp re-resolves it on mount.
+    //
+    // `loading` deliberately stays true here: SET_USER clears it when the
+    // SIGNED_IN session resolution lands (with mfaRequired already set), so
+    // the login form's spinner runs continuously until PublicRoute hands off
+    // to the MFA gate. Clearing it early re-rendered the login form for the
+    // gap between "loading off" and "isAuthenticated on" — the reported
+    // "login page flashes back before the Authenticator" bug.
+    const { data: aal } = await withTimeout(getAal(), AUTH_CALL_TIMEOUT_MS, { data: null });
     if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
       dispatch({ type: ActionTypes.SET_MFA_REQUIRED, payload: true });
-      dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-      const { data: factorsData } = await listFactors();
+      const { data: factorsData } = await withTimeout(listFactors(), AUTH_CALL_TIMEOUT_MS, { data: null });
       const totp = factorsData?.totp?.find((f) => f.status === "verified");
       return { status: "mfa_required", factorId: totp?.id ?? null };
     }

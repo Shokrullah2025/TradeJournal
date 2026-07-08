@@ -1,6 +1,7 @@
 import { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 // Routes where the user's saved theme does NOT apply: the public marketing
 // site, legal pages, and the auth screens always render light. The dark
@@ -39,11 +40,16 @@ const isPublicPath = (pathname) =>
  */
 const ThemeScope = () => {
   const { theme } = useTheme();
+  const { mfaRequired } = useAuth();
   const { pathname } = useLocation();
 
   useLayoutEffect(() => {
     const root = document.documentElement;
-    const dark = theme === "dark" && !isPublicPath(pathname);
+    // The 2FA step-up gate (MfaStepUp) renders in place at the protected route
+    // the user was heading to, so it has no public pathname of its own. It is
+    // still part of the sign-in flow — keep it light like /login; the saved
+    // dark theme applies only once the code is verified and the app renders.
+    const dark = theme === "dark" && !isPublicPath(pathname) && !mfaRequired;
     root.classList.toggle("dark", dark);
     root.classList.toggle("light", !dark);
 
@@ -53,7 +59,7 @@ const ThemeScope = () => {
       root.classList.remove("theme-transition");
     }, 300);
     return () => clearTimeout(timer);
-  }, [theme, pathname]);
+  }, [theme, pathname, mfaRequired]);
 
   return null;
 };
