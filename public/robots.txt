@@ -6,6 +6,7 @@ Allow: /$
 Allow: /features
 Allow: /solutions
 Allow: /pricing
+Allow: /blog
 Allow: /about
 Allow: /contact
 Allow: /terms
