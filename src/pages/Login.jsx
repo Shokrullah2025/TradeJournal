@@ -66,6 +66,14 @@ const Login = () => {
         localStorage.removeItem(REMEMBER_KEY);
       }
       const result = await login(email, password);
+      // 2FA step-up: do NOT navigate. Global `loading` stays true (keeping
+      // this button's spinner running) until the session resolution lands
+      // isAuthenticated + mfaRequired together; PublicRoute then redirects
+      // and ProtectedRoute mounts the MFA gate directly. Navigating now
+      // would hit ProtectedRoute before isAuthenticated is set and bounce
+      // straight back here — the "login page flashes before the
+      // Authenticator" bug.
+      if (result?.status === "mfa_required") return;
       // First sign-in with no authenticator enrolled → one-time setup offer.
       // The wizard's onboarding mode has "Skip for now" → dashboard.
       if (result?.offerMfaSetup) {
