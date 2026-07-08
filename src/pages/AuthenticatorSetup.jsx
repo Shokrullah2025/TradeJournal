@@ -225,7 +225,9 @@ const AuthenticatorSetup = () => {
 
   return (
     <div
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-10"
+      // Same background as the app shell's <main> (App.jsx) so opening this
+      // page from Settings doesn't visibly jump to a different surface.
+      className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-primary-900/30 flex items-center justify-center px-4 py-10"
       data-testid="authenticator-setup-page"
     >
       <div className="w-full max-w-xl">

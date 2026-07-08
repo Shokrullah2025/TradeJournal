@@ -446,19 +446,19 @@ const SiteNavbar = () => {
               );
             })}
 
-            <div className="mt-4 flex flex-col gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <div className="mt-4 flex flex-col items-center gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
               <button
                 type="button"
                 onClick={handleSignIn}
                 data-testid="site-nav-mobile-signin-btn"
-                className="btn btn-ghost w-full justify-center border border-gray-200 dark:border-gray-700"
+                className="btn btn-ghost inline-flex w-56 max-w-full items-center justify-center border border-gray-200 dark:border-gray-700"
               >
                 Sign in
               </button>
               <Link
                 to="/login"
                 data-testid="site-nav-mobile-getstarted-btn"
-                className="btn btn-site w-full justify-center"
+                className="btn btn-site inline-flex w-56 max-w-full items-center justify-center"
               >
                 Get Started
               </Link>
