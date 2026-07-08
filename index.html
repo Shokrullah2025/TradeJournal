@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48 32x32 16x16" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary SEO baseline.
@@ -13,10 +15,15 @@
          tags and shadow the per-page description for crawlers that run JS.
          The og:/twitter: block below is a site-level fallback so JS-blind social
          crawlers (Facebook, LinkedIn, Slack, Discord) still get a branded
-         preview card; JS-running crawlers (Googlebot) read the per-page tags. -->
-    <title>ZalorTrade — Trading Journal & Analytics for Serious Traders</title>
+         preview card; JS-running crawlers (Googlebot) read the per-page tags.
+         The seo:fallback markers bound the block scripts/prerender.mjs REPLACES
+         with each page's helmet tags in the prerendered dist/<route>/index.html
+         files — do not remove them, and keep every fallback tag inside them. -->
     <meta name="theme-color" content="#158477" />
     <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- seo:fallback:start -->
+    <title>ZalorTrade — Trading Journal & Analytics for Serious Traders</title>
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -44,6 +51,7 @@
       content="Auto-sync your broker, journal every trade, and turn your track record into real, measurable analytics."
     />
     <meta name="twitter:image" content="https://zalortrade.com/og-image.png" />
+    <!-- seo:fallback:end -->
 
     <!-- Structured data: the product/organisation. Helps Google understand the
          brand and can power rich results. -->

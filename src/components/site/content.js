@@ -417,6 +417,7 @@ export const FOOTER_LINKS = [
   {
     heading: "Resources",
     links: [
+      { label: "Blog", to: "/blog" },
       { label: "FAQ", to: "/pricing#faq" },
       { label: "Help center", to: "/contact" },
       { label: "Risk Calculator", to: "/features/risk-calculator" },
@@ -520,6 +521,7 @@ export const NAV_MENUS = [
     })),
   },
   { label: "Pricing", type: "link", to: "/pricing" },
+  { label: "Blog", type: "link", to: "/blog" },
   {
     label: "Company",
     type: "dropdown",

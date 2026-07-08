@@ -37,6 +37,8 @@ const SolutionDetail = React.lazy(() => import("./pages/site/SolutionDetail"));
 const Pricing = React.lazy(() => import("./pages/site/Pricing"));
 const About = React.lazy(() => import("./pages/site/About"));
 const Contact = React.lazy(() => import("./pages/site/Contact"));
+const Blog = React.lazy(() => import("./pages/site/Blog"));
+const BlogPost = React.lazy(() => import("./pages/site/BlogPost"));
 
 // Legal pages — lazy loaded, public routes
 const TermsOfService = React.lazy(() => import("./pages/legal/TermsOfService"));
@@ -137,6 +139,8 @@ function App() {
                       <Route path="/pricing" element={<Pricing />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />
+                      <Route path="/blog" element={<Blog />} />
+                      <Route path="/blog/:slug" element={<BlogPost />} />
 
                       {/* Legal pages — public, no auth required */}
                       <Route path="/terms" element={<TermsOfService />} />
