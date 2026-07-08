@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
+import { isComingSoon } from "../../lib/featureFlags";
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const { user } = useAuth();
@@ -24,7 +25,9 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
 
   // `feature` ties a nav item to a feature flag — when an admin disables that
   // feature for the current user's audience (plan/role/trial), the item is
-  // hidden. Items with no `feature` are always available.
+  // hidden. Items with no `feature` are always available. Features in
+  // COMING_SOON_FEATURES stay listed but carry a "Soon" pill; their page
+  // renders behind the ComingSoonGate blur.
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: Gauge },
     { name: "Trades", href: "/trades", icon: CandlestickChart },
@@ -33,7 +36,9 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Analytics", href: "/analytics", icon: Radar, feature: "advanced_analytics" },
     { name: "Risk Calculator", href: "/risk-calculator", icon: Scale, feature: "risk_calculator" },
     { name: "Settings", href: "/settings", icon: SlidersHorizontal },
-  ].filter((item) => !item.feature || isFeatureEnabled(item.feature));
+  ]
+    .filter((item) => !item.feature || isFeatureEnabled(item.feature))
+    .map((item) => ({ ...item, soon: item.feature ? isComingSoon(item.feature) : false }));
 
   const adminNavigation = [
     // `end` keeps "/admin" from matching its nested routes (e.g. the Contact
@@ -155,7 +160,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`
                   }
-                  title={isCollapsed ? item.name : ""}
+                  title={isCollapsed ? `${item.name}${item.soon ? " (Coming soon)" : ""}` : ""}
                 >
                   {({ isActive }) => (
                     <>
@@ -163,8 +168,16 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                         <Icon className="h-4 w-4" />
                       </span>
                       {!isCollapsed && (
-                        <span className="transition-opacity duration-300 whitespace-nowrap overflow-hidden text-ellipsis">
+                        <span className="flex-1 transition-opacity duration-300 whitespace-nowrap overflow-hidden text-ellipsis">
                           {item.name}
+                        </span>
+                      )}
+                      {!isCollapsed && item.soon && (
+                        <span
+                          data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-soon-pill`}
+                          className="ml-2 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-600 dark:bg-primary-900/30 dark:text-primary-300"
+                        >
+                          Soon
                         </span>
                       )}
                     </>

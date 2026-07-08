@@ -72,7 +72,7 @@ export const FEATURE_PAGES = [
       },
     ],
     steps: [
-      { title: "Log the trade", description: "Quick entry or broker auto-sync — the trade lands in your journal with all core fields filled." },
+      { title: "Log the trade", description: "Quick entry or CSV import — the trade lands in your journal with all core fields filled." },
       { title: "Add the context", description: "Screenshot, setup tag, and a two-line thesis while the trade is fresh in your mind." },
       { title: "Review weekly", description: "Filter by tag or session, read your own notes, and pick one leak to fix next week." },
     ],
@@ -85,7 +85,7 @@ export const FEATURE_PAGES = [
       {
         question: "How long does it take to log a trade?",
         answer:
-          "Quick mode takes under 15 seconds. With broker auto-sync connected, executions import automatically and you only add notes and tags — many traders journal a full session in a couple of minutes.",
+          "Quick mode takes under 15 seconds. And once broker auto-sync launches (coming soon), executions will import automatically so you only add notes and tags — journaling a full session in a couple of minutes.",
       },
       {
         question: "Can I import my existing trade history?",
@@ -155,7 +155,7 @@ export const FEATURE_PAGES = [
       {
         question: "Does the calendar work with broker auto-sync?",
         answer:
-          "Yes. Synced fills and manually journaled trades both feed the calendar, so it always reflects your complete record.",
+          "Manually journaled and CSV-imported trades feed the calendar today, and synced fills will flow in automatically once broker auto-sync launches — so it always reflects your complete record.",
       },
     ],
     related: ["trade-journal", "performance-dashboard", "advanced-reports"],
@@ -165,17 +165,18 @@ export const FEATURE_PAGES = [
     group: "Journal & Tracking",
     visual: "sync",
     icon: Link2,
+    comingSoon: true,
     navLabel: "Broker Sync & CSV Import",
-    navDescription: "Auto-import from Tradovate & more",
+    navDescription: "Coming soon — auto-import from Tradovate & more",
     seo: {
-      title: "Broker Auto-Sync — Import Trades Automatically",
+      title: "Broker Auto-Sync (Coming Soon) — Import Trades Automatically",
       description:
-        "Connect Tradovate and popular futures prop firms to auto-import your fills into your trading journal in real time. Or bring history in via CSV and Excel import.",
+        "Broker auto-sync is coming soon to ZalorTrade: connect Tradovate and popular futures prop firms to auto-import fills in real time. CSV and Excel import is available today.",
     },
     hero: {
       title: "Your fills, imported automatically",
       subtitle:
-        "Connect your broker once and every execution flows into your journal in real time — no statement exports, no copy-paste, no missed trades.",
+        "Coming soon: connect your broker once and every execution flows into your journal in real time — no statement exports, no copy-paste, no missed trades. Until launch, CSV & Excel import brings in any broker's history today.",
     },
     bullets: [
       "Secure Tradovate connection via OAuth",
@@ -216,7 +217,7 @@ export const FEATURE_PAGES = [
       {
         question: "Which brokers does ZalorTrade sync with?",
         answer:
-          "Tradovate direct, plus futures prop firms that run on it — including Apex, Topstep, and MyFundedFutures evaluation accounts. Any other broker works via CSV or Excel import.",
+          "Auto-sync is coming soon, launching with Tradovate direct plus futures prop firms that run on it — including Apex, Topstep, and MyFundedFutures evaluation accounts. Today, any broker works via CSV or Excel import.",
       },
       {
         question: "Is connecting my broker safe?",
@@ -620,15 +621,15 @@ export const SOLUTION_PAGES = [
     seo: {
       title: "Trading Journal for Day Traders",
       description:
-        "A trading journal built for day trading volume: auto-sync fills in real time, review sessions on a P&L calendar, and find which hours of the day actually pay you.",
+        "A trading journal built for day trading volume: log trades in seconds, import a whole session via CSV, review it on a P&L calendar, and find which hours of the day actually pay you.",
     },
     hero: {
       title: "A journal that keeps up with day trading",
       subtitle:
-        "Ten trades a session shouldn't mean thirty minutes of data entry. ZalorTrade syncs your fills in real time and turns high-volume days into clean, reviewable sessions.",
+        "Ten trades a session shouldn't mean thirty minutes of data entry. Quick entry and CSV import — with real-time broker sync coming soon — turn high-volume days into clean, reviewable sessions.",
     },
     bullets: [
-      "Real-time fill sync — no end-of-day typing",
+      "Real-time fill sync coming soon — CSV import today",
       "Hour-of-day analysis finds your paying hours",
       "Session review on the P&L calendar",
       "Tag scalps, momentum, and reversal setups separately",
@@ -639,7 +640,7 @@ export const SOLUTION_PAGES = [
       {
         heading: "Day trading generates data — use it",
         paragraphs: [
-          "A day trader taking eight trades a day produces over 1,500 data points a year: enough to know, statistically, which setups, hours, and instruments pay. Most day traders throw that sample away by not recording it. With auto-sync, the record builds itself while you trade.",
+          "A day trader taking eight trades a day produces over 1,500 data points a year: enough to know, statistically, which setups, hours, and instruments pay. Most day traders throw that sample away by not recording it. Quick entry and CSV import keep the record building today — and once auto-sync launches, it will build itself while you trade.",
           "The highest-value report for intraday traders is hour-of-day analysis. Nearly every day trader who runs it finds the same shape: a profitable window around the open, a flat-to-negative midday, and a mixed close. Trading only your window is often the single biggest improvement available.",
         ],
       },
@@ -654,7 +655,7 @@ export const SOLUTION_PAGES = [
       {
         question: "I take 10+ trades a day. Is journaling realistic?",
         answer:
-          "Yes — with auto-sync, your fills import in real time and the numbers are done. You add tags and a session note at the close. High-volume traders typically spend under five minutes a day journaling.",
+          "Yes — Quick entry logs a trade in seconds and CSV import backfills a full session in one upload; once broker auto-sync launches, fills will import in real time. High-volume traders typically spend under five minutes a day journaling.",
       },
       {
         question: "Can ZalorTrade show my performance by time of day?",
@@ -672,17 +673,17 @@ export const SOLUTION_PAGES = [
     navLabel: "Futures Traders",
     navDescription: "Tick values, contracts & Tradovate sync",
     seo: {
-      title: "Futures Trading Journal — Tradovate Auto-Sync",
+      title: "Futures Trading Journal — Tick-Perfect P&L",
       description:
-        "A futures trading journal with direct Tradovate sync, correct tick-value P&L for ES, NQ, CL and more, contract-based risk sizing, and analytics built for leveraged markets.",
+        "A futures trading journal with correct tick-value P&L for ES, NQ, CL and more, contract-based risk sizing, analytics built for leveraged markets — and direct Tradovate sync coming soon.",
     },
     hero: {
       title: "Built for the futures tape",
       subtitle:
-        "Direct Tradovate sync, correct tick maths for every contract, and risk tools that think in contracts and ticks — a journal that speaks futures natively.",
+        "Correct tick maths for every contract, risk tools that think in contracts and ticks, and direct Tradovate sync on the way — a journal that speaks futures natively.",
     },
     bullets: [
-      "Direct Tradovate auto-sync",
+      "Direct Tradovate auto-sync (coming soon)",
       "Correct tick-value P&L for ES, NQ, CL, GC and more",
       "Contract-based position size calculator",
       "Scaling in/out captured accurately",
@@ -698,9 +699,9 @@ export const SOLUTION_PAGES = [
         ],
       },
       {
-        heading: "Your Tradovate fills, already journaled",
+        heading: "Your Tradovate fills, journaled for you — coming soon",
         paragraphs: [
-          "Connect Tradovate once and every execution — including partial fills and scale-outs — lands in your journal in real time. Fast futures trading produces messy fill sequences; duplicate-safe, execution-ID-matched imports keep the record exact.",
+          "Soon you'll connect Tradovate once and every execution — including partial fills and scale-outs — will land in your journal in real time. Fast futures trading produces messy fill sequences; duplicate-safe, execution-ID-matched imports keep the record exact. Until launch, CSV import brings your fills in with the same duplicate-safe matching.",
         ],
       },
     ],
@@ -713,7 +714,7 @@ export const SOLUTION_PAGES = [
       {
         question: "Does it handle scaling in and out of positions?",
         answer:
-          "Yes. Auto-synced executions preserve partial fills and scale-outs, so multi-fill positions are reconstructed accurately.",
+          "Yes. Imported executions preserve partial fills and scale-outs, so multi-fill positions are reconstructed accurately — via CSV today, and automatically once Tradovate sync launches.",
       },
     ],
     related: ["broker-sync", "risk-calculator", "backtesting"],
@@ -782,7 +783,7 @@ export const SOLUTION_PAGES = [
     seo: {
       title: "Prop Firm Trading Journal — Apex, Topstep & More",
       description:
-        "Pass and keep funded accounts with a journal built for prop trading: auto-sync Apex, Topstep and MyFundedFutures accounts, watch drawdown usage, and prove your consistency.",
+        "Pass and keep funded accounts with a journal built for prop trading: track Apex, Topstep and MyFundedFutures evaluations, watch drawdown usage, and prove your consistency. Auto-sync coming soon.",
     },
     hero: {
       title: "Trade the evaluation like a professional",
@@ -790,7 +791,7 @@ export const SOLUTION_PAGES = [
         "Prop firms don't pay for hot streaks — they pay for consistency inside rules. ZalorTrade tracks your evaluation the way the firm does, so nothing surprises you.",
     },
     bullets: [
-      "Auto-sync Apex, Topstep & MyFundedFutures accounts",
+      "Auto-sync for Apex, Topstep & MyFundedFutures (coming soon)",
       "Daily loss and drawdown usage in view",
       "Consistency metrics across evaluation days",
       "Per-account separation for multiple evals",
@@ -802,7 +803,7 @@ export const SOLUTION_PAGES = [
         heading: "Evaluations are a discipline test, not a profit test",
         paragraphs: [
           "Most failed evaluations don't die from a bad strategy — they die from one rule breach: an oversized trade into news, a revenge session after a red morning, a daily loss limit clipped by two ticks. The journal's job in an evaluation is to keep the rules in your face while you trade.",
-          "With your evaluation account synced, your daily P&L, trade count, and drawdown usage are always current. The pre-market briefing adds the professional habit firms actually reward: a written plan, checked against execution, every day.",
+          "With your trades journaled — CSV import today, account auto-sync coming soon — your daily P&L, trade count, and drawdown usage are always current. The pre-market briefing adds the professional habit firms actually reward: a written plan, checked against execution, every day.",
         ],
       },
       {
@@ -817,7 +818,7 @@ export const SOLUTION_PAGES = [
       {
         question: "Which prop firms does ZalorTrade work with?",
         answer:
-          "Any firm running on Tradovate syncs automatically — including Apex, Topstep, and MyFundedFutures. Other firms work via CSV import of your trade history.",
+          "Auto-sync is coming soon for firms running on Tradovate — including Apex, Topstep, and MyFundedFutures. Today, every firm works via CSV import of your trade history.",
       },
       {
         question: "Can I track multiple evaluation accounts at once?",

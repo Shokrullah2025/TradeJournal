@@ -16,6 +16,15 @@ export const FEATURE_CATALOG = [
   { key: "trade_images",       name: "Trade Screenshots",  description: "Attach chart screenshots to journal entries.",                  route: null },
 ];
 
+// Features announced but not yet released. These stay visible in the app so
+// users know they're coming, but render blurred behind a "Coming soon"
+// overlay (see src/components/common/ComingSoonGate.jsx). Remove a key from
+// this list to launch the feature — no other code change needed.
+export const COMING_SOON_FEATURES = ["broker_sync"];
+
+export const isComingSoon = (featureKey) =>
+  COMING_SOON_FEATURES.includes(featureKey);
+
 // Audiences a flag can target. Order matters for the admin UI columns.
 // NOTE: keys must match the `subscription_plans.slug` values in Supabase. The
 // mid-tier plan's slug is "premium" (its display name is "Pro").

@@ -13,7 +13,7 @@ const Features = () => (
   <div data-testid="site-features-page">
     <Seo
       title="Features"
-      description="Explore ZalorTrade's features: broker auto-sync, performance analytics, backtesting, risk management, and a fast, structured trade journal."
+      description="Explore ZalorTrade's features: performance analytics, backtesting, risk management, a fast structured trade journal — and broker auto-sync coming soon."
       path="/features"
     />
     {/* Page header */}
@@ -24,9 +24,9 @@ const Features = () => (
           <span className="text-gradient">master your trading</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-400">
-          A complete toolkit — journaling, analytics, broker auto-sync,
-          backtesting, and risk management — designed to help you find and keep
-          your edge.
+          A complete toolkit — journaling, analytics, backtesting, risk
+          management, and broker auto-sync coming soon — designed to help you
+          find and keep your edge.
         </p>
       </div>
     </section>
@@ -45,6 +45,7 @@ const Features = () => (
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
           <SectionHeading
             eyebrow={category.eyebrow}
+            badge={category.comingSoon ? "Coming soon" : undefined}
             title={category.title}
             subtitle={category.subtitle}
           />

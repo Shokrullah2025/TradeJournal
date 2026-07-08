@@ -121,8 +121,13 @@ const SiteNavbar = () => {
         </span>
       )}
       <span>
-        <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
+        <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
           {item.label}
+          {item.badge && (
+            <span className="rounded-full bg-accent-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-700 dark:bg-accent-900/60 dark:text-accent-300">
+              {item.badge}
+            </span>
+          )}
         </span>
         {item.description && (
           <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
@@ -314,8 +319,13 @@ const SiteNavbar = () => {
                             {item.emoji}
                           </span>
                           <span>
-                            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
+                            <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">
                               {item.label}
+                              {item.badge && (
+                                <span className="rounded-full bg-accent-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-700 dark:bg-accent-900/60 dark:text-accent-300">
+                                  {item.badge}
+                                </span>
+                              )}
                             </span>
                             <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
                               {item.description}
@@ -438,6 +448,11 @@ const SiteNavbar = () => {
                             </span>
                           )}
                           {item.label}
+                          {item.badge && (
+                            <span className="rounded-full bg-accent-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-700 dark:bg-accent-900/60 dark:text-accent-300">
+                              {item.badge}
+                            </span>
+                          )}
                         </Link>
                       ))}
                     </div>

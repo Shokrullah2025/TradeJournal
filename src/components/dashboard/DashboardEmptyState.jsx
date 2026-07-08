@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Link2, BarChart3 } from "lucide-react";
+import { Plus, BarChart3 } from "lucide-react";
 import {
   GhostFade,
   PreviewPill,
@@ -39,7 +39,10 @@ const GhostTradeTile = () => (
 
 const DashboardEmptyState = () => {
   const navigate = useNavigate();
-  const connectBroker = () => navigate("/brokers");
+  // Broker auto-sync is still behind the Coming-soon gate, so the empty state
+  // sends new users to the Trades page where they can log a trade manually or
+  // bulk-import a CSV today.
+  const logFirstTrade = () => navigate("/trades");
 
   return (
     <div className="space-y-6" data-testid="dashboard-empty-state">
@@ -62,12 +65,12 @@ const DashboardEmptyState = () => {
         </div>
         <button
           type="button"
-          onClick={connectBroker}
+          onClick={logFirstTrade}
           className="btn btn-primary flex items-center gap-1.5 self-start sm:self-auto"
-          data-testid="empty-state-connect-broker-btn"
+          data-testid="empty-state-log-trade-btn"
         >
-          <Link2 className="w-4 h-4" />
-          Connect your broker
+          <Plus className="w-4 h-4" />
+          Log your first trade
         </button>
       </div>
 
@@ -180,16 +183,17 @@ const DashboardEmptyState = () => {
               Your trade history lives here
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              Connect your broker and your trades import automatically.
+              Log trades manually or import a CSV — broker auto-sync is coming
+              soon.
             </p>
             <button
               type="button"
-              onClick={connectBroker}
+              onClick={logFirstTrade}
               className="btn btn-primary inline-flex items-center gap-1.5 mt-3"
-              data-testid="empty-recent-trades-connect-broker-btn"
+              data-testid="empty-recent-trades-log-trade-btn"
             >
-              <Link2 className="w-4 h-4" />
-              Connect your broker
+              <Plus className="w-4 h-4" />
+              Log your first trade
             </button>
           </div>
         </div>
