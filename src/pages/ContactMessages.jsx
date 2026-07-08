@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import ModalPortal from "../components/common/ModalPortal";
 import {
   Mail,
@@ -9,11 +9,13 @@ import {
   ChevronLeft,
   ChevronRight,
   MessagesSquare,
+  Send,
   X,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { toast } from "react-hot-toast";
 import { useContactInboxCount } from "../hooks/useContactInboxCount";
+import { contactReplySchema } from "../lib/schemas/contact";
 
 const PAGE_SIZE = 50;
 
@@ -22,8 +24,10 @@ const PAGE_SIZE = 50;
 // sender email carrying the latest message plus per-thread counts.
 const THREAD_COLUMNS =
   "email, latest_id, latest_name, latest_subject, latest_message, latest_status, last_message_at, message_count, new_count";
-// Individual messages inside an open thread.
-const MESSAGE_COLUMNS = "id, name, email, subject, message, status, created_at";
+// Individual messages inside an open thread. metadata carries the admin reply
+// history ({ replies: [{ at, by, message }] }) written by contact-reply.
+const MESSAGE_COLUMNS =
+  "id, name, email, subject, message, status, metadata, created_at";
 
 // Safety cap when loading a thread's history — a single sender should never
 // have anywhere near this many messages (rate limit is 5/hour).
@@ -64,6 +68,9 @@ const ContactMessages = () => {
   const [selectedThread, setSelectedThread] = useState(null);
   const [threadMessages, setThreadMessages] = useState([]);
   const [threadLoading, setThreadLoading] = useState(false);
+  // In-app reply composer (sent via the contact-reply Edge Function).
+  const [replyText, setReplyText] = useState("");
+  const [replySending, setReplySending] = useState(false);
   // Global unread count — shown on the "New" filter tab and used to trigger a
   // live reload of the list when a new submission arrives.
   const { newCount } = useContactInboxCount();
@@ -147,21 +154,26 @@ const ContactMessages = () => {
     }
   };
 
+  const fetchThreadMessages = useCallback(async (email) => {
+    const { data, error: messagesError } = await supabase
+      .from("contact_submissions")
+      .select(MESSAGE_COLUMNS)
+      .eq("email", email)
+      .order("created_at", { ascending: false })
+      .limit(THREAD_MESSAGE_LIMIT);
+    if (messagesError) throw new Error(messagesError.message);
+    return data ?? [];
+  }, []);
+
   // Open a conversation: load every message from this sender, newest first,
   // and mark the unread ones as read.
   const openThread = async (thread) => {
     setSelectedThread(thread);
     setThreadMessages([]);
+    setReplyText("");
     setThreadLoading(true);
     try {
-      const { data, error: messagesError } = await supabase
-        .from("contact_submissions")
-        .select(MESSAGE_COLUMNS)
-        .eq("email", thread.email)
-        .order("created_at", { ascending: false })
-        .limit(THREAD_MESSAGE_LIMIT);
-      if (messagesError) throw new Error(messagesError.message);
-      setThreadMessages(data ?? []);
+      setThreadMessages(await fetchThreadMessages(thread.email));
       if (thread.new_count > 0) {
         await updateThreadStatus(thread.email, "read", { silent: true });
       }
@@ -177,15 +189,77 @@ const ContactMessages = () => {
   const closeThread = () => {
     setSelectedThread(null);
     setThreadMessages([]);
+    setReplyText("");
   };
+
+  // Email the sender from inside the app (contact-reply Edge Function). The
+  // reply is attached to the newest message in the thread and shows up in the
+  // conversation below once it's recorded.
+  const sendReply = async () => {
+    const latest = threadMessages[0];
+    if (!latest || replySending) return;
+
+    const parsed = contactReplySchema.safeParse({ message: replyText });
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+
+    setReplySending(true);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "contact-reply",
+        { body: { submissionId: latest.id, message: parsed.data.message } },
+      );
+      if (invokeError || data?.success === false) {
+        throw new Error(data?.error ?? invokeError.message);
+      }
+      setReplyText("");
+      toast.success("Reply sent.");
+      // Reload the history so the new reply appears in the conversation.
+      setThreadMessages(await fetchThreadMessages(latest.email));
+    } catch (err) {
+      console.error("[ContactMessages] reply error:", err.message);
+      toast.error("Couldn't send the reply. Please try again.");
+    } finally {
+      setReplySending(false);
+    }
+  };
+
+  // Flatten visitor messages and admin replies into one conversation, newest
+  // first — so the latest email (or reply) always sits at the top.
+  const conversation = useMemo(() => {
+    const entries = [];
+    for (const m of threadMessages) {
+      entries.push({
+        kind: "visitor",
+        key: m.id,
+        subject: m.subject,
+        message: m.message,
+        at: m.created_at,
+      });
+      const replies = Array.isArray(m.metadata?.replies) ? m.metadata.replies : [];
+      replies.forEach((r, i) => {
+        entries.push({
+          kind: "admin",
+          key: `${m.id}-reply-${i}`,
+          subject: `Re: ${m.subject}`,
+          message: r.message,
+          at: r.at,
+          by: r.by,
+        });
+      });
+    }
+    return entries.sort((a, b) => new Date(b.at) - new Date(a.at));
+  }, [threadMessages]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const latestMessage = threadMessages[0] ?? null;
-  // Prefer the freshly loaded history length; fall back to the list row's
-  // count while the thread is still loading.
+  // Prefer the freshly loaded conversation length (emails + replies); fall
+  // back to the list row's email count while the thread is still loading.
   const threadCount = threadLoading
     ? selectedThread?.message_count ?? 0
-    : threadMessages.length;
+    : conversation.length;
 
   return (
     <div className="space-y-6" data-testid="admin-contact-page">
@@ -428,7 +502,7 @@ const ContactMessages = () => {
                 >
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
                 </div>
-              ) : threadMessages.length === 0 ? (
+              ) : conversation.length === 0 ? (
                 <p
                   data-testid="admin-contact-thread-empty"
                   className="py-10 text-center text-sm text-gray-500 dark:text-gray-400"
@@ -436,38 +510,72 @@ const ContactMessages = () => {
                   No messages found for this sender.
                 </p>
               ) : (
-                threadMessages.map((m, index) => (
+                conversation.map((entry, index) => (
                   <div
-                    key={m.id}
-                    data-testid={`admin-contact-thread-message-${m.id}`}
+                    key={entry.key}
+                    data-testid={`admin-contact-thread-message-${entry.key}`}
                     className={`rounded-lg p-4 ${
-                      index === 0
-                        ? "bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
-                        : "bg-gray-50 dark:bg-gray-900"
+                      entry.kind === "admin"
+                        ? "ml-8 bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
+                        : "mr-8 bg-gray-50 dark:bg-gray-900"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {m.subject}
+                        {entry.subject}
                       </p>
-                      {index === 0 && (
-                        <span className="shrink-0 rounded-full bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">
-                          Latest
-                        </span>
-                      )}
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                          entry.kind === "admin"
+                            ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
+                            : index === 0
+                            ? "bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-300"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        }`}
+                      >
+                        {entry.kind === "admin"
+                          ? "You replied"
+                          : index === 0
+                          ? "Latest"
+                          : selectedThread.latest_name}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {new Date(m.created_at).toLocaleString()}
+                      {new Date(entry.at).toLocaleString()}
                     </p>
                     <div className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
-                      {m.message}
+                      {entry.message}
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-2">
+            {/* In-app reply — emailed to the sender via the contact-reply
+                Edge Function and recorded in the conversation above. */}
+            <div className="mt-4">
+              <textarea
+                data-testid="admin-contact-reply-input"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={3}
+                placeholder={`Reply to ${selectedThread.latest_name}…`}
+                className="w-full resize-y rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  data-testid="admin-contact-send-reply-btn"
+                  onClick={sendReply}
+                  disabled={replySending || threadLoading || !replyText.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="h-4 w-4" />
+                  {replySending ? "Sending…" : "Send reply"}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
               <button
                 data-testid="admin-contact-mark-read-btn"
                 onClick={() => updateThreadStatus(selectedThread.email, "read")}
@@ -494,9 +602,9 @@ const ContactMessages = () => {
                 href={`mailto:${selectedThread.email}?subject=Re: ${encodeURIComponent(
                   latestMessage?.subject ?? selectedThread.latest_subject,
                 )}`}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
+                className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
-                <Mail className="h-4 w-4" /> Reply
+                <Mail className="h-4 w-4" /> Email app
               </a>
             </div>
           </div>
