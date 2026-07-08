@@ -30,7 +30,7 @@ const SiteFooter = () => {
                 <TrendingUp className="h-4 w-4 text-white" />
               </span>
               <span className="font-display text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">
-                Trad<span className="text-accent-600 dark:text-accent-400">gella</span>
+                Zalor<span className="text-accent-600 dark:text-accent-400">Trade</span>
               </span>
             </Link>
             <p className="mt-4 max-w-[260px] text-sm leading-relaxed text-gray-600 dark:text-gray-400">
