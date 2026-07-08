@@ -4,7 +4,7 @@ import { sendNotificationEmail } from "../_shared/notify.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-app-name",
 };
 
 // Sends the email for an existing notification. Invoked client-side by

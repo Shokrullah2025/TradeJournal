@@ -168,7 +168,7 @@ const SiteNavbar = () => {
               <TrendingUp className="h-5 w-5 text-white" />
             </span>
             <span className="font-display text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-              Trad<span className="text-accent-600 dark:text-accent-400">gella</span>
+              Zalor<span className="text-accent-600 dark:text-accent-400">Trade</span>
             </span>
           </Link>
 

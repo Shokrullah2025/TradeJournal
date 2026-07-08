@@ -29,7 +29,7 @@ const AuthNavbar = () => (
             <TrendingUp className="h-5 w-5 text-white" />
           </span>
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            Trad<span className="text-primary-600 dark:text-primary-400">gella</span>
+            Zalor<span className="text-primary-600 dark:text-primary-400">Trade</span>
           </span>
         </Link>
 
