@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
+import { withTimeout } from "../utils/withTimeout";
 import {
   FEATURE_CATALOG,
   resolveAudience,
@@ -100,7 +101,11 @@ export const FeatureFlagProvider = ({ children }) => {
     // (e.g. the entered card / SetupIntent step) and dropping the user back to
     // the start every time they switch tabs and come back.
     if (!hasResolvedRef.current) setLoading(true);
-    Promise.all([refreshFlags(), resolveUserAudience()]).finally(() => {
+    // Time-boxed: both loaders swallow their own errors, but a request that
+    // stalls without settling would keep `loading` true and pin the full-screen
+    // LoadingScreen forever. On timeout we proceed (flags fail open); the slow
+    // reads still update flags/audience in the background when they land.
+    withTimeout(Promise.all([refreshFlags(), resolveUserAudience()]), 8000, null).finally(() => {
       if (!cancelled) {
         hasResolvedRef.current = true;
         setLoading(false);

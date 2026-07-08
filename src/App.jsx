@@ -37,6 +37,8 @@ const SolutionDetail = React.lazy(() => import("./pages/site/SolutionDetail"));
 const Pricing = React.lazy(() => import("./pages/site/Pricing"));
 const About = React.lazy(() => import("./pages/site/About"));
 const Contact = React.lazy(() => import("./pages/site/Contact"));
+const Blog = React.lazy(() => import("./pages/site/Blog"));
+const BlogPost = React.lazy(() => import("./pages/site/BlogPost"));
 
 // Legal pages — lazy loaded, public routes
 const TermsOfService = React.lazy(() => import("./pages/legal/TermsOfService"));
@@ -137,6 +139,8 @@ function App() {
                       <Route path="/pricing" element={<Pricing />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />
+                      <Route path="/blog" element={<Blog />} />
+                      <Route path="/blog/:slug" element={<BlogPost />} />
 
                       {/* Legal pages — public, no auth required */}
                       <Route path="/terms" element={<TermsOfService />} />
@@ -159,7 +163,7 @@ function App() {
                         <ProtectedRoute>
                           <Suspense
                             fallback={
-                              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-primary-900/30">
                                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
                               </div>
                             }

@@ -71,9 +71,18 @@ export const RequireSubscription = ({ children }) => {
 
 // ── Redirects authenticated users away (login / register pages) ──────────
 export const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, bootstrapped } = useAuth();
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    // Bootstrap: blank the page so an already-signed-in user never sees the
+    // login form flash before the redirect below.
+    if (!bootstrapped) return <LoadingScreen />;
+    // In-flight sign-in: `loading` also goes true while login() runs. Keep
+    // the form mounted (its submit button shows the spinner) instead of
+    // swapping to a full-screen loader — unmounting the form mid-submit is
+    // what caused the loading-screen → login-flash → MFA-gate bounce.
+    return children;
+  }
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return children;
 };

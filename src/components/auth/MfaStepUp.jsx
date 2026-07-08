@@ -3,6 +3,7 @@ import { ShieldCheck, LogOut, KeyRound, Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { listFactors } from "../../utils/mfa";
 import { totpCodeSchema } from "../../utils/validation";
+import { withTimeout } from "../../utils/withTimeout";
 import TotpCodeInput from "./TotpCodeInput";
 
 // Full-screen 2FA step-up gate. Rendered by ProtectedRoute when the signed-in
@@ -19,16 +20,25 @@ const MfaStepUp = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // Resolve the verified TOTP factor id on mount (we don't have it after a
-  // refresh, so never rely on it being passed in).
+  // refresh, so never rely on it being passed in). Time-boxed: if the request
+  // stalls without settling, `.finally` never runs and the spinner would be
+  // stuck forever — show an actionable error instead.
   useEffect(() => {
     let cancelled = false;
-    listFactors()
+    withTimeout(listFactors(), 8000, { data: null })
       .then(({ data }) => {
         if (cancelled) return;
         const totp = data?.totp?.find((f) => f.status === "verified");
         setFactorId(totp?.id ?? null);
+        if (!totp) {
+          setError("Couldn't load your authenticator. Check your connection and refresh this page.");
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) {
+          setError("Couldn't load your authenticator. Check your connection and refresh this page.");
+        }
+      })
       .finally(() => {
         if (!cancelled) setLoadingFactor(false);
       });
@@ -69,7 +79,9 @@ const MfaStepUp = () => {
 
   return (
     <div
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900 px-4 py-10"
+      // Always light (bg-white like /login): this gate is part of the sign-in
+      // flow, and ThemeScope strips the dark class while mfaRequired is true.
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white px-4 py-10"
       data-testid="mfa-stepup-screen"
     >
       {/* Decorative brand glow — purely visual, sits behind the card. */}
