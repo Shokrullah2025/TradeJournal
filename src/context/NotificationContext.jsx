@@ -119,8 +119,14 @@ export const NotificationProvider = ({ children }) => {
               }
             } else if (payload.eventType === "UPDATE") {
               const row = payload.new;
+              // Re-sort after merging: aggregated notifications (e.g. contact
+              // inbox) bump created_at on update so they surface at the top.
               setNotifications((prev) =>
-                prev.map((n) => (n.id === row.id ? { ...n, ...row } : n))
+                prev
+                  .map((n) => (n.id === row.id ? { ...n, ...row } : n))
+                  .sort(
+                    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+                  )
               );
             } else if (payload.eventType === "DELETE") {
               // Default DELETE payloads carry only the row id, and the acting

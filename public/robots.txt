@@ -34,4 +34,4 @@ Disallow: /register
 Disallow: /auth/
 Disallow: /verify-email
 
-Sitemap: https://zalortrade.com/sitemap.xml
+Sitemap: https://www.zalortrade.com/sitemap.xml

@@ -13,7 +13,7 @@ export const SITE_NAME = "ZalorTrade";
 
 // Absolute origin used for canonical URLs, sitemap entries, and og:url.
 export const SITE_URL = (
-  import.meta.env.VITE_SITE_URL || "https://zalortrade.com"
+  import.meta.env.VITE_SITE_URL || "https://www.zalortrade.com"
 ).replace(/\/+$/, "");
 
 // One-line value proposition reused as the default meta description and the
