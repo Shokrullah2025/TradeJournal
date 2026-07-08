@@ -168,18 +168,20 @@ describe("Dashboard page", () => {
     expect(screen.queryByTestId("recent-trades-card")).not.toBeInTheDocument();
   });
 
-  it("navigates to broker selection from the ghost-state CTA buttons", () => {
+  it("navigates to the trades page from the ghost-state CTA buttons", () => {
+    // Broker sync is behind the Coming-soon gate, so the empty-state CTAs
+    // send users to /trades (manual entry + CSV import) instead of /brokers.
     ctx.stats = emptyStats;
     ctx.trades = [];
 
     renderDashboard();
 
-    fireEvent.click(screen.getByTestId("empty-state-connect-broker-btn"));
-    expect(navSpy).toHaveBeenCalledWith("/brokers");
+    fireEvent.click(screen.getByTestId("empty-state-log-trade-btn"));
+    expect(navSpy).toHaveBeenCalledWith("/trades");
 
     navSpy.mockClear();
-    fireEvent.click(screen.getByTestId("empty-recent-trades-connect-broker-btn"));
-    expect(navSpy).toHaveBeenCalledWith("/brokers");
+    fireEvent.click(screen.getByTestId("empty-recent-trades-log-trade-btn"));
+    expect(navSpy).toHaveBeenCalledWith("/trades");
   });
 
   it("does not show the ghost state while trades are still loading (edge case)", () => {

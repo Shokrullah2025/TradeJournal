@@ -60,6 +60,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 import ThemeScope from "./components/common/ThemeScope";
 import RecoveryRedirect from "./components/auth/RecoveryRedirect";
 import FeatureGate from "./components/common/FeatureGate";
+import ComingSoonGate from "./components/common/ComingSoonGate";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -229,7 +230,13 @@ function App() {
                                     path="/brokers"
                                     element={
                                       <FeatureGate feature="broker_sync" title="Broker Sync unavailable">
-                                        <BrokerSelection />
+                                        <ComingSoonGate
+                                          feature="broker_sync"
+                                          title="Broker Sync"
+                                          description="Automatic trade import from Tradovate and popular prop firms is almost ready. Until launch, log trades manually or bring history in with CSV import from the Trades page."
+                                        >
+                                          <BrokerSelection />
+                                        </ComingSoonGate>
                                       </FeatureGate>
                                     }
                                   />

@@ -41,8 +41,9 @@ export const HIGHLIGHT_FEATURES = [
   {
     icon: Link2,
     title: "Broker auto-sync",
+    comingSoon: true,
     description:
-      "Connect Tradovate and popular prop firms to import fills automatically. No more copy-pasting from statements.",
+      "Coming soon: connect Tradovate and popular prop firms to import fills automatically. No more copy-pasting from statements.",
   },
   {
     icon: Activity,
@@ -159,9 +160,10 @@ export const FEATURE_CATEGORIES = [
   {
     id: "auto-sync",
     eyebrow: "Broker auto-sync",
+    comingSoon: true,
     title: "Your fills, imported automatically",
     subtitle:
-      "Connect your broker or prop firm once and let trades flow into your journal in real time.",
+      "Coming soon: connect your broker or prop firm once and let trades flow into your journal in real time. CSV & Excel import is available today.",
     features: [
       {
         icon: Link2,
@@ -261,9 +263,9 @@ export const FEATURE_CATEGORIES = [
 export const STEPS = [
   {
     number: "01",
-    title: "Connect or log",
+    title: "Log or import",
     description:
-      "Link your broker for automatic sync, or log trades by hand in seconds. Import existing history from a spreadsheet.",
+      "Log trades by hand in seconds or import existing history from a spreadsheet. Broker auto-sync is coming soon.",
   },
   {
     number: "02",
@@ -324,7 +326,7 @@ export const PRICING_TIERS = [
       "Custom reports",
       "Priority email support",
       "API access",
-      "Real-time broker sync",
+      "Real-time broker sync (coming soon)",
     ],
     popular: true,
     cta: "Start Premium",
@@ -364,7 +366,7 @@ export const FAQS = [
   {
     question: "Which brokers can I connect?",
     answer:
-      "ZalorTrade syncs with Tradovate and popular futures prop firms such as Apex, Topstep, and MyFundedFutures. You can also import any history via CSV or Excel.",
+      "Broker auto-sync is coming soon, launching with Tradovate and popular futures prop firms such as Apex, Topstep, and MyFundedFutures. Today you can import any broker's history via CSV or Excel.",
   },
   {
     question: "Is my trading data secure?",
@@ -388,7 +390,7 @@ export const TESTIMONIALS = [
   },
   {
     quote:
-      "The broker sync alone saves me an hour a day. Everything lands in the journal automatically and the numbers just add up.",
+      "The CSV import alone saves me an hour a day. My whole history landed in the journal in minutes and the numbers just add up.",
     name: "Priya S.",
     role: "Prop firm trader",
   },
@@ -478,6 +480,8 @@ const featureNavItem = (page) => ({
   icon: page.icon,
   emoji: NAV_EMOJI[page.slug],
   to: `/features/${page.slug}`,
+  // Unreleased features carry a "Soon" pill in the nav menus.
+  badge: page.comingSoon ? "Soon" : undefined,
 });
 
 const NAV_FEATURE_GROUPS = [

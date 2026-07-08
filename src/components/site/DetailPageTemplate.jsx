@@ -65,8 +65,16 @@ const DetailPageTemplate = ({ page, basePath }) => {
         />
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1fr,1.1fr] lg:gap-14 lg:px-8 lg:py-20">
           <div>
-            <p className="font-nums text-xs font-semibold uppercase tracking-[0.14em] text-accent-600 dark:text-accent-400">
+            <p className="flex flex-wrap items-center gap-2 font-nums text-xs font-semibold uppercase tracking-[0.14em] text-accent-600 dark:text-accent-400">
               {page.group}
+              {page.comingSoon && (
+                <span
+                  data-testid={`detail-${page.slug}-coming-soon-badge`}
+                  className="rounded-full bg-accent-600 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-white"
+                >
+                  Coming soon
+                </span>
+              )}
             </p>
             <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100 sm:text-[44px]">
               {page.hero.title}
@@ -237,6 +245,7 @@ DetailPageTemplate.propTypes = {
     group: PropTypes.string.isRequired,
     navLabel: PropTypes.string.isRequired,
     visual: PropTypes.string.isRequired,
+    comingSoon: PropTypes.bool,
     seo: PropTypes.shape({
       title: PropTypes.string.isRequired,
       description: PropTypes.string.isRequired,

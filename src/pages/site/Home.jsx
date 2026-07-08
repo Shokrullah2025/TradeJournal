@@ -317,7 +317,8 @@ const BENTO_CARDS = [
   {
     icon: Link2,
     title: "Broker Sync & Import",
-    description: "Auto-import fills from Tradovate, prop firms & CSV.",
+    badge: "Coming soon",
+    description: "Auto-sync from Tradovate & prop firms is coming soon — CSV & Excel import works today.",
     to: "/features/broker-sync",
     visual: MiniSyncRows,
   },
@@ -335,8 +336,13 @@ const BentoCard = ({ card }) => {
       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-100 text-accent-600 dark:bg-accent-900/50 dark:text-accent-300">
         <Icon className="h-5 w-5" />
       </span>
-      <h3 className="mt-4 text-lg font-bold text-gray-900 group-hover:text-accent-600 dark:text-gray-100 dark:group-hover:text-accent-300">
+      <h3 className="mt-4 flex flex-wrap items-center gap-2 text-lg font-bold text-gray-900 group-hover:text-accent-600 dark:text-gray-100 dark:group-hover:text-accent-300">
         {card.title}
+        {card.badge && (
+          <span className="rounded-full bg-accent-100 px-2.5 py-0.5 text-[11px] font-semibold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">
+            {card.badge}
+          </span>
+        )}
       </h3>
       <p className="mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
         {card.description}
@@ -350,6 +356,7 @@ BentoCard.propTypes = {
   card: PropTypes.shape({
     icon: PropTypes.elementType.isRequired,
     title: PropTypes.string.isRequired,
+    badge: PropTypes.string,
     description: PropTypes.string.isRequired,
     to: PropTypes.string.isRequired,
     visual: PropTypes.elementType.isRequired,
@@ -389,7 +396,9 @@ const AI_EXAMPLES = [
   },
 ];
 
-const BROKERS = ["Tradovate", "Apex Trader Funding", "Topstep", "MyFundedFutures", "CSV & Excel"];
+// Broker auto-sync hasn't launched yet — the strip announces it as coming
+// soon and names the launch partners. CSV & Excel import is live today.
+const BROKERS = ["Tradovate", "Apex Trader Funding", "Topstep", "MyFundedFutures"];
 
 // ── Page ────────────────────────────────────────────────────────────────────
 
@@ -431,9 +440,9 @@ const Home = () => (
             <span className="text-accent-600 dark:text-accent-400">one clear journal.</span>
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-relaxed text-gray-600 dark:text-gray-400">
-            Log trades in seconds, sync your broker automatically, and let the
-            analytics show you exactly what&apos;s working — and what&apos;s
-            quietly costing you money.
+            Log trades in seconds, import your history in one upload, and let
+            the analytics show you exactly what&apos;s working — and
+            what&apos;s quietly costing you money.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -457,7 +466,7 @@ const Home = () => (
           <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-gray-600 dark:text-gray-400">
             <span className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-              Auto-sync Tradovate &amp; top prop firms
+              CSV &amp; Excel import in minutes
             </span>
             <span className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -472,8 +481,12 @@ const Home = () => (
 
     {/* BROKER STRIP */}
     <section className="mx-auto max-w-7xl px-4 pb-2 pt-6 sm:px-6 lg:px-8">
-      <p className="text-center text-xs font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
-        Syncs automatically with your broker
+      <p className="flex items-center justify-center gap-2 text-center text-xs font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+        Broker auto-sync
+        <span className="rounded-full bg-accent-100 px-2.5 py-0.5 text-[11px] font-semibold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">
+          Coming soon
+        </span>
+        launching with
       </p>
       <div
         data-testid="home-broker-strip"
@@ -488,6 +501,9 @@ const Home = () => (
           </span>
         ))}
       </div>
+      <p className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">
+        CSV &amp; Excel import is available today for any broker.
+      </p>
     </section>
 
     {/* METRICS BAND */}

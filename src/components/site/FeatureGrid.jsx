@@ -23,6 +23,7 @@ const FeatureGrid = ({ features, idPrefix = "feature", columns = 3 }) => {
           icon={feature.icon}
           title={feature.title}
           description={feature.description}
+          badge={feature.badge}
           testId={`${idPrefix}-card-${index}`}
         />
       ))}

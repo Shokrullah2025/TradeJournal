@@ -30,7 +30,7 @@ const Pricing = () => {
     <div data-testid="site-pricing-page">
       <Seo
         title="Pricing"
-        description="Simple, transparent pricing. Start free with up to 50 trades a month, then upgrade for broker auto-sync, advanced analytics, and backtesting. Cancel anytime."
+        description="Simple, transparent pricing. Start free with up to 50 trades a month, then upgrade for advanced analytics, backtesting, and CSV import. Cancel anytime."
         path="/pricing"
         jsonLd={PRICING_JSON_LD}
       />
