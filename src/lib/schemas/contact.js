@@ -3,6 +3,16 @@ import { z } from "zod";
 // Validation for the public Contact form. Front-end only — no DB write — but
 // kept in src/lib/schemas/ per the project convention so it's reusable if the
 // form is later wired to an Edge Function.
+// Validation for the admin in-app reply (Contact Inbox thread view). Mirrored
+// server-side in the contact-reply Edge Function.
+export const contactReplySchema = z.object({
+  message: z
+    .string()
+    .trim()
+    .min(1, "Please enter a reply message.")
+    .max(5000, "Reply is too long (5000 characters max)."),
+});
+
 export const contactSchema = z.object({
   name: z
     .string()
