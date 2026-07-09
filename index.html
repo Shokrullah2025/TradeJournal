@@ -2,6 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // tradgella.com is the retired brand domain, but the old Cloudflare
+      // Pages binding still answers for visitors with stale DNS or old
+      // bookmarks. Bounce them to zalortrade.com keeping path, query, AND
+      // hash — the hash carries Supabase auth tokens (password recovery,
+      // email confirmation), so in-flight links keep working across the hop.
+      (function () {
+        if (/(^|\.)tradgella\.com$/i.test(window.location.hostname)) {
+          window.location.replace(
+            "https://zalortrade.com" +
+              window.location.pathname +
+              window.location.search +
+              window.location.hash
+          );
+        }
+      })();
+    </script>
     <link rel="icon" type="image/png" sizes="256x256" href="/logo.png" />
     <link rel="icon" href="/favicon.ico" sizes="48x48 32x32 16x16" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
