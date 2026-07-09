@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MessagesSquare,
+  Pencil,
   Send,
   Trash2,
   X,
@@ -81,6 +82,12 @@ const ContactMessages = () => {
   // Row selection (by sender email) for the bulk delete action.
   const [selectedEmails, setSelectedEmails] = useState(() => new Set());
   const [deleting, setDeleting] = useState(false);
+  // Per-message edit state inside the open thread: the conversation entry key
+  // being edited and its draft text (plain text for visitor messages,
+  // rich-text HTML for admin replies).
+  const [editingKey, setEditingKey] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [messageBusy, setMessageBusy] = useState(false);
   // Scrollable thread container — kept pinned to the newest message (bottom).
   const threadListRef = useRef(null);
   // Global unread count — shown on the "New" filter tab and used to trigger a
@@ -278,6 +285,8 @@ const ContactMessages = () => {
     setSelectedThread(thread);
     setThreadMessages([]);
     setReplyText("");
+    setEditingKey(null);
+    setEditText("");
     setThreadLoading(true);
     try {
       setThreadMessages(await fetchThreadMessages(thread.email));
@@ -297,6 +306,131 @@ const ContactMessages = () => {
     setSelectedThread(null);
     setThreadMessages([]);
     setReplyText("");
+    setEditingKey(null);
+    setEditText("");
+  };
+
+  // Refresh the open thread and the list after a message-level change —
+  // message_count and tab counts move when a message is added or removed.
+  // Closes the modal if the whole thread is gone.
+  const refreshAfterMessageChange = async (email) => {
+    const messages = await fetchThreadMessages(email);
+    if (messages.length === 0) {
+      closeThread();
+    } else {
+      setThreadMessages(messages);
+    }
+    const { data, count } = await load();
+    setThreads(data);
+    setTotal(count);
+    loadCounts();
+  };
+
+  // Delete one message from the open thread. Visitor emails are rows in
+  // contact_submissions (admin DELETE policy, migration 035); admin replies
+  // live in the parent row's metadata.replies array (UPDATE policy, 024).
+  // Neither recalls an email already delivered to the recipient's mailbox —
+  // this only removes the inbox's stored copy.
+  const deleteEntry = async (entry) => {
+    if (messageBusy) return;
+    const parent = threadMessages.find(
+      (m) => m.id === (entry.kind === "admin" ? entry.parentId : entry.id),
+    );
+    if (!parent) return;
+
+    const warning =
+      entry.kind === "admin"
+        ? "Delete this reply? It's removed from this conversation only — the email that was already sent can't be recalled."
+        : Array.isArray(parent.metadata?.replies) && parent.metadata.replies.length > 0
+        ? "Delete this message? Your replies attached to it will be removed from the conversation too. This can't be undone."
+        : "Delete this message? This can't be undone.";
+    if (!window.confirm(warning)) return;
+
+    setMessageBusy(true);
+    try {
+      if (entry.kind === "visitor") {
+        const { error: deleteError } = await supabase
+          .from("contact_submissions")
+          .delete()
+          .eq("id", entry.id);
+        if (deleteError) throw new Error(deleteError.message);
+      } else {
+        const replies = parent.metadata.replies.filter((_, i) => i !== entry.replyIndex);
+        const { error: updateError } = await supabase
+          .from("contact_submissions")
+          .update({ metadata: { ...parent.metadata, replies } })
+          .eq("id", entry.parentId);
+        if (updateError) throw new Error(updateError.message);
+      }
+      toast.success(entry.kind === "admin" ? "Reply deleted." : "Message deleted.");
+      await refreshAfterMessageChange(parent.email);
+    } catch (err) {
+      console.error("[ContactMessages] message delete error:", err.message);
+      toast.error("Couldn't delete the message. Please try again.");
+    } finally {
+      setMessageBusy(false);
+    }
+  };
+
+  const startEdit = (entry) => {
+    setEditingKey(entry.key);
+    setEditText(entry.message);
+  };
+
+  const cancelEdit = () => {
+    setEditingKey(null);
+    setEditText("");
+  };
+
+  // Save an edited message. Edits only change the copy stored in the inbox —
+  // an email that already went out is unchanged.
+  const saveEdit = async (entry) => {
+    if (messageBusy) return;
+    const parent = threadMessages.find(
+      (m) => m.id === (entry.kind === "admin" ? entry.parentId : entry.id),
+    );
+    if (!parent) return;
+
+    setMessageBusy(true);
+    try {
+      if (entry.kind === "visitor") {
+        const text = editText.trim();
+        if (text.length === 0 || text.length > 5000) {
+          toast.error("Message must be between 1 and 5000 characters.");
+          return;
+        }
+        const { error: updateError } = await supabase
+          .from("contact_submissions")
+          .update({ message: text })
+          .eq("id", entry.id);
+        if (updateError) throw new Error(updateError.message);
+      } else {
+        // Same pipeline as sendReply: sanitize, then validate visible length.
+        const parsed = contactReplySchema.safeParse({ message: sanitizeNoteHtml(editText) });
+        if (!parsed.success) {
+          toast.error(parsed.error.issues[0].message);
+          return;
+        }
+        const replies = parent.metadata.replies.map((r, i) =>
+          i === entry.replyIndex
+            ? { ...r, message: parsed.data.message, editedAt: new Date().toISOString() }
+            : r,
+        );
+        const { error: updateError } = await supabase
+          .from("contact_submissions")
+          .update({ metadata: { ...parent.metadata, replies } })
+          .eq("id", entry.parentId);
+        if (updateError) throw new Error(updateError.message);
+      }
+      cancelEdit();
+      toast.success("Message updated.");
+      setThreadMessages(await fetchThreadMessages(parent.email));
+    } catch (err) {
+      console.error("[ContactMessages] message edit error:", err.message);
+      toast.error("Couldn't save the changes. Please try again.");
+    } finally {
+      setMessageBusy(false);
+    }
   };
 
   // Email the sender from inside the app (contact-reply Edge Function). The
@@ -349,6 +483,7 @@ const ContactMessages = () => {
       entries.push({
         kind: "visitor",
         key: m.id,
+        id: m.id,
         subject: m.subject,
         message: m.message,
         at: m.created_at,
@@ -358,10 +493,13 @@ const ContactMessages = () => {
         entries.push({
           kind: "admin",
           key: `${m.id}-reply-${i}`,
+          parentId: m.id,
+          replyIndex: i,
           subject: `Re: ${m.subject}`,
           message: r.message,
           at: r.at,
           by: r.by,
+          editedAt: r.editedAt ?? null,
         });
       });
     }
@@ -678,6 +816,7 @@ const ContactMessages = () => {
               ) : (
                 conversation.map((entry, index) => {
                   const isNewest = index === conversation.length - 1;
+                  const isEditing = editingKey === entry.key;
                   // Admin replies may carry rich-text HTML (headings, lists);
                   // older plain-text replies fall back to the text renderer.
                   const isHtmlReply =
@@ -696,28 +835,92 @@ const ContactMessages = () => {
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {entry.subject}
                         </p>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                            entry.kind === "admin"
-                              ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                              entry.kind === "admin"
+                                ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
+                                : isNewest
+                                ? "bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-300"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            }`}
+                          >
+                            {entry.kind === "admin"
+                              ? "You replied"
                               : isNewest
-                              ? "bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-300"
-                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                          }`}
-                        >
-                          {entry.kind === "admin"
-                            ? "You replied"
-                            : isNewest
-                            ? "Latest"
-                            : selectedThread.latest_name}
-                        </span>
+                              ? "Latest"
+                              : selectedThread.latest_name}
+                          </span>
+                          {!isEditing && (
+                            <>
+                              <button
+                                data-testid={`admin-contact-message-edit-btn-${entry.key}`}
+                                onClick={() => startEdit(entry)}
+                                disabled={messageBusy}
+                                title="Edit message"
+                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                data-testid={`admin-contact-message-delete-btn-${entry.key}`}
+                                onClick={() => deleteEntry(entry)}
+                                disabled={messageBusy}
+                                title="Delete message"
+                                className="rounded p-1 text-gray-400 hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400 disabled:opacity-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                         {new Date(entry.at).toLocaleString()}
+                        {entry.editedAt && (
+                          <span className="ml-1 italic">(edited)</span>
+                        )}
                       </p>
                       {/* Long emails scroll inside their own bubble (max-h)
                           instead of stretching the thread. */}
-                      {isHtmlReply ? (
+                      {isEditing ? (
+                        <div className="mt-2">
+                          {entry.kind === "admin" ? (
+                            <RichTextEditor
+                              testId={`admin-contact-message-edit-input-${entry.key}`}
+                              value={editText}
+                              onChange={setEditText}
+                              withHeadings
+                            />
+                          ) : (
+                            <textarea
+                              data-testid={`admin-contact-message-edit-input-${entry.key}`}
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              rows={5}
+                              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-sm text-gray-800 dark:text-gray-200 focus:border-primary-500 focus:ring-primary-500"
+                            />
+                          )}
+                          <div className="mt-2 flex justify-end gap-2">
+                            <button
+                              data-testid={`admin-contact-message-edit-cancel-${entry.key}`}
+                              onClick={cancelEdit}
+                              disabled={messageBusy}
+                              className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              data-testid={`admin-contact-message-edit-save-${entry.key}`}
+                              onClick={() => saveEdit(entry)}
+                              disabled={messageBusy}
+                              className="rounded-lg bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                            >
+                              {messageBusy ? "Saving…" : "Save"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : isHtmlReply ? (
                         <div
                           className="rich-text-content mt-2 max-h-56 overflow-y-auto text-sm text-gray-800 dark:text-gray-200"
                           // Sanitized with DOMPurify (sanitizeNoteHtml) per CLAUDE.md §2.
