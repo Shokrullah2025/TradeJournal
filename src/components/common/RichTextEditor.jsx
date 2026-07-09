@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bold, Italic, Underline, List, ListOrdered, Palette } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Palette,
+  Heading1,
+  Heading2,
+  Pilcrow,
+} from "lucide-react";
 import { sanitizeNoteHtml } from "../../utils/sanitizeHtml";
 
 // A small, dependency-light WYSIWYG for session notes: bold, italic, underline,
@@ -43,7 +53,15 @@ function ToolbarButton({ onAction, title, testId, active, children }) {
   );
 }
 
-function RichTextEditor({ value, onChange, placeholder = "", testId = "rich-text-editor" }) {
+// `withHeadings` adds H1/H2/normal-text block buttons — used by the Contact
+// Inbox reply composer; session notes keep the compact toolbar.
+function RichTextEditor({
+  value,
+  onChange,
+  placeholder = "",
+  testId = "rich-text-editor",
+  withHeadings = false,
+}) {
   const ref = useRef(null);
   const [isEmpty, setIsEmpty] = useState(true);
   const [colorOpen, setColorOpen] = useState(false);
@@ -120,6 +138,32 @@ function RichTextEditor({ value, onChange, placeholder = "", testId = "rich-text
         >
           <ListOrdered className="w-4 h-4" />
         </ToolbarButton>
+        {withHeadings && (
+          <>
+            <span className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-0.5" />
+            <ToolbarButton
+              onAction={() => exec("formatBlock", "<h1>")}
+              title="Heading"
+              testId={`${testId}-h1-btn`}
+            >
+              <Heading1 className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              onAction={() => exec("formatBlock", "<h2>")}
+              title="Subheading"
+              testId={`${testId}-h2-btn`}
+            >
+              <Heading2 className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              onAction={() => exec("formatBlock", "<p>")}
+              title="Normal text"
+              testId={`${testId}-paragraph-btn`}
+            >
+              <Pilcrow className="w-4 h-4" />
+            </ToolbarButton>
+          </>
+        )}
         <span className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-0.5" />
         <div className="relative" ref={colorRef}>
           <ToolbarButton
