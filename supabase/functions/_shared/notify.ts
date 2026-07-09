@@ -180,7 +180,7 @@ export async function sendNotificationEmail(
 }
 
 function renderEmail(title: string, body: string, linkTo: string | null): string {
-  const appUrl = Deno.env.get("APP_URL") ?? "https://zalortrade.com";
+  const appUrl = Deno.env.get("APP_URL") ?? "https://www.zalortrade.com";
   const cta = linkTo
     ? `<p style="margin:24px 0;"><a href="${appUrl}${linkTo}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;">View in app</a></p>`
     : "";

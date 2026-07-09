@@ -17,10 +17,14 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
 import { isComingSoon } from "../../lib/featureFlags";
+import { useContactInboxCount } from "../../hooks/useContactInboxCount";
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const { user } = useAuth();
   const { isFeatureEnabled } = useFeatureFlags();
+  // Unread contact submissions — badge on the Contact Inbox item. The hook
+  // no-ops (returns 0) for non-admins.
+  const { newCount: contactNewCount } = useContactInboxCount();
 
   // `feature` ties a nav item to a feature flag — when an admin disables that
   // feature for the current user's audience (plan/role/trial), the item is
@@ -48,6 +52,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       href: "/admin/contact-submissions",
       icon: Inbox,
       adminOnly: true,
+      badge: contactNewCount,
     },
   ];
 

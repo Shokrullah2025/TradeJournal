@@ -1,12 +1,15 @@
 import { z } from "zod";
 
-// The four v1 notification categories. Keep in sync with the
-// notifications.category CHECK constraint in 020_notifications.sql.
+// Notification categories. Keep in sync with the notifications.category CHECK
+// constraint (020_notifications.sql, extended with 'contact' in 034).
+// 'contact' is admin-only: the contact-submit Edge Function emits it when a
+// visitor messages the public Contact form.
 export const NOTIFICATION_CATEGORIES = [
   "broker_sync",
   "billing",
   "performance",
   "security",
+  "contact",
 ];
 
 export const NOTIFICATION_SEVERITIES = ["info", "success", "warning", "error"];
@@ -18,6 +21,7 @@ export const DEFAULT_NOTIFICATION_PREFS = {
   billing: { inApp: true, email: true },
   performance: { inApp: true, email: false },
   security: { inApp: true, email: true },
+  contact: { inApp: true, email: false },
 };
 
 // In-app vs email toggles for a single category.
@@ -34,6 +38,7 @@ export const notificationPrefsSchema = z.object({
   billing: notificationChannelPrefsSchema.optional(),
   performance: notificationChannelPrefsSchema.optional(),
   security: notificationChannelPrefsSchema.optional(),
+  contact: notificationChannelPrefsSchema.optional(),
 });
 
 // Merge a stored (possibly partial / unknown) preferences value with defaults.
@@ -46,6 +51,7 @@ export const normalizeNotificationPrefs = (raw) => {
     billing: { ...DEFAULT_NOTIFICATION_PREFS.billing, ...value.billing },
     performance: { ...DEFAULT_NOTIFICATION_PREFS.performance, ...value.performance },
     security: { ...DEFAULT_NOTIFICATION_PREFS.security, ...value.security },
+    contact: { ...DEFAULT_NOTIFICATION_PREFS.contact, ...value.contact },
   };
 };
 
