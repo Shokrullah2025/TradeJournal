@@ -84,7 +84,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                to="/login"
+                to="/register"
                 data-testid={`detail-${page.slug}-getstarted-btn`}
                 className="btn btn-site inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
               >
