@@ -10,7 +10,7 @@ const AcceptableUsePolicy = () => (
     slug="aup"
   >
     <p>
-      This Acceptable Use Policy ("AUP") governs your use of ZalorTrade (the "Service") operated by <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company. This AUP is incorporated by reference into our <Link to="/terms">Terms of Service</Link> and is part of the binding agreement between you and the Company.
+      This Acceptable Use Policy ("AUP") governs your use of ZalorTrade (the "Service") operated by <strong>ZalorTrade</strong>. This AUP is incorporated by reference into our <Link to="/terms">Terms of Service</Link> and is part of the binding agreement between you and the Company.
     </p>
     <p>
       The purpose of this AUP is to protect the security, integrity, and availability of the Service for all users, and to ensure the Service is not used for unlawful or harmful purposes.
@@ -26,7 +26,7 @@ const AcceptableUsePolicy = () => (
 
     <h3>a. Illegal and Harmful Activities</h3>
     <ul>
-      <li>Use the Service in violation of any applicable federal, Colorado state, or other applicable law or regulation, including securities laws, anti-money-laundering laws, and data protection laws;</li>
+      <li>Use the Service in violation of any applicable federal, state, or other applicable law or regulation, including securities laws, anti-money-laundering laws, and data protection laws;</li>
       <li>Use the Service to facilitate fraud, market manipulation, wash trading, front-running, or any other illegal trading activity;</li>
       <li>Enter false, fabricated, or misleading trade data for purposes of fraud (e.g., falsifying trading records to deceive investors, lenders, regulators, or tax authorities);</li>
       <li>Use the Service to launder money or in connection with any financial crime;</li>
@@ -83,13 +83,13 @@ const AcceptableUsePolicy = () => (
     <ul>
       <li>Use a strong, unique password for your ZalorTrade account;</li>
       <li>Not share your password or authentication tokens with any third party;</li>
-      <li>Promptly notify us at <strong>[CONTACT EMAIL]</strong> if you discover or suspect any unauthorized access to or use of your account;</li>
+      <li>Promptly notify us at <strong>noreply@zalortrade.com</strong> if you discover or suspect any unauthorized access to or use of your account;</li>
       <li>Log out of your account when using shared or public devices.</li>
     </ul>
 
     <h2>4. Accuracy of Trade Data</h2>
     <p>
-      You are solely responsible for the accuracy and completeness of the trade data, notes, and other content you enter into the Service. The Service does not independently verify your entries. Entering inaccurate trade data (whether intentional or inadvertent) may produce misleading analytics results, for which [COMPANY LEGAL NAME] is not responsible.
+      You are solely responsible for the accuracy and completeness of the trade data, notes, and other content you enter into the Service. The Service does not independently verify your entries. Entering inaccurate trade data (whether intentional or inadvertent) may produce misleading analytics results, for which ZalorTrade is not responsible.
     </p>
     <p>
       You must not enter data that is intended to misrepresent your trading performance for any improper purpose, including misrepresentation to investors, lenders, tax authorities, or prop trading firms.
@@ -126,7 +126,7 @@ const AcceptableUsePolicy = () => (
       If you become aware of any use of the Service that violates this AUP, please report it to us at:
     </p>
     <ul>
-      <li><strong>Email:</strong> [CONTACT EMAIL]</li>
+      <li><strong>Email:</strong> noreply@zalortrade.com</li>
       <li><strong>Subject line:</strong> AUP Violation Report</li>
     </ul>
     <p>We take all reports seriously and will investigate promptly.</p>
@@ -138,9 +138,8 @@ const AcceptableUsePolicy = () => (
 
     <h2>9. Contact</h2>
     <ul>
-      <li><strong>Email:</strong> [CONTACT EMAIL]</li>
-      <li><strong>Company:</strong> [COMPANY LEGAL NAME]</li>
-      <li><strong>Address:</strong> [PRINCIPAL ADDRESS]</li>
+      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Company:</strong> ZalorTrade</li>
     </ul>
   </LegalPageWrapper>
 );

@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { TrendingUp } from "lucide-react";
 import { FOOTER_LINKS, FOOTER_LEGAL_LINKS } from "./content";
 
 /**
@@ -26,9 +25,11 @@ const SiteFooter = () => {
               data-testid="site-footer-brand-link"
               className="flex items-center gap-2"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-700">
-                <TrendingUp className="h-4 w-4 text-white" />
-              </span>
+              <img
+                src="/logo.png"
+                alt="ZalorTrade logo"
+                className="h-8 w-8 rounded-lg object-cover"
+              />
               <span className="font-display text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">
                 Zalor<span className="text-accent-600 dark:text-accent-400">Trade</span>
               </span>

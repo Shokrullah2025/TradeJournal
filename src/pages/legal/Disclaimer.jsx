@@ -23,22 +23,22 @@ const Disclaimer = () => (
       Nothing contained in ZalorTrade, including but not limited to analytics outputs, win rate statistics, profit factor calculations, Sharpe ratio displays, drawdown charts, trade performance summaries, backtesting results, or any other data displayed by the Service, constitutes investment advice, financial advice, trading advice, legal advice, tax advice, or any other type of professional advice.
     </p>
     <p>
-      [COMPANY LEGAL NAME] provides the Service solely as a tool for users to record, organize, and analyze their own historical trading activity. The Service does not generate, suggest, or imply any recommendation to buy, sell, hold, short, or otherwise transact in any security, commodity, cryptocurrency, derivative, forex instrument, or other financial instrument.
+      ZalorTrade provides the Service solely as a tool for users to record, organize, and analyze their own historical trading activity. The Service does not generate, suggest, or imply any recommendation to buy, sell, hold, short, or otherwise transact in any security, commodity, cryptocurrency, derivative, forex instrument, or other financial instrument.
     </p>
 
     <h2>2. Not a Registered Investment Adviser</h2>
     <p>
-      [COMPANY LEGAL NAME] is <strong>not</strong> registered as an investment adviser, broker-dealer, futures commission merchant, commodity trading adviser, or any other regulated financial entity under:
+      ZalorTrade is <strong>not</strong> registered as an investment adviser, broker-dealer, futures commission merchant, commodity trading adviser, or any other regulated financial entity under:
     </p>
     <ul>
       <li>The Investment Advisers Act of 1940 (15 U.S.C. § 80b-1 et seq.);</li>
       <li>The Securities Exchange Act of 1934;</li>
       <li>The Commodity Exchange Act;</li>
-      <li>The Colorado Securities Act (C.R.S. § 11-51-101 et seq.); or</li>
+      <li>Any applicable state securities law; or</li>
       <li>The financial regulatory laws of any other state or jurisdiction.</li>
     </ul>
     <p>
-      No fiduciary relationship, advisory relationship, or client relationship is created by your use of the Service. You are not a "client" of [COMPANY LEGAL NAME] in any regulatory sense.
+      No fiduciary relationship, advisory relationship, or client relationship is created by your use of the Service. You are not a "client" of ZalorTrade in any regulatory sense.
     </p>
 
     <h2>3. Past Performance Does Not Guarantee Future Results</h2>
@@ -83,7 +83,7 @@ const Disclaimer = () => (
       Market data (prices, OHLC bars, volume) displayed within the backtesting feature is sourced from third-party providers. We make no representation, warranty, or guarantee as to the accuracy, completeness, timeliness, or fitness for any purpose of any market data provided. Data may be delayed, incomplete, or subject to errors. You should independently verify any market data before relying on it for any purpose.
     </p>
     <p>
-      Trade data you enter manually is your responsibility. [COMPANY LEGAL NAME] is not liable for errors in data you enter, import, or sync from a broker integration.
+      Trade data you enter manually is your responsibility. ZalorTrade is not liable for errors in data you enter, import, or sync from a broker integration.
     </p>
 
     <h2>7. Broker Integration Disclaimer</h2>
@@ -98,8 +98,8 @@ const Disclaimer = () => (
     <ul>
       <li>All trading decisions you make are entirely your own and based on your own independent judgment and research;</li>
       <li>You are not relying on the Service or any data displayed by the Service as a basis for any trading or investment decision;</li>
-      <li>[COMPANY LEGAL NAME] is not responsible for any trading losses, missed opportunities, or financial harm you suffer, regardless of whether those losses occur in connection with your use of the Service;</li>
-      <li>You will not hold [COMPANY LEGAL NAME] liable for the outcome of any trade you place.</li>
+      <li>ZalorTrade is not responsible for any trading losses, missed opportunities, or financial harm you suffer, regardless of whether those losses occur in connection with your use of the Service;</li>
+      <li>You will not hold ZalorTrade liable for the outcome of any trade you place.</li>
     </ul>
 
     <h2>9. Consult a Licensed Professional</h2>
@@ -117,12 +117,12 @@ const Disclaimer = () => (
 
     <h2>11. Limitation of Liability</h2>
     <p>
-      In no event shall [COMPANY LEGAL NAME] be liable for any trading losses, investment losses, consequential damages, or indirect damages arising from or in connection with your use of the Service, the analytics it displays, or any decision you make based on data in the Service. Please review the full limitation of liability provisions in our <Link to="/terms">Terms of Service</Link>.
+      In no event shall ZalorTrade be liable for any trading losses, investment losses, consequential damages, or indirect damages arising from or in connection with your use of the Service, the analytics it displays, or any decision you make based on data in the Service. Please review the full limitation of liability provisions in our <Link to="/terms">Terms of Service</Link>.
     </p>
 
     <h2>12. Questions</h2>
     <p>
-      If you have questions about this disclaimer, contact us at <strong>[CONTACT EMAIL]</strong>.
+      If you have questions about this disclaimer, contact us at <strong>noreply@zalortrade.com</strong>.
     </p>
   </LegalPageWrapper>
 );

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Lock, TrendingUp } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { emitNotification } from "../utils/notifications";
@@ -175,10 +175,14 @@ const ResetPassword = () => {
         <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
           <div className="mx-auto w-full max-w-sm lg:w-96">
             <div className="flex items-center mb-6">
-              <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
-                <TrendingUp className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="ml-3 text-2xl font-bold">ZalorTrade</h1>
+              <img
+                src="/logo.png"
+                alt="ZalorTrade logo"
+                className="w-12 h-12 rounded-lg object-cover"
+              />
+              <h1 className="ml-3 text-2xl font-bold">
+              Zalor<span className="text-primary-600 dark:text-primary-400">Trade</span>
+            </h1>
             </div>
 
             <div
@@ -210,10 +214,14 @@ const ResetPassword = () => {
         <div className="mx-auto w-full max-w-sm lg:w-96">
           {/* Logo */}
           <div className="flex items-center mb-6">
-            <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="ml-3 text-2xl font-bold">ZalorTrade</h1>
+            <img
+              src="/logo.png"
+              alt="ZalorTrade logo"
+              className="w-12 h-12 rounded-lg object-cover"
+            />
+            <h1 className="ml-3 text-2xl font-bold">
+              Zalor<span className="text-primary-600 dark:text-primary-400">Trade</span>
+            </h1>
           </div>
 
           <h2 className="text-3xl font-extrabold mb-2">Set new password</h2>

@@ -10,7 +10,7 @@ const CookiePolicy = () => (
     slug="cookies"
   >
     <p>
-      This Cookie Policy explains how <strong>[COMPANY LEGAL NAME]</strong> ("Company," "we," "us," or "our") uses cookies and similar browser storage technologies on ZalorTrade (the "Service"). It should be read alongside our <Link to="/privacy">Privacy Policy</Link>.
+      This Cookie Policy explains how <strong>ZalorTrade</strong> ("Company," "we," "us," or "our") uses cookies and similar browser storage technologies on ZalorTrade (the "Service"). It should be read alongside our <Link to="/privacy">Privacy Policy</Link>.
     </p>
 
     <h2>1. What Are Cookies?</h2>
@@ -131,9 +131,8 @@ const CookiePolicy = () => (
     <h2>7. Contact</h2>
     <p>Questions about our use of cookies? Contact us:</p>
     <ul>
-      <li><strong>Email:</strong> [CONTACT EMAIL]</li>
-      <li><strong>Company:</strong> [COMPANY LEGAL NAME]</li>
-      <li><strong>Address:</strong> [PRINCIPAL ADDRESS]</li>
+      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Company:</strong> ZalorTrade</li>
     </ul>
   </LegalPageWrapper>
 );

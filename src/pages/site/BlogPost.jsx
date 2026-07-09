@@ -76,7 +76,7 @@ const BlogPost = () => {
       publisher: {
         "@type": "Organization",
         name: SITE_NAME,
-        logo: { "@type": "ImageObject", url: absoluteUrl("/logo.svg") },
+        logo: { "@type": "ImageObject", url: absoluteUrl("/logo.png") },
       },
     },
     {

@@ -12,21 +12,24 @@
 export const SITE_NAME = "ZalorTrade";
 
 // Absolute origin used for canonical URLs, sitemap entries, and og:url.
+// Keep the APEX domain (no www) — it is the host Bing/Google have indexed
+// and the one every canonical, sitemap entry, and OG tag already uses.
 export const SITE_URL = (
   import.meta.env.VITE_SITE_URL || "https://zalortrade.com"
 ).replace(/\/+$/, "");
 
 // One-line value proposition reused as the default meta description and the
-// homepage description.
+// homepage description. Keep it 25-160 characters AFTER HTML escaping —
+// Bing flags meta descriptions outside that range as an SEO error.
 export const SITE_DESCRIPTION =
   "ZalorTrade is a data-driven trading journal: auto-sync your broker, " +
-  "journal every trade, and turn your track record into real, measurable " +
-  "analytics — win rate, profit factor, drawdown, and more.";
+  "journal every trade, and turn your history into win rate, profit " +
+  "factor, and drawdown.";
 
 // Default social-share image. A 1200x630 PNG/JPG gives the best preview across
-// X, Facebook, LinkedIn, and Slack. Replace /og-image.png in public/ with a
-// branded card; until then the logo is used as a safe fallback.
-export const DEFAULT_OG_IMAGE = "/og-image.png";
+// X, Facebook, LinkedIn, and Slack. Generated from the ZalorTrade logo art;
+// JPEG keeps it small enough for fast crawler fetches.
+export const DEFAULT_OG_IMAGE = "/og-image.jpg";
 
 export const TWITTER_HANDLE = "@zalortrade";
 
