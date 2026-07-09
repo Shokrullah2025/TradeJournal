@@ -6,6 +6,11 @@ import { noteTextLength } from "../../utils/sanitizeHtml";
 // rich-text HTML from RichTextEditor, so the 5000-char limit is enforced on
 // the visible text (noteTextLength), with a generous cap on the raw markup.
 export const contactReplySchema = z.object({
+  subject: z
+    .string()
+    .trim()
+    .min(1, "Please add a subject.")
+    .max(150, "Subject is too long (150 characters max)."),
   message: z
     .string()
     .trim()

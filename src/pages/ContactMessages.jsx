@@ -6,6 +6,7 @@ import {
   Mail,
   Inbox,
   Archive,
+  Ban,
   ShieldAlert,
   CheckCircle,
   ChevronLeft,
@@ -76,7 +77,15 @@ const ContactMessages = () => {
   // In-app reply composer (sent via the contact-reply Edge Function).
   // Holds sanitized rich-text HTML from RichTextEditor.
   const [replyText, setReplyText] = useState("");
+  const [replySubject, setReplySubject] = useState("");
   const [replySending, setReplySending] = useState(false);
+  // Sender block state for the open thread (contact_blocked_senders, 037).
+  const [senderBlocked, setSenderBlocked] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
+  // Messages that were unread when the thread was opened — they keep their
+  // red dot while the modal is open (so the new ones are easy to spot), even
+  // though opening already marked them read; the dots are gone on reopen.
+  const [newMessageIds, setNewMessageIds] = useState(() => new Set());
   // Per-tab conversation counts shown on the right of each filter tab.
   const [tabCounts, setTabCounts] = useState(null);
   // Row selection (by sender email) for the bulk delete action.
@@ -285,14 +294,35 @@ const ContactMessages = () => {
     setSelectedThread(thread);
     setThreadMessages([]);
     setReplyText("");
+    // Default the reply subject to the thread's latest one, Re:-prefixed once.
+    setReplySubject(
+      /^re:/i.test(thread.latest_subject ?? "")
+        ? thread.latest_subject
+        : `Re: ${thread.latest_subject}`,
+    );
     setEditingKey(null);
     setEditText("");
+    setSenderBlocked(false);
     setThreadLoading(true);
     try {
-      setThreadMessages(await fetchThreadMessages(thread.email));
+      const messages = await fetchThreadMessages(thread.email);
+      setThreadMessages(messages);
+      setNewMessageIds(
+        new Set(messages.filter((m) => m.status === "new").map((m) => m.id)),
+      );
       if (thread.new_count > 0) {
         await updateThreadStatus(thread.email, "read", { silent: true });
       }
+      // Non-fatal: the block toggle just starts from "not blocked" on error.
+      const { data: blockedRow, error: blockError } = await supabase
+        .from("contact_blocked_senders")
+        .select("email")
+        .eq("email", thread.email.toLowerCase())
+        .maybeSingle();
+      if (blockError) {
+        console.error("[ContactMessages] block lookup error:", blockError.message);
+      }
+      setSenderBlocked(Boolean(blockedRow));
     } catch (err) {
       console.error("[ContactMessages] thread load error:", err.message);
       toast.error("Couldn't load the conversation. Please try again.");
@@ -306,8 +336,53 @@ const ContactMessages = () => {
     setSelectedThread(null);
     setThreadMessages([]);
     setReplyText("");
+    setReplySubject("");
     setEditingKey(null);
     setEditText("");
+    setSenderBlocked(false);
+    setNewMessageIds(new Set());
+  };
+
+  // Block or unblock the open thread's sender. While blocked, contact-submit
+  // silently discards their messages (migration 037), so nothing new arrives
+  // until they're unblocked. Messages they already sent are untouched.
+  const toggleBlockSender = async () => {
+    if (!selectedThread || blockBusy) return;
+    const email = selectedThread.email.toLowerCase();
+
+    if (
+      !senderBlocked &&
+      !window.confirm(
+        `Block ${email}? New messages they send will be discarded — you won't receive anything from them until you unblock them.`,
+      )
+    ) {
+      return;
+    }
+
+    setBlockBusy(true);
+    try {
+      if (senderBlocked) {
+        const { error: unblockError } = await supabase
+          .from("contact_blocked_senders")
+          .delete()
+          .eq("email", email);
+        if (unblockError) throw new Error(unblockError.message);
+        setSenderBlocked(false);
+        toast.success("Sender unblocked — their messages will come through again.");
+      } else {
+        const { error: blockError } = await supabase
+          .from("contact_blocked_senders")
+          .insert({ email });
+        if (blockError) throw new Error(blockError.message);
+        setSenderBlocked(true);
+        toast.success("Sender blocked. You won't receive new messages from them.");
+      }
+    } catch (err) {
+      console.error("[ContactMessages] block toggle error:", err.message);
+      toast.error("Couldn't update the block status. Please try again.");
+    } finally {
+      setBlockBusy(false);
+    }
   };
 
   // Refresh the open thread and the list after a message-level change —
@@ -382,46 +457,36 @@ const ContactMessages = () => {
     setEditText("");
   };
 
-  // Save an edited message. Edits only change the copy stored in the inbox —
-  // an email that already went out is unchanged.
+  // Save an edited reply. Only admin replies are editable — a visitor's
+  // message is their words, not ours. Edits only change the copy stored in
+  // the inbox; the email that already went out is unchanged.
   const saveEdit = async (entry) => {
-    if (messageBusy) return;
-    const parent = threadMessages.find(
-      (m) => m.id === (entry.kind === "admin" ? entry.parentId : entry.id),
-    );
+    if (messageBusy || entry.kind !== "admin") return;
+    const parent = threadMessages.find((m) => m.id === entry.parentId);
     if (!parent) return;
 
     setMessageBusy(true);
     try {
-      if (entry.kind === "visitor") {
-        const text = editText.trim();
-        if (text.length === 0 || text.length > 5000) {
-          toast.error("Message must be between 1 and 5000 characters.");
-          return;
-        }
-        const { error: updateError } = await supabase
-          .from("contact_submissions")
-          .update({ message: text })
-          .eq("id", entry.id);
-        if (updateError) throw new Error(updateError.message);
-      } else {
-        // Same pipeline as sendReply: sanitize, then validate visible length.
-        const parsed = contactReplySchema.safeParse({ message: sanitizeNoteHtml(editText) });
-        if (!parsed.success) {
-          toast.error(parsed.error.issues[0].message);
-          return;
-        }
-        const replies = parent.metadata.replies.map((r, i) =>
-          i === entry.replyIndex
-            ? { ...r, message: parsed.data.message, editedAt: new Date().toISOString() }
-            : r,
-        );
-        const { error: updateError } = await supabase
-          .from("contact_submissions")
-          .update({ metadata: { ...parent.metadata, replies } })
-          .eq("id", entry.parentId);
-        if (updateError) throw new Error(updateError.message);
+      // Same pipeline as sendReply: sanitize, then validate visible length.
+      // The entry's own subject satisfies the schema — editing keeps it.
+      const parsed = contactReplySchema.safeParse({
+        subject: entry.subject,
+        message: sanitizeNoteHtml(editText),
+      });
+      if (!parsed.success) {
+        toast.error(parsed.error.issues[0].message);
+        return;
       }
+      const replies = parent.metadata.replies.map((r, i) =>
+        i === entry.replyIndex
+          ? { ...r, message: parsed.data.message, editedAt: new Date().toISOString() }
+          : r,
+      );
+      const { error: updateError } = await supabase
+        .from("contact_submissions")
+        .update({ metadata: { ...parent.metadata, replies } })
+        .eq("id", entry.parentId);
+      if (updateError) throw new Error(updateError.message);
       cancelEdit();
       toast.success("Message updated.");
       setThreadMessages(await fetchThreadMessages(parent.email));
@@ -442,7 +507,10 @@ const ContactMessages = () => {
 
     // Editor output is already sanitized on change; sanitize again at the
     // trust boundary before it leaves the app (CLAUDE.md §2).
-    const parsed = contactReplySchema.safeParse({ message: sanitizeNoteHtml(replyText) });
+    const parsed = contactReplySchema.safeParse({
+      subject: replySubject,
+      message: sanitizeNoteHtml(replyText),
+    });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
@@ -452,7 +520,13 @@ const ContactMessages = () => {
     try {
       const { data, error: invokeError } = await supabase.functions.invoke(
         "contact-reply",
-        { body: { submissionId: latest.id, message: parsed.data.message } },
+        {
+          body: {
+            submissionId: latest.id,
+            subject: parsed.data.subject,
+            message: parsed.data.message,
+          },
+        },
       );
       if (invokeError || data?.success === false) {
         throw new Error(data?.error ?? invokeError.message);
@@ -495,7 +569,9 @@ const ContactMessages = () => {
           key: `${m.id}-reply-${i}`,
           parentId: m.id,
           replyIndex: i,
-          subject: `Re: ${m.subject}`,
+          // Replies carry their own subject since the composer gained one;
+          // older ones fall back to Re: the email they answered.
+          subject: r.subject ?? `Re: ${m.subject}`,
           message: r.message,
           at: r.at,
           by: r.by,
@@ -691,8 +767,16 @@ const ContactMessages = () => {
                     >
                       {t.latest_name}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                       {t.email}
+                      {/* Unread dot — cleared when the thread is opened
+                          (opening marks the conversation read). */}
+                      {t.new_count > 0 && (
+                        <span
+                          data-testid={`admin-contact-unread-dot-${t.latest_id}`}
+                          className="h-2 w-2 shrink-0 rounded-full bg-danger-500"
+                        />
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
@@ -832,7 +916,13 @@ const ContactMessages = () => {
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          {entry.kind === "visitor" && newMessageIds.has(entry.id) && (
+                            <span
+                              data-testid={`admin-contact-message-unread-dot-${entry.key}`}
+                              className="h-2 w-2 shrink-0 rounded-full bg-danger-500"
+                            />
+                          )}
                           {entry.subject}
                         </p>
                         <div className="flex shrink-0 items-center gap-1.5">
@@ -853,15 +943,19 @@ const ContactMessages = () => {
                           </span>
                           {!isEditing && (
                             <>
-                              <button
-                                data-testid={`admin-contact-message-edit-btn-${entry.key}`}
-                                onClick={() => startEdit(entry)}
-                                disabled={messageBusy}
-                                title="Edit message"
-                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
+                              {/* Only our own replies are editable — a
+                                  visitor's message stays their words. */}
+                              {entry.kind === "admin" && (
+                                <button
+                                  data-testid={`admin-contact-message-edit-btn-${entry.key}`}
+                                  onClick={() => startEdit(entry)}
+                                  disabled={messageBusy}
+                                  title="Edit reply"
+                                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                               <button
                                 data-testid={`admin-contact-message-delete-btn-${entry.key}`}
                                 onClick={() => deleteEntry(entry)}
@@ -885,22 +979,12 @@ const ContactMessages = () => {
                           instead of stretching the thread. */}
                       {isEditing ? (
                         <div className="mt-2">
-                          {entry.kind === "admin" ? (
-                            <RichTextEditor
-                              testId={`admin-contact-message-edit-input-${entry.key}`}
-                              value={editText}
-                              onChange={setEditText}
-                              withHeadings
-                            />
-                          ) : (
-                            <textarea
-                              data-testid={`admin-contact-message-edit-input-${entry.key}`}
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              rows={5}
-                              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-sm text-gray-800 dark:text-gray-200 focus:border-primary-500 focus:ring-primary-500"
-                            />
-                          )}
+                          <RichTextEditor
+                            testId={`admin-contact-message-edit-input-${entry.key}`}
+                            value={editText}
+                            onChange={setEditText}
+                            withHeadings
+                          />
                           <div className="mt-2 flex justify-end gap-2">
                             <button
                               data-testid={`admin-contact-message-edit-cancel-${entry.key}`}
@@ -942,6 +1026,15 @@ const ContactMessages = () => {
             {/* In-app reply — emailed to the sender via the contact-reply
                 Edge Function and recorded in the conversation above. */}
             <div className="mt-4">
+              <input
+                type="text"
+                data-testid="admin-contact-reply-subject-input"
+                value={replySubject}
+                onChange={(e) => setReplySubject(e.target.value)}
+                placeholder="Subject"
+                maxLength={150}
+                className="mb-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+              />
               <RichTextEditor
                 testId="admin-contact-reply-input"
                 value={replyText}
@@ -953,7 +1046,12 @@ const ContactMessages = () => {
                 <button
                   data-testid="admin-contact-send-reply-btn"
                   onClick={sendReply}
-                  disabled={replySending || threadLoading || noteTextLength(replyText) === 0}
+                  disabled={
+                    replySending ||
+                    threadLoading ||
+                    replySubject.trim().length === 0 ||
+                    noteTextLength(replyText) === 0
+                  }
                   className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="h-4 w-4" />
@@ -986,6 +1084,19 @@ const ContactMessages = () => {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-danger-200 dark:border-danger-900/50 px-3 py-1.5 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
               >
                 <ShieldAlert className="h-4 w-4" /> Spam
+              </button>
+              <button
+                data-testid="admin-contact-block-btn"
+                onClick={toggleBlockSender}
+                disabled={blockBusy || threadLoading}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                  senderBlocked
+                    ? "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    : "border-danger-200 dark:border-danger-900/50 text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
+                }`}
+              >
+                <Ban className="h-4 w-4" />
+                {blockBusy ? "Working…" : senderBlocked ? "Unblock sender" : "Block sender"}
               </button>
               <a
                 data-testid="admin-contact-reply-btn"

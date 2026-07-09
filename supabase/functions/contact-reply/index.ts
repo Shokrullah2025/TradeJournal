@@ -15,6 +15,9 @@ const corsHeaders = {
 // sanitization below.
 const replySchema = z.object({
   submissionId: z.string().uuid(),
+  // Optional for backward compatibility — older clients don't send one, and
+  // we fall back to "Re: <original subject>".
+  subject: z.string().trim().min(1).max(150).optional(),
   message: z.string().trim().min(1).max(20000),
 });
 
@@ -117,6 +120,7 @@ Deno.serve(async (req: Request) => {
 
     const supportEmail = Deno.env.get("CONTACT_TO_EMAIL") ?? "support@zalortrade.com";
     const from = `ZalorTrade Support <${supportEmail}>`;
+    const subject = parsed.data.subject ?? `Re: ${submission.subject}`;
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -128,7 +132,7 @@ Deno.serve(async (req: Request) => {
         from,
         to: submission.email,
         reply_to: supportEmail,
-        subject: `Re: ${submission.subject}`,
+        subject,
         html: renderEmail(
           submission.name as string,
           message,
@@ -154,7 +158,7 @@ Deno.serve(async (req: Request) => {
           ...prevMeta,
           replies: [
             ...replies,
-            { at: new Date().toISOString(), by: user.email ?? user.id, message },
+            { at: new Date().toISOString(), by: user.email ?? user.id, subject, message },
           ],
         },
       })
