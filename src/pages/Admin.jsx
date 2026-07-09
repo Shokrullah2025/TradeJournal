@@ -7,6 +7,7 @@ import {
   DollarSign,
   ScrollText,
   Shield,
+  Newspaper,
 } from "lucide-react";
 import AdminOverview from "../components/admin/AdminOverview";
 import UserManagement from "../components/admin/UserManagement";
@@ -14,6 +15,7 @@ import SystemMetrics from "../components/admin/SystemMetrics";
 import FeatureFlagsPanel from "../components/admin/FeatureFlagsPanel";
 import BillingOverview from "../components/admin/BillingOverview";
 import ActivityLog from "../components/admin/ActivityLog";
+import BlogManagement from "../components/admin/BlogManagement";
 
 // ── Admin dashboard ────────────────────────────────────────────────────────
 // Tabbed control center for operators. Each tab is a self-contained panel that
@@ -26,6 +28,7 @@ const TABS = [
   { id: "metrics", name: "System Metrics", icon: Activity, Panel: SystemMetrics },
   { id: "features", name: "Feature Access", icon: Flag, Panel: FeatureFlagsPanel },
   { id: "billing", name: "Billing", icon: DollarSign, Panel: BillingOverview },
+  { id: "blog", name: "Blog", icon: Newspaper, Panel: BlogManagement },
   { id: "activity", name: "Activity Log", icon: ScrollText, Panel: ActivityLog },
 ];
 
