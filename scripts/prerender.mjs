@@ -137,6 +137,18 @@ async function main() {
     count += 1;
   }
 
+  // Render the NotFound page to dist/404.html. Its presence switches
+  // Cloudflare Pages out of blanket SPA mode: unmatched paths return a real
+  // HTTP 404 (no more soft 404s for crawlers) while the client-side app
+  // routes keep working through the explicit rewrites in public/_redirects.
+  // Any path outside the route table hits the "*" NotFound route; it is
+  // deliberately NOT added to the sitemap.
+  {
+    const { html, helmet } = render("/__not_found__");
+    const page = injectBody(injectHead(shell, helmet), html);
+    await writeFile(path.join(DIST, "404.html"), page, "utf8");
+  }
+
   await writeFile(
     path.join(DIST, "sitemap.xml"),
     buildSitemap(PUBLIC_ROUTES, SITE_URL),
