@@ -530,7 +530,9 @@ const ContactMessages = () => {
         >
           <div
             data-testid="admin-contact-detail-modal"
-            className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl"
+            // Fixed height so the modal doesn't grow/shrink with the thread —
+            // the message list flexes and scrolls inside it.
+            className="flex h-[min(85vh,46rem)] w-full max-w-2xl flex-col rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">
@@ -554,7 +556,7 @@ const ContactMessages = () => {
               </button>
             </div>
 
-            <div ref={threadListRef} className="mt-4 max-h-[26rem] space-y-3 overflow-y-auto">
+            <div ref={threadListRef} className="mt-4 flex-1 min-h-0 space-y-3 overflow-y-auto">
               {threadLoading ? (
                 <div
                   data-testid="admin-contact-thread-loading"
@@ -609,16 +611,18 @@ const ContactMessages = () => {
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                         {new Date(entry.at).toLocaleString()}
                       </p>
+                      {/* Long emails scroll inside their own bubble (max-h)
+                          instead of stretching the thread. */}
                       {isHtmlReply ? (
                         <div
-                          className="rich-text-content mt-2 text-sm text-gray-800 dark:text-gray-200"
+                          className="rich-text-content mt-2 max-h-56 overflow-y-auto text-sm text-gray-800 dark:text-gray-200"
                           // Sanitized with DOMPurify (sanitizeNoteHtml) per CLAUDE.md §2.
                           dangerouslySetInnerHTML={{
                             __html: sanitizeNoteHtml(entry.message),
                           }}
                         />
                       ) : (
-                        <div className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
+                        <div className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
                           {entry.message}
                         </div>
                       )}
