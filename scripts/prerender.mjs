@@ -137,17 +137,16 @@ async function main() {
     count += 1;
   }
 
-  // Render the NotFound page to dist/404.html. Its presence switches
-  // Cloudflare Pages out of blanket SPA mode: unmatched paths return a real
-  // HTTP 404 (no more soft 404s for crawlers) while the client-side app
-  // routes keep working through the explicit rewrites in public/_redirects.
-  // Any path outside the route table hits the "*" NotFound route; it is
-  // deliberately NOT added to the sitemap.
-  {
-    const { html, helmet } = render("/__not_found__");
-    const page = injectBody(injectHead(shell, helmet), html);
-    await writeFile(path.join(DIST, "404.html"), page, "utf8");
-  }
+  // NOTE: we intentionally do NOT emit dist/404.html. Its presence switches
+  // Cloudflare Pages out of blanket SPA mode, and the explicit
+  // "/route /index.html 200" rewrites we used to compensate collapse into a
+  // "308 -> /" because Pages canonicalizes the /index.html rewrite target to
+  // "/". That bounced every app route (/login, /register, /dashboard, ...) to
+  // the homepage and locked users out. Keeping SPA fallback active means Pages
+  // serves the app shell at 200 for those routes and the client router renders
+  // the correct page — including its own noindex NotFound for unknown paths.
+  // If real HTTP 404s for crawlers are reintroduced later, verify the SPA
+  // fallback still serves 200 against Cloudflare's live behavior first.
 
   await writeFile(
     path.join(DIST, "sitemap.xml"),
