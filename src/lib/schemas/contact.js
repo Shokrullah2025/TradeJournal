@@ -1,18 +1,25 @@
 import { z } from "zod";
+import { noteTextLength } from "../../utils/sanitizeHtml";
 
-// Validation for the public Contact form. Front-end only — no DB write — but
-// kept in src/lib/schemas/ per the project convention so it's reusable if the
-// form is later wired to an Edge Function.
 // Validation for the admin in-app reply (Contact Inbox thread view). Mirrored
-// server-side in the contact-reply Edge Function.
+// server-side in the contact-reply Edge Function. The message is sanitized
+// rich-text HTML from RichTextEditor, so the 5000-char limit is enforced on
+// the visible text (noteTextLength), with a generous cap on the raw markup.
 export const contactReplySchema = z.object({
   message: z
     .string()
     .trim()
-    .min(1, "Please enter a reply message.")
-    .max(5000, "Reply is too long (5000 characters max)."),
+    .max(20000, "Reply is too long (5000 characters max).")
+    .refine((html) => noteTextLength(html) >= 1, "Please enter a reply message.")
+    .refine(
+      (html) => noteTextLength(html) <= 5000,
+      "Reply is too long (5000 characters max).",
+    ),
 });
 
+// Validation for the public Contact form. Front-end only — no DB write — but
+// kept in src/lib/schemas/ per the project convention so it's reusable if the
+// form is later wired to an Edge Function.
 export const contactSchema = z.object({
   name: z
     .string()

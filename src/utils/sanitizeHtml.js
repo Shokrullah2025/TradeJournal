@@ -9,7 +9,8 @@
 import DOMPurify from "dompurify";
 
 const NOTE_CONFIG = {
-  ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "ul", "ol", "li", "p", "br", "span", "div"],
+  // h1–h3 are produced by the Contact Inbox reply composer (withHeadings).
+  ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "ul", "ol", "li", "p", "br", "span", "div", "h1", "h2", "h3"],
   // `style` is the only attribute we keep — DOMPurify still sanitizes the CSS it
   // contains, so only safe declarations (e.g. `color`) survive.
   ALLOWED_ATTR: ["style"],

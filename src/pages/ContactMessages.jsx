@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import ModalPortal from "../components/common/ModalPortal";
+import RichTextEditor from "../components/common/RichTextEditor";
+import { sanitizeNoteHtml, noteTextLength } from "../utils/sanitizeHtml";
 import {
   Mail,
   Inbox,
@@ -69,8 +71,13 @@ const ContactMessages = () => {
   const [threadMessages, setThreadMessages] = useState([]);
   const [threadLoading, setThreadLoading] = useState(false);
   // In-app reply composer (sent via the contact-reply Edge Function).
+  // Holds sanitized rich-text HTML from RichTextEditor.
   const [replyText, setReplyText] = useState("");
   const [replySending, setReplySending] = useState(false);
+  // Per-tab conversation counts shown on the right of each filter tab.
+  const [tabCounts, setTabCounts] = useState(null);
+  // Scrollable thread container — kept pinned to the newest message (bottom).
+  const threadListRef = useRef(null);
   // Global unread count — shown on the "New" filter tab and used to trigger a
   // live reload of the list when a new submission arrives.
   const { newCount } = useContactInboxCount();
@@ -94,12 +101,41 @@ const ContactMessages = () => {
     return { data: data ?? [], count: count ?? 0 };
   }, [page, statusFilter]);
 
+  // Head-only count queries per tab, mirroring the list filters exactly, so
+  // each tab badge matches the number of rows shown when it's selected.
+  const loadCounts = useCallback(async () => {
+    try {
+      const head = () =>
+        supabase
+          .from("contact_threads")
+          .select("email", { count: "exact", head: true });
+      const [all, unread, read, archived, spam] = await Promise.all([
+        head(),
+        head().gt("new_count", 0),
+        head().eq("latest_status", "read"),
+        head().eq("latest_status", "archived"),
+        head().eq("latest_status", "spam"),
+      ]);
+      const results = { all, new: unread, read, archived, spam };
+      const next = {};
+      for (const [key, res] of Object.entries(results)) {
+        if (res.error) throw new Error(res.error.message);
+        next[key] = res.count ?? 0;
+      }
+      setTabCounts(next);
+    } catch (err) {
+      // Counts are decorative — log and keep the last known values.
+      console.error("[ContactMessages] tab counts error:", err.message);
+    }
+  }, []);
+
   // newCount is a dependency so an incoming submission (realtime) reloads the
   // list and the fresh conversation appears at the top without a refresh.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
+    loadCounts();
     load()
       .then(({ data, count }) => {
         if (cancelled) return;
@@ -117,10 +153,11 @@ const ContactMessages = () => {
     return () => {
       cancelled = true;
     };
-  }, [load, newCount]);
+  }, [load, loadCounts, newCount]);
 
   // Apply a status to every message in a sender's conversation. Threads are
   // triaged as a unit — archiving or flagging spam covers the whole history.
+  // Returns true on success so callers (e.g. "Mark read") can close the modal.
   const updateThreadStatus = async (email, status, { silent = false } = {}) => {
     try {
       let query = supabase.from("contact_submissions").update({ status }).eq("email", email);
@@ -147,10 +184,13 @@ const ContactMessages = () => {
           status === "read" ? (m.status === "new" ? { ...m, status: "read" } : m) : { ...m, status },
         ),
       );
+      loadCounts();
       if (!silent) toast.success(`Conversation marked as ${status}.`);
+      return true;
     } catch (err) {
       console.error("[ContactMessages] update error:", err.message);
       if (!silent) toast.error("Couldn't update the conversation. Please try again.");
+      return false;
     }
   };
 
@@ -199,7 +239,9 @@ const ContactMessages = () => {
     const latest = threadMessages[0];
     if (!latest || replySending) return;
 
-    const parsed = contactReplySchema.safeParse({ message: replyText });
+    // Editor output is already sanitized on change; sanitize again at the
+    // trust boundary before it leaves the app (CLAUDE.md §2).
+    const parsed = contactReplySchema.safeParse({ message: sanitizeNoteHtml(replyText) });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
@@ -226,8 +268,9 @@ const ContactMessages = () => {
     }
   };
 
-  // Flatten visitor messages and admin replies into one conversation, newest
-  // first — so the latest email (or reply) always sits at the top.
+  // Flatten visitor messages and admin replies into one conversation in
+  // chronological order — oldest at the top, the newest message at the bottom
+  // (the container is kept scrolled to the bottom, like a chat).
   const conversation = useMemo(() => {
     const entries = [];
     for (const m of threadMessages) {
@@ -250,8 +293,15 @@ const ContactMessages = () => {
         });
       });
     }
-    return entries.sort((a, b) => new Date(b.at) - new Date(a.at));
+    return entries.sort((a, b) => new Date(a.at) - new Date(b.at));
   }, [threadMessages]);
+
+  // Pin the thread to the newest message whenever the conversation changes
+  // (open, incoming reload, or a reply just sent).
+  useEffect(() => {
+    const el = threadListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [conversation]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const latestMessage = threadMessages[0] ?? null;
@@ -276,37 +326,47 @@ const ContactMessages = () => {
         </span>
       </div>
 
-      {/* Status filter */}
+      {/* Status filter — every tab shows its conversation count on the right */}
       <div className="flex flex-wrap gap-2">
-        {STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            data-testid={`admin-contact-filter-${f.value}`}
-            onClick={() => {
-              setStatusFilter(f.value);
-              setPage(0);
-            }}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              statusFilter === f.value
-                ? "bg-primary-600 text-white"
-                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-            }`}
-          >
-            {f.label}
-            {f.value === "new" && newCount > 0 && (
-              <span
-                data-testid="admin-contact-new-tab-badge"
-                className={`min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full text-[11px] font-semibold ${
-                  statusFilter === "new"
-                    ? "bg-white/25 text-white"
-                    : "bg-danger-500 text-white"
-                }`}
-              >
-                {newCount > 99 ? "99+" : newCount}
-              </span>
-            )}
-          </button>
-        ))}
+        {STATUS_FILTERS.map((f) => {
+          const active = statusFilter === f.value;
+          const count = tabCounts?.[f.value];
+          return (
+            <button
+              key={f.value}
+              data-testid={`admin-contact-filter-${f.value}`}
+              onClick={() => {
+                setStatusFilter(f.value);
+                setPage(0);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-primary-600 text-white"
+                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
+            >
+              {f.label}
+              {count != null && (
+                <span
+                  data-testid={
+                    f.value === "new"
+                      ? "admin-contact-new-tab-badge"
+                      : `admin-contact-tab-count-${f.value}`
+                  }
+                  className={`min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full text-[11px] font-semibold ${
+                    active
+                      ? "bg-white/25 text-white"
+                      : f.value === "new" && count > 0
+                      ? "bg-danger-500 text-white"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  }`}
+                >
+                  {count > 99 ? "99+" : count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="card overflow-hidden">
@@ -482,7 +542,7 @@ const ContactMessages = () => {
                   data-testid="admin-contact-thread-message-count"
                   className="mt-1 text-sm text-gray-500 dark:text-gray-400"
                 >
-                  {threadCount} {threadCount === 1 ? "message" : "messages"} — newest first
+                  {threadCount} {threadCount === 1 ? "message" : "messages"} — newest at the bottom
                 </p>
               </div>
               <button
@@ -494,7 +554,7 @@ const ContactMessages = () => {
               </button>
             </div>
 
-            <div className="mt-4 max-h-[26rem] space-y-3 overflow-y-auto">
+            <div ref={threadListRef} className="mt-4 max-h-[26rem] space-y-3 overflow-y-auto">
               {threadLoading ? (
                 <div
                   data-testid="admin-contact-thread-loading"
@@ -510,63 +570,79 @@ const ContactMessages = () => {
                   No messages found for this sender.
                 </p>
               ) : (
-                conversation.map((entry, index) => (
-                  <div
-                    key={entry.key}
-                    data-testid={`admin-contact-thread-message-${entry.key}`}
-                    className={`rounded-lg p-4 ${
-                      entry.kind === "admin"
-                        ? "ml-8 bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
-                        : "mr-8 bg-gray-50 dark:bg-gray-900"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {entry.subject}
+                conversation.map((entry, index) => {
+                  const isNewest = index === conversation.length - 1;
+                  // Admin replies may carry rich-text HTML (headings, lists);
+                  // older plain-text replies fall back to the text renderer.
+                  const isHtmlReply =
+                    entry.kind === "admin" && /<[a-z][^>]*>/i.test(entry.message);
+                  return (
+                    <div
+                      key={entry.key}
+                      data-testid={`admin-contact-thread-message-${entry.key}`}
+                      className={`rounded-lg p-4 ${
+                        entry.kind === "admin"
+                          ? "ml-auto w-1/2 bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
+                          : "mr-8 bg-gray-50 dark:bg-gray-900"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          {entry.subject}
+                        </p>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            entry.kind === "admin"
+                              ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
+                              : isNewest
+                              ? "bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-300"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          }`}
+                        >
+                          {entry.kind === "admin"
+                            ? "You replied"
+                            : isNewest
+                            ? "Latest"
+                            : selectedThread.latest_name}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        {new Date(entry.at).toLocaleString()}
                       </p>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                          entry.kind === "admin"
-                            ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
-                            : index === 0
-                            ? "bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-300"
-                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                        }`}
-                      >
-                        {entry.kind === "admin"
-                          ? "You replied"
-                          : index === 0
-                          ? "Latest"
-                          : selectedThread.latest_name}
-                      </span>
+                      {isHtmlReply ? (
+                        <div
+                          className="rich-text-content mt-2 text-sm text-gray-800 dark:text-gray-200"
+                          // Sanitized with DOMPurify (sanitizeNoteHtml) per CLAUDE.md §2.
+                          dangerouslySetInnerHTML={{
+                            __html: sanitizeNoteHtml(entry.message),
+                          }}
+                        />
+                      ) : (
+                        <div className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
+                          {entry.message}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {new Date(entry.at).toLocaleString()}
-                    </p>
-                    <div className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
-                      {entry.message}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
             {/* In-app reply — emailed to the sender via the contact-reply
                 Edge Function and recorded in the conversation above. */}
             <div className="mt-4">
-              <textarea
-                data-testid="admin-contact-reply-input"
+              <RichTextEditor
+                testId="admin-contact-reply-input"
                 value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                rows={3}
+                onChange={setReplyText}
                 placeholder={`Reply to ${selectedThread.latest_name}…`}
-                className="w-full resize-y rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                withHeadings
               />
               <div className="mt-2 flex justify-end">
                 <button
                   data-testid="admin-contact-send-reply-btn"
                   onClick={sendReply}
-                  disabled={replySending || threadLoading || !replyText.trim()}
+                  disabled={replySending || threadLoading || noteTextLength(replyText) === 0}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="h-4 w-4" />
@@ -578,7 +654,10 @@ const ContactMessages = () => {
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 data-testid="admin-contact-mark-read-btn"
-                onClick={() => updateThreadStatus(selectedThread.email, "read")}
+                onClick={async () => {
+                  // Marking read is a "done triaging" action — close the modal.
+                  if (await updateThreadStatus(selectedThread.email, "read")) closeThread();
+                }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <CheckCircle className="h-4 w-4" /> Mark read

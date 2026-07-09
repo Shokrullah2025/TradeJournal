@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3";
+import sanitizeHtml from "https://esm.sh/sanitize-html@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +9,35 @@ const corsHeaders = {
 };
 
 // Server-side mirror of src/lib/schemas/contact.js `contactReplySchema`.
-// Never trust the browser — re-validate here (CLAUDE.md §2).
+// Never trust the browser — re-validate here (CLAUDE.md §2). The message is
+// rich-text HTML from the inbox composer; the raw cap is generous for markup
+// and the real 5000-char limit is enforced on the visible text after
+// sanitization below.
 const replySchema = z.object({
   submissionId: z.string().uuid(),
-  message: z.string().trim().min(1).max(5000),
+  message: z.string().trim().min(1).max(20000),
 });
+
+// Same allowlist the app's RichTextEditor / sanitizeNoteHtml produces:
+// inline formatting, lists, headings, and a color style — nothing else.
+const SANITIZE_OPTIONS = {
+  allowedTags: [
+    "b", "strong", "i", "em", "u", "ul", "ol", "li",
+    "p", "br", "span", "div", "h1", "h2", "h3",
+  ],
+  allowedAttributes: { "*": ["style"] },
+  allowedStyles: {
+    "*": { color: [/^#[0-9a-fA-F]{3,8}$/, /^rgba?\([\d\s,./%]+\)$/, /^inherit$/] },
+  },
+};
+
+/** Visible-text length of sanitized reply HTML (mirrors noteTextLength). */
+function textLength(html: string): number {
+  return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} })
+    .replace(/\s+/g, " ")
+    .trim()
+    .length;
+}
 
 // Admin-only endpoint. Lets a support admin reply to a contact submission from
 // inside the app; the reply is emailed to the submitter FROM the support address
@@ -60,7 +85,17 @@ Deno.serve(async (req: Request) => {
     if (!parsed.success) {
       return errorResponse("Please enter a reply message.", 400);
     }
-    const { submissionId, message } = parsed.data;
+    const { submissionId } = parsed.data;
+    // Sanitize to the editor's allowlist, then enforce the limit on what the
+    // recipient will actually read.
+    const message = sanitizeHtml(parsed.data.message, SANITIZE_OPTIONS);
+    const visibleLength = textLength(message);
+    if (visibleLength === 0) {
+      return errorResponse("Please enter a reply message.", 400);
+    }
+    if (visibleLength > 5000) {
+      return errorResponse("Reply is too long (5000 characters max).", 400);
+    }
 
     const { data: submission, error: lookupError } = await supabase
       .from("contact_submissions")
@@ -132,15 +167,19 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-function renderEmail(name: string, message: string): string {
-  // Escape user-controlled strings before embedding in HTML (CLAUDE.md §2).
+function renderEmail(name: string, messageHtml: string): string {
+  // `messageHtml` is already sanitized (SANITIZE_OPTIONS above) so it can be
+  // embedded as-is; the sender name is still escaped (CLAUDE.md §2).
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const safeMessage = esc(message).replace(/\n/g, "<br />");
+  // Plain-text replies (no markup) keep their line breaks.
+  const body = /<[a-z][^>]*>/i.test(messageHtml)
+    ? messageHtml
+    : messageHtml.replace(/\n/g, "<br />");
   return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px;">
     <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e5e7eb;">
       <p style="font-size:14px;color:#111827;margin:0 0 16px;">Hi ${esc(name)},</p>
-      <div style="font-size:14px;color:#111827;line-height:1.6;white-space:pre-wrap;">${safeMessage}</div>
+      <div style="font-size:14px;color:#111827;line-height:1.6;">${body}</div>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
       <p style="font-size:12px;color:#9ca3af;margin:0;">ZalorTrade Support · Reply to this email to continue the conversation.</p>
     </div>
