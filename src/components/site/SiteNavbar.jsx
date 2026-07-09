@@ -249,7 +249,7 @@ const SiteNavbar = () => {
               Sign in
             </button>
             <Link
-              to="/login"
+              to="/register"
               data-testid="site-nav-getstarted-btn"
               className="btn btn-site btn-sm"
             >
@@ -473,7 +473,7 @@ const SiteNavbar = () => {
                 Sign in
               </button>
               <Link
-                to="/login"
+                to="/register"
                 data-testid="site-nav-mobile-getstarted-btn"
                 className="btn btn-site inline-flex w-56 max-w-full items-center justify-center"
               >

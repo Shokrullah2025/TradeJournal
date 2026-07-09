@@ -447,7 +447,7 @@ const Home = () => (
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              to="/login"
+              to="/register"
               data-testid="home-hero-getstarted-btn"
               className="btn btn-site inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold"
             >

@@ -24,9 +24,9 @@ export const SITE_DESCRIPTION =
   "analytics — win rate, profit factor, drawdown, and more.";
 
 // Default social-share image. A 1200x630 PNG/JPG gives the best preview across
-// X, Facebook, LinkedIn, and Slack. Replace /og-image.png in public/ with a
-// branded card; until then the logo is used as a safe fallback.
-export const DEFAULT_OG_IMAGE = "/og-image.png";
+// X, Facebook, LinkedIn, and Slack. Generated from the ZalorTrade logo art;
+// JPEG keeps it small enough for fast crawler fetches.
+export const DEFAULT_OG_IMAGE = "/og-image.jpg";
 
 export const TWITTER_HANDLE = "@zalortrade";
 
