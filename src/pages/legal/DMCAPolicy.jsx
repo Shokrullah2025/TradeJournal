@@ -10,7 +10,7 @@ const DMCAPolicy = () => (
     slug="dmca"
   >
     <p>
-      This DMCA & Copyright Policy describes how <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), handles claims of copyright infringement in connection with ZalorTrade (the "Service"), and explains your rights and obligations under the Digital Millennium Copyright Act, 17 U.S.C. § 512 (the "DMCA").
+      This DMCA & Copyright Policy describes how <strong>ZalorTrade</strong> ("Company," "we," "us," or "our"), handles claims of copyright infringement in connection with ZalorTrade (the "Service"), and explains your rights and obligations under the Digital Millennium Copyright Act, 17 U.S.C. § 512 (the "DMCA").
     </p>
     <p>
       We respect intellectual property rights and expect our users to do the same. This policy is incorporated into our <Link to="/terms">Terms of Service</Link>.
@@ -22,10 +22,9 @@ const DMCAPolicy = () => (
     </p>
     <div className="bg-gray-100 dark:bg-gray-800 rounded-md px-5 py-4 my-4">
       <p><strong>Copyright Agent</strong></p>
-      <p>[COMPANY LEGAL NAME]</p>
+      <p>ZalorTrade</p>
       <p>Attn: DMCA Copyright Agent</p>
-      <p>[PRINCIPAL ADDRESS]</p>
-      <p>Email: [CONTACT EMAIL] (subject line: DMCA Takedown Notice)</p>
+      <p>Email: noreply@zalortrade.com (subject line: DMCA Takedown Notice)</p>
     </div>
     <p>
       Only DMCA notices should be sent to this address. Other correspondence will not receive a response.
@@ -56,7 +55,7 @@ const DMCAPolicy = () => (
       <li><strong>Accuracy statement:</strong> A statement, made under penalty of perjury, that the information in the notification is accurate and that you are the copyright owner or are authorized to act on behalf of the copyright owner.</li>
     </ol>
     <p>
-      Send your complete takedown notice to our Copyright Agent at <strong>[CONTACT EMAIL]</strong> with the subject line "DMCA Takedown Notice."
+      Send your complete takedown notice to our Copyright Agent at <strong>noreply@zalortrade.com</strong> with the subject line "DMCA Takedown Notice."
     </p>
     <p>
       <strong>Warning:</strong> Filing a materially false DMCA takedown notice may expose you to civil liability under 17 U.S.C. § 512(f), including liability for damages and attorneys' fees.
@@ -84,11 +83,11 @@ const DMCAPolicy = () => (
       <li><strong>Signature:</strong> Your physical or electronic signature;</li>
       <li><strong>Identification of removed material:</strong> Identification of the material that was removed and the location where it appeared before removal;</li>
       <li><strong>Statement under penalty of perjury:</strong> A statement under penalty of perjury that you have a good faith belief that the material was removed as a result of mistake or misidentification;</li>
-      <li><strong>Consent to jurisdiction:</strong> Your name, address, and telephone number, and a statement that you consent to the jurisdiction of the federal district court for the judicial district in which your address is located (or, if outside the U.S., the U.S. District Court for the District of Colorado), and that you will accept service of process from the party that submitted the original takedown notice; and</li>
+      <li><strong>Consent to jurisdiction:</strong> Your name, address, and telephone number, and a statement that you consent to the jurisdiction of the federal district court for the judicial district in which your address is located (or, if outside the U.S., any judicial district in which the Company may be found), and that you will accept service of process from the party that submitted the original takedown notice; and</li>
       <li><strong>Contact information:</strong> Your current email address.</li>
     </ol>
     <p>
-      Send your counter-notification to our Copyright Agent at <strong>[CONTACT EMAIL]</strong> with the subject line "DMCA Counter-Notification."
+      Send your counter-notification to our Copyright Agent at <strong>noreply@zalortrade.com</strong> with the subject line "DMCA Counter-Notification."
     </p>
     <p>
       Upon receipt of a valid counter-notification, we will forward it to the original complainant and inform them that we may restore the removed content within <strong>10–14 business days</strong> unless the complainant notifies us that they have filed an action seeking a court order to restrain you from engaging in the infringing activity. If no such court order is received, we will restore the removed content.
@@ -104,7 +103,7 @@ const DMCAPolicy = () => (
 
     <h2>7. Our Own Copyright and Intellectual Property</h2>
     <p>
-      All software code, user interface designs, icons, logos, trademarks, and other proprietary content of ZalorTrade are owned by [COMPANY LEGAL NAME] and are protected by U.S. copyright law (17 U.S.C. § 102 et seq.), trademark law, and other applicable intellectual property laws.
+      All software code, user interface designs, icons, logos, trademarks, and other proprietary content of ZalorTrade are owned by ZalorTrade and are protected by U.S. copyright law (17 U.S.C. § 102 et seq.), trademark law, and other applicable intellectual property laws.
     </p>
     <p>
       You may not copy, reproduce, distribute, create derivative works from, or publicly display any portion of the Service's codebase, design, or brand elements without our prior written consent. Unauthorized use of our copyrighted material may result in civil and criminal liability under applicable law.
@@ -112,14 +111,13 @@ const DMCAPolicy = () => (
 
     <h2>8. Trademarks</h2>
     <p>
-      "ZalorTrade" and any associated logos are trademarks or service marks of [COMPANY LEGAL NAME]. Nothing in these terms or this policy grants you any right to use our trademarks, trade names, or service marks without our prior written approval. All other trademarks mentioned on the Service are the property of their respective owners.
+      "ZalorTrade" and any associated logos are trademarks or service marks of ZalorTrade. Nothing in these terms or this policy grants you any right to use our trademarks, trade names, or service marks without our prior written approval. All other trademarks mentioned on the Service are the property of their respective owners.
     </p>
 
     <h2>9. Contact</h2>
     <p>For all DMCA and copyright matters:</p>
     <ul>
-      <li><strong>Email:</strong> [CONTACT EMAIL] (subject: DMCA Notice)</li>
-      <li><strong>Mail:</strong> [COMPANY LEGAL NAME], Attn: DMCA Copyright Agent, [PRINCIPAL ADDRESS]</li>
+      <li><strong>Email:</strong> noreply@zalortrade.com (subject: DMCA Notice)</li>
     </ul>
   </LegalPageWrapper>
 );

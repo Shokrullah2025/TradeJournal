@@ -10,7 +10,6 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   Inbox,
-  TrendingUp,
   X,
   ChevronLeft,
   ChevronRight,
@@ -93,9 +92,11 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                 title="Expand Sidebar"
               >
                 {/* App Logo - visible by default, hidden on hover */}
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 shadow-md shadow-primary-600/30 rounded-xl group-hover:opacity-0 transition-opacity duration-200">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="ZalorTrade logo"
+                  className="w-10 h-10 rounded-xl object-cover shadow-md shadow-primary-600/30 group-hover:opacity-0 transition-opacity duration-200"
+                />
 
                 {/* Expand icon - hidden by default, visible on hover, same size as logo */}
                 <div className="absolute flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl opacity-0 group-hover:opacity-100 hover:brightness-110 transition-all duration-200">
@@ -104,12 +105,17 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
               </button>
             ) : (
               <>
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 shadow-md shadow-primary-600/30 rounded-xl">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="ZalorTrade logo"
+                  className="w-10 h-10 rounded-xl object-cover shadow-md shadow-primary-600/30"
+                />
                 <div>
                   <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    Journal
+                    Zalor
+                    <span className="text-primary-600 dark:text-primary-400">
+                      Trade
+                    </span>
                   </h1>
                 </div>
               </>
