@@ -12,8 +12,10 @@
 export const SITE_NAME = "ZalorTrade";
 
 // Absolute origin used for canonical URLs, sitemap entries, and og:url.
+// Keep the APEX domain (no www) — it is the host Bing/Google have indexed
+// and the one every canonical, sitemap entry, and OG tag already uses.
 export const SITE_URL = (
-  import.meta.env.VITE_SITE_URL || "https://www.zalortrade.com"
+  import.meta.env.VITE_SITE_URL || "https://zalortrade.com"
 ).replace(/\/+$/, "");
 
 // One-line value proposition reused as the default meta description and the
