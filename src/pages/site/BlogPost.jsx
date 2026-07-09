@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import Seo from "../../components/seo/Seo";
@@ -7,18 +7,56 @@ import FAQAccordion from "../../components/site/FAQAccordion";
 import CTASection from "../../components/site/CTASection";
 import NotFound from "./NotFound";
 import { getBlogPost } from "../../components/site/blogPosts";
+import { fetchPublishedBlogPost } from "../../lib/blogApi";
 import { formatLongDate } from "../../utils/date";
 import { absoluteUrl, SITE_NAME, DEFAULT_OG_IMAGE } from "../../utils/seo";
 
 /**
- * Blog article page (route "/blog/:slug"). Renders a post from the blogPosts
- * content module with Article + BreadcrumbList (+ FAQPage) structured data.
- * Unknown slugs render the 404 page rather than silently redirecting, so
- * crawlers see an explicit noindex instead of a soft duplicate.
+ * Blog article page (route "/blog/:slug"). Static posts (blogPosts content
+ * module) resolve synchronously — so build-time prerendering still sees full
+ * HTML — and any other slug is looked up in the blog_posts table, where
+ * admin-authored articles live (Admin → Blog tab). Unknown slugs render the
+ * 404 page rather than silently redirecting, so crawlers see an explicit
+ * noindex instead of a soft duplicate.
  */
 const BlogPost = () => {
   const { slug } = useParams();
-  const post = getBlogPost(slug);
+  const staticPost = getBlogPost(slug);
+  const [dynamicPost, setDynamicPost] = useState(null);
+  const [loading, setLoading] = useState(!staticPost);
+
+  useEffect(() => {
+    if (staticPost) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    setDynamicPost(null);
+    fetchPublishedBlogPost(slug)
+      .then((post) => {
+        if (!cancelled) setDynamicPost(post);
+      })
+      .catch((err) => {
+        console.error("[BlogPost] could not load post:", err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, staticPost]);
+
+  const post = staticPost ?? dynamicPost;
+
+  if (!post && loading) {
+    return (
+      <div
+        className="flex items-center justify-center py-32"
+        data-testid="blog-post-loading-spinner"
+      >
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent-600" />
+      </div>
+    );
+  }
 
   if (!post) return <NotFound />;
 
@@ -32,7 +70,7 @@ const BlogPost = () => {
       description: post.seo.description,
       datePublished: post.publishedAt,
       dateModified: post.updatedAt,
-      image: absoluteUrl(DEFAULT_OG_IMAGE),
+      image: post.coverImage ?? absoluteUrl(DEFAULT_OG_IMAGE),
       mainEntityOfPage: absoluteUrl(path),
       author: { "@type": "Organization", name: SITE_NAME, url: absoluteUrl("/") },
       publisher: {
@@ -105,6 +143,14 @@ const BlogPost = () => {
             </span>
           ))}
         </div>
+        {post.coverImage && (
+          <img
+            src={post.coverImage}
+            alt={post.title}
+            data-testid={`blog-post-${post.slug}-cover-img`}
+            className="mt-8 aspect-[2/1] w-full rounded-2xl border border-gray-200 dark:border-gray-700 object-cover"
+          />
+        )}
         <p className="mt-8 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
           {post.intro}
         </p>
