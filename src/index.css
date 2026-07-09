@@ -227,6 +227,22 @@
 .rich-text-content li {
   margin: 0.125rem 0;
 }
+/* Headings from the reply composer — preflight also flattens h1–h3. */
+.rich-text-content h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.5rem 0 0.25rem;
+}
+.rich-text-content h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+}
+.rich-text-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+}
 
 /* ==========================================================================
    Dark-theme retint — match the Risk Calculator across the authenticated app

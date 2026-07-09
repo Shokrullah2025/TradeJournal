@@ -47,6 +47,21 @@ Deno.serve(async (req: Request) => {
     }
     const { name, email, subject, message } = parsed.data;
 
+    // Blocked sender (admin block list, migration 037): silently discard.
+    // Return success so the sender can't tell they're blocked — nothing is
+    // stored, no notification or email goes out.
+    const { data: blocked, error: blockLookupError } = await supabase
+      .from("contact_blocked_senders")
+      .select("email")
+      .eq("email", email.toLowerCase())
+      .maybeSingle();
+    if (blockLookupError) {
+      // Fail open: a lookup hiccup must not drop legitimate messages.
+      console.error("contact-submit block lookup failed:", blockLookupError.message);
+    } else if (blocked) {
+      return successResponse({ id: null });
+    }
+
     const ip = (req.headers.get("x-forwarded-for") ?? "")
       .split(",")[0]
       .trim() || "unknown";
