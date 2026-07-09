@@ -87,7 +87,7 @@ export const BLOG_POSTS = [
     seo: {
       title: "Win Rate vs Profit Factor Explained",
       description:
-        "Win rate feels good but profit factor pays the bills. Learn what each metric really measures, how they interact, and which numbers a profitable trading strategy actually needs.",
+        "Win rate feels good but profit factor pays the bills. Learn what each metric measures and which numbers a profitable trading strategy needs.",
     },
     publishedAt: "2026-07-08",
     updatedAt: "2026-07-08",
@@ -154,7 +154,7 @@ export const BLOG_POSTS = [
     seo: {
       title: "How to Pass a Prop Firm Evaluation",
       description:
-        "Most traders fail prop firm evaluations on rules, not skill. A data-driven playbook for passing funded challenges: daily loss math, position sizing, and the stats to track.",
+        "Most traders fail prop firm evaluations on rules, not skill. A data-driven playbook: daily loss math, position sizing, and the stats to track.",
     },
     publishedAt: "2026-07-08",
     updatedAt: "2026-07-08",

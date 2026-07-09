@@ -33,7 +33,7 @@ export const FEATURE_PAGES = [
     seo: {
       title: "Trade Journal — Log Every Trade in Seconds",
       description:
-        "A frictionless online trading journal: log entries in seconds, attach chart screenshots, tag setups and mistakes, and build the track record that makes you consistent.",
+        "A frictionless online trading journal: log entries in seconds, attach chart screenshots, tag setups and mistakes, and build a track record you can trust.",
     },
     hero: {
       title: "A trading journal you'll actually keep",
@@ -110,7 +110,7 @@ export const FEATURE_PAGES = [
     seo: {
       title: "Trade Calendar — Your P&L Day by Day",
       description:
-        "See your trading profit and loss on a colour-coded calendar. Spot winning streaks, losing days, and overtrading patterns at a glance, then drill into any day's trades.",
+        "See your trading profit and loss on a colour-coded calendar. Spot streaks, losing days, and overtrading patterns at a glance, then drill into any day.",
     },
     hero: {
       title: "Your month, at a glance",
@@ -171,7 +171,7 @@ export const FEATURE_PAGES = [
     seo: {
       title: "Broker Auto-Sync (Coming Soon) — Import Trades Automatically",
       description:
-        "Broker auto-sync is coming soon to ZalorTrade: connect Tradovate and popular futures prop firms to auto-import fills in real time. CSV and Excel import is available today.",
+        "Broker auto-sync is coming soon: connect Tradovate and popular futures prop firms to auto-import fills. CSV and Excel import is available today.",
     },
     hero: {
       title: "Your fills, imported automatically",
@@ -313,7 +313,7 @@ export const FEATURE_PAGES = [
     seo: {
       title: "Advanced Trading Reports — Strategy, Instrument & Time Analysis",
       description:
-        "Break your trading performance down by strategy, instrument, day of week, and hour of day. Find where your real edge lives and cut the sessions that bleed money.",
+        "Break your trading performance down by strategy, instrument, and hour. Find where your real edge lives and cut the sessions that bleed money.",
     },
     hero: {
       title: "Find out where your edge actually lives",
@@ -439,7 +439,7 @@ export const FEATURE_PAGES = [
     seo: {
       title: "Backtesting Studio — Replay Markets Bar by Bar",
       description:
-        "Prove a trading strategy before risking money. Replay historical price action bar by bar, place simulated entries and exits, and measure results with the same analytics as live trades.",
+        "Prove a trading strategy before risking money. Replay price action bar by bar, place simulated entries and exits, and measure results like live trades.",
     },
     hero: {
       title: "Prove it before you trade it",
@@ -621,7 +621,7 @@ export const SOLUTION_PAGES = [
     seo: {
       title: "Trading Journal for Day Traders",
       description:
-        "A trading journal built for day trading volume: log trades in seconds, import a whole session via CSV, review it on a P&L calendar, and find which hours of the day actually pay you.",
+        "A trading journal built for day trading volume: log trades in seconds, import a session via CSV, and find which hours of the day actually pay you.",
     },
     hero: {
       title: "A journal that keeps up with day trading",
@@ -675,7 +675,7 @@ export const SOLUTION_PAGES = [
     seo: {
       title: "Futures Trading Journal — Tick-Perfect P&L",
       description:
-        "A futures trading journal with correct tick-value P&L for ES, NQ, CL and more, contract-based risk sizing, analytics built for leveraged markets — and direct Tradovate sync coming soon.",
+        "A futures trading journal with correct tick-value PnL for ES, NQ and CL, contract-based risk sizing, and analytics built for leveraged markets.",
     },
     hero: {
       title: "Built for the futures tape",
@@ -729,7 +729,7 @@ export const SOLUTION_PAGES = [
     seo: {
       title: "Forex & Crypto Trading Journal",
       description:
-        "A trading journal for forex and crypto: pip-based risk maths, fractional position sizes, session analysis across 24-hour markets, and CSV import from any platform.",
+        "A trading journal for forex and crypto: pip-based risk maths, fractional position sizes, session analysis for 24-hour markets, and CSV import.",
     },
     hero: {
       title: "For markets that never close",
@@ -783,7 +783,7 @@ export const SOLUTION_PAGES = [
     seo: {
       title: "Prop Firm Trading Journal — Apex, Topstep & More",
       description:
-        "Pass and keep funded accounts with a journal built for prop trading: track Apex, Topstep and MyFundedFutures evaluations, watch drawdown usage, and prove your consistency. Auto-sync coming soon.",
+        "Pass and keep funded accounts: track Apex, Topstep and MyFundedFutures evaluations, watch drawdown usage, and prove your consistency with data.",
     },
     hero: {
       title: "Trade the evaluation like a professional",
