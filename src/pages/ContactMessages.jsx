@@ -12,6 +12,7 @@ import {
   ChevronRight,
   MessagesSquare,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -76,6 +77,9 @@ const ContactMessages = () => {
   const [replySending, setReplySending] = useState(false);
   // Per-tab conversation counts shown on the right of each filter tab.
   const [tabCounts, setTabCounts] = useState(null);
+  // Row selection (by sender email) for the bulk delete action.
+  const [selectedEmails, setSelectedEmails] = useState(() => new Set());
+  const [deleting, setDeleting] = useState(false);
   // Scrollable thread container — kept pinned to the newest message (bottom).
   const threadListRef = useRef(null);
   // Global unread count — shown on the "New" filter tab and used to trigger a
@@ -154,6 +158,68 @@ const ContactMessages = () => {
       cancelled = true;
     };
   }, [load, loadCounts, newCount]);
+
+  // Selections don't carry across pages/filters — the rows they referred to
+  // are no longer visible.
+  useEffect(() => {
+    setSelectedEmails(new Set());
+  }, [statusFilter, page]);
+
+  const toggleSelected = (email) => {
+    setSelectedEmails((prev) => {
+      const next = new Set(prev);
+      if (next.has(email)) next.delete(email);
+      else next.add(email);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedEmails((prev) =>
+      prev.size === threads.length ? new Set() : new Set(threads.map((t) => t.email)),
+    );
+  };
+
+  // Permanently delete every message from the selected senders (RLS: admin
+  // delete policy from migration 035). Destructive — confirmed first.
+  const deleteSelected = async () => {
+    if (deleting || selectedEmails.size === 0) return;
+    const emails = [...selectedEmails];
+    const label =
+      emails.length === 1 ? "this conversation" : `${emails.length} conversations`;
+    if (
+      !window.confirm(
+        `Delete ${label}? Every message from the selected sender(s) will be permanently removed. This can't be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from("contact_submissions")
+        .delete()
+        .in("email", emails);
+      if (deleteError) throw new Error(deleteError.message);
+
+      if (selectedThread && emails.includes(selectedThread.email)) closeThread();
+      setSelectedEmails(new Set());
+      toast.success(
+        emails.length === 1 ? "Conversation deleted." : `${emails.length} conversations deleted.`,
+      );
+      // Reload so pagination and counts stay accurate.
+      const { data, count } = await load();
+      setThreads(data);
+      setTotal(count);
+      loadCounts();
+    } catch (err) {
+      console.error("[ContactMessages] delete error:", err.message);
+      toast.error("Couldn't delete the selected conversations. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Apply a status to every message in a sender's conversation. Threads are
   // triaged as a unit — archiving or flagging spam covers the whole history.
@@ -369,10 +435,41 @@ const ContactMessages = () => {
         })}
       </div>
 
+      {/* Bulk actions for checked rows */}
+      {selectedEmails.size > 0 && (
+        <div
+          data-testid="admin-contact-selection-bar"
+          className="flex items-center justify-between rounded-lg border border-danger-200 dark:border-danger-900/50 bg-danger-50 dark:bg-danger-900/15 px-4 py-2"
+        >
+          <p className="text-sm font-medium text-danger-700 dark:text-danger-300">
+            {selectedEmails.size} selected
+          </p>
+          <button
+            data-testid="admin-contact-delete-selected-btn"
+            onClick={deleteSelected}
+            disabled={deleting}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-danger-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-danger-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      )}
+
       <div className="card overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
+              <th className="w-10 px-4 py-3">
+                <input
+                  type="checkbox"
+                  data-testid="admin-contact-select-all"
+                  aria-label="Select all conversations"
+                  checked={threads.length > 0 && selectedEmails.size === threads.length}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-900"
+                />
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 From
               </th>
@@ -397,7 +494,7 @@ const ContactMessages = () => {
             {loading ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   data-testid="admin-contact-loading"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
@@ -407,7 +504,7 @@ const ContactMessages = () => {
             ) : error ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   data-testid="admin-contact-error"
                   className="px-6 py-10 text-center text-sm text-danger-600 dark:text-danger-400"
                 >
@@ -417,7 +514,7 @@ const ContactMessages = () => {
             ) : threads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   data-testid="admin-contact-empty"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
@@ -430,8 +527,20 @@ const ContactMessages = () => {
                 <tr
                   key={t.email}
                   data-testid={`admin-contact-row-${t.latest_id}`}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700/40"
+                  onClick={() => openThread(t)}
+                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
                 >
+                  {/* stopPropagation: checking a row must not open it */}
+                  <td className="w-10 px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      data-testid={`admin-contact-select-${t.latest_id}`}
+                      aria-label={`Select conversation with ${t.email}`}
+                      checked={selectedEmails.has(t.email)}
+                      onChange={() => toggleSelected(t.email)}
+                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-900"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div
                       className={`text-sm text-gray-900 dark:text-gray-100 ${
@@ -481,7 +590,11 @@ const ContactMessages = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       data-testid={`admin-contact-view-btn-${t.latest_id}`}
-                      onClick={() => openThread(t)}
+                      onClick={(e) => {
+                        // The row itself opens the thread; don't fire twice.
+                        e.stopPropagation();
+                        openThread(t);
+                      }}
                       className="text-primary-600 dark:text-primary-400 hover:underline"
                     >
                       View
