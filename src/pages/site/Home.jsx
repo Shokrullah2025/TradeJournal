@@ -723,84 +723,67 @@ const Home = () => (
           Start free. Upgrade when it pays for itself.
         </h2>
       </div>
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-3">
-        {PRICING_TIERS.map((tier) => {
-          const dark = tier.id === "enterprise";
-          return (
-            <div
-              key={tier.id}
-              data-testid={`home-pricing-${tier.id}-card`}
-              className={`relative rounded-2xl border p-6 ${
-                dark
-                  ? "border-gray-900 bg-gray-900 dark:border-gray-700 dark:bg-gray-950"
-                  : tier.popular
-                    ? "border-accent-500 bg-white shadow-2xl shadow-accent-600/25 dark:bg-gray-900"
-                    : "border-accent-100 bg-white dark:border-gray-700 dark:bg-gray-900"
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        {PRICING_TIERS.map((tier) => (
+          <div
+            key={tier.id}
+            data-testid={`home-pricing-${tier.id}-card`}
+            className={`relative flex flex-col rounded-2xl border p-6 ${
+              tier.popular
+                ? "border-accent-500 bg-white shadow-xl dark:border-accent-500 dark:bg-gray-900"
+                : "border-accent-100 bg-white dark:border-gray-700 dark:bg-gray-900"
+            }`}
+          >
+            {tier.popular && (
+              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-accent-600 px-3 py-1 font-nums text-[11px] font-semibold tracking-wide text-white">
+                MOST POPULAR
+              </span>
+            )}
+            <p
+              className={`text-[15px] font-semibold ${
+                tier.popular
+                  ? "text-accent-600 dark:text-accent-400"
+                  : "text-gray-900 dark:text-gray-100"
               }`}
             >
-              {tier.popular && (
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-accent-600 px-3 py-1 font-nums text-[11px] font-semibold tracking-wide text-white">
-                  MOST POPULAR
-                </span>
-              )}
-              <p
-                className={`text-[15px] font-semibold ${
-                  dark
-                    ? "text-white"
-                    : tier.popular
-                      ? "text-accent-600 dark:text-accent-400"
-                      : "text-gray-900 dark:text-gray-100"
-                }`}
-              >
-                {tier.name}
-              </p>
-              <p className="mt-3 flex items-baseline gap-1">
-                <span
-                  className={`font-nums text-4xl font-semibold ${
-                    dark ? "text-white" : "text-gray-900 dark:text-gray-100"
-                  }`}
+              {tier.name}
+            </p>
+            <p className="mt-3 flex items-baseline gap-1">
+              <span className="font-nums text-4xl font-semibold text-gray-900 dark:text-gray-100">
+                ${tier.monthlyPrice}
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {tier.monthlyPrice === 0 ? "/forever" : "/mo"}
+              </span>
+            </p>
+            <p className="mt-1.5 text-[13px] text-gray-500 dark:text-gray-400">
+              {tier.description}
+            </p>
+            <Link
+              to={tier.id === "enterprise" ? "/contact" : "/register"}
+              data-testid={`home-pricing-${tier.id}-btn`}
+              className={`mt-5 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
+                tier.popular
+                  ? "btn-site"
+                  : "border border-accent-200 bg-accent-50 text-gray-900 hover:bg-accent-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              {tier.cta}
+            </Link>
+            <div className="my-5 h-px bg-accent-100 dark:bg-gray-700" />
+            <ul className="space-y-2.5">
+              {tier.features.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2.5 text-[13px] text-gray-700 dark:text-gray-300"
                 >
-                  ${tier.monthlyPrice}
-                </span>
-                <span className={dark ? "text-sm text-gray-400" : "text-sm text-gray-500 dark:text-gray-400"}>
-                  {tier.monthlyPrice === 0 ? "/forever" : "/mo"}
-                </span>
-              </p>
-              <p className={`mt-1.5 text-[13px] ${dark ? "text-gray-400" : "text-gray-500 dark:text-gray-400"}`}>
-                {tier.description}
-              </p>
-              <Link
-                to={tier.id === "enterprise" ? "/contact" : "/login"}
-                data-testid={`home-pricing-${tier.id}-btn`}
-                className={`mt-5 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
-                  tier.popular || dark
-                    ? "btn-site"
-                    : "border border-accent-200 bg-accent-50 text-gray-900 hover:bg-accent-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-                }`}
-              >
-                {tier.cta}
-              </Link>
-              <div className={`my-5 h-px ${dark ? "bg-white/15" : "bg-accent-100 dark:bg-gray-700"}`} />
-              <ul className="space-y-2.5">
-                {tier.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className={`flex items-start gap-2.5 text-[13px] ${
-                      dark ? "text-gray-300" : "text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    <Check
-                      className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${
-                        dark ? "text-accent-300" : "text-accent-600 dark:text-accent-400"
-                      }`}
-                    />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-accent-600 dark:text-accent-400" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
       <p className="mt-8 text-center">
         <Link
