@@ -1,36 +1,15 @@
 # Cloudflare Pages routing.
 #
-# The presence of dist/404.html switches Pages out of blanket SPA mode:
-# unmatched paths get a real HTTP 404 (Bing/Google guideline — no soft 404s)
-# instead of index.html with 200. The client-side app routes below must
-# therefore be rewritten to the SPA shell explicitly. Keep this list in sync
-# with the route table in src/App.jsx; a missing entry breaks deep links to
-# that page in production.
+# We deliberately keep NO client-route rewrites here and emit no dist/404.html
+# (see scripts/prerender.mjs). With neither present, Pages stays in its default
+# single-page-app fallback: any request that does not match a static file is
+# served the app shell (index.html) at HTTP 200, and the client router renders
+# the correct page.
 #
-# Prerendered marketing/legal pages are physical files in dist/ and are
-# served before these rules run — they never hit this file.
-
-/login /index.html 200
-/register /index.html 200
-/verify-email /index.html 200
-/auth/* /index.html 200
-/security/* /index.html 200
-/dashboard /index.html 200
-/dashboard/* /index.html 200
-/trades /index.html 200
-/trades/* /index.html 200
-/trade-entry /index.html 200
-/trade-entry/* /index.html 200
-/backtest /index.html 200
-/backtest/* /index.html 200
-/brokers /index.html 200
-/brokers/* /index.html 200
-/analytics /index.html 200
-/analytics/* /index.html 200
-/risk-calculator /index.html 200
-/settings /index.html 200
-/settings/* /index.html 200
-/profile /index.html 200
-/billing /index.html 200
-/admin /index.html 200
-/admin/* /index.html 200
+# Do NOT re-add "/route /index.html 200" rules: Pages canonicalizes the
+# /index.html rewrite target to "/", turning those rewrites into a "308 -> /"
+# that bounces every app route (/login, /register, /dashboard, ...) to the
+# homepage and locks users out. This file exists only to document that.
+#
+# Prerendered marketing/legal pages are physical files in dist/ and are served
+# directly before any fallback runs.
