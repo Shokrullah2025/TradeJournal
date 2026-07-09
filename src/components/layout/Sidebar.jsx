@@ -112,7 +112,10 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                 />
                 <div>
                   <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    ZalorTrade
+                    Zalor
+                    <span className="text-primary-600 dark:text-primary-400">
+                      Trade
+                    </span>
                   </h1>
                 </div>
               </>

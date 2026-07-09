@@ -246,10 +246,10 @@ const MultiStepRegistration = () => {
                   className="w-12 h-12 rounded-lg object-cover"
                 />
                 <h1 className="ml-3 text-2xl font-bold text-gray-900">
-                  ZalorTrade
+                  Zalor<span className="text-primary-600">Trade</span>
                 </h1>
               </div>
-              <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+              <h2 className="mt-6 text-xl font-bold text-gray-900">
                 Create your account
               </h2>
               <p className="mt-2 text-sm text-gray-600">

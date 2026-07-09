@@ -180,7 +180,9 @@ const ResetPassword = () => {
                 alt="ZalorTrade logo"
                 className="w-12 h-12 rounded-lg object-cover"
               />
-              <h1 className="ml-3 text-2xl font-bold">ZalorTrade</h1>
+              <h1 className="ml-3 text-2xl font-bold">
+              Zalor<span className="text-primary-600 dark:text-primary-400">Trade</span>
+            </h1>
             </div>
 
             <div
@@ -217,7 +219,9 @@ const ResetPassword = () => {
               alt="ZalorTrade logo"
               className="w-12 h-12 rounded-lg object-cover"
             />
-            <h1 className="ml-3 text-2xl font-bold">ZalorTrade</h1>
+            <h1 className="ml-3 text-2xl font-bold">
+              Zalor<span className="text-primary-600 dark:text-primary-400">Trade</span>
+            </h1>
           </div>
 
           <h2 className="text-3xl font-extrabold mb-2">Set new password</h2>
