@@ -23,8 +23,9 @@ import { contactReplySchema } from "../lib/schemas/contact";
 const PAGE_SIZE = 50;
 
 // Explicit column lists — never select('*') (CLAUDE.md §4).
-// Thread rows come from the contact_threads view (migration 034): one row per
-// sender email carrying the latest message plus per-thread counts.
+// Thread rows come from the contact_threads view (034, counts updated in
+// 036): one row per sender email carrying the latest message plus per-thread
+// counts; message_count includes admin replies stored in metadata.replies.
 const THREAD_COLUMNS =
   "email, latest_id, latest_name, latest_subject, latest_message, latest_status, last_message_at, message_count, new_count";
 // Individual messages inside an open thread. metadata carries the admin reply
@@ -326,6 +327,11 @@ const ContactMessages = () => {
       toast.success("Reply sent.");
       // Reload the history so the new reply appears in the conversation.
       setThreadMessages(await fetchThreadMessages(latest.email));
+      // The row badge counts replies too (migration 036) — refresh the list
+      // so it bumps without waiting for a realtime event.
+      const { data: freshThreads, count } = await load();
+      setThreads(freshThreads);
+      setTotal(count);
     } catch (err) {
       console.error("[ContactMessages] reply error:", err.message);
       toast.error("Couldn't send the reply. Please try again.");
@@ -372,7 +378,8 @@ const ContactMessages = () => {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const latestMessage = threadMessages[0] ?? null;
   // Prefer the freshly loaded conversation length (emails + replies); fall
-  // back to the list row's email count while the thread is still loading.
+  // back to the list row's count (also emails + replies since migration 036)
+  // while the thread is still loading.
   const threadCount = threadLoading
     ? selectedThread?.message_count ?? 0
     : conversation.length;
@@ -485,16 +492,13 @@ const ContactMessages = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="relative px-6 py-3">
-                <span className="sr-only">Actions</span>
-              </th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   data-testid="admin-contact-loading"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
@@ -504,7 +508,7 @@ const ContactMessages = () => {
             ) : error ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   data-testid="admin-contact-error"
                   className="px-6 py-10 text-center text-sm text-danger-600 dark:text-danger-400"
                 >
@@ -514,7 +518,7 @@ const ContactMessages = () => {
             ) : threads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   data-testid="admin-contact-empty"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
@@ -586,19 +590,6 @@ const ContactMessages = () => {
                     >
                       {t.new_count > 0 ? "new" : t.latest_status}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      data-testid={`admin-contact-view-btn-${t.latest_id}`}
-                      onClick={(e) => {
-                        // The row itself opens the thread; don't fire twice.
-                        e.stopPropagation();
-                        openThread(t);
-                      }}
-                      className="text-primary-600 dark:text-primary-400 hover:underline"
-                    >
-                      View
-                    </button>
                   </td>
                 </tr>
               ))
