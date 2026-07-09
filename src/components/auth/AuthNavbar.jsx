@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { TrendingUp, Home } from "lucide-react";
+import { Home } from "lucide-react";
 
 /**
  * Slim top navigation for the authentication pages (Login / Register).
@@ -25,9 +25,11 @@ const AuthNavbar = () => (
           data-testid="auth-nav-brand-link"
           className="flex items-center gap-2"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600">
-            <TrendingUp className="h-5 w-5 text-white" />
-          </span>
+          <img
+            src="/logo.png"
+            alt="ZalorTrade logo"
+            className="h-9 w-9 rounded-lg object-cover"
+          />
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
             Zalor<span className="text-primary-600 dark:text-primary-400">Trade</span>
           </span>

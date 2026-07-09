@@ -35,7 +35,7 @@ const HOME_JSON_LD = [
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.svg`,
+    logo: `${SITE_URL}/logo.png`,
   },
   {
     "@context": "https://schema.org",

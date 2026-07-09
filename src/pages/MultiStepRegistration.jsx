@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, UserPlus, TrendingUp, Check, Mail, Star } from "lucide-react";
+import { Eye, EyeOff, UserPlus, Check, Mail, Star } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { z } from "zod";
 
@@ -240,9 +240,11 @@ const MultiStepRegistration = () => {
 
             <div>
               <div className="flex items-center">
-                <div className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-lg">
-                  <TrendingUp className="w-8 h-8 text-white" />
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="ZalorTrade logo"
+                  className="w-12 h-12 rounded-lg object-cover"
+                />
                 <h1 className="ml-3 text-2xl font-bold text-gray-900">
                   ZalorTrade
                 </h1>

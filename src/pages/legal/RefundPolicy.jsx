@@ -10,10 +10,10 @@ const RefundPolicy = () => (
     slug="refund"
   >
     <p>
-      This Refund & Billing Policy governs all payment, subscription, and billing matters for ZalorTrade, operated by <strong>[COMPANY LEGAL NAME]</strong>, a Colorado limited liability company. This policy is incorporated by reference into our <Link to="/terms">Terms of Service</Link>.
+      This Refund & Billing Policy governs all payment, subscription, and billing matters for ZalorTrade, operated by <strong>ZalorTrade</strong>. This policy is incorporated by reference into our <Link to="/terms">Terms of Service</Link>.
     </p>
     <p>
-      This policy complies with the Colorado Automatic Renewal Law (C.R.S. § 6-1-732), the Colorado Consumer Protection Act (C.R.S. § 6-1-105), the FTC's Negative Option Rule (16 C.F.R. Part 425), and applicable California automatic renewal law (Cal. Bus. & Prof. Code § 17600 et seq.) for California subscribers.
+      This policy complies with the FTC's Negative Option Rule (16 C.F.R. Part 425) and applicable state automatic-renewal laws, including California automatic renewal law (Cal. Bus. & Prof. Code § 17600 et seq.) for California subscribers.
     </p>
 
     <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg px-5 py-4 my-6">
@@ -21,7 +21,7 @@ const RefundPolicy = () => (
         STRICT NO-REFUND POLICY — ALL SALES FINAL
       </p>
       <p className="text-red-800 dark:text-red-300 font-medium">
-        ALL SUBSCRIPTION CHARGES PAID TO [COMPANY LEGAL NAME] ARE FINAL AND NON-REFUNDABLE UNDER ANY CIRCUMSTANCES WHATSOEVER, INCLUDING BUT NOT LIMITED TO: CANCELLATION AT ANY TIME, UNUSED TIME IN A BILLING PERIOD, PLAN DOWNGRADE, ACCOUNT SUSPENSION FOR POLICY VIOLATIONS, DISSATISFACTION WITH THE SERVICE, FAILURE TO USE THE SERVICE, CHANGE OF MIND, OR ANY OTHER REASON. BY SUBSCRIBING, YOU EXPRESSLY ACKNOWLEDGE THIS NO-REFUND POLICY AND WAIVE ANY CLAIM TO A REFUND.
+        ALL SUBSCRIPTION CHARGES PAID TO ZalorTrade ARE FINAL AND NON-REFUNDABLE UNDER ANY CIRCUMSTANCES WHATSOEVER, INCLUDING BUT NOT LIMITED TO: CANCELLATION AT ANY TIME, UNUSED TIME IN A BILLING PERIOD, PLAN DOWNGRADE, ACCOUNT SUSPENSION FOR POLICY VIOLATIONS, DISSATISFACTION WITH THE SERVICE, FAILURE TO USE THE SERVICE, CHANGE OF MIND, OR ANY OTHER REASON. BY SUBSCRIBING, YOU EXPRESSLY ACKNOWLEDGE THIS NO-REFUND POLICY AND WAIVE ANY CLAIM TO A REFUND.
       </p>
     </div>
 
@@ -35,23 +35,23 @@ const RefundPolicy = () => (
       <li>You downgrade from a higher-tier plan to a lower-tier plan;</li>
       <li>Your account is suspended or terminated due to violations of the <Link to="/terms">Terms of Service</Link> or <Link to="/aup">Acceptable Use Policy</Link>;</li>
       <li>You are dissatisfied with the Service for any reason;</li>
-      <li>You experience technical difficulties (contact support at <strong>[CONTACT EMAIL]</strong> for assistance — we will work to resolve issues);</li>
+      <li>You experience technical difficulties (contact support at <strong>noreply@zalortrade.com</strong> for assistance — we will work to resolve issues);</li>
       <li>You forget to cancel before a renewal date; or</li>
       <li>Any other reason.</li>
     </ul>
     <p>
-      This no-refund policy is a material term of your agreement with us, is clearly disclosed before you complete your purchase, and is enforceable under Colorado law (C.R.S. § 4-2-719).
+      This no-refund policy is a material term of your agreement with us, is clearly disclosed before you complete your purchase, and is enforceable to the maximum extent permitted by applicable law.
     </p>
 
     <h2>2. Auto-Renewal Disclosure</h2>
     <p>
-      <strong>Required disclosure under Colorado Revised Statutes § 6-1-732 and FTC Negative Option Rule:</strong>
+      <strong>Required disclosure under applicable automatic-renewal laws and the FTC Negative Option Rule:</strong>
     </p>
     <ul>
       <li>Your ZalorTrade subscription <strong>automatically renews</strong> at the end of each billing period (monthly or annual, as selected at checkout).</li>
       <li>You will be charged the <strong>then-current subscription rate</strong> for your plan at the start of each new billing period.</li>
       <li>By completing your purchase, you <strong>authorize us and Stripe, Inc.</strong> to charge your payment method on a recurring basis until you cancel.</li>
-      <li>Charges will appear on your statement as <strong>[COMPANY LEGAL NAME]</strong> or a similar descriptor.</li>
+      <li>Charges will appear on your statement as <strong>ZalorTrade</strong> or a similar descriptor.</li>
       <li>You may cancel at any time before the next renewal date to avoid being charged for the next period. Cancellation after a charge has been processed does not entitle you to a refund for that period.</li>
     </ul>
 
@@ -76,7 +76,7 @@ const RefundPolicy = () => (
       <li>You will not receive a refund for any portion of the current billing period, regardless of how early in the period you cancel.</li>
     </ul>
     <p>
-      If you experience any difficulty cancelling, contact us at <strong>[CONTACT EMAIL]</strong> and we will assist you promptly.
+      If you experience any difficulty cancelling, contact us at <strong>noreply@zalortrade.com</strong> and we will assist you promptly.
     </p>
 
     <h2>5. Free Trials</h2>
@@ -113,7 +113,7 @@ const RefundPolicy = () => (
 
     <h2>8. Chargebacks and Payment Disputes</h2>
     <p>
-      By accepting these terms, you agree to contact us at <strong>[CONTACT EMAIL]</strong> before initiating any chargeback or payment dispute with your bank or card issuer. Given our strict no-refund policy (which you acknowledged at the time of purchase), chargebacks are not an appropriate remedy and constitute a breach of your agreement with us.
+      By accepting these terms, you agree to contact us at <strong>noreply@zalortrade.com</strong> before initiating any chargeback or payment dispute with your bank or card issuer. Given our strict no-refund policy (which you acknowledged at the time of purchase), chargebacks are not an appropriate remedy and constitute a breach of your agreement with us.
     </p>
     <p>In the event of a chargeback:</p>
     <ul>
@@ -138,9 +138,8 @@ const RefundPolicy = () => (
       If you have questions about a charge, believe there is a billing error, or need to update your payment method, contact us before disputing with your bank:
     </p>
     <ul>
-      <li><strong>Email:</strong> [CONTACT EMAIL]</li>
-      <li><strong>Company:</strong> [COMPANY LEGAL NAME]</li>
-      <li><strong>Address:</strong> [PRINCIPAL ADDRESS]</li>
+      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Company:</strong> ZalorTrade</li>
     </ul>
     <p>We aim to respond to billing inquiries within 2 business days.</p>
   </LegalPageWrapper>

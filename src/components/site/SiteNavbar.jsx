@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { TrendingUp, Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { NAV_MENUS } from "./content";
 
@@ -169,9 +169,11 @@ const SiteNavbar = () => {
             data-testid="site-nav-brand-link"
             className="flex items-center gap-2"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-600">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </span>
+            <img
+              src="/logo.png"
+              alt="ZalorTrade logo"
+              className="h-9 w-9 rounded-lg object-cover"
+            />
             <span className="font-display text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
               Zalor<span className="text-accent-600 dark:text-accent-400">Trade</span>
             </span>
