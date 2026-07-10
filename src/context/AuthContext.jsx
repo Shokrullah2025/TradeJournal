@@ -392,6 +392,23 @@ export const AuthProvider = ({ children }) => {
       throw new Error(msg);
     }
 
+    // Supabase does not return an error when the email is already registered —
+    // as an anti-enumeration measure signUp() resolves successfully with an
+    // obfuscated user whose `identities` array is empty, and sends no email.
+    // Detect that here so we can tell the user to sign in instead of routing
+    // them to the "check your inbox" screen to await a confirmation email that
+    // will never arrive. Tagged with a code so the form can show an inline
+    // "already registered" banner with a sign-in link (no toast for this case).
+    const alreadyRegistered =
+      data?.user &&
+      Array.isArray(data.user.identities) &&
+      data.user.identities.length === 0;
+    if (alreadyRegistered) {
+      const err = new Error("An account with this email already exists.");
+      err.code = "user_already_exists";
+      throw err;
+    }
+
     // Create the user profile row immediately after signup
     if (data.user) {
       await supabase.from("user_profiles").upsert({

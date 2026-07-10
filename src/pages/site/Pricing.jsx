@@ -5,6 +5,7 @@ import PricingToggle from "../../components/site/PricingToggle";
 import PricingCard from "../../components/site/PricingCard";
 import FAQAccordion from "../../components/site/FAQAccordion";
 import { PRICING_TIERS, FAQS } from "../../components/site/content";
+import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
 
 // FAQPage structured data, built from the same FAQS shown in the accordion
 // below so the markup always matches the visible content (a Google
@@ -25,6 +26,18 @@ const PRICING_JSON_LD = {
  */
 const Pricing = () => {
   const [cycle, setCycle] = useState("monthly");
+  // Live prices from the admin Pricing tab, overlaid on the static tier content.
+  // During prerender the effect doesn't run, so the static defaults render; the
+  // client syncs to live amounts on hydration.
+  const { plans: livePlans } = useSubscriptionPlans();
+  const tiers = PRICING_TIERS.map((t) => ({
+    ...t,
+    name: livePlans[t.id]?.name ?? t.name,
+    description: livePlans[t.id]?.description ?? t.description,
+    features: livePlans[t.id]?.features?.length ? livePlans[t.id].features : t.features,
+    monthlyPrice: livePlans[t.id]?.price ?? t.monthlyPrice,
+    yearlyPrice: livePlans[t.id]?.priceAnnually ?? t.yearlyPrice,
+  }));
 
   return (
     <div data-testid="site-pricing-page">
@@ -53,7 +66,7 @@ const Pricing = () => {
       {/* Tiers */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-          {PRICING_TIERS.map((tier) => (
+          {tiers.map((tier) => (
             <PricingCard key={tier.id} tier={tier} cycle={cycle} />
           ))}
         </div>

@@ -17,6 +17,8 @@ import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
 import StripePaymentForm from "../components/billing/StripePaymentForm";
+import CancelRetentionModal from "../components/billing/CancelRetentionModal";
+import useSubscriptionPlans from "../hooks/useSubscriptionPlans";
 
 // Static class strings per plan accent — Tailwind's scanner can't see
 // dynamically-built classes like `bg-${plan.color}-600`, so they'd be purged
@@ -57,7 +59,11 @@ const Billing = () => {
     isLoading,
     createCheckoutSession,
     openPortal,
+    applyRetentionOffer,
   } = useBilling();
+  // Live plan prices set by admins in the Pricing tab; the hardcoded numbers
+  // below act as a fallback until they load.
+  const { plans: livePlans } = useSubscriptionPlans();
   // Derive active plan slug from real DB subscription (BillingContext).
   // A trial carries the same plan entitlement as an active subscription, so
   // both 'active' and 'trialing' resolve the plan. Falls back to "basic".
@@ -72,8 +78,15 @@ const Billing = () => {
   const [clientSecret, setClientSecret] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [retentionWorking, setRetentionWorking] = useState(false);
   const [billingAnalytics, setBillingAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState("payment");
+
+  // A paid subscription (or an in-progress trial) is the only thing worth
+  // retaining — the free Basic plan has nothing to cancel.
+  const canCancel =
+    subscription?.status === "active" || subscription?.status === "trialing";
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -115,7 +128,40 @@ const Billing = () => {
     }
   };
 
-  const plans = [
+  // User clicked a "cancel" entry point — intercept with the retention offer
+  // before sending them anywhere destructive.
+  const handleCancelIntent = () => {
+    setShowCancelModal(true);
+  };
+
+  // "Keep my plan — 30% off": apply the discount to the live subscription and
+  // stay put. The BillingContext realtime channel refreshes the row after the
+  // Stripe webhook reconciles it, so there's no manual refetch here.
+  const handleAcceptRetention = async () => {
+    setRetentionWorking(true);
+    try {
+      await applyRetentionOffer();
+      toast.success("Your 30% discount has been applied. Thanks for staying!");
+      setShowCancelModal(false);
+    } catch (err) {
+      toast.error(err.message || "We couldn't apply the offer. Please try again.");
+    } finally {
+      setRetentionWorking(false);
+    }
+  };
+
+  // "No thanks, continue to cancel": hand off to the Stripe portal, which owns
+  // the authoritative cancellation flow (and its confirmation UI).
+  const handleDeclineRetention = async () => {
+    try {
+      await openPortal();
+    } catch (err) {
+      toast.error(err.message || "Failed to open billing portal");
+      setRetentionWorking(false);
+    }
+  };
+
+  const planContent = [
     {
       id: "basic",
       name: "Basic",
@@ -136,7 +182,7 @@ const Billing = () => {
       id: "premium",
       name: "Premium",
       description: "Best for serious traders and small teams",
-      monthlyPrice: 29,
+      monthlyPrice: 18,
       yearlyPrice: 290,
       features: [
         "Unlimited trades",
@@ -170,6 +216,18 @@ const Billing = () => {
       popular: false,
     },
   ];
+
+  // Overlay live DB prices (set in the admin Pricing tab) onto the static plan
+  // content, keeping features/copy local. Falls back to the hardcoded number
+  // while prices load or if a plan has no amount set yet.
+  const plans = planContent.map((p) => ({
+    ...p,
+    name: livePlans[p.id]?.name ?? p.name,
+    description: livePlans[p.id]?.description ?? p.description,
+    features: livePlans[p.id]?.features?.length ? livePlans[p.id].features : p.features,
+    monthlyPrice: livePlans[p.id]?.price ?? p.monthlyPrice,
+    yearlyPrice: livePlans[p.id]?.priceAnnually ?? p.yearlyPrice,
+  }));
 
   const getPlanPrice = (plan) => {
     return billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
@@ -361,13 +419,7 @@ const Billing = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={async () => {
-                    try {
-                      await openPortal();
-                    } catch (err) {
-                      toast.error(err.message || "Couldn't open the billing portal.");
-                    }
-                  }}
+                  onClick={handleCancelIntent}
                   className="py-2 px-4 border border-amber-300 dark:border-amber-600 rounded-md text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40"
                   data-testid="billing-trial-cancel-btn"
                 >
@@ -398,9 +450,8 @@ const Billing = () => {
                     $
                     {currentPlanSlug === "basic"
                       ? "0"
-                      : currentPlanSlug === "premium"
-                      ? "29"
-                      : "99"}
+                      : livePlans[currentPlanSlug]?.price ??
+                        (currentPlanSlug === "premium" ? 18 : 99)}
                   </div>
                   <div className="text-sm text-primary-600 dark:text-primary-300">
                     per month
@@ -474,9 +525,8 @@ const Billing = () => {
                           $
                           {currentPlanSlug === "basic"
                             ? "0"
-                            : currentPlanSlug === "premium"
-                            ? "29"
-                            : "99"}
+                            : livePlans[currentPlanSlug]?.price ??
+                              (currentPlanSlug === "premium" ? 18 : 99)}
                         </div>
                         <div className="text-sm text-primary-600 dark:text-primary-300">
                           per month
@@ -553,6 +603,28 @@ const Billing = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* Cancel subscription — intercepted by the retention offer */}
+                  {canCancel && (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between flex-wrap gap-4">
+                      <div>
+                        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                          Cancel subscription
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Thinking about leaving? See what we can do before you go.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCancelIntent}
+                        className="py-2 px-4 border border-red-300 dark:border-red-700 rounded-md text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        data-testid="billing-cancel-subscription-btn"
+                      >
+                        Cancel subscription
+                      </button>
+                    </div>
+                  )}
 
                 </div>
               )}
@@ -1005,6 +1077,16 @@ const Billing = () => {
               </div>
             </div>
             </ModalPortal>
+          )}
+
+          {/* Cancellation retention offer */}
+          {showCancelModal && (
+            <CancelRetentionModal
+              onAcceptOffer={handleAcceptRetention}
+              onDeclineToCancel={handleDeclineRetention}
+              onClose={() => setShowCancelModal(false)}
+              isWorking={retentionWorking}
+            />
           )}
         </div>
       </div>
