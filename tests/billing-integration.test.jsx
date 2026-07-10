@@ -67,7 +67,9 @@ describe("Billing Page Integration", () => {
     expect(screen.getByText("Basic")).toBeInTheDocument();
     expect(screen.getByText("Premium")).toBeInTheDocument();
     expect(screen.getByText("Enterprise")).toBeInTheDocument();
-    expect(screen.getByText("$29")).toBeInTheDocument(); // Premium monthly
+    // Premium monthly. Prices are DB-driven (useSubscriptionPlans); with no
+    // plans loaded in the test the card shows the fallback, which is now $18.
+    expect(screen.getByText("$18")).toBeInTheDocument();
   });
 
   it("updates prices when the billing cycle switches to yearly", () => {
