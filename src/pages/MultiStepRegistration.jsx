@@ -37,6 +37,10 @@ const MultiStepRegistration = () => {
   const [registrationData, setRegistrationData] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Set when signUp reports the email is already registered, so we can show an
+  // inline banner pointing the user to sign in instead of the "verify email"
+  // flow (which sends no email for an existing account).
+  const [alreadyExists, setAlreadyExists] = useState(false);
   const navigate = useNavigate();
   const { register: registerUser, discardSession } = useAuth();
 
@@ -84,6 +88,7 @@ const MultiStepRegistration = () => {
   const passwordStrength = getPasswordStrength(password);
 
   const handleAccountCreation = async (data) => {
+    setAlreadyExists(false);
     try {
       await registerUser({
         first_name: data.firstName,
@@ -102,7 +107,13 @@ const MultiStepRegistration = () => {
         state: { verifyEmail: true, email: data.email },
       });
     } catch (error) {
-      // Error handling is done in the AuthContext
+      // signUp resolves (no thrown error) for an already-registered email, so
+      // register() tags that case with code "user_already_exists". Surface it as
+      // an inline banner with a sign-in link. All other errors are already
+      // toasted inside the AuthContext.
+      if (error?.code === "user_already_exists") {
+        setAlreadyExists(true);
+      }
     }
   };
 
@@ -262,6 +273,27 @@ const MultiStepRegistration = () => {
                 </Link>
               </p>
             </div>
+
+            {alreadyExists && (
+              <div
+                className="mt-6 rounded-md border border-amber-300 bg-amber-50 p-4"
+                role="alert"
+                data-testid="register-already-exists-banner"
+              >
+                <p className="text-sm text-amber-800">
+                  An account with this email already exists.{" "}
+                  <Link
+                    to="/login"
+                    className="font-medium text-primary-600 underline hover:text-primary-500"
+                    data-testid="register-already-exists-signin-link"
+                  >
+                    Sign in instead
+                  </Link>
+                  . If you forgot your password, use “Forgot password?” on the
+                  sign-in page.
+                </p>
+              </div>
+            )}
 
             <div className="mt-8">
               <form
