@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import {
   ResponsiveContainer,
@@ -8,6 +8,9 @@ import {
   Line,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -23,10 +26,12 @@ import { buildDailySeries, summarizeSeries } from "../../utils/adminMetrics";
 
 // ── System metrics board ──────────────────────────────────────────────────
 // Operational view: request volume, failure/error rate, active users, signups
-// and trades over a selectable window. Figures are derived live from
-// user_activity_log (a proxy for request volume), users.created_at and
-// trades.created_at. If admin_metrics_daily snapshots exist they could later be
-// merged for server-side load/latency; until then those cards show live data.
+// and trades. We fetch a fixed 90-day window once and each chart slices its own
+// range from it, so per-chart time filters cost no extra queries. The KPI strip
+// has its own summary range. A storage donut shows how much of the plan's
+// storage quota the trade images occupy.
+
+const FETCH_DAYS = 90;
 
 const RANGE_OPTIONS = [
   { value: 7, label: "7D" },
@@ -34,14 +39,60 @@ const RANGE_OPTIONS = [
   { value: 90, label: "90D" },
 ];
 
+// Storage included on the current Supabase plan (Free includes 1 GB; Pro 100 GB).
+// Used only to show "% of quota" — bump this if the plan is upgraded. Trade
+// screenshots are the dominant storage consumer; avatars (one small WebP per
+// user) are negligible.
+const STORAGE_QUOTA_GB = 1;
+const STORAGE_QUOTA_BYTES = STORAGE_QUOTA_GB * 1e9;
+
 const CHART_GRID = "#e5e7eb";
 const AXIS = "#6b7280";
+const STORAGE_COLORS = ["#2a9d8f", "#e5e7eb"]; // [used, free]
 
-const ChartCard = ({ title, subtitle, children, testId }) => (
+function formatBytes(bytes) {
+  const n = Number(bytes) || 0;
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)} GB`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} MB`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)} KB`;
+  return `${n} B`;
+}
+
+const RangeToggle = ({ value, onChange, testId }) => (
+  <div className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5" data-testid={testId}>
+    {RANGE_OPTIONS.map(({ value: v, label }) => {
+      const active = value === v;
+      return (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          className={
+            active
+              ? "text-xs font-medium px-2.5 py-1 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+              : "text-xs font-medium px-2.5 py-1 rounded text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+          }
+        >
+          {label}
+        </button>
+      );
+    })}
+  </div>
+);
+RangeToggle.propTypes = {
+  value: PropTypes.number.isRequired,
+  onChange: PropTypes.func.isRequired,
+  testId: PropTypes.string,
+};
+
+const ChartCard = ({ title, subtitle, headerRight, children, testId }) => (
   <div className="card flex flex-col" data-testid={testId}>
-    <div className="mb-3">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-      {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
+    <div className="mb-3 flex items-start justify-between gap-2">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
+      </div>
+      {headerRight}
     </div>
     <div className="h-64">
       <ResponsiveContainer width="100%" height="100%">
@@ -50,17 +101,16 @@ const ChartCard = ({ title, subtitle, children, testId }) => (
     </div>
   </div>
 );
-
 ChartCard.propTypes = {
   title: PropTypes.string.isRequired,
   subtitle: PropTypes.string,
+  headerRight: PropTypes.node,
   children: PropTypes.element.isRequired,
   testId: PropTypes.string,
 };
 
 // Read colors from the same CSS vars the toast/theme use so the tooltip is
-// legible in both light and dark mode (recharts colors item/label text
-// separately, hence itemStyle/labelStyle below).
+// legible in both light and dark mode.
 const tooltipStyle = {
   backgroundColor: "var(--toast-bg, #fff)",
   color: "var(--toast-color, #111827)",
@@ -71,10 +121,13 @@ const tooltipStyle = {
 const tooltipItemStyle = { color: "var(--toast-color, #111827)" };
 
 const SystemMetrics = () => {
-  const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [raw, setRaw] = useState({ activity: [], signups: [], trades: [] });
+  // KPI strip range + independent per-chart ranges (all slice the 90-day fetch).
+  const [summaryDays, setSummaryDays] = useState(30);
+  const [chartRanges, setChartRanges] = useState({ requests: 30, errors: 30, active: 30, growth: 30 });
+  const setChartRange = (key, v) => setChartRanges((r) => ({ ...r, [key]: v }));
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +135,7 @@ const SystemMetrics = () => {
     const load = async () => {
       setLoading(true);
       setError(null);
-      const sinceISO = new Date(Date.now() - days * 864e5).toISOString();
+      const sinceISO = new Date(Date.now() - FETCH_DAYS * 864e5).toISOString();
       try {
         const [activityRes, signupRes, tradeRes] = await Promise.all([
           supabase
@@ -117,7 +170,7 @@ const SystemMetrics = () => {
     return () => {
       cancelled = true;
     };
-  }, [days]);
+  }, []);
 
   const series = useMemo(
     () =>
@@ -125,14 +178,52 @@ const SystemMetrics = () => {
         activityRows: raw.activity,
         signupRows: raw.signups,
         tradeRows: raw.trades,
-        days,
+        days: FETCH_DAYS,
       }),
-    [raw, days]
+    [raw]
   );
 
-  const totals = useMemo(() => summarizeSeries(series), [series]);
+  // Slice helper — take the last N days off the full series.
+  const sliced = useCallback((n) => series.slice(-n), [series]);
 
-  // ── Storage maintenance ─────────────────────────────────────────────────
+  const totals = useMemo(() => summarizeSeries(sliced(summaryDays)), [sliced, summaryDays]);
+
+  // ── Storage usage ──────────────────────────────────────────────────────
+  const [storageBytes, setStorageBytes] = useState(null);
+  const [storageLoading, setStorageLoading] = useState(true);
+
+  const loadStorage = useCallback(async () => {
+    setStorageLoading(true);
+    try {
+      // Sum the live trade-image file sizes (admins can read all rows via RLS).
+      const { data, error: sErr } = await supabase
+        .from("trade_images")
+        .select("file_size")
+        .is("deleted_at", null)
+        .limit(10000);
+      if (sErr) throw sErr;
+      setStorageBytes((data ?? []).reduce((s, r) => s + (Number(r.file_size) || 0), 0));
+    } catch (err) {
+      console.error("[SystemMetrics] storage error:", err.message);
+      setStorageBytes(null);
+    } finally {
+      setStorageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStorage();
+  }, [loadStorage]);
+
+  const used = storageBytes ?? 0;
+  const free = Math.max(0, STORAGE_QUOTA_BYTES - used);
+  const usedPct = STORAGE_QUOTA_BYTES > 0 ? (used / STORAGE_QUOTA_BYTES) * 100 : 0;
+  const storagePie = [
+    { name: "Used", value: used },
+    { name: "Free", value: free },
+  ];
+
+  // ── Storage maintenance (purge orphans) ─────────────────────────────────
   const [purging, setPurging] = useState(false);
   const [purgeResult, setPurgeResult] = useState(null);
 
@@ -148,6 +239,7 @@ const SystemMetrics = () => {
       toast.success(
         `Removed ${res.orphansRemoved} orphaned file${res.orphansRemoved === 1 ? "" : "s"}.`,
       );
+      loadStorage(); // reflect the freed space
     } catch (err) {
       toast.error(err.message || "Purge failed. Please try again.");
     } finally {
@@ -157,30 +249,14 @@ const SystemMetrics = () => {
 
   return (
     <div className="space-y-6" data-testid="admin-system-metrics">
-      {/* Range selector */}
-      <div className="flex items-center justify-between">
+      {/* Summary range selector */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Operational metrics derived from live activity over the selected window.
+          Operational metrics from live activity. Each chart has its own range.
         </p>
-        <div className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5" data-testid="admin-metrics-range-toggle">
-          {RANGE_OPTIONS.map(({ value, label }) => {
-            const active = days === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setDays(value)}
-                data-testid={`admin-metrics-range-${label}-btn`}
-                className={
-                  active
-                    ? "text-xs font-medium px-3 py-1 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                    : "text-xs font-medium px-3 py-1 rounded text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                }
-              >
-                {label}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400">Summary:</span>
+          <RangeToggle value={summaryDays} onChange={setSummaryDays} testId="admin-metrics-summary-range" />
         </div>
       </div>
 
@@ -195,7 +271,7 @@ const SystemMetrics = () => {
 
       {/* KPI strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AdminStatCard title="Requests" value={totals.requests.toLocaleString()} icon={Activity} tone="primary" hint={`over ${days} days`} testId="admin-metric-requests" />
+        <AdminStatCard title="Requests" value={totals.requests.toLocaleString()} icon={Activity} tone="primary" hint={`over ${summaryDays} days`} testId="admin-metric-requests" />
         <AdminStatCard
           title="Error Rate"
           value={`${totals.errorRate}%`}
@@ -214,8 +290,13 @@ const SystemMetrics = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartCard title="Request Volume" subtitle="Activity events per day" testId="admin-chart-requests">
-            <AreaChart data={series}>
+          <ChartCard
+            title="Request Volume"
+            subtitle="Activity events per day"
+            testId="admin-chart-requests"
+            headerRight={<RangeToggle value={chartRanges.requests} onChange={(v) => setChartRange("requests", v)} testId="admin-chart-requests-range" />}
+          >
+            <AreaChart data={sliced(chartRanges.requests)}>
               <defs>
                 <linearGradient id="reqGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.7} />
@@ -230,8 +311,13 @@ const SystemMetrics = () => {
             </AreaChart>
           </ChartCard>
 
-          <ChartCard title="Error Rate" subtitle="% of events that failed" testId="admin-chart-errors">
-            <LineChart data={series}>
+          <ChartCard
+            title="Error Rate"
+            subtitle="% of events that failed"
+            testId="admin-chart-errors"
+            headerRight={<RangeToggle value={chartRanges.errors} onChange={(v) => setChartRange("errors", v)} testId="admin-chart-errors-range" />}
+          >
+            <LineChart data={sliced(chartRanges.errors)}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} opacity={0.5} />
               <XAxis dataKey="label" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} minTickGap={20} />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} unit="%" />
@@ -240,8 +326,13 @@ const SystemMetrics = () => {
             </LineChart>
           </ChartCard>
 
-          <ChartCard title="Active Users" subtitle="Distinct users active per day" testId="admin-chart-active-users">
-            <AreaChart data={series}>
+          <ChartCard
+            title="Active Users"
+            subtitle="Distinct users active per day"
+            testId="admin-chart-active-users"
+            headerRight={<RangeToggle value={chartRanges.active} onChange={(v) => setChartRange("active", v)} testId="admin-chart-active-users-range" />}
+          >
+            <AreaChart data={sliced(chartRanges.active)}>
               <defs>
                 <linearGradient id="auGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.7} />
@@ -256,8 +347,13 @@ const SystemMetrics = () => {
             </AreaChart>
           </ChartCard>
 
-          <ChartCard title="Growth" subtitle="Signups vs trades logged per day" testId="admin-chart-growth">
-            <BarChart data={series}>
+          <ChartCard
+            title="Growth"
+            subtitle="Signups vs trades logged per day"
+            testId="admin-chart-growth"
+            headerRight={<RangeToggle value={chartRanges.growth} onChange={(v) => setChartRange("growth", v)} testId="admin-chart-growth-range" />}
+          >
+            <BarChart data={sliced(chartRanges.growth)}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} opacity={0.5} />
               <XAxis dataKey="label" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} minTickGap={20} />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -267,6 +363,67 @@ const SystemMetrics = () => {
               <Bar dataKey="trades" fill="#f59e0b" name="Trades" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ChartCard>
+
+          {/* Storage usage donut */}
+          <div className="card flex flex-col" data-testid="admin-chart-storage">
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Storage</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Trade-image storage used of the {STORAGE_QUOTA_GB} GB plan quota
+              </p>
+            </div>
+            {storageLoading ? (
+              <div className="flex items-center justify-center h-64" data-testid="admin-storage-loading">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <div className="relative h-48 w-48 flex-shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={storagePie}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius="65%"
+                        outerRadius="100%"
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                      >
+                        {storagePie.map((entry, i) => (
+                          <Cell key={entry.name} fill={STORAGE_COLORS[i]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} formatter={(v, n) => [formatBytes(v), n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="admin-storage-used-pct">
+                      {usedPct < 0.1 && used > 0 ? "<0.1" : usedPct.toFixed(1)}%
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">used</span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: STORAGE_COLORS[0] }} />
+                    <span className="text-gray-600 dark:text-gray-400">Used</span>
+                    <span className="ml-auto font-medium text-gray-900 dark:text-gray-100" data-testid="admin-storage-used">{formatBytes(used)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-sm bg-gray-200 dark:bg-gray-600" />
+                    <span className="text-gray-600 dark:text-gray-400">Free</span>
+                    <span className="ml-auto font-medium text-gray-900 dark:text-gray-100" data-testid="admin-storage-free">{formatBytes(free)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 border-t border-gray-200 dark:border-gray-700 pt-2">
+                    <span className="text-gray-600 dark:text-gray-400">Quota</span>
+                    <span className="ml-auto font-medium text-gray-900 dark:text-gray-100">{STORAGE_QUOTA_GB} GB</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
