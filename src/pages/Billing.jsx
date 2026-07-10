@@ -11,6 +11,7 @@ import {
   TrendingUp,
   AlertCircle,
   User,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
@@ -357,7 +358,7 @@ const Billing = () => {
 
       {/* Main Content */}
       <div className={`flex-1 ${user?.role === "admin" ? "lg:pl-6" : ""} p-4 lg:p-6`}>
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -439,47 +440,36 @@ const Billing = () => {
             </div>
           )}
 
-          {/* Tab Navigation - Users Only */}
+          {/* Billing sections — vertical tab rail on the left (desktop), a
+              scrollable strip on mobile. Payment Information is the default. */}
           {user?.role !== "admin" && (
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setActiveTab("payment")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === "payment"
-                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  Payment Information
-                </button>
-                <button
-                  onClick={() => setActiveTab("plans")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === "plans"
-                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  Plans & Subscriptions
-                </button>
-                <button
-                  onClick={() => setActiveTab("invoices")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === "invoices"
-                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  Invoice History
-                </button>
+            <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-10">
+              <nav
+                aria-label="Billing sections"
+                className="flex lg:flex-col gap-1.5 lg:w-60 lg:shrink-0 overflow-x-auto pb-1 lg:pb-0 lg:sticky lg:top-6"
+              >
+                {[
+                  { id: "payment", label: "Payment Information", Icon: CreditCard },
+                  { id: "plans", label: "Plans & Subscriptions", Icon: DollarSign },
+                  { id: "invoices", label: "Invoice History", Icon: FileText },
+                ].map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    data-testid={`billing-tab-${id}-btn`}
+                    className={`flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3.5 py-2.5 text-sm font-medium text-left transition-colors ${
+                      activeTab === id
+                        ? "bg-primary-50 dark:bg-primary-900/25 text-primary-700 dark:text-primary-300"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {label}
+                  </button>
+                ))}
               </nav>
-            </div>
-          )}
 
-          {/* Tab Content - Users Only */}
-          {user?.role !== "admin" && (
-            <div className="mt-8">
+              <div className="flex-1 min-w-0">
               {/* Payment Information Tab */}
               {activeTab === "payment" && (
                 <div className="space-y-8">
@@ -885,6 +875,7 @@ const Billing = () => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           )}
 
