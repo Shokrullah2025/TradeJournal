@@ -3,7 +3,7 @@ import { X, Upload, ChevronUp, ChevronDown, Image as ImageIcon, Plus } from "luc
 import toast from "react-hot-toast";
 
 const MAX_IMAGES = 4;
-const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 // Videos are explicitly blocked — only still images permitted
 
@@ -63,7 +63,7 @@ const TradeImageUploader = ({ images, onSave, onClose }) => {
         continue;
       }
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast.error(`${file.name}: file must be under 4MB`);
+        toast.error(`${file.name}: file must be under 2MB`);
         continue;
       }
       const compressed = await compressImage(file);
@@ -176,7 +176,7 @@ const TradeImageUploader = ({ images, onSave, onClose }) => {
                 Drop images here or <span className="text-blue-600 dark:text-blue-400">browse</span>
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                JPEG, PNG, WebP · Max 4MB each · Up to {MAX_IMAGES - visibleItems.length} more
+                JPEG, PNG, WebP · Max 2MB each · Up to {MAX_IMAGES - visibleItems.length} more
               </p>
               <input
                 ref={fileInputRef}
