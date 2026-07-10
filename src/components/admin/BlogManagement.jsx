@@ -28,6 +28,7 @@ import {
   slugify,
   estimateReadingTime,
 } from "../../lib/schemas/blogPost";
+import RichTextEditor from "../common/RichTextEditor";
 
 // ── Blog management admin panel ────────────────────────────────────────────
 // Lets admins publish articles to the public /blog without code changes. Posts
@@ -45,6 +46,21 @@ const COVER_QUALITY = 0.8;
 const ADMIN_COLUMNS =
   "id, slug, title, seo_title, seo_description, intro, cover_image_url, tags, reading_time, sections, faqs, status, published_at, created_at, updated_at";
 
+// Rich-text helpers — Intro and section body are authored as sanitized HTML.
+const hasHtml = (s) => /<[a-z][\s\S]*>/i.test(s || "");
+const escapeHtml = (s) =>
+  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// Old posts stored plain paragraphs as a string[]; wrap each in <p> so they open
+// cleanly in the rich editor. New posts already store one HTML string per section.
+const paragraphsToHtml = (arr) =>
+  (Array.isArray(arr) ? arr : [])
+    .map((p) => (hasHtml(p) ? p : `<p>${escapeHtml(p)}</p>`))
+    .join("");
+// Visible text of an HTML string — used to tell an "empty" rich field apart from
+// one that only holds markup like <p></p>.
+const stripToText = (html) =>
+  String(html ?? "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim();
+
 const emptyForm = () => ({
   id: null,
   title: "",
@@ -56,7 +72,7 @@ const emptyForm = () => ({
   coverImageUrl: "",
   tagsText: "",
   readingTime: "",
-  sections: [{ heading: "", paragraphsText: "" }],
+  sections: [{ heading: "", body: "" }],
   faqs: [],
   status: "draft",
   publishedAt: null,
@@ -78,7 +94,7 @@ const rowToForm = (row) => ({
     : [{ heading: "", paragraphs: [] }]
   ).map((s) => ({
     heading: s.heading ?? "",
-    paragraphsText: (s.paragraphs ?? []).join("\n\n"),
+    body: paragraphsToHtml(s.paragraphs),
   })),
   faqs: (Array.isArray(row.faqs) ? row.faqs : []).map((f) => ({
     question: f.question ?? "",
@@ -87,13 +103,6 @@ const rowToForm = (row) => ({
   status: row.status ?? "draft",
   publishedAt: row.published_at ?? null,
 });
-
-// Blank-line-separated textarea → paragraphs array (matches static module shape).
-const splitParagraphs = (text) =>
-  String(text ?? "")
-    .split(/\n\s*\n/)
-    .map((p) => p.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
 
 const formToCandidate = (form) => ({
   title: form.title.trim(),
@@ -107,9 +116,12 @@ const formToCandidate = (form) => ({
     .map((t) => t.trim())
     .filter(Boolean),
   readingTime: form.readingTime === "" ? NaN : Number(form.readingTime),
+  // Section body is one rich-text HTML string, stored as a single-element
+  // paragraphs array (keeps the shape the renderer/schema expect). An empty
+  // body drops to [] so the schema flags the missing paragraph.
   sections: form.sections.map((s) => ({
     heading: s.heading.trim(),
-    paragraphs: splitParagraphs(s.paragraphsText),
+    paragraphs: stripToText(s.body) ? [s.body.trim()] : [],
   })),
   faqs: form.faqs
     .map((f) => ({ question: f.question.trim(), answer: f.answer.trim() }))
@@ -211,7 +223,7 @@ const BlogManagement = () => {
         intro: form.intro,
         sections: form.sections.map((s) => ({
           heading: s.heading,
-          paragraphs: splitParagraphs(s.paragraphsText),
+          paragraphs: [s.body],
         })),
       }),
     [form.intro, form.sections]
@@ -253,7 +265,7 @@ const BlogManagement = () => {
   const addSection = () =>
     setForm((f) => ({
       ...f,
-      sections: [...f.sections, { heading: "", paragraphsText: "" }],
+      sections: [...f.sections, { heading: "", body: "" }],
     }));
 
   const removeSection = (index) =>
@@ -665,18 +677,16 @@ const BlogManagement = () => {
             <div>
               <FieldLabel
                 htmlFor="blog-intro"
-                hint="shown under the title and used as the article summary"
+                hint="shown under the title — use the toolbar for bold, lists, and color"
               >
                 Intro
               </FieldLabel>
-              <textarea
-                id="blog-intro"
-                rows={4}
+              <RichTextEditor
+                testId="admin-blog-intro"
                 value={form.intro}
-                onChange={(e) => setField("intro", e.target.value)}
+                onChange={(html) => setField("intro", html)}
                 placeholder="Open with the problem this article solves for the reader…"
-                data-testid="admin-blog-intro-input"
-                className="input w-full"
+                bodyHeightClass="min-h-[8rem] max-h-[20rem]"
               />
               <FieldError id="admin-blog-intro-error" message={errors.intro} />
             </div>
@@ -819,20 +829,17 @@ const BlogManagement = () => {
                 <div>
                   <FieldLabel
                     htmlFor={`blog-section-body-${index}`}
-                    hint="separate paragraphs with a blank line"
+                    hint="bold, italic, lists, headings, and color from the toolbar"
                   >
-                    Paragraphs
+                    Body
                   </FieldLabel>
-                  <textarea
-                    id={`blog-section-body-${index}`}
-                    rows={6}
-                    value={section.paragraphsText}
-                    onChange={(e) =>
-                      updateSection(index, { paragraphsText: e.target.value })
-                    }
-                    placeholder={"First paragraph…\n\nSecond paragraph…"}
-                    data-testid={`admin-blog-section-body-input-${index}`}
-                    className="input w-full"
+                  <RichTextEditor
+                    testId={`admin-blog-section-body-${index}`}
+                    value={section.body}
+                    onChange={(html) => updateSection(index, { body: html })}
+                    placeholder="Write the section content…"
+                    withHeadings
+                    bodyHeightClass="min-h-[12rem] max-h-[32rem]"
                   />
                   <FieldError
                     id={`admin-blog-section-body-error-${index}`}

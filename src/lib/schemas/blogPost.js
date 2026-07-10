@@ -7,6 +7,20 @@ import { z } from "zod";
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// Intro and section body are rich text (sanitized HTML from RichTextEditor), so
+// length limits are measured against the visible text, not the markup. Static
+// posts store plain strings, which pass through these helpers unchanged.
+const stripTags = (s) =>
+  String(s ?? "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+const visibleLen = (s) => stripTags(s).length;
+
 export const blogSectionSchema = z.object({
   heading: z
     .string()
@@ -18,8 +32,8 @@ export const blogSectionSchema = z.object({
       z
         .string()
         .trim()
-        .min(1, "Paragraphs cannot be empty.")
-        .max(5000, "A paragraph is too long (5000 characters max).")
+        .max(20000, "A paragraph is too long (20000 characters max).")
+        .refine((v) => visibleLen(v) >= 1, "Paragraphs cannot be empty.")
     )
     .min(1, "Each section needs at least one paragraph."),
 });
@@ -65,8 +79,11 @@ export const blogPostSchema = z.object({
   intro: z
     .string()
     .trim()
-    .min(20, "The intro needs at least 20 characters — it doubles as the article summary.")
-    .max(5000, "Intro is too long (5000 characters max)."),
+    .max(20000, "Intro is too long (20000 characters max).")
+    .refine(
+      (v) => visibleLen(v) >= 20,
+      "The intro needs at least 20 characters — it doubles as the article summary."
+    ),
   coverImageUrl: z
     .string()
     .trim()
@@ -106,6 +123,7 @@ export function estimateReadingTime({ intro = "", sections = [] }) {
     intro,
     ...sections.flatMap((s) => [s.heading, ...(s.paragraphs || [])]),
   ].join(" ");
-  const words = text.split(/\s+/).filter(Boolean).length;
+  // Strip any HTML so markup doesn't inflate the word count.
+  const words = stripTags(text).split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
 }
