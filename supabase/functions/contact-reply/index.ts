@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: submission, error: lookupError } = await supabase
       .from("contact_submissions")
-      .select("id, name, email, subject, metadata")
+      .select("id, email, subject, metadata")
       .eq("id", submissionId)
       .single();
     if (lookupError || !submission) {
@@ -120,6 +120,11 @@ Deno.serve(async (req: Request) => {
 
     const supportEmail = Deno.env.get("CONTACT_TO_EMAIL") ?? "support@zalortrade.com";
     const from = `ZalorTrade Support <${supportEmail}>`;
+    // The visitor's reply must land on the Resend-receiving subdomain so
+    // contact-inbound picks it up — that's a different address than the sending
+    // `from` when the receiving subdomain isn't a verified sending domain.
+    // Falls back to the from address when unset (single-domain setups).
+    const replyTo = Deno.env.get("CONTACT_REPLY_TO_EMAIL") ?? supportEmail;
     const subject = parsed.data.subject ?? `Re: ${submission.subject}`;
 
     const res = await fetch("https://api.resend.com/emails", {
@@ -131,18 +136,27 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from,
         to: submission.email,
-        reply_to: supportEmail,
+        reply_to: replyTo,
         subject,
-        html: renderEmail(
-          submission.name as string,
-          message,
-        ),
+        html: renderEmail(message),
       }),
     });
 
     if (!res.ok) {
-      console.error("contact-reply Resend error:", res.status, await res.text());
-      return errorResponse("We couldn't send your reply. Please try again.", 502);
+      const detail = await res.text();
+      console.error("contact-reply Resend error:", res.status, detail);
+      // Admin-only endpoint: surface the provider's reason so the operator can
+      // act on it (e.g. an unverified sending domain) instead of a dead end.
+      let reason = "";
+      try {
+        reason = (JSON.parse(detail) as { message?: string }).message ?? "";
+      } catch { /* non-JSON body — fall back to the generic message */ }
+      return errorResponse(
+        reason
+          ? `Email provider rejected the reply: ${reason}`
+          : "We couldn't send your reply. Please try again.",
+        502,
+      );
     }
 
     // Record the reply on the submission (audit trail) and mark it read. Status
@@ -171,23 +185,16 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-function renderEmail(name: string, messageHtml: string): string {
+function renderEmail(messageHtml: string): string {
   // `messageHtml` is already sanitized (SANITIZE_OPTIONS above) so it can be
-  // embedded as-is; the sender name is still escaped (CLAUDE.md §2).
-  const esc = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // embedded as-is. Only the admin's message goes out — no greeting or footer.
   // Plain-text replies (no markup) keep their line breaks.
   const body = /<[a-z][^>]*>/i.test(messageHtml)
     ? messageHtml
     : messageHtml.replace(/\n/g, "<br />");
-  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px;">
-    <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e5e7eb;">
-      <p style="font-size:14px;color:#111827;margin:0 0 16px;">Hi ${esc(name)},</p>
-      <div style="font-size:14px;color:#111827;line-height:1.6;">${body}</div>
-      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
-      <p style="font-size:12px;color:#9ca3af;margin:0;">ZalorTrade Support · Reply to this email to continue the conversation.</p>
-    </div>
-  </body></html>`;
+  // Plain message — no card, border, or background, so it reads like a normal
+  // email rather than a boxed notification.
+  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:14px;line-height:1.6;margin:0;padding:16px;">${body}</body></html>`;
 }
 
 function successResponse(data: unknown) {

@@ -79,13 +79,15 @@ const ContactMessages = () => {
   const [replyText, setReplyText] = useState("");
   const [replySubject, setReplySubject] = useState("");
   const [replySending, setReplySending] = useState(false);
-  // Sender block state for the open thread (contact_blocked_senders, 037).
-  const [senderBlocked, setSenderBlocked] = useState(false);
-  const [blockBusy, setBlockBusy] = useState(false);
-  // Messages that were unread when the thread was opened — they keep their
-  // red dot while the modal is open (so the new ones are easy to spot), even
-  // though opening already marked them read; the dots are gone on reopen.
-  const [newMessageIds, setNewMessageIds] = useState(() => new Set());
+  // The reply composer (subject + body) is collapsed behind a "New message"
+  // button by default so the thread reads cleanly until you choose to reply.
+  const [composerOpen, setComposerOpen] = useState(false);
+  // Blocked senders (contact_blocked_senders, 037), keyed by lowercased email —
+  // drives the per-row Block/Unblock action.
+  const [blockedEmails, setBlockedEmails] = useState(() => new Set());
+  // The email whose row action (status change / block) is in flight, so that
+  // row's buttons disable without blocking the rest of the list.
+  const [busyEmail, setBusyEmail] = useState(null);
   // Per-tab conversation counts shown on the right of each filter tab.
   const [tabCounts, setTabCounts] = useState(null);
   // Row selection (by sender email) for the bulk delete action.
@@ -97,8 +99,12 @@ const ContactMessages = () => {
   const [editingKey, setEditingKey] = useState(null);
   const [editText, setEditText] = useState("");
   const [messageBusy, setMessageBusy] = useState(false);
-  // Scrollable thread container — kept pinned to the newest message (bottom).
+  // Scrollable thread container.
   const threadListRef = useRef(null);
+  // Which message the thread should scroll to once it renders: the id of the
+  // first unread message when a thread is opened, or null to fall back to the
+  // bottom (latest message). A ref so updating it doesn't trigger a re-render.
+  const pendingScrollRef = useRef(null);
   // Global unread count — shown on the "New" filter tab and used to trigger a
   // live reload of the list when a new submission arrives.
   const { newCount } = useContactInboxCount();
@@ -150,6 +156,19 @@ const ContactMessages = () => {
     }
   }, []);
 
+  // The set of currently blocked sender emails, so each row can show Block vs
+  // Unblock. Non-fatal: on error the rows just default to "not blocked".
+  const loadBlocked = useCallback(async () => {
+    const { data, error: blockedError } = await supabase
+      .from("contact_blocked_senders")
+      .select("email");
+    if (blockedError) {
+      console.error("[ContactMessages] blocked load error:", blockedError.message);
+      return;
+    }
+    setBlockedEmails(new Set((data ?? []).map((r) => r.email.toLowerCase())));
+  }, []);
+
   // newCount is a dependency so an incoming submission (realtime) reloads the
   // list and the fresh conversation appears at the top without a refresh.
   useEffect(() => {
@@ -157,6 +176,7 @@ const ContactMessages = () => {
     setLoading(true);
     setError(false);
     loadCounts();
+    loadBlocked();
     load()
       .then(({ data, count }) => {
         if (cancelled) return;
@@ -174,7 +194,7 @@ const ContactMessages = () => {
     return () => {
       cancelled = true;
     };
-  }, [load, loadCounts, newCount]);
+  }, [load, loadCounts, loadBlocked, newCount]);
 
   // Selections don't carry across pages/filters — the rows they referred to
   // are no longer visible.
@@ -302,27 +322,20 @@ const ContactMessages = () => {
     );
     setEditingKey(null);
     setEditText("");
-    setSenderBlocked(false);
+    setComposerOpen(false);
     setThreadLoading(true);
     try {
       const messages = await fetchThreadMessages(thread.email);
+      // Scroll target: the earliest unread message, so the admin lands on the
+      // first message they haven't seen (not the very bottom). Messages come
+      // back newest-first, so scan from the end for the oldest 'new' one. Set
+      // before marking read below, since that flips their status to 'read'.
+      const firstUnread = [...messages].reverse().find((m) => m.status === "new");
+      pendingScrollRef.current = firstUnread ? firstUnread.id : null;
       setThreadMessages(messages);
-      setNewMessageIds(
-        new Set(messages.filter((m) => m.status === "new").map((m) => m.id)),
-      );
       if (thread.new_count > 0) {
         await updateThreadStatus(thread.email, "read", { silent: true });
       }
-      // Non-fatal: the block toggle just starts from "not blocked" on error.
-      const { data: blockedRow, error: blockError } = await supabase
-        .from("contact_blocked_senders")
-        .select("email")
-        .eq("email", thread.email.toLowerCase())
-        .maybeSingle();
-      if (blockError) {
-        console.error("[ContactMessages] block lookup error:", blockError.message);
-      }
-      setSenderBlocked(Boolean(blockedRow));
     } catch (err) {
       console.error("[ContactMessages] thread load error:", err.message);
       toast.error("Couldn't load the conversation. Please try again.");
@@ -339,49 +352,66 @@ const ContactMessages = () => {
     setReplySubject("");
     setEditingKey(null);
     setEditText("");
-    setSenderBlocked(false);
-    setNewMessageIds(new Set());
+    setComposerOpen(false);
+    pendingScrollRef.current = null;
   };
 
-  // Block or unblock the open thread's sender. While blocked, contact-submit
-  // silently discards their messages (migration 037), so nothing new arrives
-  // until they're unblocked. Messages they already sent are untouched.
-  const toggleBlockSender = async () => {
-    if (!selectedThread || blockBusy) return;
-    const email = selectedThread.email.toLowerCase();
+  // Apply a status to a whole conversation straight from its row (Mark read /
+  // Archive / Spam), disabling just that row while the change is in flight.
+  const applyRowStatus = async (email, status) => {
+    if (busyEmail) return;
+    setBusyEmail(email);
+    try {
+      await updateThreadStatus(email, status);
+    } finally {
+      setBusyEmail(null);
+    }
+  };
+
+  // Block or unblock a sender from its row. While blocked, contact-submit and
+  // contact-inbound silently discard their messages (migration 037), so nothing
+  // new arrives until they're unblocked. Messages they already sent are kept.
+  const toggleBlockEmail = async (email) => {
+    if (busyEmail) return;
+    const key = email.toLowerCase();
+    const isBlocked = blockedEmails.has(key);
 
     if (
-      !senderBlocked &&
+      !isBlocked &&
       !window.confirm(
-        `Block ${email}? New messages they send will be discarded — you won't receive anything from them until you unblock them.`,
+        `Block ${key}? New messages they send will be discarded — you won't receive anything from them until you unblock them.`,
       )
     ) {
       return;
     }
 
-    setBlockBusy(true);
+    setBusyEmail(email);
     try {
-      if (senderBlocked) {
+      if (isBlocked) {
         const { error: unblockError } = await supabase
           .from("contact_blocked_senders")
           .delete()
-          .eq("email", email);
+          .eq("email", key);
         if (unblockError) throw new Error(unblockError.message);
-        setSenderBlocked(false);
         toast.success("Sender unblocked — their messages will come through again.");
       } else {
         const { error: blockError } = await supabase
           .from("contact_blocked_senders")
-          .insert({ email });
+          .insert({ email: key });
         if (blockError) throw new Error(blockError.message);
-        setSenderBlocked(true);
         toast.success("Sender blocked. You won't receive new messages from them.");
       }
+      setBlockedEmails((prev) => {
+        const next = new Set(prev);
+        if (isBlocked) next.delete(key);
+        else next.add(key);
+        return next;
+      });
     } catch (err) {
       console.error("[ContactMessages] block toggle error:", err.message);
       toast.error("Couldn't update the block status. Please try again.");
     } finally {
-      setBlockBusy(false);
+      setBusyEmail(null);
     }
   };
 
@@ -389,6 +419,9 @@ const ContactMessages = () => {
   // message_count and tab counts move when a message is added or removed.
   // Closes the modal if the whole thread is gone.
   const refreshAfterMessageChange = async (email) => {
+    // After an edit/delete, drop the first-unread target so the thread settles
+    // on the latest message rather than jumping back up.
+    pendingScrollRef.current = null;
     const messages = await fetchThreadMessages(email);
     if (messages.length === 0) {
       closeThread();
@@ -533,6 +566,9 @@ const ContactMessages = () => {
       }
       setReplyText("");
       toast.success("Reply sent.");
+      // Once we've replied, drop the first-unread target so the thread scrolls
+      // to the new reply at the bottom instead of back up to an old message.
+      pendingScrollRef.current = null;
       // Reload the history so the new reply appears in the conversation.
       setThreadMessages(await fetchThreadMessages(latest.email));
       // The row badge counts replies too (migration 036) — refresh the list
@@ -549,8 +585,8 @@ const ContactMessages = () => {
   };
 
   // Flatten visitor messages and admin replies into one conversation in
-  // chronological order — oldest at the top, the newest message at the bottom
-  // (the container is kept scrolled to the bottom, like a chat).
+  // chronological order — oldest at the top, the latest message at the bottom.
+  // The container auto-scrolls to the bottom so the latest is shown on open.
   const conversation = useMemo(() => {
     const entries = [];
     for (const m of threadMessages) {
@@ -582,12 +618,25 @@ const ContactMessages = () => {
     return entries.sort((a, b) => new Date(a.at) - new Date(b.at));
   }, [threadMessages]);
 
-  // Pin the thread to the newest message whenever the conversation changes
-  // (open, incoming reload, or a reply just sent).
+  // Position the thread whenever it (re)renders: scroll to the first unread
+  // message if one was flagged on open, otherwise pin to the latest (bottom).
+  // Depends on threadLoading so it runs once the message list is actually in
+  // the DOM (during loading the container only holds the spinner).
   useEffect(() => {
+    if (threadLoading) return;
     const el = threadListRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [conversation]);
+    if (!el) return;
+    const key = pendingScrollRef.current;
+    const target = key
+      ? el.querySelector(`[data-testid="admin-contact-thread-message-${key}"]`)
+      : null;
+    if (target) {
+      // Align the first unread message to the top of the scroll container.
+      el.scrollTop += target.getBoundingClientRect().top - el.getBoundingClientRect().top;
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [conversation, threadLoading]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const latestMessage = threadMessages[0] ?? null;
@@ -605,12 +654,6 @@ const ContactMessages = () => {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Contact Inbox
         </h1>
-        <span
-          data-testid="admin-contact-count"
-          className="ml-1 rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          {total}
-        </span>
       </div>
 
       {/* Status filter — every tab shows its conversation count on the right */}
@@ -706,13 +749,16 @@ const ContactMessages = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Status
               </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   data-testid="admin-contact-loading"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
@@ -722,7 +768,7 @@ const ContactMessages = () => {
             ) : error ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   data-testid="admin-contact-error"
                   className="px-6 py-10 text-center text-sm text-danger-600 dark:text-danger-400"
                 >
@@ -732,7 +778,7 @@ const ContactMessages = () => {
             ) : threads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   data-testid="admin-contact-empty"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
@@ -749,7 +795,18 @@ const ContactMessages = () => {
                   className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
                 >
                   {/* stopPropagation: checking a row must not open it */}
-                  <td className="w-10 px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                  <td className="relative w-10 px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                    {/* New-message count badge in the top-left corner — cleared
+                        once the thread is opened (marks it read). */}
+                    {t.new_count > 0 && (
+                      <span
+                        data-testid={`admin-contact-row-new-dot-${t.latest_id}`}
+                        aria-label={`${t.new_count} new`}
+                        className="absolute left-0.5 top-0.5 inline-flex h-[1.125rem] min-w-[1.125rem] px-1 items-center justify-center rounded-full bg-danger-600 text-[10px] font-semibold text-white ring-2 ring-white dark:ring-gray-800"
+                      >
+                        {t.new_count > 99 ? "99+" : t.new_count}
+                      </span>
+                    )}
                     <input
                       type="checkbox"
                       data-testid={`admin-contact-select-${t.latest_id}`}
@@ -767,16 +824,8 @@ const ContactMessages = () => {
                     >
                       {t.latest_name}
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       {t.email}
-                      {/* Unread dot — cleared when the thread is opened
-                          (opening marks the conversation read). */}
-                      {t.new_count > 0 && (
-                        <span
-                          data-testid={`admin-contact-unread-dot-${t.latest_id}`}
-                          className="h-2 w-2 shrink-0 rounded-full bg-danger-500"
-                        />
-                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
@@ -790,14 +839,6 @@ const ContactMessages = () => {
                       <MessagesSquare className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       {t.message_count}
                     </span>
-                    {t.new_count > 0 && (
-                      <span
-                        data-testid={`admin-contact-thread-new-badge-${t.latest_id}`}
-                        className="ml-2 inline-flex min-w-[1.25rem] h-5 px-1.5 items-center justify-center rounded-full bg-danger-500 text-[11px] font-semibold text-white"
-                      >
-                        {t.new_count > 99 ? "99+" : t.new_count}
-                      </span>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {new Date(t.last_message_at).toLocaleString()}
@@ -812,6 +853,59 @@ const ContactMessages = () => {
                     >
                       {t.new_count > 0 ? "new" : t.latest_status}
                     </span>
+                  </td>
+                  {/* Per-conversation actions — stopPropagation so clicking an
+                      action doesn't also open the thread. */}
+                  <td
+                    className="px-6 py-4 whitespace-nowrap text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        data-testid={`admin-contact-row-read-btn-${t.latest_id}`}
+                        onClick={() => applyRowStatus(t.email, "read")}
+                        disabled={busyEmail === t.email}
+                        title="Mark read"
+                        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </button>
+                      <button
+                        data-testid={`admin-contact-row-archive-btn-${t.latest_id}`}
+                        onClick={() => applyRowStatus(t.email, "archived")}
+                        disabled={busyEmail === t.email}
+                        title="Archive"
+                        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </button>
+                      <button
+                        data-testid={`admin-contact-row-spam-btn-${t.latest_id}`}
+                        onClick={() => applyRowStatus(t.email, "spam")}
+                        disabled={busyEmail === t.email}
+                        title="Mark as spam"
+                        className="rounded p-1.5 text-gray-400 hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ShieldAlert className="h-4 w-4" />
+                      </button>
+                      <button
+                        data-testid={`admin-contact-row-block-btn-${t.latest_id}`}
+                        onClick={() => toggleBlockEmail(t.email)}
+                        disabled={busyEmail === t.email}
+                        title={
+                          blockedEmails.has(t.email.toLowerCase())
+                            ? "Unblock sender"
+                            : "Block sender"
+                        }
+                        className={`rounded p-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                          blockedEmails.has(t.email.toLowerCase())
+                            ? "text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
+                            : "text-gray-400 hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400"
+                        }`}
+                      >
+                        <Ban className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -870,7 +964,7 @@ const ContactMessages = () => {
                   data-testid="admin-contact-thread-message-count"
                   className="mt-1 text-sm text-gray-500 dark:text-gray-400"
                 >
-                  {threadCount} {threadCount === 1 ? "message" : "messages"} — newest at the bottom
+                  {threadCount} {threadCount === 1 ? "message" : "messages"}
                 </p>
               </div>
               <button
@@ -905,24 +999,41 @@ const ContactMessages = () => {
                   // older plain-text replies fall back to the text renderer.
                   const isHtmlReply =
                     entry.kind === "admin" && /<[a-z][^>]*>/i.test(entry.message);
+                  // Both sides use a full-contrast, readable colour; the reply
+                  // vs incoming distinction comes from the bubble background,
+                  // side, and "You replied" badge — not a washed-out text tone.
+                  const bodyClass =
+                    entry.kind === "admin"
+                      ? "text-gray-800 dark:text-gray-100"
+                      : "text-gray-800 dark:text-gray-200";
                   return (
                     <div
                       key={entry.key}
-                      data-testid={`admin-contact-thread-message-${entry.key}`}
-                      className={`rounded-lg p-4 ${
+                      className={
                         entry.kind === "admin"
-                          ? "ml-auto w-1/2 bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
-                          : "mr-8 bg-gray-50 dark:bg-gray-900"
-                      }`}
+                          ? "ml-auto w-1/2"
+                          : "mr-auto w-1/2"
+                      }
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      {/* Date/time sits above the bubble, aligned to its side. */}
+                      <p
+                        className={`text-xs text-gray-400 dark:text-gray-500 mb-1 ${
+                          entry.kind === "admin" ? "text-right" : "text-left"
+                        }`}
+                      >
+                        {new Date(entry.at).toLocaleString()}
+                        {entry.editedAt && <span className="ml-1 italic">(edited)</span>}
+                      </p>
+                      <div
+                        data-testid={`admin-contact-thread-message-${entry.key}`}
+                        className={`rounded-lg p-4 ${
+                          entry.kind === "admin"
+                            ? "bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
+                            : "bg-gray-50 dark:bg-gray-900"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
                         <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {entry.kind === "visitor" && newMessageIds.has(entry.id) && (
-                            <span
-                              data-testid={`admin-contact-message-unread-dot-${entry.key}`}
-                              className="h-2 w-2 shrink-0 rounded-full bg-danger-500"
-                            />
-                          )}
                           {entry.subject}
                         </p>
                         <div className="flex shrink-0 items-center gap-1.5">
@@ -969,12 +1080,6 @@ const ContactMessages = () => {
                           )}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        {new Date(entry.at).toLocaleString()}
-                        {entry.editedAt && (
-                          <span className="ml-1 italic">(edited)</span>
-                        )}
-                      </p>
                       {/* Long emails scroll inside their own bubble (max-h)
                           instead of stretching the thread. */}
                       {isEditing ? (
@@ -1006,104 +1111,99 @@ const ContactMessages = () => {
                         </div>
                       ) : isHtmlReply ? (
                         <div
-                          className="rich-text-content mt-2 max-h-56 overflow-y-auto text-sm text-gray-800 dark:text-gray-200"
+                          className={`rich-text-content mt-2 max-h-56 overflow-y-auto text-sm ${bodyClass}`}
                           // Sanitized with DOMPurify (sanitizeNoteHtml) per CLAUDE.md §2.
                           dangerouslySetInnerHTML={{
                             __html: sanitizeNoteHtml(entry.message),
                           }}
                         />
                       ) : (
-                        <div className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
+                        <div className={`mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm ${bodyClass}`}>
                           {entry.message}
                         </div>
                       )}
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
 
-            {/* In-app reply — emailed to the sender via the contact-reply
-                Edge Function and recorded in the conversation above. */}
-            <div className="mt-4">
-              <input
-                type="text"
-                data-testid="admin-contact-reply-subject-input"
-                value={replySubject}
-                onChange={(e) => setReplySubject(e.target.value)}
-                placeholder="Subject"
-                maxLength={150}
-                className="mb-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
-              />
-              <RichTextEditor
-                testId="admin-contact-reply-input"
-                value={replyText}
-                onChange={setReplyText}
-                placeholder={`Reply to ${selectedThread.latest_name}…`}
-                withHeadings
-              />
-              <div className="mt-2 flex justify-end">
-                <button
-                  data-testid="admin-contact-send-reply-btn"
-                  onClick={sendReply}
-                  disabled={
-                    replySending ||
-                    threadLoading ||
-                    replySubject.trim().length === 0 ||
-                    noteTextLength(replyText) === 0
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="h-4 w-4" />
-                  {replySending ? "Sending…" : "Send reply"}
-                </button>
+            {/* In-app reply — collapsed behind a "New message" button by
+                default; expands to the subject + body composer. Emailed to the
+                sender via contact-reply and recorded in the conversation above. */}
+            {composerOpen ? (
+              <div className="mt-4">
+                {/* Composer header with a close button — the composer stays open
+                    after sending so you can send several messages in a row. */}
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    New message
+                  </span>
+                  <button
+                    data-testid="admin-contact-reply-close-btn"
+                    onClick={() => setComposerOpen(false)}
+                    disabled={replySending}
+                    title="Close"
+                    className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  data-testid="admin-contact-reply-subject-input"
+                  value={replySubject}
+                  onChange={(e) => setReplySubject(e.target.value)}
+                  placeholder="Subject"
+                  maxLength={150}
+                  className="mb-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                />
+                <RichTextEditor
+                  testId="admin-contact-reply-input"
+                  value={replyText}
+                  onChange={setReplyText}
+                  placeholder={`Reply to ${selectedThread.latest_name}…`}
+                  withHeadings
+                />
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    data-testid="admin-contact-send-reply-btn"
+                    onClick={sendReply}
+                    disabled={
+                      replySending ||
+                      threadLoading ||
+                      replySubject.trim().length === 0 ||
+                      noteTextLength(replyText) === 0
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="h-4 w-4" />
+                    {replySending ? "Sending…" : "Send reply"}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                data-testid="admin-contact-mark-read-btn"
-                onClick={async () => {
-                  // Marking read is a "done triaging" action — close the modal.
-                  if (await updateThreadStatus(selectedThread.email, "read")) closeThread();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <CheckCircle className="h-4 w-4" /> Mark read
-              </button>
-              <button
-                data-testid="admin-contact-archive-btn"
-                onClick={() => updateThreadStatus(selectedThread.email, "archived")}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <Archive className="h-4 w-4" /> Archive
-              </button>
-              <button
-                data-testid="admin-contact-spam-btn"
-                onClick={() => updateThreadStatus(selectedThread.email, "spam")}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-danger-200 dark:border-danger-900/50 px-3 py-1.5 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
-              >
-                <ShieldAlert className="h-4 w-4" /> Spam
-              </button>
-              <button
-                data-testid="admin-contact-block-btn"
-                onClick={toggleBlockSender}
-                disabled={blockBusy || threadLoading}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                  senderBlocked
-                    ? "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    : "border-danger-200 dark:border-danger-900/50 text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
-                }`}
-              >
-                <Ban className="h-4 w-4" />
-                {blockBusy ? "Working…" : senderBlocked ? "Unblock sender" : "Block sender"}
-              </button>
+            {/* Reply actions, stacked on the right — the "New message" button
+                sits on top of the external Email app link. Triage actions
+                (mark read / archive / spam / block) live on each list row. */}
+            <div className="mt-4 flex flex-col items-end gap-2">
+              {!composerOpen && (
+                <button
+                  data-testid="admin-contact-new-message-btn"
+                  onClick={() => setComposerOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
+                >
+                  <Pencil className="h-4 w-4" /> New message
+                </button>
+              )}
               <a
                 data-testid="admin-contact-reply-btn"
                 href={`mailto:${selectedThread.email}?subject=Re: ${encodeURIComponent(
                   latestMessage?.subject ?? selectedThread.latest_subject,
                 )}`}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <Mail className="h-4 w-4" /> Email app
               </a>
