@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3";
+import { notifyAdminsContact } from "../_shared/contactNotify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -118,14 +119,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Best-effort in-app notification for admins, aggregated per sender email
-    // (one bell entry with a running count, not a new row per message).
-    await notifyAdminsInApp(supabase, {
-      name,
-      email,
-      subject,
-      submissionId: inserted.id,
-    });
+    // Best-effort in-app notification for admins: one aggregated bell entry
+    // with a running count across all senders, not a new row per message.
+    await notifyAdminsContact(
+      supabase,
+      { name, email, subject, submissionId: inserted.id },
+      "message",
+    );
 
     // Best-effort team notification. The submission is already saved, so a
     // missing/failed email never fails the request — we just record the outcome.
@@ -168,88 +168,6 @@ async function verifyTurnstile(
   }
 }
 
-// Creates or bumps one in-app notification per admin per sender email.
-// Repeat messages from the same sender increment the count on the existing
-// unread notification (and move it to the top by refreshing created_at)
-// instead of stacking a separate notification for every message. Once the
-// admin reads the notification, the next message starts a fresh one.
-// Never throws — the submission is already saved and must not fail here.
-async function notifyAdminsInApp(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
-  input: { name: string; email: string; subject: string; submissionId: string },
-): Promise<void> {
-  try {
-    const { data: admins, error: adminsError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("role", "admin");
-    if (adminsError || !admins?.length) {
-      if (adminsError) {
-        console.error("contact-submit admin lookup failed:", adminsError.message);
-      }
-      return;
-    }
-
-    await Promise.all(
-      admins.map(async ({ id: adminId }: { id: string }) => {
-        const { data: existing } = await supabase
-          .from("notifications")
-          .select("id, metadata")
-          .eq("user_id", adminId)
-          .eq("category", "contact")
-          .eq("event_type", "contact_message")
-          .eq("metadata->>sender_email", input.email)
-          .is("read_at", null)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (existing) {
-          const count = (Number(existing.metadata?.count) || 1) + 1;
-          const { error } = await supabase
-            .from("notifications")
-            .update({
-              title: `${count} new messages from ${input.name}`,
-              body: input.subject,
-              metadata: {
-                ...existing.metadata,
-                sender_email: input.email,
-                count,
-                latest_submission_id: input.submissionId,
-              },
-              // Bump so the aggregated entry surfaces at the top of the bell.
-              created_at: new Date().toISOString(),
-            })
-            .eq("id", existing.id);
-          if (error) {
-            console.error("contact-submit notification bump failed:", error.message);
-          }
-        } else {
-          const { error } = await supabase.from("notifications").insert({
-            user_id: adminId,
-            category: "contact",
-            event_type: "contact_message",
-            title: `New message from ${input.name}`,
-            body: input.subject,
-            severity: "info",
-            link_to: "/admin/contact-submissions",
-            metadata: {
-              sender_email: input.email,
-              count: 1,
-              latest_submission_id: input.submissionId,
-            },
-          });
-          if (error) {
-            console.error("contact-submit notification insert failed:", error.message);
-          }
-        }
-      }),
-    );
-  } catch (err) {
-    console.error("contact-submit admin notification failed:", err);
-  }
-}
 
 // Emails the support inbox via Resend, with reply-to set to the submitter so the
 // team can respond directly. Mirrors the fetch pattern in _shared/notify.ts.
