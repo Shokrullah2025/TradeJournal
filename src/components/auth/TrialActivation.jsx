@@ -214,16 +214,6 @@ const TrialActivation = ({
           </div>
         )}
 
-        {/* Optional coupon — applied to the plan that starts after the trial. */}
-        <div className="space-y-1.5" data-testid="trial-coupon">
-          <p className="text-xs font-medium text-gray-500">Have a coupon?</p>
-          <CouponField
-            onApply={setCouponCode}
-            onClear={() => setCouponCode(null)}
-            disabled={isWorking}
-          />
-        </div>
-
         {paymentMethodId ? (
           // Card already verified; the trial start failed. Retry just that step.
           <div className="space-y-3">
@@ -277,6 +267,15 @@ const TrialActivation = ({
               onSuccess={handleCardConfirmed}
               onCancel={() => setTrialStatus("intro")}
             />
+            {/* Coupon applied to the plan that starts after the trial */}
+            <div className="mt-4 border-t border-gray-100 pt-4 space-y-1.5" data-testid="trial-coupon">
+              <p className="text-xs font-medium text-gray-500">Have a coupon code?</p>
+              <CouponField
+                onApply={setCouponCode}
+                onClear={() => setCouponCode(null)}
+                disabled={isWorking}
+              />
+            </div>
           </div>
         ) : (
           <form

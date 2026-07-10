@@ -329,7 +329,7 @@ export const PRICING_TIERS = [
       "Real-time broker sync (coming soon)",
     ],
     popular: true,
-    cta: "Start Premium",
+    cta: "Start free trial",
   },
   {
     id: "enterprise",

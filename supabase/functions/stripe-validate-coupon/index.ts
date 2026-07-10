@@ -38,10 +38,21 @@ Deno.serve(async (req: Request) => {
       apiVersion: "2024-04-10",
     });
 
-    const promos = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+    // List without the active filter so we can tell "doesn't exist" (invalid)
+    // apart from "exists but no longer usable" (expired), for a clearer message.
+    const promos = await stripe.promotionCodes.list({ code, limit: 1 });
     const promo = promos.data[0];
-    if (!promo || !promo.coupon?.valid) {
-      return successResponse({ valid: false });
+    if (!promo) {
+      return successResponse({ valid: false, reason: "invalid" });
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expired =
+      promo.active === false ||
+      (promo.expires_at != null && promo.expires_at < nowSec) ||
+      promo.coupon?.valid === false;
+    if (expired) {
+      return successResponse({ valid: false, reason: "expired" });
     }
 
     return successResponse({
