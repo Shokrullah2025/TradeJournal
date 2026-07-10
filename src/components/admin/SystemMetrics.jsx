@@ -14,8 +14,10 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { Activity, AlertTriangle, Users, TrendingUp, Server, Gauge } from "lucide-react";
+import { Activity, AlertTriangle, Users, TrendingUp, Server, Gauge, Trash2, Loader2, HardDrive } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
+import { invokeFunction } from "../../lib/invokeFunction";
 import AdminStatCard from "./AdminStatCard";
 import { buildDailySeries, summarizeSeries } from "../../utils/adminMetrics";
 
@@ -129,6 +131,29 @@ const SystemMetrics = () => {
   );
 
   const totals = useMemo(() => summarizeSeries(series), [series]);
+
+  // ── Storage maintenance ─────────────────────────────────────────────────
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState(null);
+
+  const runPurge = async () => {
+    setPurging(true);
+    try {
+      const res = await invokeFunction(
+        "admin-purge-trade-images",
+        undefined,
+        "Purge failed. Please try again.",
+      );
+      setPurgeResult(res);
+      toast.success(
+        `Removed ${res.orphansRemoved} orphaned file${res.orphansRemoved === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      toast.error(err.message || "Purge failed. Please try again.");
+    } finally {
+      setPurging(false);
+    }
+  };
 
   return (
     <div className="space-y-6" data-testid="admin-system-metrics">
@@ -244,6 +269,48 @@ const SystemMetrics = () => {
           </ChartCard>
         </div>
       )}
+
+      {/* Storage maintenance */}
+      <div className="card" data-testid="admin-storage-maintenance">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="flex items-start gap-3">
+            <HardDrive className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                Storage maintenance
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 max-w-lg">
+                Remove trade-image files that are no longer referenced by any
+                trade — left over from deleted trades or images. Frees storage;
+                does not touch images still in use.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={runPurge}
+            disabled={purging}
+            data-testid="admin-purge-images-btn"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {purging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {purging ? "Purging…" : "Purge orphaned images"}
+          </button>
+        </div>
+        {purgeResult && (
+          <p
+            className="mt-3 text-xs text-gray-600 dark:text-gray-300"
+            data-testid="admin-purge-result"
+          >
+            Scanned {purgeResult.scanned} file{purgeResult.scanned === 1 ? "" : "s"} ·
+            kept {purgeResult.kept} in use · removed{" "}
+            <span className="font-semibold">{purgeResult.orphansRemoved}</span> orphan
+            {purgeResult.orphansRemoved === 1 ? "" : "s"} · purged{" "}
+            {purgeResult.softDeletedRowsPurged} stale record
+            {purgeResult.softDeletedRowsPurged === 1 ? "" : "s"}.
+          </p>
+        )}
+      </div>
 
       <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 px-4 py-3 flex items-start gap-3">
         <Server className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />

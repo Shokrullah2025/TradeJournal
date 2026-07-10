@@ -401,6 +401,23 @@ export const TradeProvider = ({ children }) => {
   const deleteTrade = useCallback(async (tradeId) => {
     if (!user) throw new Error("Not authenticated");
 
+    // Remove this trade's image files from storage first. Deleting the trade row
+    // cascades the trade_images rows, but not the underlying objects — without
+    // this the files would be orphaned in the bucket forever. Select all rows
+    // (including any previously soft-deleted) so nothing is left behind.
+    const { data: imgs } = await supabase
+      .from("trade_images")
+      .select("image_url")
+      .eq("trade_id", tradeId)
+      .eq("user_id", user.id);
+    const paths = (imgs ?? []).map((r) => r.image_url).filter(Boolean);
+    if (paths.length > 0) {
+      const { error: removeError } = await supabase.storage
+        .from("trade-images")
+        .remove(paths);
+      if (removeError) console.warn("[Trades] image cleanup warning:", removeError.message);
+    }
+
     const { error } = await supabase
       .from("trades")
       .delete()
@@ -503,13 +520,33 @@ export const TradeProvider = ({ children }) => {
     return path;
   }, [user]);
 
-  // Soft-delete a trade image — sets deleted_at so it's hidden from normal queries
-  // but remains in storage and is recoverable by an admin via the deleted_at IS NOT NULL filter.
+  // Hard-delete a trade image: remove the file from storage first, then delete
+  // the row. Previously this only soft-deleted (deleted_at), which left the file
+  // in the bucket forever and steadily bloated storage. When the user removes an
+  // image they intend it gone, so we reclaim the space immediately.
   const deleteTradeImage = useCallback(async (imageId) => {
     if (!user) throw new Error("Not authenticated");
+
+    // Resolve the storage path so we can remove the actual object.
+    const { data: img, error: fetchError } = await supabase
+      .from("trade_images")
+      .select("image_url")
+      .eq("id", imageId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (fetchError) throw new Error(fetchError.message);
+
+    if (img?.image_url) {
+      const { error: removeError } = await supabase.storage
+        .from("trade-images")
+        .remove([img.image_url]);
+      // A missing object shouldn't block deleting the row — just warn.
+      if (removeError) console.warn("[Trades] image remove warning:", removeError.message);
+    }
+
     const { error } = await supabase
       .from("trade_images")
-      .update({ deleted_at: new Date().toISOString() })
+      .delete()
       .eq("id", imageId)
       .eq("user_id", user.id);
     if (error) throw new Error(error.message);

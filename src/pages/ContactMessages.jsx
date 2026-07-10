@@ -106,6 +106,9 @@ const ContactMessages = () => {
   const [busyEmail, setBusyEmail] = useState(null);
   // Per-tab conversation counts shown on the right of each filter tab.
   const [tabCounts, setTabCounts] = useState(null);
+  // Bumped after an action (status change / block) to re-run the list + counts
+  // so a row that no longer matches the active tab actually leaves it.
+  const [refreshKey, setRefreshKey] = useState(0);
   // Row selection (by sender email) for the bulk delete action.
   const [selectedEmails, setSelectedEmails] = useState(() => new Set());
   const [deleting, setDeleting] = useState(false);
@@ -135,7 +138,10 @@ const ContactMessages = () => {
 
     if (statusFilter === "new") {
       query = query.gt("new_count", 0);
-    } else if (statusFilter !== "all") {
+    } else if (statusFilter === "all") {
+      // "All" is the active inbox — archived and spam live in their own tabs.
+      query = query.not("latest_status", "in", "(archived,spam)");
+    } else {
       query = query.eq("latest_status", statusFilter);
     }
 
@@ -153,7 +159,7 @@ const ContactMessages = () => {
           .from("contact_threads")
           .select("email", { count: "exact", head: true });
       const [all, unread, read, archived, spam] = await Promise.all([
-        head(),
+        head().not("latest_status", "in", "(archived,spam)"),
         head().gt("new_count", 0),
         head().eq("latest_status", "read"),
         head().eq("latest_status", "archived"),
@@ -210,7 +216,7 @@ const ContactMessages = () => {
     return () => {
       cancelled = true;
     };
-  }, [load, loadCounts, loadBlocked, newCount]);
+  }, [load, loadCounts, loadBlocked, newCount, refreshKey]);
 
   // Selections don't carry across pages/filters — the rows they referred to
   // are no longer visible.
@@ -379,6 +385,8 @@ const ContactMessages = () => {
     setBusyEmail(email);
     try {
       await updateThreadStatus(email, status);
+      // Re-run the list so the row leaves a tab it no longer belongs to.
+      setRefreshKey((k) => k + 1);
     } finally {
       setBusyEmail(null);
     }
@@ -410,13 +418,25 @@ const ContactMessages = () => {
           .delete()
           .eq("email", key);
         if (unblockError) throw new Error(unblockError.message);
+        // Bring the conversation back into the active inbox. updateThreadStatus's
+        // "read" path only touches unread messages (so it can't un-spam), so move
+        // the spam messages back to read directly.
+        const { error: unspamError } = await supabase
+          .from("contact_submissions")
+          .update({ status: "read" })
+          .eq("email", key)
+          .eq("status", "spam");
+        if (unspamError) throw new Error(unspamError.message);
         toast.success("Sender unblocked — their messages will come through again.");
       } else {
         const { error: blockError } = await supabase
           .from("contact_blocked_senders")
           .insert({ email: key });
         if (blockError) throw new Error(blockError.message);
-        toast.success("Sender blocked. You won't receive new messages from them.");
+        // A blocked sender is spam — move the whole conversation to the Spam tab
+        // so it stops showing in All.
+        await updateThreadStatus(key, "spam", { silent: true });
+        toast.success("Sender blocked and moved to Spam. You won't receive new messages from them.");
       }
       setBlockedEmails((prev) => {
         const next = new Set(prev);
@@ -424,6 +444,8 @@ const ContactMessages = () => {
         else next.add(key);
         return next;
       });
+      // Reflect the new status/tab placement immediately.
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error("[ContactMessages] block toggle error:", err.message);
       toast.error("Couldn't update the block status. Please try again.");
@@ -778,12 +800,11 @@ const ContactMessages = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td
-                  colSpan={7}
-                  data-testid="admin-contact-loading"
-                  className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
-                >
-                  Loading…
+                <td colSpan={7} data-testid="admin-contact-loading" className="px-6 py-12">
+                  <div className="flex flex-col items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                    <span>Loading conversations…</span>
+                  </div>
                 </td>
               </tr>
             ) : error ? (
@@ -1030,11 +1051,9 @@ const ContactMessages = () => {
                   return (
                     <div
                       key={entry.key}
-                      className={
-                        entry.kind === "admin"
-                          ? "ml-auto w-1/2"
-                          : "mr-auto w-1/2"
-                      }
+                      className={`w-[88%] sm:w-3/4 lg:w-2/3 ${
+                        entry.kind === "admin" ? "ml-auto" : "mr-auto"
+                      }`}
                     >
                       {/* Date/time sits above the bubble, aligned to its side. */}
                       <p
@@ -1053,13 +1072,13 @@ const ContactMessages = () => {
                             : "bg-gray-50 dark:bg-gray-900"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                        <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 flex-1 break-words text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {entry.subject}
                         </p>
                         <div className="flex shrink-0 items-center gap-1.5">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            className={`max-w-[7rem] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                               entry.kind === "admin"
                                 ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
                                 : isNewest

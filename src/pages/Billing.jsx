@@ -18,6 +18,7 @@ import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
 import StripePaymentForm from "../components/billing/StripePaymentForm";
 import CancelRetentionModal from "../components/billing/CancelRetentionModal";
+import CouponField from "../components/billing/CouponField";
 import useSubscriptionPlans from "../hooks/useSubscriptionPlans";
 
 // Static class strings per plan accent — Tailwind's scanner can't see
@@ -80,6 +81,8 @@ const Billing = () => {
   const [portalLoading, setPortalLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [retentionWorking, setRetentionWorking] = useState(false);
+  // A validated coupon code applied to a paid upgrade at checkout.
+  const [checkoutCoupon, setCheckoutCoupon] = useState(null);
   const [billingAnalytics, setBillingAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState("payment");
 
@@ -98,7 +101,7 @@ const Billing = () => {
     setSelectedPlan(planSlug);
     setCheckoutLoading(true);
     try {
-      const cs = await createCheckoutSession(planSlug, cycle);
+      const cs = await createCheckoutSession(planSlug, cycle, checkoutCoupon);
       setClientSecret(cs);
       setShowPaymentForm(true);
     } catch (err) {
@@ -659,6 +662,18 @@ const Billing = () => {
                         </span>
                       </button>
                     </div>
+                  </div>
+
+                  {/* Optional coupon applied when you upgrade */}
+                  <div className="mx-auto w-full max-w-sm space-y-1.5" data-testid="checkout-coupon">
+                    <p className="text-center text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Have a coupon?
+                    </p>
+                    <CouponField
+                      onApply={setCheckoutCoupon}
+                      onClear={() => setCheckoutCoupon(null)}
+                      disabled={checkoutLoading}
+                    />
                   </div>
 
                   {/* Pricing Plans */}

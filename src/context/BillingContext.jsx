@@ -132,7 +132,7 @@ export const BillingProvider = ({ children }) => {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  const createCheckoutSession = async (planSlug, billingCycle) => {
+  const createCheckoutSession = async (planSlug, billingCycle, promotionCode) => {
     const custData = await invokeFunction(
       "stripe-create-customer",
       undefined,
@@ -141,7 +141,7 @@ export const BillingProvider = ({ children }) => {
 
     const subData = await invokeFunction(
       "stripe-create-subscription",
-      { body: { customerId: custData.customerId, planSlug, billingCycle } },
+      { body: { customerId: custData.customerId, planSlug, billingCycle, promotionCode: promotionCode || undefined } },
       "Failed to create subscription",
     );
 
@@ -150,11 +150,21 @@ export const BillingProvider = ({ children }) => {
 
   // `customerId` comes from the stripe-setup-intent step, which already
   // resolves-or-creates the Stripe customer — no extra create-customer call.
-  const startTrial = async (planSlug, billingCycle, paymentMethodId, customerId) => {
+  const startTrial = async (planSlug, billingCycle, paymentMethodId, customerId, promotionCode) => {
     return invokeFunction(
       "stripe-start-trial",
-      { body: { customerId, planSlug, billingCycle, paymentMethodId } },
+      { body: { customerId, planSlug, billingCycle, paymentMethodId, promotionCode: promotionCode || undefined } },
       "Failed to start your trial",
+    );
+  };
+
+  // Checks a promotion code against Stripe so the UI can confirm the discount
+  // before the user commits. Returns { valid, code, label }.
+  const validateCoupon = async (code) => {
+    return invokeFunction(
+      "stripe-validate-coupon",
+      { body: { code } },
+      "Couldn't check that coupon. Please try again.",
     );
   };
 
@@ -213,6 +223,7 @@ export const BillingProvider = ({ children }) => {
     // Stripe actions
     createCheckoutSession,
     startTrial,
+    validateCoupon,
     openPortal,
     applyRetentionOffer,
   };
