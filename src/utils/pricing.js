@@ -6,18 +6,20 @@
 // Annual billing gives 2 months free (pay for 10, get 12) → ~17% off.
 export const ANNUAL_FREE_MONTHS = 2;
 
-// Derive a plan's annual price from its live monthly price. An explicitly
-// configured annual amount (from the admin Pricing tab) wins, but only if it's
-// actually cheaper than 12 months — otherwise fall back to the derived amount
-// so the "savings" can never go negative.
+// A plan's displayed annual price. The amount configured in the admin Pricing
+// tab always wins — it's what Stripe actually charges, so the display must
+// match it exactly whatever it is. Only when no annual price is configured do
+// we fall back to the derived 2-months-free amount.
 export function annualPriceFor(monthly, explicit) {
+  if (explicit != null && Number(explicit) > 0) return Number(explicit);
   if (!monthly || monthly <= 0) return 0;
-  if (explicit != null && explicit > 0 && explicit < monthly * 12) return explicit;
   return Math.round(monthly * (12 - ANNUAL_FREE_MONTHS));
 }
 
-// Real percentage saved by paying `yearly` instead of 12 × `monthly`.
+// Real percentage saved by paying `yearly` instead of 12 × `monthly`, clamped
+// at 0 so a non-discounted annual price shows no savings badge rather than a
+// negative number.
 export function savingsPercent(monthly, yearly) {
   if (!monthly || monthly <= 0 || !yearly || yearly <= 0) return 0;
-  return Math.round((1 - yearly / (monthly * 12)) * 100);
+  return Math.max(0, Math.round((1 - yearly / (monthly * 12)) * 100));
 }

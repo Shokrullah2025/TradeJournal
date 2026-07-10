@@ -1000,44 +1000,51 @@ const Billing = () => {
           )}
 
           {/* Stripe Payment Modal */}
-          {showPaymentForm && clientSecret && (
+          {showPaymentForm && clientSecret && (() => {
+            const modalPlan = plans.find((p) => p.id === selectedPlan);
+            return (
             <ModalPortal>
+            {/* Centered on screen; scrolls internally on short viewports. */}
             <div
-              className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-[9999]"
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 p-4"
               data-testid="billing-payment-modal"
             >
-              <div className="relative top-20 mx-auto p-5 border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
-                <div className="mt-3">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Complete Subscription
-                    </h3>
-                    <button
-                      onClick={handlePaymentCancel}
-                      className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                      data-testid="billing-payment-modal-close-btn"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Subscribing to the{" "}
-                    <span className="font-semibold capitalize">{selectedPlan}</span> plan
-                    ({billingCycle}).
-                  </p>
-
-                  <StripePaymentForm
-                    clientSecret={clientSecret}
-                    amount={getPlanPrice(plans.find((p) => p.id === selectedPlan))}
-                    onSuccess={handlePaymentSuccess}
-                    onCancel={handlePaymentCancel}
-                  />
+              <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Complete Subscription
+                  </h3>
+                  <button
+                    onClick={handlePaymentCancel}
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                    data-testid="billing-payment-modal-close-btn"
+                  >
+                    ✕
+                  </button>
                 </div>
+
+                {/* The price lives here, next to the plan/cycle — not in the button. */}
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Subscribing to the{" "}
+                  <span className="font-semibold">{modalPlan?.name ?? selectedPlan}</span>{" "}
+                  plan ({billingCycle}) —{" "}
+                  <span className="font-semibold text-gray-900 dark:text-gray-100" data-testid="billing-payment-modal-price">
+                    ${getPlanPrice(modalPlan)}/{billingCycle === "monthly" ? "month" : "year"}
+                  </span>
+                  .
+                </p>
+
+                <StripePaymentForm
+                  clientSecret={clientSecret}
+                  submitLabel="Confirm subscription"
+                  onSuccess={handlePaymentSuccess}
+                  onCancel={handlePaymentCancel}
+                />
               </div>
             </div>
             </ModalPortal>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>
