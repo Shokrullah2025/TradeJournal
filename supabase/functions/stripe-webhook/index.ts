@@ -296,8 +296,13 @@ Deno.serve(async (req: Request) => {
     }
   };
 
-  // Fire-and-forget so we respond to Stripe in < 30s
-  processEvent();
+  // Keep the worker alive until processing finishes. A bare fire-and-forget
+  // promise can be killed when the isolate shuts down right after the response,
+  // which intermittently dropped event processing (e.g. the invoice row was
+  // written but the trialing→active status update never ran).
+  const task = processEvent();
+  // @ts-ignore -- EdgeRuntime is a global provided by the Supabase Edge runtime
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(task);
 
   return new Response(JSON.stringify({ received: true }), {
     status: 200,
