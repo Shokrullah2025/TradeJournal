@@ -93,7 +93,8 @@ describe("Billing Page Integration", () => {
     await waitFor(() => {
       expect(billingState.createCheckoutSession).toHaveBeenCalledWith(
         "premium",
-        "monthly"
+        "monthly",
+        null // no coupon applied
       );
     });
     expect(await screen.findByTestId("billing-payment-modal")).toBeInTheDocument();

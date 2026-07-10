@@ -244,7 +244,7 @@ describe("Registration & Trial Flow", () => {
         expect(stripeMock.confirmSetup).toHaveBeenCalled();
       });
       await waitFor(() => {
-        expect(billingApi.startTrial).toHaveBeenCalledWith("premium", "monthly", "pm_123", "cus_123");
+        expect(billingApi.startTrial).toHaveBeenCalledWith("premium", "monthly", "pm_123", "cus_123", null);
       });
 
       // No interstitial "welcome / complete your profile" page anymore —

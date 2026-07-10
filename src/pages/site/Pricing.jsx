@@ -72,7 +72,8 @@ const Pricing = () => {
         </div>
         <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
           All plans include secure cloud storage, dark mode, and access on every
-          device.
+          device. Prices are in USD — your bank may convert to your local
+          currency at checkout.
         </p>
       </section>
 

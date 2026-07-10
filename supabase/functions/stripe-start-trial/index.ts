@@ -34,6 +34,7 @@ Deno.serve(async (req: Request) => {
       billingCycle: "monthly" | "annually";
       paymentMethodId: string;
     };
+    const promotionCode = typeof body.promotionCode === "string" ? body.promotionCode.trim() : "";
 
     if (!customerId || !planSlug || !billingCycle || !paymentMethodId) {
       return errorResponse(
@@ -95,6 +96,19 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Resolve a coupon code, if the user entered one. We only apply valid, active
+    // promotion codes — an invalid code is rejected so the user isn't silently
+    // charged full price after expecting a discount.
+    let promotionId: string | null = null;
+    if (promotionCode) {
+      const promos = await stripe.promotionCodes.list({ code: promotionCode, active: true, limit: 1 });
+      const promo = promos.data[0];
+      if (!promo || !promo.coupon?.valid) {
+        return errorResponse("That coupon code isn't valid.", 400);
+      }
+      promotionId = promo.id;
+    }
+
     // Attach the payment method (confirmed client-side via SetupIntent) and make it
     // the customer default, so Stripe can auto-charge when the trial ends.
     await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
@@ -106,14 +120,17 @@ Deno.serve(async (req: Request) => {
     // automatically invoices and charges the default payment method, then bills
     // monthly. If the card is removed before trial end the subscription is cancelled
     // instead of leaving an unpaid subscription open.
-    const subscription = await stripe.subscriptions.create({
+    const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
       items: [{ price: priceId }],
       trial_period_days: TRIAL_PERIOD_DAYS,
       default_payment_method: paymentMethodId,
       payment_settings: { save_default_payment_method: "on_subscription" },
       trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
-    });
+    };
+    // The discount applies to invoices after the trial ends (the first real charge).
+    if (promotionId) subParams.promotion_code = promotionId;
+    const subscription = await stripe.subscriptions.create(subParams);
 
     const now = new Date().toISOString();
     const trialEnd = subscription.trial_end

@@ -7,6 +7,7 @@ import { useBilling } from "../../context/BillingContext";
 import { hardNavigate } from "../../utils/navigation";
 import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
 import StripePaymentForm from "../billing/StripePaymentForm";
+import CouponField from "../billing/CouponField";
 
 const TrialActivation = ({
   onTrialActivated,
@@ -31,6 +32,9 @@ const TrialActivation = ({
   // Set once the card is verified (SetupIntent succeeded). Its presence means we
   // no longer need the card form — a failed trial start can be retried directly.
   const [paymentMethodId, setPaymentMethodId] = useState(null);
+  // A validated coupon code to apply to the subscription that starts after the
+  // trial. Null until the user applies a valid one.
+  const [couponCode, setCouponCode] = useState(null);
   const { startTrial } = useBilling();
   // Live monthly price for this plan (admin Pricing tab); fall back until loaded.
   const { plans } = useSubscriptionPlans();
@@ -81,7 +85,7 @@ const TrialActivation = ({
     setIsWorking(true);
     setErrorMessage("");
     try {
-      const result = await startTrial(planSlug, billingCycle, pmId, customerId);
+      const result = await startTrial(planSlug, billingCycle, pmId, customerId, couponCode);
       toast.success("Your 7-day free trial has started!");
       onTrialActivated?.(result);
       // Straight into the app — no interstitial "welcome / complete your
@@ -181,6 +185,10 @@ const TrialActivation = ({
             No commitment, cancel anytime. After your 7 days, your plan continues
             automatically at ${monthlyPrice}/month unless you cancel.
           </p>
+          <p className="text-xs text-gray-500 mb-4">
+            Prices are in USD. Your bank may convert to your local currency at
+            checkout.
+          </p>
           <div className="grid grid-cols-1 gap-3">
             {trialFeatures.map((feature, index) => (
               <div key={index} className="flex items-start space-x-3">
@@ -205,6 +213,16 @@ const TrialActivation = ({
             {errorMessage}
           </div>
         )}
+
+        {/* Optional coupon — applied to the plan that starts after the trial. */}
+        <div className="space-y-1.5" data-testid="trial-coupon">
+          <p className="text-xs font-medium text-gray-500">Have a coupon?</p>
+          <CouponField
+            onApply={setCouponCode}
+            onClear={() => setCouponCode(null)}
+            disabled={isWorking}
+          />
+        </div>
 
         {paymentMethodId ? (
           // Card already verified; the trial start failed. Retry just that step.

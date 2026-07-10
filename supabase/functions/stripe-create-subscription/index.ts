@@ -31,6 +31,7 @@ Deno.serve(async (req: Request) => {
       planSlug: string;
       billingCycle: "monthly" | "annually";
     };
+    const promotionCode = typeof body.promotionCode === "string" ? body.promotionCode.trim() : "";
 
     if (!customerId || !planSlug || !billingCycle) {
       return errorResponse("Missing required fields: customerId, planSlug, billingCycle", 400);
@@ -73,16 +74,30 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Resolve a coupon code if one was entered — reject an invalid one rather
+    // than silently charging full price.
+    let promotionId: string | null = null;
+    if (promotionCode) {
+      const promos = await stripe.promotionCodes.list({ code: promotionCode, active: true, limit: 1 });
+      const promo = promos.data[0];
+      if (!promo || !promo.coupon?.valid) {
+        return errorResponse("That coupon code isn't valid.", 400);
+      }
+      promotionId = promo.id;
+    }
+
     // Create subscription in 'default_incomplete' state.
     // The PaymentIntent client_secret is returned to the browser to confirm
     // payment via Stripe Elements — the card data never touches this server.
-    const subscription = await stripe.subscriptions.create({
+    const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
       items: [{ price: priceId }],
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
-    });
+    };
+    if (promotionId) subParams.promotion_code = promotionId;
+    const subscription = await stripe.subscriptions.create(subParams);
 
     const invoice = subscription.latest_invoice as Stripe.Invoice | null;
     const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent | null;
