@@ -1030,11 +1030,9 @@ const ContactMessages = () => {
                   return (
                     <div
                       key={entry.key}
-                      className={
-                        entry.kind === "admin"
-                          ? "ml-auto w-1/2"
-                          : "mr-auto w-1/2"
-                      }
+                      className={`w-[88%] sm:w-3/4 lg:w-2/3 ${
+                        entry.kind === "admin" ? "ml-auto" : "mr-auto"
+                      }`}
                     >
                       {/* Date/time sits above the bubble, aligned to its side. */}
                       <p
@@ -1053,13 +1051,13 @@ const ContactMessages = () => {
                             : "bg-gray-50 dark:bg-gray-900"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                        <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 flex-1 break-words text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {entry.subject}
                         </p>
                         <div className="flex shrink-0 items-center gap-1.5">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            className={`max-w-[7rem] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                               entry.kind === "admin"
                                 ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
                                 : isNewest
