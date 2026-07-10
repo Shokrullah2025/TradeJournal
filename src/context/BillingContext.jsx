@@ -167,6 +167,18 @@ export const BillingProvider = ({ children }) => {
     window.location.href = data.url;
   };
 
+  // Applies the retention discount to the caller's live subscription (used by the
+  // cancellation "stay" offer). The coupon's percent/duration lives in Stripe;
+  // the realtime user_subscriptions channel refreshes the row once the webhook
+  // reconciles it, so callers don't need to refetch manually.
+  const applyRetentionOffer = async () => {
+    return invokeFunction(
+      "stripe-apply-retention-coupon",
+      undefined,
+      "We couldn't apply the offer. Please try again.",
+    );
+  };
+
   // ── Admin-compat helpers (use mock data until admin RLS policies are added) ─
 
   const getPaymentsByUser = (userId) =>
@@ -202,6 +214,7 @@ export const BillingProvider = ({ children }) => {
     createCheckoutSession,
     startTrial,
     openPortal,
+    applyRetentionOffer,
   };
 
   return (
