@@ -40,6 +40,21 @@ const MESSAGE_COLUMNS =
 // have anywhere near this many messages (rate limit is 5/hour).
 const THREAD_MESSAGE_LIMIT = 200;
 
+// First line of real content from a quoted chain, for the always-visible
+// "Replying to:" preview. Skips the mail client's "On <date> … wrote:"
+// attribution so the snippet shows the actual message, and truncates long
+// lines; the full chain is available by expanding the block.
+const quotedSnippet = (quoted) => {
+  const lines = quoted
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const wroteAt = lines.findIndex((l) => /\bwrote:$/i.test(l));
+  // wroteAt === -1 → slice(0): no attribution, use everything.
+  const content = lines.slice(wroteAt + 1).join(" ") || lines.join(" ");
+  return content.length > 90 ? `${content.slice(0, 90)}…` : content;
+};
+
 const STATUS_FILTERS = [
   { value: "all", label: "All" },
   { value: "new", label: "New" },
@@ -598,6 +613,10 @@ const ContactMessages = () => {
         id: m.id,
         subject: m.subject,
         message: m.message,
+        // Quoted history preserved by contact-inbound from the sender's mail
+        // client — shown as collapsible context under the message.
+        quoted:
+          typeof m.metadata?.quoted === "string" ? m.metadata.quoted : null,
         at: m.created_at,
       });
       const replies = Array.isArray(m.metadata?.replies) ? m.metadata.replies : [];
@@ -1113,16 +1132,40 @@ const ContactMessages = () => {
                         </div>
                       ) : isHtmlReply ? (
                         <div
-                          className={`rich-text-content mt-2 max-h-56 overflow-y-auto text-sm ${bodyClass}`}
+                          className={`rich-text-content mt-2 pl-3 max-h-56 overflow-y-auto text-sm ${bodyClass}`}
                           // Sanitized with DOMPurify (sanitizeNoteHtml) per CLAUDE.md §2.
                           dangerouslySetInnerHTML={{
                             __html: sanitizeNoteHtml(entry.message),
                           }}
                         />
                       ) : (
-                        <div className={`mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm ${bodyClass}`}>
+                        // The body is nudged inward (pl-3) on both sides of the
+                        // conversation so it reads distinctly from the subject
+                        // line above and the "Replying to" context below.
+                        <div className={`mt-2 pl-3 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm ${bodyClass}`}>
                           {entry.message}
                         </div>
+                      )}
+                      {/* What this reply is answering — the quoted history the
+                          visitor's mail client appended. Sits below the message
+                          with breathing room so the reply reads first and the
+                          context is easy to spot; the first line is always
+                          visible, clicking expands the full chain. */}
+                      {!isEditing && entry.quoted && (
+                        <details
+                          data-testid={`admin-contact-quoted-${entry.key}`}
+                          className="group mt-4 border-l-2 border-gray-300 dark:border-gray-600 pl-2"
+                        >
+                          <summary className="cursor-pointer select-none text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                            <span className="font-medium">Replying to:</span>{" "}
+                            <span className="italic group-open:hidden">
+                              {quotedSnippet(entry.quoted)}
+                            </span>
+                          </summary>
+                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">
+                            {entry.quoted}
+                          </div>
+                        </details>
                       )}
                       </div>
                     </div>
