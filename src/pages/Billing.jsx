@@ -358,7 +358,9 @@ const Billing = () => {
 
       {/* Main Content */}
       <div className={`flex-1 ${user?.role === "admin" ? "lg:pl-6" : ""} p-4 lg:p-6`}>
-        <div className="max-w-6xl mx-auto space-y-8">
+        {/* Full width — the tab rail starts flush against the app sidebar
+            instead of floating in a centered column. */}
+        <div className="space-y-8">
           {/* Header */}
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -444,9 +446,10 @@ const Billing = () => {
               scrollable strip on mobile. Payment Information is the default. */}
           {user?.role !== "admin" && (
             <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-10">
+              {/* Grey panel; tabs sit tight together, active one pops white. */}
               <nav
                 aria-label="Billing sections"
-                className="flex lg:flex-col gap-1.5 lg:w-60 lg:shrink-0 overflow-x-auto pb-1 lg:pb-0 lg:sticky lg:top-6"
+                className="flex lg:flex-col gap-1 lg:w-64 lg:shrink-0 overflow-x-auto rounded-xl bg-gray-100 dark:bg-gray-800/60 p-2 lg:sticky lg:top-6"
               >
                 {[
                   { id: "payment", label: "Payment Information", Icon: CreditCard },
@@ -457,13 +460,13 @@ const Billing = () => {
                     key={id}
                     onClick={() => setActiveTab(id)}
                     data-testid={`billing-tab-${id}-btn`}
-                    className={`flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3.5 py-2.5 text-sm font-medium text-left transition-colors ${
+                    className={`flex items-center gap-2.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-base font-medium text-left transition-colors ${
                       activeTab === id
-                        ? "bg-primary-50 dark:bg-primary-900/25 text-primary-700 dark:text-primary-300"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
+                        ? "bg-white dark:bg-gray-700 text-primary-700 dark:text-primary-300 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200"
                     }`}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className="h-[18px] w-[18px] shrink-0" />
                     {label}
                   </button>
                 ))}
