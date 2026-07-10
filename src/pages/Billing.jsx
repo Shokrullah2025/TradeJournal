@@ -361,14 +361,14 @@ const Billing = () => {
         {/* Full width — the tab rail starts flush against the app sidebar
             instead of floating in a centered column. */}
         <div className="space-y-8">
-          {/* Header */}
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          {/* Header — compact and left-aligned, mirroring the Settings page. */}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {user?.role === "admin"
                 ? "Billing Management"
                 : "Subscription & Billing"}
             </h1>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-gray-600 dark:text-gray-400">
               {user?.role === "admin"
                 ? "Manage all billing operations and view analytics"
                 : "Manage your subscription and payment information"}
@@ -446,10 +446,11 @@ const Billing = () => {
               scrollable strip on mobile. Payment Information is the default. */}
           {user?.role !== "admin" && (
             <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-10">
-              {/* Grey panel; tabs sit tight together, active one pops white. */}
+              {/* Separate panel styled like the Settings vertical nav — white
+                  card, primary tint + left accent bar on the active tab. */}
               <nav
                 aria-label="Billing sections"
-                className="flex lg:flex-col gap-1 lg:w-64 lg:shrink-0 overflow-x-auto rounded-xl bg-gray-100 dark:bg-gray-800/60 p-2 lg:sticky lg:top-6"
+                className="flex lg:flex-col gap-1 lg:w-64 lg:shrink-0 overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 lg:sticky lg:top-6"
               >
                 {[
                   { id: "payment", label: "Payment Information", Icon: CreditCard },
@@ -460,13 +461,24 @@ const Billing = () => {
                     key={id}
                     onClick={() => setActiveTab(id)}
                     data-testid={`billing-tab-${id}-btn`}
-                    className={`flex items-center gap-2.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-base font-medium text-left transition-colors ${
+                    className={`relative flex items-center gap-3 whitespace-nowrap rounded-xl p-3 text-base text-left transition-all duration-150 ${
                       activeTab === id
-                        ? "bg-white dark:bg-gray-700 text-primary-700 dark:text-primary-300 shadow-sm"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200"
+                        ? "bg-primary-50 dark:bg-primary-900/30 font-bold text-primary-700 dark:text-primary-300"
+                        : "font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60"
                     }`}
                   >
-                    <Icon className="h-[18px] w-[18px] shrink-0" />
+                    <span
+                      className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
+                        activeTab === id ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
+                      }`}
+                    />
+                    <Icon
+                      className={`h-5 w-5 shrink-0 ${
+                        activeTab === id
+                          ? "text-primary-600 dark:text-primary-400"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}
+                    />
                     {label}
                   </button>
                 ))}
