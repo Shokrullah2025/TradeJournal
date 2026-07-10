@@ -356,13 +356,55 @@ const Billing = () => {
         </div>
       )}
 
+      {/* Billing tab rail — a full-height column like the Settings nav: white
+          background stretching from the very top all the way down, flush
+          against the app sidebar. Users only; admins keep their own sidebar. */}
+      {user?.role !== "admin" && (
+        <div className="w-full lg:w-72 shrink-0 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6">
+          <nav
+            aria-label="Billing sections"
+            className="flex lg:flex-col gap-1 overflow-x-auto lg:sticky lg:top-6"
+          >
+            {[
+              { id: "payment", label: "Payment Information", Icon: CreditCard },
+              { id: "plans", label: "Plans & Subscriptions", Icon: DollarSign },
+              { id: "invoices", label: "Invoice History", Icon: FileText },
+            ].map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                data-testid={`billing-tab-${id}-btn`}
+                className={`relative flex items-center gap-3 whitespace-nowrap rounded-xl p-3 text-base text-left transition-all duration-150 ${
+                  activeTab === id
+                    ? "bg-primary-50 dark:bg-primary-900/30 font-bold text-primary-700 dark:text-primary-300"
+                    : "font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60"
+                }`}
+              >
+                <span
+                  className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
+                    activeTab === id ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
+                  }`}
+                />
+                <Icon
+                  className={`h-5 w-5 shrink-0 ${
+                    activeTab === id
+                      ? "text-primary-600 dark:text-primary-400"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
+                />
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className={`flex-1 ${user?.role === "admin" ? "lg:pl-6" : ""} p-4 lg:p-6`}>
-        {/* Full width — the tab rail starts flush against the app sidebar
-            instead of floating in a centered column. */}
-        <div className="space-y-8">
-          {/* Header — compact and left-aligned, mirroring the Settings page. */}
-          <div>
+        {/* Capped width so the content doesn't look stretched. */}
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Header — centered over the content area. */}
+          <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {user?.role === "admin"
                 ? "Billing Management"
@@ -442,49 +484,9 @@ const Billing = () => {
             </div>
           )}
 
-          {/* Billing sections — vertical tab rail on the left (desktop), a
-              scrollable strip on mobile. Payment Information is the default. */}
+          {/* Tab content — Payment Information is the default. */}
           {user?.role !== "admin" && (
-            <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-10">
-              {/* Separate panel styled like the Settings vertical nav — white
-                  card, primary tint + left accent bar on the active tab. */}
-              <nav
-                aria-label="Billing sections"
-                className="flex lg:flex-col gap-1 lg:w-64 lg:shrink-0 overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 lg:sticky lg:top-6"
-              >
-                {[
-                  { id: "payment", label: "Payment Information", Icon: CreditCard },
-                  { id: "plans", label: "Plans & Subscriptions", Icon: DollarSign },
-                  { id: "invoices", label: "Invoice History", Icon: FileText },
-                ].map(({ id, label, Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id)}
-                    data-testid={`billing-tab-${id}-btn`}
-                    className={`relative flex items-center gap-3 whitespace-nowrap rounded-xl p-3 text-base text-left transition-all duration-150 ${
-                      activeTab === id
-                        ? "bg-primary-50 dark:bg-primary-900/30 font-bold text-primary-700 dark:text-primary-300"
-                        : "font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60"
-                    }`}
-                  >
-                    <span
-                      className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
-                        activeTab === id ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
-                      }`}
-                    />
-                    <Icon
-                      className={`h-5 w-5 shrink-0 ${
-                        activeTab === id
-                          ? "text-primary-600 dark:text-primary-400"
-                          : "text-gray-400 dark:text-gray-500"
-                      }`}
-                    />
-                    {label}
-                  </button>
-                ))}
-              </nav>
-
-              <div className="flex-1 min-w-0">
+            <div>
               {/* Payment Information Tab */}
               {activeTab === "payment" && (
                 <div className="space-y-8">
@@ -890,7 +892,6 @@ const Billing = () => {
                   </div>
                 </div>
               )}
-              </div>
             </div>
           )}
 
