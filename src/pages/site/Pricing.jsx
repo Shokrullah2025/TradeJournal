@@ -43,7 +43,7 @@ const Pricing = () => {
     <div data-testid="site-pricing-page">
       <Seo
         title="Pricing"
-        description="Simple, transparent pricing. Start free with up to 50 trades a month, then upgrade for advanced analytics, backtesting, and CSV import. Cancel anytime."
+        description="Simple, transparent pricing. Try ZalorTrade free for 7 days, then pick a plan — trade logging, advanced analytics, backtesting, and CSV import. Cancel anytime."
         path="/pricing"
         jsonLd={PRICING_JSON_LD}
       />
@@ -54,8 +54,8 @@ const Pricing = () => {
             Simple, transparent <span className="text-gradient">pricing</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-400">
-            Start free and upgrade when you're ready. No hidden fees, cancel
-            anytime.
+            Start with a 7-day free trial and upgrade when you're ready. No
+            hidden fees, cancel anytime.
           </p>
           <div className="mt-8 flex justify-center">
             <PricingToggle cycle={cycle} onChange={setCycle} />

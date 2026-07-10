@@ -451,7 +451,7 @@ const Home = () => (
               data-testid="home-hero-getstarted-btn"
               className="btn btn-site inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold"
             >
-              Start free
+              Start free trial
             </Link>
             <Link
               to="/features"
@@ -720,7 +720,7 @@ const Home = () => (
           Pricing
         </p>
         <h2 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl">
-          Start free. Upgrade when it pays for itself.
+          Try it free for 7 days. Upgrade when it pays for itself.
         </h2>
       </div>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">

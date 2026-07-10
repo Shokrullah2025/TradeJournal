@@ -40,7 +40,7 @@ const CTASection = () => {
               data-testid="site-cta-getstarted-btn"
               className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-accent-700 transition-transform hover:-translate-y-px"
             >
-              Start free
+              Start free trial
               <ArrowRight className="h-5 w-5" />
             </Link>
           )}
