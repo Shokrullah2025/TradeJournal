@@ -317,7 +317,7 @@ export const PRICING_TIERS = [
     id: "premium",
     name: "Premium",
     description: "For serious traders and small teams.",
-    monthlyPrice: 29,
+    monthlyPrice: 18,
     yearlyPrice: 290,
     features: [
       "Unlimited trades",

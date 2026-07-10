@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 import { useBilling } from "../../context/BillingContext";
 import { hardNavigate } from "../../utils/navigation";
+import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
 import StripePaymentForm from "../billing/StripePaymentForm";
 
 const TrialActivation = ({
@@ -31,6 +32,9 @@ const TrialActivation = ({
   // no longer need the card form — a failed trial start can be retried directly.
   const [paymentMethodId, setPaymentMethodId] = useState(null);
   const { startTrial } = useBilling();
+  // Live monthly price for this plan (admin Pricing tab); fall back until loaded.
+  const { plans } = useSubscriptionPlans();
+  const monthlyPrice = plans[planSlug]?.price ?? 29.99;
 
   // After the trial is activated the user's subscription becomes "trialing", but
   // the in-memory FeatureFlag audience is still "free" until the app re-resolves
@@ -175,7 +179,7 @@ const TrialActivation = ({
           </div>
           <p className="text-sm text-gray-600 mb-4">
             No commitment, cancel anytime. After your 7 days, your plan continues
-            automatically at $29.99/month unless you cancel.
+            automatically at ${monthlyPrice}/month unless you cancel.
           </p>
           <div className="grid grid-cols-1 gap-3">
             {trialFeatures.map((feature, index) => (
