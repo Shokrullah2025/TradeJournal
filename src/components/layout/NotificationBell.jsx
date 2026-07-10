@@ -130,7 +130,7 @@ const NotificationBell = () => {
       {isOpen && (
         <div
           data-testid="notifications-dropdown-panel"
-          className="fixed left-3 right-3 top-16 w-auto sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[200]"
+          className="fixed right-3 left-auto top-16 w-[78vw] max-w-[18rem] sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[200]"
         >
           <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             {/* Left: bulk actions */}

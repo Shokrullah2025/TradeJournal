@@ -528,8 +528,9 @@ export const TradeProvider = ({ children }) => {
 
   // ── Performance milestones ──────────────────────────────────────────────
   // When stats cross a tier, emit a one-time celebratory notification. Deduped
-  // per session via a ref and across sessions/devices via an existence check
-  // on the notifications table (metadata.key), so a tier never re-notifies.
+  // per session via a ref and permanently via the notification_dedup table, so
+  // a tier notifies exactly once ever — even after the user deletes the bell
+  // entry (deleting a notification must never make its milestone re-fire).
   useEffect(() => {
     if (!user?.id || state.loading) return;
     const candidates = getMilestoneCandidates(state.stats);
@@ -541,15 +542,16 @@ export const TradeProvider = ({ children }) => {
         if (firedMilestonesRef.current.has(candidate.key)) continue;
         firedMilestonesRef.current.add(candidate.key);
 
-        const { data: existing } = await supabase
-          .from("notifications")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("event_type", candidate.event_type)
-          .eq("metadata->>key", candidate.key)
-          .limit(1);
+        // Claim the award atomically: the (user_id, dedup_key) primary key
+        // rejects a second insert with a unique violation (23505). A conflict
+        // means this milestone was already awarded (another tab/device, or a
+        // prior — possibly since-deleted — notification), so we skip. Only a
+        // clean insert proceeds to notify.
+        const { error: claimError } = await supabase
+          .from("notification_dedup")
+          .insert({ user_id: user.id, dedup_key: candidate.key });
         if (cancelled) return;
-        if (existing && existing.length > 0) continue;
+        if (claimError) continue;
 
         await createNotification({
           category: "performance",
