@@ -1,6 +1,6 @@
 -- ============================================================
 -- ZalorTrade — Contact inbox threads + aggregated admin notifications
--- Migration: 034_contact_threads_notifications.sql
+-- Migration: 20260708210946_contact_threads_notifications.sql
 --
 -- The admin Contact Inbox becomes thread-based: every message a visitor
 -- sends from the same email address belongs to one conversation. Opening

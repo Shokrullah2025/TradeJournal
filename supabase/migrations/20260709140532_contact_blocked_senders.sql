@@ -1,6 +1,6 @@
 -- ============================================================
 -- ZalorTrade — Block contact-form senders
--- Migration: 037_contact_blocked_senders.sql
+-- Migration: 20260709140532_contact_blocked_senders.sql
 --
 -- Admins can block a sender from the Contact Inbox thread view. The
 -- contact-submit Edge Function checks this table before storing a

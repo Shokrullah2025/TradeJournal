@@ -1,6 +1,6 @@
 -- ============================================================
 -- ZalorTrade — Persistent notification de-duplication keys
--- Migration: 038_notification_dedup.sql
+-- Migration: 20260709150000_notification_dedup.sql
 --
 -- Performance milestones ("25 trades logged 🎉") must fire exactly once
 -- per user, ever. 020's approach checked the notifications table for an
