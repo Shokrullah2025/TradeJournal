@@ -800,12 +800,11 @@ const ContactMessages = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td
-                  colSpan={7}
-                  data-testid="admin-contact-loading"
-                  className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
-                >
-                  Loading…
+                <td colSpan={7} data-testid="admin-contact-loading" className="px-6 py-12">
+                  <div className="flex flex-col items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                    <span>Loading conversations…</span>
+                  </div>
                 </td>
               </tr>
             ) : error ? (
