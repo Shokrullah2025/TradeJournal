@@ -363,7 +363,7 @@ const Billing = () => {
         <div className="w-full lg:w-72 shrink-0 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6">
           <nav
             aria-label="Billing sections"
-            className="flex lg:flex-col gap-1 overflow-x-auto lg:sticky lg:top-6"
+            className="flex lg:flex-col gap-1 overflow-x-auto lg:mt-6 lg:sticky lg:top-6"
           >
             {[
               { id: "payment", label: "Payment Information", Icon: CreditCard },
