@@ -354,9 +354,9 @@ export const PRICING_TIERS = [
 // ── Frequently asked questions (Pricing page) ─────────────────────────────
 export const FAQS = [
   {
-    question: "Is there a free plan?",
+    question: "Is there a free trial?",
     answer:
-      "Yes. The Basic plan is free forever and includes up to 50 trades a month with the core analytics dashboard. A card is captured at sign-up to verify your account, but you're never charged on the free plan.",
+      "Yes — every new account starts with a 7-day free trial. You add a card at sign-up but aren't charged until the trial ends, and you can cancel anytime before then at no cost.",
   },
   {
     question: "Can I cancel anytime?",

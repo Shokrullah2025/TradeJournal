@@ -21,8 +21,8 @@ const CTASection = () => {
           Stop guessing. Start journaling with an edge.
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-base opacity-90 sm:text-lg">
-          Turn scattered notes into a measurable, repeatable process. Start on
-          the free plan and upgrade only when it pays for itself.
+          Turn scattered notes into a measurable, repeatable process. Start
+          with a 7-day free trial and keep it only if it pays for itself.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           {isAuthenticated ? (
