@@ -6,6 +6,7 @@ import PricingCard from "../../components/site/PricingCard";
 import FAQAccordion from "../../components/site/FAQAccordion";
 import { PRICING_TIERS, FAQS } from "../../components/site/content";
 import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
+import { annualPriceFor, savingsPercent } from "../../utils/pricing";
 
 // FAQPage structured data, built from the same FAQS shown in the accordion
 // below so the markup always matches the visible content (a Google
@@ -18,18 +19,6 @@ const PRICING_JSON_LD = {
     name: faq.question,
     acceptedAnswer: { "@type": "Answer", text: faq.answer },
   })),
-};
-
-// Annual billing gives 2 months free (pay for 10, get 12) → ~17% off. Derived
-// from the live monthly price so the yearly price and the "Save X%" badge are
-// always consistent with whatever the monthly price is. An explicitly
-// configured annual price (from the admin tab) wins, but only if it's actually
-// cheaper than 12 months — otherwise we fall back to the derived amount.
-const ANNUAL_FREE_MONTHS = 2;
-const annualPriceFor = (monthly, explicit) => {
-  if (!monthly || monthly <= 0) return 0;
-  if (explicit != null && explicit > 0 && explicit < monthly * 12) return explicit;
-  return Math.round(monthly * (12 - ANNUAL_FREE_MONTHS));
 };
 
 /**
@@ -56,10 +45,7 @@ const Pricing = () => {
 
   // Real savings % for the annual toggle, taken from the featured plan.
   const popular = tiers.find((t) => t.popular) ?? tiers.find((t) => t.monthlyPrice > 0);
-  const savingsPct =
-    popular && popular.monthlyPrice > 0
-      ? Math.round((1 - popular.yearlyPrice / (popular.monthlyPrice * 12)) * 100)
-      : 0;
+  const savingsPct = popular ? savingsPercent(popular.monthlyPrice, popular.yearlyPrice) : 0;
 
   return (
     <div data-testid="site-pricing-page">

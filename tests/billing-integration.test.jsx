@@ -78,7 +78,9 @@ describe("Billing Page Integration", () => {
 
     fireEvent.click(screen.getByText("Yearly"));
 
-    expect(screen.getByText("$290")).toBeInTheDocument(); // Premium yearly
+    // Annual prices are derived from the monthly price via the shared
+    // 2-months-free formula (utils/pricing): 18*10 and 99*10.
+    expect(screen.getByText("$180")).toBeInTheDocument(); // Premium yearly
     expect(screen.getByText("$990")).toBeInTheDocument(); // Enterprise yearly
   });
 

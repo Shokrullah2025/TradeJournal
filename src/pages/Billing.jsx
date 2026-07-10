@@ -18,6 +18,7 @@ import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
 import StripePaymentForm from "../components/billing/StripePaymentForm";
 import useSubscriptionPlans from "../hooks/useSubscriptionPlans";
+import { annualPriceFor, savingsPercent } from "../utils/pricing";
 
 // Static class strings per plan accent — Tailwind's scanner can't see
 // dynamically-built classes like `bg-${plan.color}-600`, so they'd be purged
@@ -138,8 +139,7 @@ const Billing = () => {
       id: "basic",
       name: "Basic",
       description: "Perfect for individual traders getting started",
-      monthlyPrice: 0,
-      yearlyPrice: 0,
+      monthlyPrice: 9.99,
       features: [
         "Up to 50 trades per month",
         "Basic analytics dashboard",
@@ -155,7 +155,6 @@ const Billing = () => {
       name: "Premium",
       description: "Best for serious traders and small teams",
       monthlyPrice: 18,
-      yearlyPrice: 290,
       features: [
         "Unlimited trades",
         "Advanced analytics & insights",
@@ -173,7 +172,6 @@ const Billing = () => {
       name: "Enterprise",
       description: "For trading firms and large organizations",
       monthlyPrice: 99,
-      yearlyPrice: 990,
       features: [
         "Everything in Premium",
         "Team management",
@@ -190,27 +188,32 @@ const Billing = () => {
   ];
 
   // Overlay live DB prices (set in the admin Pricing tab) onto the static plan
-  // content, keeping features/copy local. Falls back to the hardcoded number
-  // while prices load or if a plan has no amount set yet.
-  const plans = planContent.map((p) => ({
-    ...p,
-    name: livePlans[p.id]?.name ?? p.name,
-    description: livePlans[p.id]?.description ?? p.description,
-    features: livePlans[p.id]?.features?.length ? livePlans[p.id].features : p.features,
-    monthlyPrice: livePlans[p.id]?.price ?? p.monthlyPrice,
-    yearlyPrice: livePlans[p.id]?.priceAnnually ?? p.yearlyPrice,
-  }));
+  // content, keeping features/copy local. The annual price and savings use the
+  // same shared formula as the marketing pricing page (2 months free unless an
+  // explicit, genuinely-discounted annual price is configured).
+  const plans = planContent.map((p) => {
+    const monthlyPrice = livePlans[p.id]?.price ?? p.monthlyPrice;
+    return {
+      ...p,
+      name: livePlans[p.id]?.name ?? p.name,
+      description: livePlans[p.id]?.description ?? p.description,
+      features: livePlans[p.id]?.features?.length ? livePlans[p.id].features : p.features,
+      monthlyPrice,
+      yearlyPrice: annualPriceFor(monthlyPrice, livePlans[p.id]?.priceAnnually ?? null),
+    };
+  });
+
+  // Dynamic savings for the Yearly toggle badge, from the featured plan.
+  const popularPlan = plans.find((p) => p.popular) ?? plans.find((p) => p.monthlyPrice > 0);
+  const yearlySavingsPct = popularPlan
+    ? savingsPercent(popularPlan.monthlyPrice, popularPlan.yearlyPrice)
+    : 0;
 
   const getPlanPrice = (plan) => {
     return billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
   };
 
-  const getSavingsPercent = (plan) => {
-    if (plan.monthlyPrice === 0) return 0;
-    const monthlyTotal = plan.monthlyPrice * 12;
-    const yearlySavings = monthlyTotal - plan.yearlyPrice;
-    return Math.round((yearlySavings / monthlyTotal) * 100);
-  };
+  const getSavingsPercent = (plan) => savingsPercent(plan.monthlyPrice, plan.yearlyPrice);
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
@@ -421,10 +424,12 @@ const Billing = () => {
                 <div className="text-right">
                   <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
                     $
-                    {currentPlanSlug === "basic"
-                      ? "0"
-                      : livePlans[currentPlanSlug]?.price ??
-                        (currentPlanSlug === "premium" ? 18 : 99)}
+                    {livePlans[currentPlanSlug]?.price ??
+                      (currentPlanSlug === "basic"
+                        ? 9.99
+                        : currentPlanSlug === "premium"
+                        ? 18
+                        : 99)}
                   </div>
                   <div className="text-sm text-primary-600 dark:text-primary-300">
                     per month
@@ -496,10 +501,12 @@ const Billing = () => {
                       <div className="text-right">
                         <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
                           $
-                          {currentPlanSlug === "basic"
-                            ? "0"
-                            : livePlans[currentPlanSlug]?.price ??
-                              (currentPlanSlug === "premium" ? 18 : 99)}
+                          {livePlans[currentPlanSlug]?.price ??
+                            (currentPlanSlug === "basic"
+                              ? 9.99
+                              : currentPlanSlug === "premium"
+                              ? 18
+                              : 99)}
                         </div>
                         <div className="text-sm text-primary-600 dark:text-primary-300">
                           per month
@@ -605,9 +612,11 @@ const Billing = () => {
                         }`}
                       >
                         Yearly
-                        <span className="ml-1 text-xs bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
-                          Save up to 17%
-                        </span>
+                        {yearlySavingsPct > 0 && (
+                          <span className="ml-1 text-xs bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
+                            Save {yearlySavingsPct}%
+                          </span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -617,7 +626,7 @@ const Billing = () => {
                     {plans.map((plan) => (
                       <div
                         key={plan.id}
-                        className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 transition-all ${
+                        className={`relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
                           selectedPlan === plan.id
                             ? PLAN_STYLES[plan.color].selectedBorder
                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
@@ -631,7 +640,7 @@ const Billing = () => {
                           </div>
                         )}
 
-                        <div className="p-6">
+                        <div className="flex flex-1 flex-col p-8">
                           <div className="text-center">
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                               {plan.name}
@@ -664,7 +673,7 @@ const Billing = () => {
                             </div>
                           </div>
 
-                          <ul className="mt-8 space-y-3">
+                          <ul className="mt-8 flex-1 space-y-3">
                             {plan.features.map((feature, index) => (
                               <li key={index} className="flex items-start">
                                 <Check className="h-5 w-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
@@ -675,7 +684,7 @@ const Billing = () => {
                             ))}
                           </ul>
 
-                          <div className="mt-8">
+                          <div className="mt-8 pt-2">
                             <button
                               onClick={() => {
                                 if (plan.id !== currentPlanSlug && plan.id !== "basic") {
