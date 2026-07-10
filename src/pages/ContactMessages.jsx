@@ -198,7 +198,7 @@ const ContactMessages = () => {
   };
 
   // Permanently delete every message from the selected senders (RLS: admin
-  // delete policy from migration 035). Destructive — confirmed first.
+  // delete policy from migration 20260709140509). Destructive — confirmed first.
   const deleteSelected = async () => {
     if (deleting || selectedEmails.size === 0) return;
     const emails = [...selectedEmails];
@@ -344,7 +344,7 @@ const ContactMessages = () => {
   };
 
   // Block or unblock the open thread's sender. While blocked, contact-submit
-  // silently discards their messages (migration 037), so nothing new arrives
+  // silently discards their messages (migration 20260709140532), so nothing new arrives
   // until they're unblocked. Messages they already sent are untouched.
   const toggleBlockSender = async () => {
     if (!selectedThread || blockBusy) return;
@@ -402,7 +402,7 @@ const ContactMessages = () => {
   };
 
   // Delete one message from the open thread. Visitor emails are rows in
-  // contact_submissions (admin DELETE policy, migration 035); admin replies
+  // contact_submissions (admin DELETE policy, migration 20260709140509); admin replies
   // live in the parent row's metadata.replies array (UPDATE policy, 024).
   // Neither recalls an email already delivered to the recipient's mailbox —
   // this only removes the inbox's stored copy.
@@ -535,7 +535,7 @@ const ContactMessages = () => {
       toast.success("Reply sent.");
       // Reload the history so the new reply appears in the conversation.
       setThreadMessages(await fetchThreadMessages(latest.email));
-      // The row badge counts replies too (migration 036) — refresh the list
+      // The row badge counts replies too (migration 20260709140521) — refresh the list
       // so it bumps without waiting for a realtime event.
       const { data: freshThreads, count } = await load();
       setThreads(freshThreads);
@@ -592,7 +592,7 @@ const ContactMessages = () => {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const latestMessage = threadMessages[0] ?? null;
   // Prefer the freshly loaded conversation length (emails + replies); fall
-  // back to the list row's count (also emails + replies since migration 036)
+  // back to the list row's count (also emails + replies since migration 20260709140521)
   // while the thread is still loading.
   const threadCount = threadLoading
     ? selectedThread?.message_count ?? 0

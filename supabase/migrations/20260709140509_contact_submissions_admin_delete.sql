@@ -1,6 +1,6 @@
 -- ============================================================
 -- Trade Journal Pro — Let admins delete contact submissions
--- Migration: 035_contact_submissions_admin_delete.sql
+-- Migration: 20260709140509_contact_submissions_admin_delete.sql
 --
 -- The admin Contact Inbox gains row checkboxes with a bulk delete
 -- action. 024 added admin SELECT/UPDATE policies and 026 granted

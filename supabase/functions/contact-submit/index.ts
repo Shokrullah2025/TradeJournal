@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
     }
     const { name, email, subject, message } = parsed.data;
 
-    // Blocked sender (admin block list, migration 037): silently discard.
+    // Blocked sender (admin block list, migration 20260709140532): silently discard.
     // Return success so the sender can't tell they're blocked — nothing is
     // stored, no notification or email goes out.
     const { data: blocked, error: blockLookupError } = await supabase

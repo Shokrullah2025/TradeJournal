@@ -1,6 +1,6 @@
 -- ============================================================
 -- ZalorTrade — Count admin replies in the thread message count
--- Migration: 036_contact_threads_count_replies.sql
+-- Migration: 20260709140521_contact_threads_count_replies.sql
 --
 -- The inbox row badge (message icon + number) showed only visitor
 -- emails: contact_threads.message_count was COUNT(*) over the sender's

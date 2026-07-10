@@ -523,7 +523,7 @@ const BlogManagement = () => {
       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
       <span>
         Blog management needs migration{" "}
-        <code className="text-[12px]">034_blog_posts.sql</code> applied to the
+        <code className="text-[12px]">20260708215123_blog_posts.sql</code> applied to the
         database before posts can be created.
       </span>
     </div>
