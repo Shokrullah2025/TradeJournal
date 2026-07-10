@@ -6,8 +6,12 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  Check,
   Tag,
   ListChecks,
+  MoreVertical,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
@@ -18,10 +22,10 @@ import { logActivity } from "../../utils/logActivity";
 // ── Pricing admin panel ────────────────────────────────────────────────────
 // Two sub-tabs. "Prices" sets each plan's monthly/annual amount via the
 // stripe-admin-set-price edge function (creates a new immutable Stripe Price and
-// repoints the plan, so Stripe + DB stay in sync). "Plan details" edits the
-// name, description, and the feature bullets shown on the pricing cards — these
-// touch no Stripe and save straight to the DB under the admin RLS policy. Both
-// feed the customer-facing displays through the useSubscriptionPlans hook.
+// repoints the plan, so Stripe + DB stay in sync). "Plan details" shows each
+// plan read-only and reveals editing/removal behind a ⋮ menu — edits and
+// removal touch no Stripe and save straight to the DB under the admin RLS
+// policy. Both feed the customer-facing displays through useSubscriptionPlans.
 
 // A real Stripe price id looks like `price_1Ab2Cd...` (alphanumeric). The seed
 // placeholders (`price_live_monthly_id`) and nulls fail this, so we can flag a
@@ -33,6 +37,15 @@ const SUB_TABS = [
   { id: "details", name: "Plan details", icon: ListChecks },
 ];
 
+const emptyDetail = { name: "", description: "", features: "" };
+
+const detailFromPlan = (p) => ({
+  name: p?.name ?? "",
+  description: p?.description ?? "",
+  // One feature per line — the simplest thing an operator can edit.
+  features: Array.isArray(p?.features) ? p.features.join("\n") : "",
+});
+
 const PricingManagement = () => {
   const { user } = useAuth();
   const [subTab, setSubTab] = useState("prices");
@@ -42,6 +55,10 @@ const PricingManagement = () => {
   const [priceDrafts, setPriceDrafts] = useState({}); // slug -> { monthly, annual }
   const [detailDrafts, setDetailDrafts] = useState({}); // slug -> { name, description, features }
   const [savingSlug, setSavingSlug] = useState(null);
+  // Plan-details interaction state.
+  const [editingSlug, setEditingSlug] = useState(null);
+  const [menuSlug, setMenuSlug] = useState(null);
+  const [pendingDeleteSlug, setPendingDeleteSlug] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,6 +69,7 @@ const PricingManagement = () => {
         .select(
           "slug, name, description, features, price, price_annually, currency, stripe_price_id_monthly, stripe_price_id_annually, sort_order",
         )
+        .eq("is_active", true)
         .order("sort_order", { ascending: true });
       if (error) throw error;
       setPlans(data ?? []);
@@ -63,15 +81,14 @@ const PricingManagement = () => {
           monthly: p.price != null ? String(p.price) : "",
           annual: p.price_annually != null ? String(p.price_annually) : "",
         };
-        seededDetails[p.slug] = {
-          name: p.name ?? "",
-          description: p.description ?? "",
-          // One feature per line — the simplest thing an operator can edit.
-          features: Array.isArray(p.features) ? p.features.join("\n") : "",
-        };
+        seededDetails[p.slug] = detailFromPlan(p);
       });
       setPriceDrafts(seededPrices);
       setDetailDrafts(seededDetails);
+      // Any in-progress edit/menu is stale after a reload.
+      setEditingSlug(null);
+      setMenuSlug(null);
+      setPendingDeleteSlug(null);
     } catch (err) {
       console.error("[Pricing] load error:", err.message);
       setLoadError(true);
@@ -83,6 +100,14 @@ const PricingManagement = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Close the ⋮ menu on any outside click.
+  useEffect(() => {
+    if (!menuSlug) return undefined;
+    const close = () => setMenuSlug(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [menuSlug]);
 
   const setPriceDraft = (slug, field, value) => {
     setPriceDrafts((d) => ({ ...d, [slug]: { ...d[slug], [field]: value } }));
@@ -136,8 +161,22 @@ const PricingManagement = () => {
     }
   };
 
+  // ── Plan-details actions ──────────────────────────────────────────────────
+  const startEdit = (slug) => {
+    setMenuSlug(null);
+    setPendingDeleteSlug(null);
+    setEditingSlug(slug);
+  };
+
+  const cancelEdit = (slug) => {
+    // Discard unsaved edits by reseeding the draft from the loaded plan.
+    const plan = plans.find((p) => p.slug === slug);
+    setDetailDrafts((d) => ({ ...d, [slug]: detailFromPlan(plan) }));
+    setEditingSlug(null);
+  };
+
   const saveDetails = async (plan) => {
-    const draft = detailDrafts[plan.slug] || {};
+    const draft = detailDrafts[plan.slug] || emptyDetail;
     const name = (draft.name || "").trim();
     if (!name) {
       toast.error("Plan name can't be empty.");
@@ -167,10 +206,42 @@ const PricingManagement = () => {
         features: features.length,
       });
       toast.success(`${name} details updated`);
+      setEditingSlug(null);
       await load();
     } catch (err) {
       console.error("[Pricing] details save error:", err.message);
       toast.error("Could not save. Confirm you have admin access and try again.");
+    } finally {
+      setSavingSlug(null);
+    }
+  };
+
+  const requestDelete = (slug) => {
+    setMenuSlug(null);
+    setEditingSlug(null);
+    setPendingDeleteSlug(slug);
+  };
+  const cancelDelete = () => setPendingDeleteSlug(null);
+
+  // "Delete" archives the plan (is_active=false) rather than hard-deleting: a
+  // plan may be referenced by invoices/subscriptions, and archiving hides it
+  // from every customer surface while preserving billing history. Recoverable
+  // by flipping is_active back on in the DB.
+  const confirmDelete = async (plan) => {
+    setSavingSlug(plan.slug);
+    try {
+      const { error } = await supabase
+        .from("subscription_plans")
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq("slug", plan.slug);
+      if (error) throw error;
+      logActivity(user?.id, "admin_plan_archived", { plan: plan.slug });
+      toast.success(`${plan.name} plan removed`);
+      setPendingDeleteSlug(null);
+      await load();
+    } catch (err) {
+      console.error("[Pricing] archive error:", err.message);
+      toast.error("Could not remove the plan. Confirm you have admin access.");
     } finally {
       setSavingSlug(null);
     }
@@ -248,6 +319,15 @@ const PricingManagement = () => {
           setDetailDraft={setDetailDraft}
           saveDetails={saveDetails}
           savingSlug={savingSlug}
+          editingSlug={editingSlug}
+          menuSlug={menuSlug}
+          setMenuSlug={setMenuSlug}
+          startEdit={startEdit}
+          cancelEdit={cancelEdit}
+          pendingDeleteSlug={pendingDeleteSlug}
+          requestDelete={requestDelete}
+          cancelDelete={cancelDelete}
+          confirmDelete={confirmDelete}
         />
       )}
     </div>
@@ -352,71 +432,203 @@ PricesTab.propTypes = {
 };
 
 // ── Plan details sub-tab ───────────────────────────────────────────────────
-const DetailsTab = ({ plans, detailDrafts, setDetailDraft, saveDetails, savingSlug }) => (
+// Cards are read-only by default; the ⋮ menu reveals Edit / Delete.
+const DetailsTab = ({
+  plans,
+  detailDrafts,
+  setDetailDraft,
+  saveDetails,
+  savingSlug,
+  editingSlug,
+  menuSlug,
+  setMenuSlug,
+  startEdit,
+  cancelEdit,
+  pendingDeleteSlug,
+  requestDelete,
+  cancelDelete,
+  confirmDelete,
+}) => (
   <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
     {plans.map((plan) => {
-      const draft = detailDrafts[plan.slug] || { name: "", description: "", features: "" };
+      const draft = detailDrafts[plan.slug] || emptyDetail;
+      const isEditing = editingSlug === plan.slug;
+      const isMenuOpen = menuSlug === plan.slug;
+      const isConfirmingDelete = pendingDeleteSlug === plan.slug;
+      const busy = savingSlug === plan.slug;
+      const features = Array.isArray(plan.features) ? plan.features : [];
+
       return (
         <div
           key={plan.slug}
           className="card p-5 flex flex-col gap-4"
           data-testid={`admin-plan-details-${plan.slug}`}
         >
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            <Tag className="w-3.5 h-3.5" />
-            {plan.slug}
+          {/* Header: slug + ⋮ menu */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              <Tag className="w-3.5 h-3.5" />
+              {plan.slug}
+            </div>
+            {!isEditing && !isConfirmingDelete && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuSlug(isMenuOpen ? null : plan.slug);
+                  }}
+                  data-testid={`admin-plan-menu-btn-${plan.slug}`}
+                  aria-label={`${plan.name} actions`}
+                  className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+                {isMenuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid={`admin-plan-menu-${plan.slug}`}
+                    className="absolute right-0 mt-1 w-32 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-10 py-1"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => startEdit(plan.slug)}
+                      data-testid={`admin-plan-edit-btn-${plan.slug}`}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => requestDelete(plan.slug)}
+                      data-testid={`admin-plan-delete-btn-${plan.slug}`}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <label className="block">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Plan name</span>
-            <input
-              type="text"
-              value={draft.name}
-              onChange={(e) => setDetailDraft(plan.slug, "name", e.target.value)}
-              data-testid={`admin-plan-name-input-${plan.slug}`}
-              className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </label>
+          {isConfirmingDelete ? (
+            <div
+              className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-sm flex-1"
+              data-testid={`admin-plan-delete-confirm-${plan.slug}`}
+            >
+              <p className="text-red-700 dark:text-red-300">
+                Remove the <strong>{plan.name}</strong> plan? It disappears from
+                the app and pricing page. Existing subscribers keep their plan.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => confirmDelete(plan)}
+                  data-testid={`admin-plan-delete-yes-${plan.slug}`}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Yes, remove
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={cancelDelete}
+                  className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : isEditing ? (
+            <>
+              <label className="block">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Plan name</span>
+                <input
+                  type="text"
+                  value={draft.name}
+                  onChange={(e) => setDetailDraft(plan.slug, "name", e.target.value)}
+                  data-testid={`admin-plan-name-input-${plan.slug}`}
+                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </label>
 
-          <label className="block">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Description</span>
-            <input
-              type="text"
-              value={draft.description}
-              onChange={(e) => setDetailDraft(plan.slug, "description", e.target.value)}
-              data-testid={`admin-plan-description-input-${plan.slug}`}
-              className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </label>
+              <label className="block">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Description</span>
+                <input
+                  type="text"
+                  value={draft.description}
+                  onChange={(e) => setDetailDraft(plan.slug, "description", e.target.value)}
+                  data-testid={`admin-plan-description-input-${plan.slug}`}
+                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </label>
 
-          <label className="block flex-1">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Features — one per line
-            </span>
-            <textarea
-              rows={7}
-              value={draft.features}
-              onChange={(e) => setDetailDraft(plan.slug, "features", e.target.value)}
-              placeholder={"Unlimited trades\nAdvanced analytics\nPriority support"}
-              data-testid={`admin-plan-features-input-${plan.slug}`}
-              className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y"
-            />
-          </label>
+              <label className="block flex-1">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Features — one per line
+                </span>
+                <textarea
+                  rows={7}
+                  value={draft.features}
+                  onChange={(e) => setDetailDraft(plan.slug, "features", e.target.value)}
+                  placeholder={"Unlimited trades\nAdvanced analytics\nPriority support"}
+                  data-testid={`admin-plan-features-input-${plan.slug}`}
+                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y"
+                />
+              </label>
 
-          <button
-            type="button"
-            disabled={savingSlug === plan.slug}
-            onClick={() => saveDetails(plan)}
-            data-testid={`admin-plan-details-save-${plan.slug}`}
-            className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {savingSlug === plan.slug ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Save className="w-3.5 h-3.5" />
-            )}
-            Save details
-          </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => saveDetails(plan)}
+                  data-testid={`admin-plan-details-save-${plan.slug}`}
+                  className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Save details
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => cancelEdit(plan.slug)}
+                  data-testid={`admin-plan-details-cancel-${plan.slug}`}
+                  className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-3 flex-1">
+              <h4
+                className="text-lg font-bold text-gray-900 dark:text-gray-100"
+                data-testid={`admin-plan-name-${plan.slug}`}
+              >
+                {plan.name}
+              </h4>
+              {plan.description && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">{plan.description}</p>
+              )}
+              <ul className="space-y-1.5 mt-1" data-testid={`admin-plan-features-${plan.slug}`}>
+                {features.length ? (
+                  features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <Check className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
+                      {f}
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-sm italic text-gray-400 dark:text-gray-500">No features yet</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       );
     })}
@@ -429,6 +641,15 @@ DetailsTab.propTypes = {
   setDetailDraft: PropTypes.func.isRequired,
   saveDetails: PropTypes.func.isRequired,
   savingSlug: PropTypes.string,
+  editingSlug: PropTypes.string,
+  menuSlug: PropTypes.string,
+  setMenuSlug: PropTypes.func.isRequired,
+  startEdit: PropTypes.func.isRequired,
+  cancelEdit: PropTypes.func.isRequired,
+  pendingDeleteSlug: PropTypes.string,
+  requestDelete: PropTypes.func.isRequired,
+  cancelDelete: PropTypes.func.isRequired,
+  confirmDelete: PropTypes.func.isRequired,
 };
 
 const StatusPill = ({ ok, label }) => (
