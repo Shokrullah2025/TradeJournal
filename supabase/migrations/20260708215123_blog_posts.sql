@@ -1,6 +1,6 @@
 -- ============================================================
 -- Trade Journal Pro — Admin-managed blog posts
--- Migration: 034_blog_posts.sql
+-- Migration: 20260708215123_blog_posts.sql
 --
 -- Backs the admin dashboard "Blog" tab: admins write, edit, publish and
 -- unpublish articles from the app instead of editing the hardcoded

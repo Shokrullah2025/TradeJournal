@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
  * Admin-only: RLS on contact_submissions returns zero rows for everyone else,
  * and the hook skips the query entirely for non-admins. The count refreshes
  * in realtime — contact_submissions is in the supabase_realtime publication
- * (migration 034) and postgres_changes respects RLS, so only admins receive
+ * (migration 20260708210946) and postgres_changes respects RLS, so only admins receive
  * events.
  */
 export function useContactInboxCount() {
