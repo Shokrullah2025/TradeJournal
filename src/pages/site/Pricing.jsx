@@ -85,8 +85,9 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* Tiers */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24">
+      {/* Tiers — symmetric vertical padding so the card row sits centered in
+          the background band instead of hugging its top edge. */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {tiers.map((tier) => (
             <PricingCard key={tier.id} tier={tier} cycle={cycle} />

@@ -21,7 +21,7 @@ const PricingCard = ({ tier, cycle }) => {
   return (
     <div
       data-testid={`pricing-card-${tier.id}`}
-      className={`relative flex flex-col rounded-2xl border p-8 sm:p-10 transition-all duration-200 hover:-translate-y-1 ${
+      className={`relative flex flex-col rounded-2xl border p-8 sm:p-10 sm:min-h-[34rem] transition-all duration-200 hover:-translate-y-1 ${
         tier.popular
           ? "z-10 border-accent-500 bg-white shadow-2xl ring-1 ring-accent-500 dark:bg-gray-800 lg:scale-[1.04]"
           : "border-gray-200 bg-white shadow-sm hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
