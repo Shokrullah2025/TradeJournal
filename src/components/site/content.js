@@ -301,8 +301,8 @@ export const PRICING_TIERS = [
     id: "basic",
     name: "Basic",
     description: "For individual traders getting started.",
-    monthlyPrice: 0,
-    yearlyPrice: 0,
+    monthlyPrice: 9.99,
+    yearlyPrice: 100,
     features: [
       "Up to 50 trades per month",
       "Basic analytics dashboard",
@@ -311,7 +311,7 @@ export const PRICING_TIERS = [
       "Mobile app access",
     ],
     popular: false,
-    cta: "Start free",
+    cta: "Get started",
   },
   {
     id: "premium",
@@ -329,7 +329,7 @@ export const PRICING_TIERS = [
       "Real-time broker sync (coming soon)",
     ],
     popular: true,
-    cta: "Start Premium",
+    cta: "Start free trial",
   },
   {
     id: "enterprise",
@@ -354,9 +354,9 @@ export const PRICING_TIERS = [
 // ── Frequently asked questions (Pricing page) ─────────────────────────────
 export const FAQS = [
   {
-    question: "Is there a free plan?",
+    question: "Is there a free trial?",
     answer:
-      "Yes. The Basic plan is free forever and includes up to 50 trades a month with the core analytics dashboard. A card is captured at sign-up to verify your account, but you're never charged on the free plan.",
+      "Yes — every new account starts with a 7-day free trial. You add a card at sign-up but aren't charged until the trial ends, and you can cancel anytime before then at no cost.",
   },
   {
     question: "Can I cancel anytime?",

@@ -54,7 +54,7 @@ const PricingCard = ({ tier, cycle }) => {
       {/* Billing detail line — reserves height so cards stay aligned */}
       <p className="mt-2 min-h-[1.25rem] text-sm">
         {isFree ? (
-          <span className="text-gray-400 dark:text-gray-500">Free forever</span>
+          <span className="text-gray-400 dark:text-gray-500">Free</span>
         ) : isAnnual ? (
           <span className="text-success-700 dark:text-success-400">
             ${fmt(perMonth)}/mo billed annually

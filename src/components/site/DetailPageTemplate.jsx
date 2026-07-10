@@ -88,7 +88,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
                 data-testid={`detail-${page.slug}-getstarted-btn`}
                 className="btn btn-site inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
               >
-                Start free
+                Start free trial
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link

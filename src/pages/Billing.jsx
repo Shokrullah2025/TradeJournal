@@ -11,15 +11,15 @@ import {
   TrendingUp,
   AlertCircle,
   User,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
 import StripePaymentForm from "../components/billing/StripePaymentForm";
-import CancelRetentionModal from "../components/billing/CancelRetentionModal";
-import CouponField from "../components/billing/CouponField";
 import useSubscriptionPlans from "../hooks/useSubscriptionPlans";
+import { annualPriceFor, savingsPercent } from "../utils/pricing";
 
 // Static class strings per plan accent — Tailwind's scanner can't see
 // dynamically-built classes like `bg-${plan.color}-600`, so they'd be purged
@@ -60,7 +60,6 @@ const Billing = () => {
     isLoading,
     createCheckoutSession,
     openPortal,
-    applyRetentionOffer,
   } = useBilling();
   // Live plan prices set by admins in the Pricing tab; the hardcoded numbers
   // below act as a fallback until they load.
@@ -79,17 +78,8 @@ const Billing = () => {
   const [clientSecret, setClientSecret] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [retentionWorking, setRetentionWorking] = useState(false);
-  // A validated coupon code applied to a paid upgrade at checkout.
-  const [checkoutCoupon, setCheckoutCoupon] = useState(null);
   const [billingAnalytics, setBillingAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState("payment");
-
-  // A paid subscription (or an in-progress trial) is the only thing worth
-  // retaining — the free Basic plan has nothing to cancel.
-  const canCancel =
-    subscription?.status === "active" || subscription?.status === "trialing";
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -101,7 +91,7 @@ const Billing = () => {
     setSelectedPlan(planSlug);
     setCheckoutLoading(true);
     try {
-      const cs = await createCheckoutSession(planSlug, cycle, checkoutCoupon);
+      const cs = await createCheckoutSession(planSlug, cycle);
       setClientSecret(cs);
       setShowPaymentForm(true);
     } catch (err) {
@@ -121,6 +111,20 @@ const Billing = () => {
     setClientSecret(null);
   };
 
+  // Opening the Stripe portal navigates the tab away. When the user returns —
+  // especially via the browser back button, which restores the page from the
+  // bfcache with its old state — the button could stay stuck on "Opening…".
+  // Reset the loading flag whenever the page is shown or regains focus.
+  useEffect(() => {
+    const reset = () => setPortalLoading(false);
+    window.addEventListener("pageshow", reset);
+    window.addEventListener("focus", reset);
+    return () => {
+      window.removeEventListener("pageshow", reset);
+      window.removeEventListener("focus", reset);
+    };
+  }, []);
+
   const handleOpenPortal = async () => {
     setPortalLoading(true);
     try {
@@ -131,46 +135,12 @@ const Billing = () => {
     }
   };
 
-  // User clicked a "cancel" entry point — intercept with the retention offer
-  // before sending them anywhere destructive.
-  const handleCancelIntent = () => {
-    setShowCancelModal(true);
-  };
-
-  // "Keep my plan — 30% off": apply the discount to the live subscription and
-  // stay put. The BillingContext realtime channel refreshes the row after the
-  // Stripe webhook reconciles it, so there's no manual refetch here.
-  const handleAcceptRetention = async () => {
-    setRetentionWorking(true);
-    try {
-      await applyRetentionOffer();
-      toast.success("Your 30% discount has been applied. Thanks for staying!");
-      setShowCancelModal(false);
-    } catch (err) {
-      toast.error(err.message || "We couldn't apply the offer. Please try again.");
-    } finally {
-      setRetentionWorking(false);
-    }
-  };
-
-  // "No thanks, continue to cancel": hand off to the Stripe portal, which owns
-  // the authoritative cancellation flow (and its confirmation UI).
-  const handleDeclineRetention = async () => {
-    try {
-      await openPortal();
-    } catch (err) {
-      toast.error(err.message || "Failed to open billing portal");
-      setRetentionWorking(false);
-    }
-  };
-
   const planContent = [
     {
       id: "basic",
       name: "Basic",
       description: "Perfect for individual traders getting started",
-      monthlyPrice: 0,
-      yearlyPrice: 0,
+      monthlyPrice: 9.99,
       features: [
         "Up to 50 trades per month",
         "Basic analytics dashboard",
@@ -186,7 +156,6 @@ const Billing = () => {
       name: "Premium",
       description: "Best for serious traders and small teams",
       monthlyPrice: 18,
-      yearlyPrice: 290,
       features: [
         "Unlimited trades",
         "Advanced analytics & insights",
@@ -204,7 +173,6 @@ const Billing = () => {
       name: "Enterprise",
       description: "For trading firms and large organizations",
       monthlyPrice: 99,
-      yearlyPrice: 990,
       features: [
         "Everything in Premium",
         "Team management",
@@ -221,27 +189,32 @@ const Billing = () => {
   ];
 
   // Overlay live DB prices (set in the admin Pricing tab) onto the static plan
-  // content, keeping features/copy local. Falls back to the hardcoded number
-  // while prices load or if a plan has no amount set yet.
-  const plans = planContent.map((p) => ({
-    ...p,
-    name: livePlans[p.id]?.name ?? p.name,
-    description: livePlans[p.id]?.description ?? p.description,
-    features: livePlans[p.id]?.features?.length ? livePlans[p.id].features : p.features,
-    monthlyPrice: livePlans[p.id]?.price ?? p.monthlyPrice,
-    yearlyPrice: livePlans[p.id]?.priceAnnually ?? p.yearlyPrice,
-  }));
+  // content, keeping features/copy local. The annual price and savings use the
+  // same shared formula as the marketing pricing page (2 months free unless an
+  // explicit, genuinely-discounted annual price is configured).
+  const plans = planContent.map((p) => {
+    const monthlyPrice = livePlans[p.id]?.price ?? p.monthlyPrice;
+    return {
+      ...p,
+      name: livePlans[p.id]?.name ?? p.name,
+      description: livePlans[p.id]?.description ?? p.description,
+      features: livePlans[p.id]?.features?.length ? livePlans[p.id].features : p.features,
+      monthlyPrice,
+      yearlyPrice: annualPriceFor(monthlyPrice, livePlans[p.id]?.priceAnnually ?? null),
+    };
+  });
+
+  // Dynamic savings for the Yearly toggle badge, from the featured plan.
+  const popularPlan = plans.find((p) => p.popular) ?? plans.find((p) => p.monthlyPrice > 0);
+  const yearlySavingsPct = popularPlan
+    ? savingsPercent(popularPlan.monthlyPrice, popularPlan.yearlyPrice)
+    : 0;
 
   const getPlanPrice = (plan) => {
     return billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
   };
 
-  const getSavingsPercent = (plan) => {
-    if (plan.monthlyPrice === 0) return 0;
-    const monthlyTotal = plan.monthlyPrice * 12;
-    const yearlySavings = monthlyTotal - plan.yearlyPrice;
-    return Math.round((yearlySavings / monthlyTotal) * 100);
-  };
+  const getSavingsPercent = (plan) => savingsPercent(plan.monthlyPrice, plan.yearlyPrice);
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
@@ -383,17 +356,61 @@ const Billing = () => {
         </div>
       )}
 
+      {/* Billing tab rail — a full-height column like the Settings nav: white
+          background stretching from the very top all the way down, flush
+          against the app sidebar. Users only; admins keep their own sidebar. */}
+      {user?.role !== "admin" && (
+        <div className="w-full lg:w-72 shrink-0 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6">
+          <nav
+            aria-label="Billing sections"
+            className="flex lg:flex-col gap-1 overflow-x-auto lg:mt-6 lg:sticky lg:top-6"
+          >
+            {[
+              { id: "payment", label: "Payment Information", Icon: CreditCard },
+              { id: "plans", label: "Plans & Subscriptions", Icon: DollarSign },
+              { id: "invoices", label: "Invoice History", Icon: FileText },
+            ].map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                data-testid={`billing-tab-${id}-btn`}
+                className={`relative flex items-center gap-3 whitespace-nowrap rounded-xl p-3 text-base text-left transition-all duration-150 ${
+                  activeTab === id
+                    ? "bg-primary-50 dark:bg-primary-900/30 font-bold text-primary-700 dark:text-primary-300"
+                    : "font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60"
+                }`}
+              >
+                <span
+                  className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
+                    activeTab === id ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
+                  }`}
+                />
+                <Icon
+                  className={`h-5 w-5 shrink-0 ${
+                    activeTab === id
+                      ? "text-primary-600 dark:text-primary-400"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
+                />
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className={`flex-1 ${user?.role === "admin" ? "lg:pl-6" : ""} p-4 lg:p-6`}>
+        {/* Capped width so the content doesn't look stretched. */}
         <div className="max-w-4xl mx-auto space-y-8">
-          {/* Header */}
+          {/* Header — centered over the content area. */}
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {user?.role === "admin"
                 ? "Billing Management"
                 : "Subscription & Billing"}
             </h1>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-gray-600 dark:text-gray-400">
               {user?.role === "admin"
                 ? "Manage all billing operations and view analytics"
                 : "Manage your subscription and payment information"}
@@ -422,11 +439,12 @@ const Billing = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={handleCancelIntent}
-                  className="py-2 px-4 border border-amber-300 dark:border-amber-600 rounded-md text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                  onClick={handleOpenPortal}
+                  disabled={portalLoading}
+                  className="py-2 px-4 border border-amber-300 dark:border-amber-600 rounded-md text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-70 disabled:cursor-not-allowed"
                   data-testid="billing-trial-cancel-btn"
                 >
-                  Manage or cancel
+                  {portalLoading ? "Opening…" : "Manage or cancel"}
                 </button>
               </div>
             </div>
@@ -451,10 +469,12 @@ const Billing = () => {
                 <div className="text-right">
                   <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
                     $
-                    {currentPlanSlug === "basic"
-                      ? "0"
-                      : livePlans[currentPlanSlug]?.price ??
-                        (currentPlanSlug === "premium" ? 18 : 99)}
+                    {livePlans[currentPlanSlug]?.price ??
+                      (currentPlanSlug === "basic"
+                        ? 9.99
+                        : currentPlanSlug === "premium"
+                        ? 18
+                        : 99)}
                   </div>
                   <div className="text-sm text-primary-600 dark:text-primary-300">
                     per month
@@ -464,47 +484,9 @@ const Billing = () => {
             </div>
           )}
 
-          {/* Tab Navigation - Users Only */}
+          {/* Tab content — Payment Information is the default. */}
           {user?.role !== "admin" && (
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setActiveTab("payment")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === "payment"
-                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  Payment Information
-                </button>
-                <button
-                  onClick={() => setActiveTab("plans")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === "plans"
-                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  Plans & Subscriptions
-                </button>
-                <button
-                  onClick={() => setActiveTab("invoices")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === "invoices"
-                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  Invoice History
-                </button>
-              </nav>
-            </div>
-          )}
-
-          {/* Tab Content - Users Only */}
-          {user?.role !== "admin" && (
-            <div className="mt-8">
+            <div>
               {/* Payment Information Tab */}
               {activeTab === "payment" && (
                 <div className="space-y-8">
@@ -526,10 +508,12 @@ const Billing = () => {
                       <div className="text-right">
                         <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
                           $
-                          {currentPlanSlug === "basic"
-                            ? "0"
-                            : livePlans[currentPlanSlug]?.price ??
-                              (currentPlanSlug === "premium" ? 18 : 99)}
+                          {livePlans[currentPlanSlug]?.price ??
+                            (currentPlanSlug === "basic"
+                              ? 9.99
+                              : currentPlanSlug === "premium"
+                              ? 18
+                              : 99)}
                         </div>
                         <div className="text-sm text-primary-600 dark:text-primary-300">
                           per month
@@ -607,28 +591,6 @@ const Billing = () => {
                     </div>
                   </div>
 
-                  {/* Cancel subscription — intercepted by the retention offer */}
-                  {canCancel && (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between flex-wrap gap-4">
-                      <div>
-                        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                          Cancel subscription
-                        </h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          Thinking about leaving? See what we can do before you go.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleCancelIntent}
-                        className="py-2 px-4 border border-red-300 dark:border-red-700 rounded-md text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        data-testid="billing-cancel-subscription-btn"
-                      >
-                        Cancel subscription
-                      </button>
-                    </div>
-                  )}
-
                 </div>
               )}
 
@@ -657,23 +619,13 @@ const Billing = () => {
                         }`}
                       >
                         Yearly
-                        <span className="ml-1 text-xs bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
-                          Save up to 17%
-                        </span>
+                        {yearlySavingsPct > 0 && (
+                          <span className="ml-1 text-xs bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
+                            Save {yearlySavingsPct}%
+                          </span>
+                        )}
                       </button>
                     </div>
-                  </div>
-
-                  {/* Optional coupon applied when you upgrade */}
-                  <div className="mx-auto w-full max-w-sm space-y-1.5" data-testid="checkout-coupon">
-                    <p className="text-center text-xs font-medium text-gray-500 dark:text-gray-400">
-                      Have a coupon?
-                    </p>
-                    <CouponField
-                      onApply={setCheckoutCoupon}
-                      onClear={() => setCheckoutCoupon(null)}
-                      disabled={checkoutLoading}
-                    />
                   </div>
 
                   {/* Pricing Plans */}
@@ -681,7 +633,7 @@ const Billing = () => {
                     {plans.map((plan) => (
                       <div
                         key={plan.id}
-                        className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 transition-all ${
+                        className={`relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
                           selectedPlan === plan.id
                             ? PLAN_STYLES[plan.color].selectedBorder
                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
@@ -695,7 +647,7 @@ const Billing = () => {
                           </div>
                         )}
 
-                        <div className="p-6">
+                        <div className="flex flex-1 flex-col p-8">
                           <div className="text-center">
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                               {plan.name}
@@ -728,7 +680,7 @@ const Billing = () => {
                             </div>
                           </div>
 
-                          <ul className="mt-8 space-y-3">
+                          <ul className="mt-8 flex-1 space-y-3">
                             {plan.features.map((feature, index) => (
                               <li key={index} className="flex items-start">
                                 <Check className="h-5 w-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
@@ -739,7 +691,7 @@ const Billing = () => {
                             ))}
                           </ul>
 
-                          <div className="mt-8">
+                          <div className="mt-8 pt-2">
                             <button
                               onClick={() => {
                                 if (plan.id !== currentPlanSlug && plan.id !== "basic") {
@@ -1055,54 +1007,51 @@ const Billing = () => {
           )}
 
           {/* Stripe Payment Modal */}
-          {showPaymentForm && clientSecret && (
+          {showPaymentForm && clientSecret && (() => {
+            const modalPlan = plans.find((p) => p.id === selectedPlan);
+            return (
             <ModalPortal>
+            {/* Centered on screen; scrolls internally on short viewports. */}
             <div
-              className="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 overflow-y-auto h-full w-full z-[9999]"
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 p-4"
               data-testid="billing-payment-modal"
             >
-              <div className="relative top-20 mx-auto p-5 border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
-                <div className="mt-3">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Complete Subscription
-                    </h3>
-                    <button
-                      onClick={handlePaymentCancel}
-                      className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                      data-testid="billing-payment-modal-close-btn"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Subscribing to the{" "}
-                    <span className="font-semibold capitalize">{selectedPlan}</span> plan
-                    ({billingCycle}).
-                  </p>
-
-                  <StripePaymentForm
-                    clientSecret={clientSecret}
-                    amount={getPlanPrice(plans.find((p) => p.id === selectedPlan))}
-                    onSuccess={handlePaymentSuccess}
-                    onCancel={handlePaymentCancel}
-                  />
+              <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Complete Subscription
+                  </h3>
+                  <button
+                    onClick={handlePaymentCancel}
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                    data-testid="billing-payment-modal-close-btn"
+                  >
+                    ✕
+                  </button>
                 </div>
+
+                {/* The price lives here, next to the plan/cycle — not in the button. */}
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Subscribing to the{" "}
+                  <span className="font-semibold">{modalPlan?.name ?? selectedPlan}</span>{" "}
+                  plan ({billingCycle}) —{" "}
+                  <span className="font-semibold text-gray-900 dark:text-gray-100" data-testid="billing-payment-modal-price">
+                    ${getPlanPrice(modalPlan)}/{billingCycle === "monthly" ? "month" : "year"}
+                  </span>
+                  .
+                </p>
+
+                <StripePaymentForm
+                  clientSecret={clientSecret}
+                  submitLabel="Confirm subscription"
+                  onSuccess={handlePaymentSuccess}
+                  onCancel={handlePaymentCancel}
+                />
               </div>
             </div>
             </ModalPortal>
-          )}
-
-          {/* Cancellation retention offer */}
-          {showCancelModal && (
-            <CancelRetentionModal
-              onAcceptOffer={handleAcceptRetention}
-              onDeclineToCancel={handleDeclineRetention}
-              onClose={() => setShowCancelModal(false)}
-              isWorking={retentionWorking}
-            />
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>

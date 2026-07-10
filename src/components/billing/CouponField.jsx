@@ -30,7 +30,11 @@ const CouponField = ({ onApply, onClear, disabled }) => {
         setApplied({ code: res.code, label: res.label });
         onApply?.(res.code);
       } else {
-        setError("That coupon code isn't valid.");
+        setError(
+          res?.reason === "expired"
+            ? "This coupon has expired."
+            : "That coupon code isn't valid.",
+        );
         setApplied(null);
         onClear?.();
       }
