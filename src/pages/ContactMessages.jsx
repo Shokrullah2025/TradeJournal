@@ -1101,26 +1101,6 @@ const ContactMessages = () => {
                           )}
                         </div>
                       </div>
-                      {/* What this reply is answering — the quoted history
-                          the visitor's mail client appended. The first line
-                          is always visible so the context is clear at a
-                          glance; clicking expands the full chain. */}
-                      {!isEditing && entry.quoted && (
-                        <details
-                          data-testid={`admin-contact-quoted-${entry.key}`}
-                          className="group mt-2 border-l-2 border-gray-300 dark:border-gray-600 pl-2"
-                        >
-                          <summary className="cursor-pointer select-none text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
-                            <span className="font-medium">Replying to:</span>{" "}
-                            <span className="italic group-open:hidden">
-                              {quotedSnippet(entry.quoted)}
-                            </span>
-                          </summary>
-                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">
-                            {entry.quoted}
-                          </div>
-                        </details>
-                      )}
                       {/* Long emails scroll inside their own bubble (max-h)
                           instead of stretching the thread. */}
                       {isEditing ? (
@@ -1162,6 +1142,27 @@ const ContactMessages = () => {
                         <div className={`mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm ${bodyClass}`}>
                           {entry.message}
                         </div>
+                      )}
+                      {/* What this reply is answering — the quoted history the
+                          visitor's mail client appended. Sits below the message
+                          with breathing room so the reply reads first and the
+                          context is easy to spot; the first line is always
+                          visible, clicking expands the full chain. */}
+                      {!isEditing && entry.quoted && (
+                        <details
+                          data-testid={`admin-contact-quoted-${entry.key}`}
+                          className="group mt-4 border-l-2 border-gray-300 dark:border-gray-600 pl-2"
+                        >
+                          <summary className="cursor-pointer select-none text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                            <span className="font-medium">Replying to:</span>{" "}
+                            <span className="italic group-open:hidden">
+                              {quotedSnippet(entry.quoted)}
+                            </span>
+                          </summary>
+                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">
+                            {entry.quoted}
+                          </div>
+                        </details>
                       )}
                       </div>
                     </div>
