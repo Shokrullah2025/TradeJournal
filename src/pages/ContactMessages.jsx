@@ -40,6 +40,21 @@ const MESSAGE_COLUMNS =
 // have anywhere near this many messages (rate limit is 5/hour).
 const THREAD_MESSAGE_LIMIT = 200;
 
+// First line of real content from a quoted chain, for the always-visible
+// "Replying to:" preview. Skips the mail client's "On <date> … wrote:"
+// attribution so the snippet shows the actual message, and truncates long
+// lines; the full chain is available by expanding the block.
+const quotedSnippet = (quoted) => {
+  const lines = quoted
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const wroteAt = lines.findIndex((l) => /\bwrote:$/i.test(l));
+  // wroteAt === -1 → slice(0): no attribution, use everything.
+  const content = lines.slice(wroteAt + 1).join(" ") || lines.join(" ");
+  return content.length > 90 ? `${content.slice(0, 90)}…` : content;
+};
+
 const STATUS_FILTERS = [
   { value: "all", label: "All" },
   { value: "new", label: "New" },
@@ -1086,6 +1101,26 @@ const ContactMessages = () => {
                           )}
                         </div>
                       </div>
+                      {/* What this reply is answering — the quoted history
+                          the visitor's mail client appended. The first line
+                          is always visible so the context is clear at a
+                          glance; clicking expands the full chain. */}
+                      {!isEditing && entry.quoted && (
+                        <details
+                          data-testid={`admin-contact-quoted-${entry.key}`}
+                          className="group mt-2 border-l-2 border-gray-300 dark:border-gray-600 pl-2"
+                        >
+                          <summary className="cursor-pointer select-none text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                            <span className="font-medium">Replying to:</span>{" "}
+                            <span className="italic group-open:hidden">
+                              {quotedSnippet(entry.quoted)}
+                            </span>
+                          </summary>
+                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">
+                            {entry.quoted}
+                          </div>
+                        </details>
+                      )}
                       {/* Long emails scroll inside their own bubble (max-h)
                           instead of stretching the thread. */}
                       {isEditing ? (
@@ -1127,21 +1162,6 @@ const ContactMessages = () => {
                         <div className={`mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm ${bodyClass}`}>
                           {entry.message}
                         </div>
-                      )}
-                      {/* The quoted chain the visitor's mail client appended,
-                          collapsed by default so the thread stays readable. */}
-                      {!isEditing && entry.quoted && (
-                        <details
-                          data-testid={`admin-contact-quoted-${entry.key}`}
-                          className="mt-2"
-                        >
-                          <summary className="cursor-pointer select-none text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
-                            Show quoted message
-                          </summary>
-                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap border-l-2 border-gray-300 dark:border-gray-600 pl-3 text-xs text-gray-500 dark:text-gray-400">
-                            {entry.quoted}
-                          </div>
-                        </details>
                       )}
                       </div>
                     </div>
