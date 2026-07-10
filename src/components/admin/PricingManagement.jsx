@@ -15,6 +15,7 @@ import {
   Plus,
   Eye,
   EyeOff,
+  Info,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
@@ -362,9 +363,8 @@ const PricingManagement = () => {
           {SUB_TABS.map((tab) => {
             const Icon = tab.icon;
             const active = subTab === tab.id;
-            return (
+            const btn = (
               <button
-                key={tab.id}
                 type="button"
                 onClick={() => switchTab(tab.id)}
                 data-testid={`admin-pricing-subtab-${tab.id}`}
@@ -374,39 +374,50 @@ const PricingManagement = () => {
                 <span>{tab.name}</span>
               </button>
             );
+            if (tab.id !== "prices") return <React.Fragment key={tab.id}>{btn}</React.Fragment>;
+            return (
+              <div key={tab.id} className="flex items-center gap-1.5">
+                {btn}
+                <span className="relative group inline-flex items-center" data-testid="admin-prices-info">
+                  <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 cursor-help" tabIndex={0} aria-label="About prices" />
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-md bg-gray-900 text-gray-100 text-xs leading-relaxed px-3 py-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity shadow-lg"
+                  >
+                    Prices are created in whichever Stripe account your{" "}
+                    <code className="text-[11px] text-gray-300">STRIPE_SECRET_KEY</code>{" "}
+                    points to. New plans start hidden — set a price, then publish to
+                    show them.
+                  </span>
+                </span>
+              </div>
+            );
           })}
         </nav>
       </div>
 
       {subTab === "prices" ? (
-        <>
-          <div className={CARD_ROW}>
-            {plans.map((plan) => (
-              <PriceCard
-                key={plan.slug}
-                plan={plan}
-                draft={priceDrafts[plan.slug] || { monthly: "", annual: "" }}
-                setPriceDraft={setPriceDraft}
-                savePrice={savePrice}
-                {...cardActions}
-              />
-            ))}
-            <AddCard
-              adding={adding}
-              newName={newName}
-              setNewName={setNewName}
-              onStart={() => { setAdding(true); setNewName(""); }}
-              onCancel={() => { setAdding(false); setNewName(""); }}
-              onCreate={createPlan}
-              creating={savingSlug === "__new__"}
+        <div className={CARD_ROW}>
+          {plans.map((plan) => (
+            <PriceCard
+              key={plan.slug}
+              plan={plan}
+              draft={priceDrafts[plan.slug] || { monthly: "", annual: "" }}
+              setPriceDraft={setPriceDraft}
+              savePrice={savePrice}
+              {...cardActions}
             />
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Prices are created in whichever Stripe account your{" "}
-            <code className="text-[12px]">STRIPE_SECRET_KEY</code> points to.
-            New plans start hidden — set a price, then publish to show them.
-          </p>
-        </>
+          ))}
+          <AddCard
+            adding={adding}
+            newName={newName}
+            setNewName={setNewName}
+            onStart={() => { setAdding(true); setNewName(""); }}
+            onCancel={() => { setAdding(false); setNewName(""); }}
+            onCreate={createPlan}
+            creating={savingSlug === "__new__"}
+          />
+        </div>
       ) : (
         <div className={CARD_ROW}>
           {plans.map((plan) => (
