@@ -301,8 +301,8 @@ export const PRICING_TIERS = [
     id: "basic",
     name: "Basic",
     description: "For individual traders getting started.",
-    monthlyPrice: 0,
-    yearlyPrice: 0,
+    monthlyPrice: 9.99,
+    yearlyPrice: 100,
     features: [
       "Up to 50 trades per month",
       "Basic analytics dashboard",
@@ -311,7 +311,7 @@ export const PRICING_TIERS = [
       "Mobile app access",
     ],
     popular: false,
-    cta: "Start free",
+    cta: "Get started",
   },
   {
     id: "premium",
