@@ -39,10 +39,11 @@ const RANGE_OPTIONS = [
   { value: 90, label: "90D" },
 ];
 
-// Storage included on the current Supabase plan (Pro includes 100 GB). Used only
-// to show "% of quota" — adjust if the plan changes. Trade screenshots are the
-// dominant storage consumer; avatars (one small WebP per user) are negligible.
-const STORAGE_QUOTA_GB = 100;
+// Storage included on the current Supabase plan (Free includes 1 GB; Pro 100 GB).
+// Used only to show "% of quota" — bump this if the plan is upgraded. Trade
+// screenshots are the dominant storage consumer; avatars (one small WebP per
+// user) are negligible.
+const STORAGE_QUOTA_GB = 1;
 const STORAGE_QUOTA_BYTES = STORAGE_QUOTA_GB * 1e9;
 
 const CHART_GRID = "#e5e7eb";
