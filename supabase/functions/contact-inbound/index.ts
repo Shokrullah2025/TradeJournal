@@ -25,6 +25,9 @@ const corsHeaders = {
 // TEXT (no DB cap), but a reply thread should never be enormous — trim the
 // stored copy so a huge forwarded chain can't bloat the row.
 const MAX_MESSAGE_LENGTH = 20000;
+// Cap for the quoted history preserved alongside a reply (metadata.quoted) —
+// context only, so it can be tighter than the message itself.
+const MAX_QUOTED_LENGTH = 10000;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -95,7 +98,7 @@ Deno.serve(async (req: Request) => {
       return successResponse({ id: null, skipped: "no-content" });
     }
 
-    const { name, email, subject, message } = parsed;
+    const { name, email, subject, message, quoted } = parsed;
 
     // Loop guard: when the receiving domain is also our sending domain, our own
     // outbound mail (e.g. contact-submit's team notification from noreply@, or an
@@ -150,7 +153,13 @@ Deno.serve(async (req: Request) => {
         subject,
         message,
         status: "new",
-        metadata: { source: "inbound-email", email_status: "received" },
+        metadata: {
+          source: "inbound-email",
+          email_status: "received",
+          // The quoted chain from the sender's mail client, shown as
+          // collapsible context under the message in the inbox.
+          ...(quoted ? { quoted } : {}),
+        },
       })
       .select("id")
       .single();
@@ -255,6 +264,9 @@ interface Inbound {
   email: string;
   subject: string;
   message: string;
+  // The quoted history the sender's mail client appended ("On … wrote:" and
+  // the `>` lines), kept separately so the inbox can show it as context.
+  quoted: string;
 }
 
 // Fetches the full received email. Throws on any non-2xx / network failure so
@@ -290,7 +302,8 @@ function buildInbound(
   const text = typeof content.text === "string" ? content.text : "";
   const html = typeof content.html === "string" ? content.html : "";
   const rawText = text.trim() ? text : html ? stripHtml(html) : "";
-  const message = stripQuotedReply(rawText).trim().slice(0, MAX_MESSAGE_LENGTH);
+  const { reply, quoted } = splitQuotedReply(rawText);
+  const message = reply.trim().slice(0, MAX_MESSAGE_LENGTH);
   if (!message) return null;
 
   const subjectSource =
@@ -306,6 +319,7 @@ function buildInbound(
     email: sender.email,
     subject,
     message,
+    quoted,
   };
 }
 
@@ -356,29 +370,54 @@ function parseAddress(value: unknown): { name: string; email: string } {
   return { name: "", email: "" };
 }
 
-// Best-effort removal of quoted history so the inbox shows the new reply, not
-// the whole chain plus its attribution line.
-function stripQuotedReply(text: string): string {
-  // Cut the Gmail/Apple-style attribution and everything after it. It commonly
-  // wraps across lines — "On <date>, <name> <email>\nwrote:" — so match across
-  // newlines up to "wrote:" (non-greedy, capped so it can't run away). Requires
-  // a preceding newline so a message that merely starts with "On" isn't eaten.
+// Best-effort split of the new reply from the quoted history, so the inbox
+// shows the fresh text as the message while keeping the quote available as
+// context (metadata.quoted) — the admin can still see exactly which message
+// the visitor was answering.
+function splitQuotedReply(text: string): { reply: string; quoted: string } {
+  // Cut at the Gmail/Apple-style attribution. It commonly wraps across lines —
+  // "On <date>, <name> <email>\nwrote:" — so match across newlines up to
+  // "wrote:" (non-greedy, capped so it can't run away). Requires a preceding
+  // newline so a message that merely starts with "On" isn't eaten.
   const attributionAt = text.search(/\n\s*On\s[\s\S]{0,200}?\bwrote:/i);
-  let body = attributionAt >= 0 ? text.slice(0, attributionAt) : text;
+  let body = text;
+  let quoted = "";
+  if (attributionAt >= 0) {
+    body = text.slice(0, attributionAt);
+    quoted = text.slice(attributionAt);
+  }
 
-  // Then cut other common quote markers / a run of quoted `>` lines.
+  // Then split at other common quote markers / a run of quoted `>` lines.
   const cutMarkers = [
     /^\s*-{2,}\s*Original Message\s*-{2,}\s*$/i,
     /^\s*_{5,}\s*$/,
     /^\s*From:\s.+/i,
   ];
+  const lines = body.split(/\r?\n/);
   const out: string[] = [];
-  for (const line of body.split(/\r?\n/)) {
-    if (cutMarkers.some((re) => re.test(line))) break;
-    if (/^\s*>/.test(line)) break;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (cutMarkers.some((re) => re.test(line)) || /^\s*>/.test(line)) {
+      const rest = lines.slice(i).join("\n");
+      quoted = quoted ? `${rest}\n${quoted}` : rest;
+      break;
+    }
     out.push(line);
   }
-  return out.join("\n");
+  return { reply: out.join("\n"), quoted: cleanQuoted(quoted) };
+}
+
+// Normalizes the captured quote for display: drop `>` markers (the inbox
+// renders it inside its own quote block), collapse blank runs, cap the size so
+// a deep chain can't bloat the row.
+function cleanQuoted(quoted: string): string {
+  return quoted
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(>\s?)+/, ""))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, MAX_QUOTED_LENGTH);
 }
 
 function stripHtml(html: string): string {
