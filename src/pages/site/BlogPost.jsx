@@ -10,6 +10,12 @@ import { getBlogPost } from "../../components/site/blogPosts";
 import { fetchPublishedBlogPost } from "../../lib/blogApi";
 import { formatLongDate } from "../../utils/date";
 import { absoluteUrl, SITE_NAME, DEFAULT_OG_IMAGE } from "../../utils/seo";
+import { sanitizeNoteHtml } from "../../utils/sanitizeHtml";
+
+// Admin posts store rich-text HTML in intro/paragraphs; static posts store plain
+// strings. Render markup safely (sanitized) and leave plain text on the escaped
+// React path, so existing static articles are byte-for-byte unchanged.
+const containsHtml = (s) => typeof s === "string" && /<[a-z][\s\S]*>/i.test(s);
 
 /**
  * Blog article page (route "/blog/:slug"). Static posts (blogPosts content
@@ -151,9 +157,17 @@ const BlogPost = () => {
             className="mt-8 aspect-[2/1] w-full rounded-2xl border border-gray-200 dark:border-gray-700 object-cover"
           />
         )}
-        <p className="mt-8 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
-          {post.intro}
-        </p>
+        {containsHtml(post.intro) ? (
+          <div
+            data-testid={`blog-post-${post.slug}-intro`}
+            className="rich-text-content mt-8 text-lg leading-relaxed text-gray-700 dark:text-gray-300"
+            dangerouslySetInnerHTML={{ __html: sanitizeNoteHtml(post.intro) }}
+          />
+        ) : (
+          <p className="mt-8 text-lg leading-relaxed text-gray-700 dark:text-gray-300">
+            {post.intro}
+          </p>
+        )}
       </header>
 
       {/* Body sections — the long-form substance search engines index */}
@@ -163,14 +177,22 @@ const BlogPost = () => {
             <h2 className="text-2xl sm:text-[28px] font-bold tracking-tight text-gray-900 dark:text-gray-100">
               {section.heading}
             </h2>
-            {section.paragraphs.map((paragraph) => (
-              <p
-                key={paragraph.slice(0, 40)}
-                className="mt-5 text-base leading-relaxed text-gray-600 dark:text-gray-400"
-              >
-                {paragraph}
-              </p>
-            ))}
+            {section.paragraphs.map((paragraph, i) =>
+              containsHtml(paragraph) ? (
+                <div
+                  key={i}
+                  className="rich-text-content mt-5 text-base leading-relaxed text-gray-600 dark:text-gray-400"
+                  dangerouslySetInnerHTML={{ __html: sanitizeNoteHtml(paragraph) }}
+                />
+              ) : (
+                <p
+                  key={paragraph.slice(0, 40)}
+                  className="mt-5 text-base leading-relaxed text-gray-600 dark:text-gray-400"
+                >
+                  {paragraph}
+                </p>
+              )
+            )}
           </section>
         ))}
       </article>

@@ -61,6 +61,9 @@ function RichTextEditor({
   placeholder = "",
   testId = "rich-text-editor",
   withHeadings = false,
+  // Height of the editable area. Defaults to the compact note height; callers
+  // with long-form content (e.g. the blog editor) pass a taller min/max.
+  bodyHeightClass = "h-28",
 }) {
   const ref = useRef(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -217,7 +220,7 @@ function RichTextEditor({
           aria-label={placeholder || "Rich text editor"}
           onInput={emit}
           onBlur={emit}
-          className="rich-text-content h-28 overflow-y-auto px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none"
+          className={`rich-text-content ${bodyHeightClass} overflow-y-auto px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none`}
         />
       </div>
     </div>
