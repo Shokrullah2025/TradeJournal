@@ -3,9 +3,10 @@ import React from "react";
 /**
  * Monthly / annual billing switch for the Pricing page.
  * Controlled by the parent: `cycle` is "monthly" | "annual",
- * `onChange` receives the new cycle.
+ * `onChange` receives the new cycle. `savingsPct` is the real annual discount
+ * (computed from the live prices) shown on the Annual pill.
  */
-const PricingToggle = ({ cycle, onChange }) => (
+const PricingToggle = ({ cycle, onChange, savingsPct = 0 }) => (
   <div
     data-testid="pricing-billing-toggle"
     className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 p-1 dark:border-gray-700 dark:bg-gray-800"
@@ -33,9 +34,11 @@ const PricingToggle = ({ cycle, onChange }) => (
       }`}
     >
       Annual
-      <span className="rounded-full bg-success-100 px-2 py-0.5 text-xs font-semibold text-success-700 dark:bg-success-500/20 dark:text-success-400">
-        Save ~17%
-      </span>
+      {savingsPct > 0 && (
+        <span className="rounded-full bg-success-100 px-2 py-0.5 text-xs font-semibold text-success-700 dark:bg-success-500/20 dark:text-success-400">
+          Save {savingsPct}%
+        </span>
+      )}
     </button>
   </div>
 );
