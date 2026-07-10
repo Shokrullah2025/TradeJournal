@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: submission, error: lookupError } = await supabase
       .from("contact_submissions")
-      .select("id, email, subject, metadata")
+      .select("id, name, email, subject, message, created_at, metadata")
       .eq("id", submissionId)
       .single();
     if (lookupError || !submission) {
@@ -138,7 +138,12 @@ Deno.serve(async (req: Request) => {
         to: submission.email,
         reply_to: replyTo,
         subject,
-        html: renderEmail(message),
+        html: renderEmail(message, {
+          name: submission.name as string,
+          email: submission.email as string,
+          message: submission.message as string,
+          at: submission.created_at as string,
+        }),
       }),
     });
 
@@ -185,16 +190,31 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-function renderEmail(messageHtml: string): string {
+function renderEmail(
+  messageHtml: string,
+  quoted: { name: string; email: string; message: string; at: string },
+): string {
   // `messageHtml` is already sanitized (SANITIZE_OPTIONS above) so it can be
-  // embedded as-is. Only the admin's message goes out — no greeting or footer.
-  // Plain-text replies (no markup) keep their line breaks.
+  // embedded as-is. Plain-text replies (no markup) keep their line breaks.
   const body = /<[a-z][^>]*>/i.test(messageHtml)
     ? messageHtml
     : messageHtml.replace(/\n/g, "<br />");
+  // Quote the message being answered below the reply, mail-client style
+  // ("On <date>, <name> wrote:" + left-bordered muted copy), so the visitor
+  // sees exactly what this responds to. The quoted content is visitor-supplied
+  // plain text — escape it before embedding (CLAUDE.md §2).
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const when = new Date(quoted.at);
+  const whenLabel = Number.isNaN(when.getTime())
+    ? ""
+    : `On ${when.toUTCString()}, `;
+  const quotedHtml = `
+    <div style="margin-top:24px;color:#6b7280;font-size:13px;">${whenLabel}${esc(quoted.name)} &lt;${esc(quoted.email)}&gt; wrote:</div>
+    <blockquote style="margin:8px 0 0;padding:0 0 0 12px;border-left:3px solid #d1d5db;color:#6b7280;font-size:13px;white-space:pre-wrap;">${esc(quoted.message)}</blockquote>`;
   // Plain message — no card, border, or background, so it reads like a normal
   // email rather than a boxed notification.
-  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:14px;line-height:1.6;margin:0;padding:16px;">${body}</body></html>`;
+  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:14px;line-height:1.6;margin:0;padding:16px;">${body}${quotedHtml}</body></html>`;
 }
 
 function successResponse(data: unknown) {
