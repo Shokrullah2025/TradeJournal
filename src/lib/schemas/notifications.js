@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Notification categories. Keep in sync with the notifications.category CHECK
-// constraint (020_notifications.sql, extended with 'contact' in 034).
+// constraint (020_notifications.sql, extended with 'contact' in 20260708210946).
 // 'contact' is admin-only: the contact-submit Edge Function emits it when a
 // visitor messages the public Contact form.
 export const NOTIFICATION_CATEGORIES = [

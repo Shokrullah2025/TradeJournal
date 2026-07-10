@@ -112,8 +112,9 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Respect the admin block list (migration 037): discard silently, same as
-    // the form path, so a blocked sender can't get back in via email either.
+    // Respect the admin block list (migration 20260709140532): discard
+    // silently, same as the form path, so a blocked sender can't get back in
+    // via email either.
     const { data: blocked, error: blockLookupError } = await supabase
       .from("contact_blocked_senders")
       .select("email")

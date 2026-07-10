@@ -25,9 +25,10 @@ import { contactReplySchema } from "../lib/schemas/contact";
 const PAGE_SIZE = 50;
 
 // Explicit column lists — never select('*') (CLAUDE.md §4).
-// Thread rows come from the contact_threads view (034, counts updated in
-// 036): one row per sender email carrying the latest message plus per-thread
-// counts; message_count includes admin replies stored in metadata.replies.
+// Thread rows come from the contact_threads view (20260708210946, counts
+// updated in 20260709140521): one row per sender email carrying the latest
+// message plus per-thread counts; message_count includes admin replies stored
+// in metadata.replies.
 const THREAD_COLUMNS =
   "email, latest_id, latest_name, latest_subject, latest_message, latest_status, last_message_at, message_count, new_count";
 // Individual messages inside an open thread. metadata carries the admin reply
@@ -61,7 +62,7 @@ const STATUS_BADGE = {
  * an existing sender bumps their conversation to the top. Opening a row loads
  * the full history for that sender (newest first) and marks it read. Reads are
  * allowed by the admin RLS policy from migration 024; realtime refresh comes
- * via useContactInboxCount (publication added in 034).
+ * via useContactInboxCount (publication added in 20260708210946).
  */
 const ContactMessages = () => {
   const [threads, setThreads] = useState([]);
@@ -82,8 +83,8 @@ const ContactMessages = () => {
   // The reply composer (subject + body) is collapsed behind a "New message"
   // button by default so the thread reads cleanly until you choose to reply.
   const [composerOpen, setComposerOpen] = useState(false);
-  // Blocked senders (contact_blocked_senders, 037), keyed by lowercased email —
-  // drives the per-row Block/Unblock action.
+  // Blocked senders (contact_blocked_senders, 20260709140532), keyed by
+  // lowercased email — drives the per-row Block/Unblock action.
   const [blockedEmails, setBlockedEmails] = useState(() => new Set());
   // The email whose row action (status change / block) is in flight, so that
   // row's buttons disable without blocking the rest of the list.
