@@ -64,6 +64,11 @@ export const BillingProvider = ({ children }) => {
   const [subscription, setSubscription] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [userInvoices, setUserInvoices] = useState([]);
+  // Whether this user has ever consumed the one free trial (any subscription
+  // row with trial_start set, however it ended). The trial gate uses this to
+  // show a pay-now checkout instead of a second trial offer — the backend
+  // (stripe-start-trial) enforces the same rule with a 409.
+  const [hasUsedTrial, setHasUsedTrial] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -71,7 +76,7 @@ export const BillingProvider = ({ children }) => {
     let realtimeChannel = null;
 
     const fetchData = async (userId) => {
-      const [subResult, methodsResult, invoicesResult] = await Promise.all([
+      const [subResult, methodsResult, invoicesResult, trialResult] = await Promise.all([
         supabase
           .from("user_subscriptions")
           .select("id, status, current_period_end, cancel_at_period_end, trial_start, trial_end, stripe_customer_id, subscription_plans(name, slug, price)")
@@ -91,12 +96,21 @@ export const BillingProvider = ({ children }) => {
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(50),
+        // Any row that ever had a trial, regardless of how it ended.
+        supabase
+          .from("user_subscriptions")
+          .select("id")
+          .eq("user_id", userId)
+          .not("trial_start", "is", null)
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (cancelled) return;
       setSubscription(subResult.data ?? null);
       setPaymentMethods(methodsResult.data ?? []);
       setUserInvoices(invoicesResult.data ?? []);
+      setHasUsedTrial(Boolean(trialResult.data));
     };
 
     const init = async () => {
@@ -219,6 +233,7 @@ export const BillingProvider = ({ children }) => {
     subscription,
     paymentMethods,
     userInvoices,
+    hasUsedTrial,
     isLoading,
     // Stripe actions
     createCheckoutSession,
