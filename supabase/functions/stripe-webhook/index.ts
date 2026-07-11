@@ -35,7 +35,10 @@ Deno.serve(async (req: Request) => {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
+    // Must be the async variant: Deno's crypto is SubtleCrypto (async-only), so
+    // the sync constructEvent throws "cannot be used in a synchronous context"
+    // on every request — rejecting even correctly-signed events with a 400.
+    event = await stripe.webhooks.constructEventAsync(
       rawBody,
       signature,
       Deno.env.get("STRIPE_WEBHOOK_SECRET")!,
@@ -65,19 +68,34 @@ Deno.serve(async (req: Request) => {
           const userId = await resolveUserId(supabase, sub.customer as string);
           if (!userId) break;
 
-          const planId = await resolvePlanId(supabase, sub.items.data[0]?.price?.id);
+          const item = sub.items.data[0];
+          const planId = await resolvePlanId(supabase, item?.price?.id);
 
           // Capture the prior DB status BEFORE the update so we can detect
           // trial-lifecycle transitions (e.g. trialing → active = converted).
           const priorStatus = await getDbSubStatus(supabase, sub.id);
           const newStatus = stripeStatusToDb(sub.status);
 
+          // Stripe API ≥2025-03-31 moved current_period_start/end from the
+          // subscription onto its items. Events are serialized with the
+          // endpoint's API version, so read both shapes — the old code did
+          // `new Date(undefined * 1000).toISOString()`, which throws and
+          // silently aborted the whole status update.
+          const periodStart = toIso(
+            sub.current_period_start ??
+              (item as unknown as { current_period_start?: number })?.current_period_start,
+          );
+          const periodEnd = toIso(
+            sub.current_period_end ??
+              (item as unknown as { current_period_end?: number })?.current_period_end,
+          );
+
           await supabase
             .from("user_subscriptions")
             .update({
               status: newStatus,
-              current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-              current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+              ...(periodStart ? { current_period_start: periodStart } : {}),
+              ...(periodEnd ? { current_period_end: periodEnd } : {}),
               cancel_at_period_end: sub.cancel_at_period_end,
               cancelled_at: sub.canceled_at
                 ? new Date(sub.canceled_at * 1000).toISOString()
@@ -293,14 +311,25 @@ Deno.serve(async (req: Request) => {
     }
   };
 
-  // Fire-and-forget so we respond to Stripe in < 30s
-  processEvent();
+  // Keep the worker alive until processing finishes. A bare fire-and-forget
+  // promise can be killed when the isolate shuts down right after the response,
+  // which intermittently dropped event processing (e.g. the invoice row was
+  // written but the trialing→active status update never ran).
+  const task = processEvent();
+  // @ts-ignore -- EdgeRuntime is a global provided by the Supabase Edge runtime
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(task);
 
   return new Response(JSON.stringify({ received: true }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
 });
+
+// Convert a Stripe epoch-seconds timestamp to ISO, or null when absent —
+// never throw on a missing field.
+function toIso(seconds?: number | null): string | null {
+  return typeof seconds === "number" ? new Date(seconds * 1000).toISOString() : null;
+}
 
 async function resolveUserId(
   supabase: ReturnType<typeof createClient>,
