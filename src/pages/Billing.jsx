@@ -629,7 +629,7 @@ const Billing = () => {
                   </div>
 
                   {/* Pricing Plans */}
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:gap-6">
                     {plans.map((plan) => (
                       <div
                         key={plan.id}
@@ -647,18 +647,18 @@ const Billing = () => {
                           </div>
                         )}
 
-                        <div className="flex flex-1 flex-col p-8">
+                        <div className="flex flex-1 flex-col p-5 xl:p-8">
                           <div className="text-center">
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            <h3 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-gray-100">
                               {plan.name}
                             </h3>
-                            <p className="mt-2 text-gray-500 dark:text-gray-400">
+                            <p className="mt-2 text-sm xl:text-base text-gray-500 dark:text-gray-400">
                               {plan.description}
                             </p>
 
-                            <div className="mt-6">
-                              <div className="flex items-center justify-center">
-                                <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                            <div className="mt-4 xl:mt-6">
+                              <div className="flex items-baseline justify-center">
+                                <span className="text-3xl xl:text-4xl font-bold text-gray-900 dark:text-gray-100">
                                   ${getPlanPrice(plan)}
                                 </span>
                                 <span className="text-gray-500 dark:text-gray-400 ml-2">
@@ -680,18 +680,18 @@ const Billing = () => {
                             </div>
                           </div>
 
-                          <ul className="mt-8 flex-1 space-y-3">
+                          <ul className="mt-6 xl:mt-8 flex-1 space-y-2.5 xl:space-y-3">
                             {plan.features.map((feature, index) => (
                               <li key={index} className="flex items-start">
-                                <Check className="h-5 w-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                                <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                <Check className="h-4 w-4 xl:h-5 xl:w-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                                <span className="ml-2.5 xl:ml-3 text-sm text-gray-700 dark:text-gray-300">
                                   {feature}
                                 </span>
                               </li>
                             ))}
                           </ul>
 
-                          <div className="mt-8 pt-2">
+                          <div className="mt-6 xl:mt-8 pt-2">
                             <button
                               onClick={() => {
                                 if (plan.id !== currentPlanSlug && plan.id !== "basic") {
