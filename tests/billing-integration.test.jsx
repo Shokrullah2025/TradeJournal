@@ -85,7 +85,11 @@ describe("Billing Page Integration", () => {
   });
 
   it("opens the Stripe checkout modal when an upgrade button is clicked", async () => {
-    billingState.createCheckoutSession.mockResolvedValue("cs_test_123");
+    billingState.createCheckoutSession.mockResolvedValue({
+      clientSecret: "cs_test_123",
+      paidInFull: false,
+      setupClientSecret: null,
+    });
     render(<Billing />);
     goToPlansTab();
 
@@ -100,6 +104,25 @@ describe("Billing Page Integration", () => {
     });
     expect(await screen.findByTestId("billing-payment-modal")).toBeInTheDocument();
     expect(screen.getByTestId("stripe-payment-form-mock")).toBeInTheDocument();
+  });
+
+  it("still collects a card (setup mode, $0 due) when a coupon zeroes the first invoice", async () => {
+    // paidInFull + SetupIntent secret: nothing to pay today, but the card must
+    // be saved or the renewal after the free period could never be charged.
+    billingState.createCheckoutSession.mockResolvedValue({
+      clientSecret: null,
+      paidInFull: true,
+      setupClientSecret: "seti_test_123",
+    });
+    render(<Billing />);
+    goToPlansTab();
+
+    fireEvent.click(screen.getAllByText(/Upgrade to/)[0]); // Premium
+
+    expect(await screen.findByTestId("billing-payment-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("stripe-payment-form-mock")).toBeInTheDocument();
+    expect(screen.getByTestId("billing-payment-modal-setup-note")).toBeInTheDocument();
+    expect(screen.getByTestId("billing-payment-modal-price")).toHaveTextContent("$0/month");
   });
 
   it("opens the Stripe portal when Manage Payment Methods is clicked", async () => {

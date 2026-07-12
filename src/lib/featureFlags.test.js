@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveAudience,
+  deriveEntitlement,
+  ENTITLEMENT_GRACE_MS,
   evaluateFlag,
   FEATURE_CATALOG,
   AUDIENCES,
@@ -30,6 +32,97 @@ describe("resolveAudience", () => {
     expect(resolveAudience({ role: "user" })).toBe("free");
     expect(resolveAudience({})).toBe("free");
     expect(resolveAudience()).toBe("free");
+  });
+});
+
+describe("deriveEntitlement", () => {
+  // Fixed clock so every case is deterministic.
+  const NOW = new Date("2026-07-11T12:00:00Z").getTime();
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+  const premium = { subscription_plans: { slug: "premium" } };
+
+  // Happy path — a live trial grants the trial audience, never the paid one.
+  it("grants trial (and no plan slug) while a trial is still running", () => {
+    const row = {
+      status: "trialing",
+      trial_end: new Date(NOW + DAY).toISOString(),
+      current_period_end: new Date(NOW + DAY).toISOString(),
+      ...premium,
+    };
+    expect(deriveEntitlement(row, NOW)).toEqual({ isTrial: true, planSlug: null });
+  });
+
+  // Regression — the production leak: an expired trial whose webhook never
+  // landed must resolve to free, not to the trial row's premium plan.
+  it("grants nothing for a trialing row past trial_end (expired-trial leak)", () => {
+    const row = {
+      status: "trialing",
+      trial_end: new Date(NOW - HOUR).toISOString(),
+      current_period_end: new Date(NOW - HOUR).toISOString(),
+      ...premium,
+    };
+    const ent = deriveEntitlement(row, NOW);
+    expect(ent).toEqual({ isTrial: false, planSlug: null });
+    expect(resolveAudience({ role: "user", ...ent })).toBe("free");
+  });
+
+  // Edge — a trialing row with no trial_end at all can't prove it's live.
+  it("does not treat a trialing row without a trial_end as a live trial", () => {
+    const row = { status: "trialing", trial_end: null, current_period_end: null, ...premium };
+    expect(deriveEntitlement(row, NOW)).toEqual({ isTrial: false, planSlug: null });
+  });
+
+  // Happy path — a paid subscription inside its period grants its plan.
+  it("grants the plan slug for an active row inside its period", () => {
+    const row = {
+      status: "active",
+      trial_end: null,
+      current_period_end: new Date(NOW + 20 * DAY).toISOString(),
+      ...premium,
+    };
+    const ent = deriveEntitlement(row, NOW);
+    expect(ent).toEqual({ isTrial: false, planSlug: "premium" });
+    expect(resolveAudience({ role: "user", ...ent })).toBe("premium");
+  });
+
+  // Edge — webhook lag on renewal: the paid user must keep access within the
+  // grace window even though current_period_end has passed.
+  it("keeps an active row entitled within the grace window past period end", () => {
+    const row = {
+      status: "active",
+      trial_end: null,
+      current_period_end: new Date(NOW - DAY).toISOString(), // 1 day late
+      ...premium,
+    };
+    expect(deriveEntitlement(row, NOW).planSlug).toBe("premium");
+  });
+
+  // The auto-charge guarantee's backstop: if a renewal never gets collected
+  // (no card, dead webhook), access ends once the grace window closes.
+  it("grants nothing once an active row is past period end + grace", () => {
+    const row = {
+      status: "active",
+      trial_end: null,
+      current_period_end: new Date(NOW - ENTITLEMENT_GRACE_MS - HOUR).toISOString(),
+      ...premium,
+    };
+    const ent = deriveEntitlement(row, NOW);
+    expect(ent).toEqual({ isTrial: false, planSlug: null });
+    expect(resolveAudience({ role: "user", ...ent })).toBe("free");
+  });
+
+  // Edge — a legacy active row without a period end stays entitled (there is
+  // no date to expire against; the status is the only signal).
+  it("keeps an active row without current_period_end entitled", () => {
+    const row = { status: "active", trial_end: null, current_period_end: null, ...premium };
+    expect(deriveEntitlement(row, NOW).planSlug).toBe("premium");
+  });
+
+  // Edge — no subscription row at all (new user, or nothing active/trialing).
+  it("grants nothing when there is no row", () => {
+    expect(deriveEntitlement(null, NOW)).toEqual({ isTrial: false, planSlug: null });
+    expect(deriveEntitlement(undefined, NOW)).toEqual({ isTrial: false, planSlug: null });
   });
 });
 

@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast";
 import { formatStripeError } from "../../utils/stripeErrors";
 import { stripePromise, isStripeConfigured } from "../../lib/stripe";
 
-const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitLabel }) => {
+const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitLabel, footer }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -93,7 +93,12 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitL
       className="space-y-4"
       data-testid="stripe-payment-form"
     >
-      <PaymentElement onChange={() => cardError && setCardError("")} />
+      <PaymentElement
+        onChange={() => cardError && setCardError("")}
+        // Surface mount failures (e.g. a test-mode publishable key against a
+        // live-mode intent) — otherwise the form shows buttons but no fields.
+        onLoadError={({ error }) => setCardError(formatStripeError(error))}
+      />
 
       {cardError && (
         <div
@@ -105,6 +110,10 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, amount, mode, submitL
           <span>{cardError}</span>
         </div>
       )}
+
+      {/* Caller-supplied content rendered below the card fields but above the
+          submit row — e.g. a coupon field at paid checkout. */}
+      {footer}
 
       <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-md p-3">
         <Shield className="w-4 h-4 flex-shrink-0 text-green-600 dark:text-green-400" />
@@ -152,6 +161,7 @@ const StripePaymentForm = ({
   onCancel,
   mode = "payment",
   submitLabel,
+  footer,
 }) => {
   // Billing is unavailable if VITE_STRIPE_PUBLISHABLE_KEY was not set at build
   // time. Show a friendly message instead of mounting <Elements stripe={null}>.
@@ -188,6 +198,7 @@ const StripePaymentForm = ({
         amount={amount}
         mode={mode}
         submitLabel={submitLabel}
+        footer={footer}
       />
     </Elements>
   );
@@ -200,6 +211,7 @@ const checkoutPropTypes = {
   amount: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   mode: PropTypes.oneOf(["payment", "setup"]),
   submitLabel: PropTypes.string,
+  footer: PropTypes.node,
 };
 
 CheckoutForm.propTypes = checkoutPropTypes;

@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, act } from "@testing-library/react";
 import { BillingProvider, useBilling } from "../src/context/BillingContext";
 import { AuthProvider } from "../src/context/AuthContext";
 
 // Billing was refactored from a mock client-side `processPayment` flow to real
-// Stripe checkout via Supabase Edge Functions. These tests cover the current
-// implementation: the admin mock-analytics data exposed by BillingContext and
-// the Stripe action helpers (createCheckoutSession / openPortal). The supabase
-// singleton is mocked so the provider mounts without touching the network.
+// Stripe checkout via Supabase Edge Functions. The admin mock-analytics that
+// BillingContext used to expose (getSubscriptionAnalytics / getPaymentsByUser /
+// payments) has been removed — real admin figures now come from the
+// useAdminBillingData hook (DB queries under admin RLS). These tests cover the
+// Stripe action helper that remains on the context: createCheckoutSession. The
+// supabase singleton is mocked so the provider mounts without touching the
+// network.
 const { mockInvoke } = vi.hoisted(() => ({ mockInvoke: vi.fn() }));
 
 vi.mock("../src/lib/supabase", () => {
@@ -44,17 +47,7 @@ vi.mock("../src/lib/supabase", () => {
 let api;
 const Probe = () => {
   api = useBilling();
-  const analytics = api.getSubscriptionAnalytics();
-  return (
-    <div>
-      <div data-testid="total-revenue">{api.subscriptions.totalRevenue}</div>
-      <div data-testid="total-subscribers">{api.subscriptions.totalSubscribers}</div>
-      <div data-testid="payments-count">{api.payments.length}</div>
-      <div data-testid="failed-payments">{analytics.failedPayments}</div>
-      <div data-testid="premium-count">{analytics.subscriptionsByPlan.premium}</div>
-      <div data-testid="arpu">{analytics.averageRevenuePerUser}</div>
-    </div>
-  );
+  return null;
 };
 
 const renderBilling = async () => {
@@ -76,25 +69,6 @@ describe("BillingContext", () => {
   });
 
   // ── Happy path ────────────────────────────────────────────────────────────
-  it("provides the admin analytics totals derived from completed payments", async () => {
-    await renderBilling();
-
-    // 3 completed payments: $29 + $290 + $99 = $418 across 3 subscribers,
-    // out of 4 total payment records (one failed).
-    expect(screen.getByTestId("total-revenue")).toHaveTextContent("418");
-    expect(screen.getByTestId("total-subscribers")).toHaveTextContent("3");
-    expect(screen.getByTestId("payments-count")).toHaveTextContent("4");
-  });
-
-  it("computes subscription analytics (ARPU, plan breakdown, failures)", async () => {
-    await renderBilling();
-
-    expect(screen.getByTestId("premium-count")).toHaveTextContent("2");
-    expect(screen.getByTestId("failed-payments")).toHaveTextContent("1");
-    // 418 / 3 subscribers ≈ 139.33 (substring match tolerates the float tail).
-    expect(screen.getByTestId("arpu")).toHaveTextContent("139.33");
-  });
-
   it("createCheckoutSession returns the clientSecret from the Edge Functions", async () => {
     await renderBilling();
 
@@ -108,24 +82,58 @@ describe("BillingContext", () => {
         error: null,
       });
 
-    let clientSecret;
+    let session;
     await act(async () => {
-      clientSecret = await api.createCheckoutSession("premium", "monthly");
+      session = await api.createCheckoutSession("premium", "monthly");
     });
 
-    expect(clientSecret).toBe("cs_test_abc");
+    expect(session).toEqual({
+      clientSecret: "cs_test_abc",
+      paidInFull: false,
+      setupClientSecret: null,
+    });
     expect(mockInvoke).toHaveBeenNthCalledWith(1, "stripe-create-customer");
     expect(mockInvoke).toHaveBeenNthCalledWith(2, "stripe-create-subscription", {
       body: { customerId: "cus_123", planSlug: "premium", billingCycle: "monthly" },
     });
   });
 
-  // ── Edge case ─────────────────────────────────────────────────────────────
-  it("getPaymentsByUser returns only the matching user's payments", async () => {
+  it("createCheckoutSession surfaces paidInFull and the SetupIntent secret for a $0 checkout", async () => {
     await renderBilling();
 
-    expect(api.getPaymentsByUser("user2")).toHaveLength(1);
-    expect(api.getPaymentsByUser("nobody")).toEqual([]);
+    mockInvoke
+      .mockResolvedValueOnce({
+        data: { success: true, data: { customerId: "cus_123" } },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        // 100%-off coupon: no PaymentIntent; the SetupIntent saves the card
+        // that renewal invoices will auto-charge after the free period.
+        data: {
+          success: true,
+          data: { clientSecret: null, paidInFull: true, setupClientSecret: "seti_secret_1" },
+        },
+        error: null,
+      });
+
+    let session;
+    await act(async () => {
+      session = await api.createCheckoutSession("premium", "monthly", "FRIEND100");
+    });
+
+    expect(session).toEqual({
+      clientSecret: null,
+      paidInFull: true,
+      setupClientSecret: "seti_secret_1",
+    });
+    expect(mockInvoke).toHaveBeenNthCalledWith(2, "stripe-create-subscription", {
+      body: {
+        customerId: "cus_123",
+        planSlug: "premium",
+        billingCycle: "monthly",
+        promotionCode: "FRIEND100",
+      },
+    });
   });
 
   // ── Error state ───────────────────────────────────────────────────────────

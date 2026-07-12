@@ -10,6 +10,9 @@ import {
   Smartphone,
   LogOut,
   KeyRound,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
@@ -20,7 +23,13 @@ import { listFactors, unenrollFactor } from "../../utils/mfa";
 
 // ── Shared card / row styling (matches the General & Notifications tabs) ──────
 const CARD =
-  "rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden";
+  "overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]";
+// Solid teal primary button (mint with dark ink in dark mode, per the design).
+const BTN_PRIMARY =
+  "rounded-[10px] bg-primary-600 px-5 py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-primary-700 disabled:opacity-60 dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600";
+// Red-outline destructive button.
+const BTN_DANGER_OUTLINE =
+  "rounded-[10px] border border-[#dc4a3f]/30 px-4 py-2.5 text-[13.5px] font-semibold text-[#dc4a3f] transition-colors hover:bg-red-50 disabled:opacity-60 dark:border-red-400/30 dark:text-red-400 dark:hover:bg-red-500/10";
 
 // Human-readable label for a user_activity_log action.
 const ACTION_LABEL = {
@@ -51,6 +60,8 @@ const describeDevice = (ua) => {
 // ── A. Change password ────────────────────────────────────────────────────────
 const ChangePasswordSection = () => {
   const { changePassword } = useAuth();
+  // Collapsed by default — the form only renders after the user opens it.
+  const [open, setOpen] = useState(false);
   const [show, setShow] = useState({ current: false, next: false, confirm: false });
 
   const {
@@ -80,19 +91,33 @@ const ChangePasswordSection = () => {
 
   return (
     <section className={CARD}>
-      <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/70">
-        <div className="flex items-center gap-2">
-          <KeyRound className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Change password</h3>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50/60 dark:hover:bg-white/5"
+        data-testid="security-change-password-expand-btn"
+      >
+        <div>
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-gray-500 dark:text-gray-500" />
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-300">Change password</h3>
+          </div>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">
+            Use at least 6 characters with an uppercase, a lowercase, and a number.
+          </p>
         </div>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          Use at least 6 characters with an uppercase, a lowercase, and a number.
-        </p>
-      </header>
+        <ChevronDown
+          className={`h-4 w-4 flex-shrink-0 text-gray-400 transition-transform dark:text-gray-500 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
 
+      {open && (
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="px-5 py-4 space-y-4"
+        className="border-t border-gray-100 px-5 py-4 space-y-4 dark:border-white/5"
         data-testid="security-change-password-form"
       >
         {fields.map((f) => (
@@ -131,16 +156,17 @@ const ChangePasswordSection = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="btn btn-gradient justify-center"
+          className={`${BTN_PRIMARY} flex items-center justify-center`}
           data-testid="security-change-password-submit-btn"
         >
           {isSubmitting ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" data-testid="security-change-password-spinner" />
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" data-testid="security-change-password-spinner" />
           ) : (
             "Update password"
           )}
         </button>
       </form>
+      )}
     </section>
   );
 };
@@ -197,17 +223,17 @@ const TwoFactorSection = () => {
 
   return (
     <section className={CARD} data-testid="security-2fa-section">
-      <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/70 flex items-center justify-between gap-2">
+      <header className="px-5 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Smartphone className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Two-factor authentication</h3>
+          <Smartphone className="w-4 h-4 text-gray-500 dark:text-gray-500" />
+          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-300">Two-factor authentication</h3>
         </div>
         {!loading && !error && (
           <span
             className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
               factor
                 ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                : "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-500"
             }`}
             data-testid="security-2fa-status-badge"
           >
@@ -231,8 +257,8 @@ const TwoFactorSection = () => {
             <div className="flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-green-500 mt-0.5" />
               <div>
-                <div className="text-sm font-bold text-gray-900 dark:text-gray-100">Enabled</div>
-                <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-sm font-bold text-gray-900 dark:text-gray-300">Enabled</div>
+                <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">
                   Added {factor.created_at ? format(new Date(factor.created_at), "MMM d, yyyy") : "—"}
                 </div>
               </div>
@@ -241,7 +267,7 @@ const TwoFactorSection = () => {
               type="button"
               onClick={removeFactor}
               disabled={busy}
-              className="btn btn-secondary text-danger-600 dark:text-danger-400 flex-shrink-0"
+              className={`${BTN_DANGER_OUTLINE} flex-shrink-0`}
               data-testid="security-2fa-remove-btn"
             >
               Remove
@@ -251,15 +277,15 @@ const TwoFactorSection = () => {
           // Disabled state — enrollment happens in the /security/2fa wizard.
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" data-testid="security-2fa-disabled">
             <div>
-              <div className="text-sm font-bold text-gray-900 dark:text-gray-100">Add an extra layer of security</div>
-              <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-sm font-bold text-gray-900 dark:text-gray-300">Add an extra layer of security</div>
+              <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">
                 Require a one-time code from your phone each time you sign in.
               </div>
             </div>
             <button
               type="button"
               onClick={() => navigate("/security/2fa")}
-              className="btn btn-gradient flex-shrink-0"
+              className={`${BTN_PRIMARY} flex-shrink-0`}
               data-testid="security-2fa-enroll-btn"
             >
               Set up
@@ -276,7 +302,8 @@ const TwoFactorSection = () => {
 // VISIBLE_COUNT rows render by default — "View all" expands to the full
 // (retention-window) list.
 const ACTIVITY_RETENTION_DAYS = 60;
-const ACTIVITY_VISIBLE_COUNT = 10;
+const ACTIVITY_VISIBLE_COUNT = 4;
+const ACTIVITY_PAGE_SIZE = 8;
 const ACTIVITY_FETCH_CAP = 50;
 
 const LoginActivitySection = () => {
@@ -285,6 +312,7 @@ const LoginActivitySection = () => {
   const [error, setError] = useState("");
   const [rows, setRows] = useState([]);
   const [expanded, setExpanded] = useState(false);
+  const [page, setPage] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
@@ -321,7 +349,12 @@ const LoginActivitySection = () => {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  const visibleRows = expanded ? rows : rows.slice(0, ACTIVITY_VISIBLE_COUNT);
+  // Collapsed: only the latest few. Expanded: the full retention window,
+  // paginated so long histories stay navigable.
+  const totalPages = Math.max(1, Math.ceil(rows.length / ACTIVITY_PAGE_SIZE));
+  const visibleRows = expanded
+    ? rows.slice(page * ACTIVITY_PAGE_SIZE, (page + 1) * ACTIVITY_PAGE_SIZE)
+    : rows.slice(0, ACTIVITY_VISIBLE_COUNT);
   const hiddenCount = rows.length - ACTIVITY_VISIBLE_COUNT;
 
   const handleSignOutAll = async () => {
@@ -338,12 +371,12 @@ const LoginActivitySection = () => {
 
   return (
     <section className={CARD}>
-      <header className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/70">
+      <header className="px-5 py-4 border-b border-gray-100 dark:border-white/5">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Login activity</h3>
+          <ShieldCheck className="w-4 h-4 text-gray-500 dark:text-gray-500" />
+          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-300">Login activity</h3>
         </div>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">
           Sign-ins on your account over the last {ACTIVITY_RETENTION_DAYS} days.
         </p>
       </header>
@@ -357,12 +390,12 @@ const LoginActivitySection = () => {
           {error}
         </p>
       ) : rows.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="security-activity-empty">
+        <p className="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-500" data-testid="security-activity-empty">
           No recent login activity.
         </p>
       ) : (
         <>
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700/70" data-testid="security-activity-list">
+          <ul className="divide-y divide-gray-100 dark:divide-white/5" data-testid="security-activity-list">
             {visibleRows.map((row) => (
               <li
                 key={row.id}
@@ -370,10 +403,10 @@ const LoginActivitySection = () => {
                 data-testid={`security-activity-row-${row.id}`}
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-300">
                     {ACTION_LABEL[row.action] || row.action}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <div className="text-xs text-gray-500 dark:text-gray-500 truncate">
                     {describeDevice(row.user_agent)}
                   </div>
                 </div>
@@ -384,28 +417,59 @@ const LoginActivitySection = () => {
             ))}
           </ul>
           {hiddenCount > 0 && (
-            <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700/70 text-center">
+            <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 dark:border-white/5">
               <button
                 type="button"
-                onClick={() => setExpanded((open) => !open)}
-                className="text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                onClick={() => {
+                  setExpanded((open) => !open);
+                  setPage(0);
+                }}
+                className="text-[13px] font-semibold text-primary-600 hover:text-primary-700 dark:text-[#2dd4bf]"
                 data-testid="security-activity-viewall-btn"
               >
-                {expanded
-                  ? "Show recent only"
-                  : `View all (${rows.length})`}
+                {expanded ? "Show recent only" : `Show all (${rows.length})`}
               </button>
+              {expanded && totalPages > 1 && (
+                <div
+                  className="flex items-center gap-2"
+                  data-testid="security-activity-pagination"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    aria-label="Previous page"
+                    className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-500 dark:hover:bg-white/5"
+                    data-testid="security-activity-prev-btn"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs tabular-nums text-gray-500 dark:text-gray-500">
+                    {page + 1} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                    aria-label="Next page"
+                    className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-500 dark:hover:bg-white/5"
+                    data-testid="security-activity-next-btn"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
       )}
 
-      <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700/70">
+      <div className="px-5 py-4 border-t border-gray-100 dark:border-white/5">
         <button
           type="button"
           onClick={handleSignOutAll}
           disabled={signingOut}
-          className="btn btn-secondary text-danger-600 dark:text-danger-400 flex items-center gap-2"
+          className={`${BTN_DANGER_OUTLINE} inline-flex items-center gap-2`}
           data-testid="security-signout-all-btn"
         >
           <LogOut className="w-4 h-4" />
@@ -420,8 +484,8 @@ const LoginActivitySection = () => {
 const SecurityTab = () => (
   <div className="max-w-3xl space-y-6" data-testid="settings-security-panel">
     <div>
-      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Security</h2>
-      <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+      <h2 className="text-[17px] font-bold text-gray-900 lg:text-[22px] dark:text-gray-300">Security</h2>
+      <p className="mt-0.5 text-xs lg:text-[13.5px] text-gray-500 dark:text-gray-500">
         Manage your password, two-factor authentication, and where you're signed in.
       </p>
     </div>

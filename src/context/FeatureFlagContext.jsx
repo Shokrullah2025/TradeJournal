@@ -13,6 +13,7 @@ import { withTimeout } from "../utils/withTimeout";
 import {
   FEATURE_CATALOG,
   resolveAudience,
+  deriveEntitlement,
   evaluateFlag,
 } from "../lib/featureFlags";
 
@@ -64,7 +65,7 @@ export const FeatureFlagProvider = ({ children }) => {
     try {
       const { data } = await supabase
         .from("user_subscriptions")
-        .select("status, trial_end, subscription_plans(slug)")
+        .select("status, trial_end, current_period_end, subscription_plans(slug)")
         .eq("user_id", user.id)
         // A trial grants the same Pro entitlements as a paid plan, so both
         // 'active' and 'trialing' rows must resolve the audience. (Stripe's
@@ -74,8 +75,11 @@ export const FeatureFlagProvider = ({ children }) => {
         .limit(1)
         .maybeSingle();
 
-      const planSlug = data?.subscription_plans?.slug ?? null;
-      const isTrial = !!data?.trial_end && new Date(data.trial_end) > new Date();
+      // Entitlement dies with the period even if the status-flipping webhook
+      // never lands — an expired trial or lapsed active row must resolve to
+      // "free". The pure logic (and its edge cases) lives in
+      // src/lib/featureFlags.js and is unit-tested in featureFlags.test.js.
+      const { isTrial, planSlug } = deriveEntitlement(data);
       setAudience(resolveAudience({ role: user.role, planSlug, isTrial }));
     } catch (err) {
       console.error("[FeatureFlags] audience resolve failed:", err.message);

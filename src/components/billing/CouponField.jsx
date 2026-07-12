@@ -9,11 +9,14 @@ import { useBilling } from "../../context/BillingContext";
 // invalid code can never ride through to the subscription. The parent passes the
 // applied code into startTrial / createCheckoutSession, where it's validated
 // again server-side before the discount is applied.
-const CouponField = ({ onApply, onClear, disabled }) => {
+const CouponField = ({ onApply, onClear, disabled, initialApplied = null }) => {
   const { validateCoupon } = useBilling();
   const [code, setCode] = useState("");
   const [checking, setChecking] = useState(false);
-  const [applied, setApplied] = useState(null); // { code, label }
+  // { code, label } — seeded from initialApplied so a parent that remounts this
+  // field (e.g. swapping the Stripe Elements clientSecret after a coupon is
+  // attached) can restore the applied chip instead of losing it.
+  const [applied, setApplied] = useState(initialApplied);
   const [error, setError] = useState("");
 
   const apply = async () => {
@@ -28,7 +31,7 @@ const CouponField = ({ onApply, onClear, disabled }) => {
       const res = await validateCoupon(c);
       if (res?.valid) {
         setApplied({ code: res.code, label: res.label });
-        onApply?.(res.code);
+        onApply?.(res.code, res.label);
       } else {
         setError(
           res?.reason === "expired"
@@ -123,6 +126,10 @@ CouponField.propTypes = {
   onApply: PropTypes.func,
   onClear: PropTypes.func,
   disabled: PropTypes.bool,
+  initialApplied: PropTypes.shape({
+    code: PropTypes.string.isRequired,
+    label: PropTypes.string,
+  }),
 };
 
 export default CouponField;
