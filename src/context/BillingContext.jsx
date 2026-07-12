@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { invokeFunction } from "../lib/invokeFunction";
+import { useAuth } from "./AuthContext";
 
 const BillingContext = createContext();
 
@@ -12,53 +13,9 @@ export const useBilling = () => {
   return context;
 };
 
-// ── Mock admin analytics data ──────────────────────────────────────────────
-// Used only by the admin billing panel. Real user subscription data is fetched
-// from Supabase below. Admin-wide payment data requires a dedicated admin query
-// endpoint with elevated RLS policies (future work).
-const MOCK_PAYMENTS = [
-  {
-    id: "pay_001", userId: "user1", userEmail: "admin@example.com", userName: "Admin User",
-    amount: 29.0, currency: "USD", plan: "premium", billingCycle: "monthly",
-    status: "completed", cardLast4: "4242", cardBrand: "visa",
-    createdAt: new Date("2024-12-01"), nextBillingDate: new Date("2025-01-01"),
-  },
-  {
-    id: "pay_002", userId: "user2", userEmail: "john@example.com", userName: "John Doe",
-    amount: 290.0, currency: "USD", plan: "premium", billingCycle: "yearly",
-    status: "completed", cardLast4: "1234", cardBrand: "mastercard",
-    createdAt: new Date("2024-11-15"), nextBillingDate: new Date("2025-11-15"),
-  },
-  {
-    id: "pay_003", userId: "user3", userEmail: "jane@example.com", userName: "Jane Smith",
-    amount: 99.0, currency: "USD", plan: "enterprise", billingCycle: "monthly",
-    status: "completed", cardLast4: "5678", cardBrand: "amex",
-    createdAt: new Date("2024-12-10"), nextBillingDate: new Date("2025-01-10"),
-  },
-  {
-    id: "pay_004", userId: "user4", userEmail: "bob@example.com", userName: "Bob Wilson",
-    amount: 29.0, currency: "USD", plan: "premium", billingCycle: "monthly",
-    status: "failed", cardLast4: "9999", cardBrand: "visa",
-    createdAt: new Date("2024-12-15"), nextBillingDate: new Date("2025-01-15"),
-    failureReason: "Insufficient funds",
-  },
-];
-
 export const BillingProvider = ({ children }) => {
-  // Admin analytics (mock — see note above)
-  const [payments] = useState(MOCK_PAYMENTS);
-  const [adminStats] = useState({
-    totalSubscribers: MOCK_PAYMENTS.filter((p) => p.status === "completed").length,
-    totalRevenue: MOCK_PAYMENTS.filter((p) => p.status === "completed").reduce((s, p) => s + p.amount, 0),
-    monthlyRevenue: MOCK_PAYMENTS.filter((p) => p.status === "completed" && p.billingCycle === "monthly").reduce((s, p) => s + p.amount, 0),
-    yearlyRevenue: MOCK_PAYMENTS.filter((p) => p.status === "completed" && p.billingCycle === "yearly").reduce((s, p) => s + p.amount, 0),
-    subscriptionsByPlan: {
-      basic: 0,
-      premium: MOCK_PAYMENTS.filter((p) => p.plan === "premium" && p.status === "completed").length,
-      enterprise: MOCK_PAYMENTS.filter((p) => p.plan === "enterprise" && p.status === "completed").length,
-    },
-    failedPayments: MOCK_PAYMENTS.filter((p) => p.status === "failed").length,
-  });
+  // Admin-wide billing analytics live in useAdminBillingData (real DB queries
+  // under the admin RLS policies) — no mock data here anymore.
 
   // Real user subscription data from Supabase
   const [subscription, setSubscription] = useState(null);
@@ -69,13 +26,32 @@ export const BillingProvider = ({ children }) => {
   // show a pay-now checkout instead of a second trial offer — the backend
   // (stripe-start-trial) enforces the same rule with a 409.
   const [hasUsedTrial, setHasUsedTrial] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // Which user's billing data is currently loaded. `isLoading` is derived from
+  // this instead of a boolean flag so a freshly signed-in user is "loading"
+  // from the very first render — TrialGate must never decide between the
+  // trial offer and the pay-now checkout off the pre-fetch defaults.
+  const [loadedUserId, setLoadedUserId] = useState(null);
+
+  // Keyed to the auth user, not a one-shot getSession(): after a cache-cleared
+  // login there is no session when this provider mounts, and a mount-only
+  // effect would never fetch (hasUsedTrial stuck false → wrong gate offer).
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
   useEffect(() => {
     let cancelled = false;
     let realtimeChannel = null;
 
-    const fetchData = async (userId) => {
+    if (!userId) {
+      setSubscription(null);
+      setPaymentMethods([]);
+      setUserInvoices([]);
+      setHasUsedTrial(false);
+      setLoadedUserId(null);
+      return undefined;
+    }
+
+    const fetchData = async () => {
       const [subResult, methodsResult, invoicesResult, trialResult] = await Promise.all([
         supabase
           .from("user_subscriptions")
@@ -111,38 +87,43 @@ export const BillingProvider = ({ children }) => {
       setPaymentMethods(methodsResult.data ?? []);
       setUserInvoices(invoicesResult.data ?? []);
       setHasUsedTrial(Boolean(trialResult.data));
+      setLoadedUserId(userId);
     };
 
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user || cancelled) return;
+    fetchData();
 
-      const userId = session.user.id;
-      setIsLoading(true);
-      await fetchData(userId);
-      if (!cancelled) setIsLoading(false);
-      if (cancelled) return;
-
-      realtimeChannel = supabase
-        .channel(`billing-sub-${userId}`)
-        .on("postgres_changes", {
-          event: "*",
-          schema: "public",
-          table: "user_subscriptions",
-          filter: `user_id=eq.${userId}`,
-        }, () => {
-          if (!cancelled) fetchData(userId);
-        })
-        .subscribe();
-    };
-
-    init();
+    // Live-refresh on any change to this user's subscription OR invoices, so a
+    // plan change and the proration invoice the webhook writes both show up
+    // without a manual reload. (Both tables are in the supabase_realtime
+    // publication as of migration 20260712050000; RLS scopes events to this
+    // user.)
+    realtimeChannel = supabase
+      .channel(`billing-sub-${userId}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "user_subscriptions",
+        filter: `user_id=eq.${userId}`,
+      }, () => {
+        if (!cancelled) fetchData();
+      })
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "invoices",
+        filter: `user_id=eq.${userId}`,
+      }, () => {
+        if (!cancelled) fetchData();
+      })
+      .subscribe();
 
     return () => {
       cancelled = true;
       if (realtimeChannel) supabase.removeChannel(realtimeChannel);
     };
-  }, []);
+  }, [userId]);
+
+  const isLoading = Boolean(userId) && loadedUserId !== userId;
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -159,7 +140,16 @@ export const BillingProvider = ({ children }) => {
       "Failed to create subscription",
     );
 
-    return subData.clientSecret;
+    // paidInFull: a 100%-off coupon zeroed the first invoice — Stripe already
+    // activated the subscription and there is no PaymentIntent to confirm.
+    // setupClientSecret is the SetupIntent to confirm instead: it saves the
+    // card that renewal invoices auto-charge, so a $0 first month must still
+    // collect card details or month 2 could never be billed.
+    return {
+      clientSecret: subData.clientSecret ?? null,
+      paidInFull: Boolean(subData.paidInFull),
+      setupClientSecret: subData.setupClientSecret ?? null,
+    };
   };
 
   // `customerId` comes from the stripe-setup-intent step, which already
@@ -183,9 +173,13 @@ export const BillingProvider = ({ children }) => {
   };
 
   const openPortal = async () => {
+    // Return to the page the user left from — without this the portal's
+    // default return_url is the standalone /billing route, so users who
+    // opened it from Settings → Billing came "back" to a page missing the
+    // Settings menu.
     const data = await invokeFunction(
       "stripe-portal",
-      undefined,
+      { body: { returnUrl: window.location.href } },
       "Failed to open billing portal",
     );
     window.location.href = data.url;
@@ -203,32 +197,7 @@ export const BillingProvider = ({ children }) => {
     );
   };
 
-  // ── Admin-compat helpers (use mock data until admin RLS policies are added) ─
-
-  const getPaymentsByUser = (userId) =>
-    payments.filter((p) => p.userId === userId);
-
-  const getSubscriptionAnalytics = () => {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const recentPayments = payments.filter((p) => p.createdAt >= thirtyDaysAgo);
-    return {
-      ...adminStats,
-      recentPayments: recentPayments.length,
-      averageRevenuePerUser: adminStats.totalSubscribers > 0
-        ? adminStats.totalRevenue / adminStats.totalSubscribers
-        : 0,
-      churnRate: 0.05,
-      growthRate: 0.15,
-    };
-  };
-
   const value = {
-    // Admin panel (mock data — real data requires admin RLS policy)
-    payments,
-    subscriptions: adminStats,
-    getPaymentsByUser,
-    getSubscriptionAnalytics,
     // Real user subscription data
     subscription,
     paymentMethods,

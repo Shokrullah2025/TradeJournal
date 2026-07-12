@@ -11,7 +11,6 @@ import {
   TrendingUp,
   AlertCircle,
   User,
-  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
@@ -19,41 +18,16 @@ import { useBilling } from "../context/BillingContext";
 import { toast } from "react-hot-toast";
 import StripePaymentForm from "../components/billing/StripePaymentForm";
 import useSubscriptionPlans from "../hooks/useSubscriptionPlans";
-import { annualPriceFor, savingsPercent } from "../utils/pricing";
-
-// Static class strings per plan accent — Tailwind's scanner can't see
-// dynamically-built classes like `bg-${plan.color}-600`, so they'd be purged
-// from the bundle. Premium uses the brand teal; Enterprise gets amber so the
-// two paid tiers stay visually distinct.
-const PLAN_STYLES = {
-  gray: {
-    selectedBorder: "border-gray-500 dark:border-gray-400",
-    solidBtn:
-      "bg-gray-600 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600",
-    outlineBtn:
-      "border border-gray-600 dark:border-gray-400 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900/20",
-  },
-  primary: {
-    selectedBorder: "border-primary-500 dark:border-primary-400",
-    solidBtn:
-      "bg-primary-600 dark:bg-primary-700 text-white hover:bg-primary-700 dark:hover:bg-primary-600",
-    outlineBtn:
-      "border border-primary-600 dark:border-primary-400 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20",
-  },
-  amber: {
-    selectedBorder: "border-amber-500 dark:border-amber-400",
-    solidBtn:
-      "bg-amber-600 dark:bg-amber-700 text-white hover:bg-amber-700 dark:hover:bg-amber-600",
-    outlineBtn:
-      "border border-amber-600 dark:border-amber-400 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20",
-  },
-};
+import useAdminBillingData from "../hooks/useAdminBillingData";
+import { annualPriceFor } from "../utils/pricing";
 
 const Billing = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  // Real admin analytics from the DB (admin RLS); no-op for regular users.
+  const { data: adminData, loading: adminLoading, error: adminError } =
+    useAdminBillingData(isAdmin);
   const {
-    payments,
-    getSubscriptionAnalytics,
     subscription,
     paymentMethods,
     userInvoices,
@@ -76,24 +50,44 @@ const Billing = () => {
   const [billingCycle, setBillingCycle] = useState("monthly");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [clientSecret, setClientSecret] = useState(null);
+  // "payment" charges the first invoice; "setup" saves a card for a checkout
+  // whose first invoice is $0 (100%-off coupon) so renewals can be charged.
+  const [paymentMode, setPaymentMode] = useState("payment");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [billingAnalytics, setBillingAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState("payment");
-
-  useEffect(() => {
-    if (user?.role === "admin") {
-      setBillingAnalytics(getSubscriptionAnalytics());
-    }
-  }, [user, getSubscriptionAnalytics]);
+  // Admin billing card tab — admins manage everyone's billing here, they don't
+  // see their own plan/invoices.
+  const [adminTab, setAdminTab] = useState("overview");
 
   const handleUpgrade = async (planSlug, cycle) => {
     setSelectedPlan(planSlug);
     setCheckoutLoading(true);
     try {
-      const cs = await createCheckoutSession(planSlug, cycle);
-      setClientSecret(cs);
-      setShowPaymentForm(true);
+      // The backend's billingCycle is "monthly" | "annually" — this page's
+      // toggle stores "yearly", which the backend would silently read as
+      // monthly and subscribe at the wrong price.
+      const { clientSecret: cs, paidInFull, setupClientSecret } = await createCheckoutSession(
+        planSlug,
+        cycle === "yearly" ? "annually" : cycle,
+      );
+      if (paidInFull) {
+        // $0 first invoice (100%-off coupon): already active, nothing to pay
+        // today — but still save a card (SetupIntent) so renewal invoices
+        // after the free period have something to charge.
+        if (setupClientSecret) {
+          setClientSecret(setupClientSecret);
+          setPaymentMode("setup");
+          setShowPaymentForm(true);
+        } else {
+          toast.success("Subscription activated!");
+          handlePaymentSuccess();
+        }
+      } else {
+        setClientSecret(cs);
+        setPaymentMode("payment");
+        setShowPaymentForm(true);
+      }
     } catch (err) {
       toast.error(err.message || "Failed to initialize checkout. Please try again.");
     } finally {
@@ -104,11 +98,13 @@ const Billing = () => {
   const handlePaymentSuccess = () => {
     setShowPaymentForm(false);
     setClientSecret(null);
+    setPaymentMode("payment");
   };
 
   const handlePaymentCancel = () => {
     setShowPaymentForm(false);
     setClientSecret(null);
+    setPaymentMode("payment");
   };
 
   // Opening the Stripe portal navigates the tab away. When the user returns —
@@ -204,223 +200,45 @@ const Billing = () => {
     };
   });
 
-  // Dynamic savings for the Yearly toggle badge, from the featured plan.
+  // Dollar amount a plan saves per year on the annual price vs paying monthly,
+  // rounded to cents and shown without trailing ".00". Derived from the live
+  // prices, so admin price changes flow through automatically.
+  const yearlySavingsAmount = (plan) => {
+    const saved = Math.round((plan.monthlyPrice * 12 - plan.yearlyPrice) * 100) / 100;
+    if (saved <= 0) return null;
+    return Number.isInteger(saved) ? String(saved) : saved.toFixed(2);
+  };
+
+  // Savings shown on the Yearly toggle badge, from the featured plan.
   const popularPlan = plans.find((p) => p.popular) ?? plans.find((p) => p.monthlyPrice > 0);
-  const yearlySavingsPct = popularPlan
-    ? savingsPercent(popularPlan.monthlyPrice, popularPlan.yearlyPrice)
-    : 0;
+  const popularSavings = popularPlan ? yearlySavingsAmount(popularPlan) : null;
 
   const getPlanPrice = (plan) => {
     return billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
   };
 
-  const getSavingsPercent = (plan) => savingsPercent(plan.monthlyPrice, plan.yearlyPrice);
-
+  // @container/billing: the rail-vs-tabs layout switches on this component's
+  // own width, not the viewport — embedded in Settings it gets far less room
+  // than the window suggests. The container must be a wrapper: an element's
+  // own container queries can't match itself, only an ancestor.
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen">
-      {/* Admin Billing Overview Sidebar */}
-      {user?.role === "admin" && (
-        <div className="w-full lg:w-80 bg-white dark:bg-gray-800 shadow-lg border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-              Billing Overview
-            </h2>
-
-            {/* Admin Billing Stats */}
-            {billingAnalytics && (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-r from-green-400 to-green-600 rounded-lg p-4 text-white">
-                  <div className="flex items-center">
-                    <DollarSign className="h-8 w-8" />
-                    <div className="ml-3">
-                      <p className="text-sm opacity-90">Total Revenue</p>
-                      <p className="text-2xl font-bold">
-                        ${billingAnalytics.totalRevenue.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-primary-400 to-primary-600 rounded-lg p-4 text-white">
-                  <div className="flex items-center">
-                    <Users className="h-8 w-8" />
-                    <div className="ml-3">
-                      <p className="text-sm opacity-90">Total Subscribers</p>
-                      <p className="text-2xl font-bold">
-                        {billingAnalytics.totalSubscribers}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-amber-400 to-amber-600 rounded-lg p-4 text-white">
-                  <div className="flex items-center">
-                    <TrendingUp className="h-8 w-8" />
-                    <div className="ml-3">
-                      <p className="text-sm opacity-90">Avg Revenue/User</p>
-                      <p className="text-2xl font-bold">
-                        ${billingAnalytics.averageRevenuePerUser.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-red-400 to-red-600 rounded-lg p-4 text-white">
-                  <div className="flex items-center">
-                    <AlertCircle className="h-8 w-8" />
-                    <div className="ml-3">
-                      <p className="text-sm opacity-90">Failed Payments</p>
-                      <p className="text-2xl font-bold">
-                        {billingAnalytics.failedPayments}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subscription Breakdown */}
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-6">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                    Plan Distribution
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Basic
-                      </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {billingAnalytics.subscriptionsByPlan.basic}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Premium
-                      </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {billingAnalytics.subscriptionsByPlan.premium}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Enterprise
-                      </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {billingAnalytics.subscriptionsByPlan.enterprise}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Payments Preview */}
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                    Recent Payments
-                  </h3>
-                  <div className="space-y-2">
-                    {payments.slice(0, 3).map((payment) => (
-                      <div
-                        key={payment.id}
-                        className="flex items-center justify-between text-xs"
-                      >
-                        <div className="flex items-center">
-                          <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mr-2">
-                            <User className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                          </div>
-                          <div>
-                            <p
-                              className="font-medium text-gray-900 dark:text-gray-100 truncate"
-                              style={{ maxWidth: "120px" }}
-                            >
-                              {payment.userName}
-                            </p>
-                            <p className="text-gray-500 dark:text-gray-400">
-                              ${payment.amount.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            payment.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {payment.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Billing tab rail — a full-height column like the Settings nav: white
-          background stretching from the very top all the way down, flush
-          against the app sidebar. Users only; admins keep their own sidebar. */}
-      {user?.role !== "admin" && (
-        <div className="w-full lg:w-72 shrink-0 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6">
-          <nav
-            aria-label="Billing sections"
-            className="flex lg:flex-col gap-1 overflow-x-auto lg:mt-6 lg:sticky lg:top-6"
-          >
-            {[
-              { id: "payment", label: "Payment Information", Icon: CreditCard },
-              { id: "plans", label: "Plans & Subscriptions", Icon: DollarSign },
-              { id: "invoices", label: "Invoice History", Icon: FileText },
-            ].map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                data-testid={`billing-tab-${id}-btn`}
-                className={`relative flex items-center gap-3 whitespace-nowrap rounded-xl p-3 text-base text-left transition-all duration-150 ${
-                  activeTab === id
-                    ? "bg-primary-50 dark:bg-primary-900/30 font-bold text-primary-700 dark:text-primary-300"
-                    : "font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60"
-                }`}
-              >
-                <span
-                  className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
-                    activeTab === id ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
-                  }`}
-                />
-                <Icon
-                  className={`h-5 w-5 shrink-0 ${
-                    activeTab === id
-                      ? "text-primary-600 dark:text-primary-400"
-                      : "text-gray-400 dark:text-gray-500"
-                  }`}
-                />
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className={`flex-1 ${user?.role === "admin" ? "lg:pl-6" : ""} p-4 lg:p-6`}>
-        {/* Capped width so the content doesn't look stretched. */}
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Header — centered over the content area. */}
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {user?.role === "admin"
-                ? "Billing Management"
-                : "Subscription & Billing"}
-            </h1>
-            <p className="mt-1 text-gray-600 dark:text-gray-400">
-              {user?.role === "admin"
-                ? "Manage all billing operations and view analytics"
-                : "Manage your subscription and payment information"}
-            </p>
-          </div>
-
+    <div className="@container/billing">
+    <div className="flex flex-col">
+      {/* Main Content — no padding of its own: the app shell (and the Settings
+          grid, when embedded as a tab) already pad the page, and zero padding
+          keeps the billing card top-aligned with the Settings subnav card. */}
+      <div className="flex-1">
+        {/* Capped width so the content doesn't look stretched. @container makes
+            the grids below respond to this column's real width — the page is
+            also embedded as a Settings tab, where two nav rails shrink the
+            available space long before viewport breakpoints would fire. On a
+            full desktop the column hits its 896px cap, so @4xl matches the old
+            xl look exactly. */}
+        <div className="@container max-w-4xl space-y-6">
           {/* Trial banner — shown while the subscription is in its free trial. */}
           {subscription?.status === "trialing" && (
             <div
-              className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-6"
+              className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 @lg:p-6"
               data-testid="billing-trial-banner"
             >
               <div className="flex items-center justify-between flex-wrap gap-4">
@@ -450,81 +268,331 @@ const Billing = () => {
             </div>
           )}
 
-          {/* Current Subscription Status — admins only at top; users see it inside the Payment tab */}
-          {user?.role === "admin" && (
-            <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-primary-900 dark:text-primary-200">
-                    Current Subscription
-                  </h3>
-                  <p className="text-primary-700 dark:text-primary-300">
-                    You're currently on the{" "}
-                    <span className="font-semibold capitalize">
-                      {currentPlanSlug}
-                    </span>{" "}
-                    plan
+          {/* Admin billing — one card, same top-tab layout as the user page.
+              Real DB data (admin RLS); admins don't see personal plan/invoice
+              sections here. */}
+          {isAdmin && (
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 @2xl:text-xl dark:text-gray-300">
+                Billing Management
+              </h1>
+              <p className="mt-1 text-xs text-gray-500 @2xl:text-sm dark:text-gray-500">
+                Revenue, subscriptions, and payments across all users
+              </p>
+            </div>
+          )}
+          {isAdmin && (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
+              <nav
+                aria-label="Admin billing sections"
+                className="flex gap-1.5 overflow-x-auto border-b border-gray-100 p-3 dark:border-white/5"
+              >
+                {[
+                  { id: "overview", label: "Overview" },
+                  { id: "transactions", label: "Transactions" },
+                  { id: "failed", label: "Failed Payments" },
+                  { id: "plans", label: "Plan Distribution" },
+                ].map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => setAdminTab(id)}
+                    data-testid={`billing-admin-tab-${id}-btn`}
+                    className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs transition-colors @2xl:px-3.5 @2xl:py-2 @2xl:text-[13px] ${
+                      adminTab === id
+                        ? "bg-[#e7f5f2] font-semibold text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
+                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="p-4 @lg:p-6">
+                {adminLoading ? (
+                  <div className="flex items-center justify-center py-16" data-testid="billing-admin-loading">
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600" />
+                  </div>
+                ) : adminError ? (
+                  <p className="py-12 text-center text-sm text-red-600 dark:text-red-400" data-testid="billing-admin-error">
+                    {adminError}
                   </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
-                    $
-                    {livePlans[currentPlanSlug]?.price ??
-                      (currentPlanSlug === "basic"
-                        ? 9.99
-                        : currentPlanSlug === "premium"
-                        ? 18
-                        : 99)}
-                  </div>
-                  <div className="text-sm text-primary-600 dark:text-primary-300">
-                    per month
-                  </div>
-                </div>
+                ) : adminData && (
+                  <>
+                    {/* Overview — compact stat tiles: tinted icon square, bold
+                        number, quiet label. */}
+                    {adminTab === "overview" && (
+                      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4 @2xl:gap-4" data-testid="billing-admin-overview">
+                        {[
+                          {
+                            id: "revenue",
+                            label: "Total Revenue",
+                            value: `$${adminData.totalRevenue.toFixed(2)}`,
+                            Icon: DollarSign,
+                            tint: "bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400",
+                          },
+                          {
+                            id: "subscribers",
+                            label: "Active Subscribers",
+                            value: String(adminData.totalSubscribers),
+                            Icon: Users,
+                            tint: "bg-[#e7f5f2] text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]",
+                          },
+                          {
+                            id: "arpu",
+                            label: "Avg / Paying User",
+                            value: `$${adminData.averageRevenuePerUser.toFixed(2)}`,
+                            Icon: TrendingUp,
+                            tint: "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+                          },
+                          {
+                            id: "failed-count",
+                            label: "Failed Payments",
+                            value: String(adminData.failedCount),
+                            Icon: AlertCircle,
+                            tint: "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400",
+                          },
+                        ].map(({ id, label, value, Icon, tint }) => (
+                          <div
+                            key={id}
+                            className="rounded-xl border border-gray-200 p-4 dark:border-white/10"
+                          >
+                            <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${tint}`}>
+                              <Icon className="h-[18px] w-[18px]" />
+                            </div>
+                            <p
+                              className="mt-3 text-lg font-extrabold tabular-nums text-gray-900 @2xl:text-xl dark:text-gray-300"
+                              data-testid={`billing-admin-${id}`}
+                            >
+                              {value}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-gray-400 @2xl:text-xs dark:text-gray-500">
+                              {label}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Transactions — latest invoices across all users */}
+                    {adminTab === "transactions" && (
+                      adminData.invoices.length === 0 ? (
+                        <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-500" data-testid="billing-admin-transactions-empty">
+                          No invoices yet.
+                        </p>
+                      ) : (
+                      <div className="overflow-x-auto" data-testid="billing-admin-transactions">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                          <thead className="bg-gray-50 dark:bg-white/5">
+                            <tr>
+                              {["User", "Invoice", "Plan", "Amount", "Status", "Date"].map((h) => (
+                                <th
+                                  key={h}
+                                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-500"
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+                            {adminData.invoices.slice(0, 25).map((inv) => (
+                              <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
+                                <td className="whitespace-nowrap px-4 py-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 dark:bg-white/10">
+                                      <User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-300">
+                                      {inv.userName}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-gray-500">
+                                  {inv.invoice_number}
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3">
+                                  <span className="inline-flex rounded-full bg-[#e7f5f2] px-2 py-0.5 text-xs font-semibold capitalize text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]">
+                                    {inv.planName}
+                                  </span>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                  ${(parseFloat(inv.total_amount) || 0).toFixed(2)}{" "}
+                                  <span className="text-xs uppercase text-gray-400">{inv.currency}</span>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3">
+                                  <span
+                                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                      inv.status === "paid"
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                        : inv.status === "failed"
+                                        ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                                        : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+                                    }`}
+                                  >
+                                    {inv.status}
+                                  </span>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
+                                  {new Date(inv.created_at).toLocaleDateString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      )
+                    )}
+
+                    {/* Failed payments */}
+                    {adminTab === "failed" && (
+                      <div className="space-y-3" data-testid="billing-admin-failed">
+                        {adminData.invoices.filter((i) => i.status === "failed").length === 0 ? (
+                          <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-500">
+                            No failed payments. 🎉
+                          </p>
+                        ) : (
+                          adminData.invoices
+                            .filter((i) => i.status === "failed")
+                            .map((inv) => (
+                              <div
+                                key={inv.id}
+                                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-400/20 dark:bg-red-500/5"
+                              >
+                                <div>
+                                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-300">
+                                    {inv.userName}
+                                  </div>
+                                  <div className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                                    {inv.invoice_number} · {inv.planName}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
+                                    ${(parseFloat(inv.total_amount) || 0).toFixed(2)}
+                                  </div>
+                                  <div className="text-xs text-gray-400 dark:text-gray-500">
+                                    {new Date(inv.created_at).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* Plan distribution */}
+                    {adminTab === "plans" && (
+                      <div className="space-y-4" data-testid="billing-admin-plans">
+                        {Object.keys(adminData.subscriptionsByPlan).length === 0 ? (
+                          <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-500">
+                            No active subscriptions yet.
+                          </p>
+                        ) : (
+                          Object.entries(adminData.subscriptionsByPlan).map(([slug, count]) => {
+                            const total = Math.max(1, adminData.totalSubscribers);
+                            const pct = Math.round((count / total) * 100);
+                            return (
+                              <div key={slug}>
+                                <div className="mb-1 flex items-center justify-between text-sm">
+                                  <span className="font-semibold capitalize text-gray-900 dark:text-gray-300">
+                                    {slug}
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-500">
+                                    {count} subscriber{count === 1 ? "" : "s"} · {pct}%
+                                  </span>
+                                </div>
+                                <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                                  <div
+                                    className="h-full rounded-full bg-primary-500 dark:bg-teal-600"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}
 
-          {/* Tab content — Payment Information is the default. */}
-          {user?.role !== "admin" && (
-            <div>
+          {/* Billing card (design 1a): one white rounded panel with a pill tab
+              bar on top and the section content inside. Payment Information is
+              the default tab. Users only — admins manage billing above. */}
+          {!isAdmin && (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
+              <nav
+                aria-label="Billing sections"
+                className="flex gap-1.5 border-b border-gray-100 p-3 dark:border-white/5"
+              >
+                {[
+                  { id: "payment", label: "Payment Information", short: "Payment Info" },
+                  { id: "plans", label: "Plans & Subscriptions", short: "Plans & Subs" },
+                  { id: "invoices", label: "Invoice History", short: "Invoices" },
+                ].map(({ id, label, short }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    data-testid={`billing-tab-${id}-btn`}
+                    className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs transition-colors @2xl:px-3.5 @2xl:py-2 @2xl:text-[13px] ${
+                      activeTab === id
+                        ? "bg-[#e7f5f2] font-semibold text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
+                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    {/* Short labels while the column is narrow so all three tabs
+                        always fit without horizontal scrolling. */}
+                    <span className="@2xl:hidden">{short}</span>
+                    <span className="hidden @2xl:inline">{label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              <div className="p-4 @lg:p-6 @2xl:px-10 @2xl:py-10">
+                {/* Heading — centered inside the card, per the design. */}
+                <div className="mb-5 text-center @2xl:mb-7">
+                  <h1 className="text-lg font-bold text-gray-900 @2xl:text-xl dark:text-gray-300">
+                    Subscription &amp; Billing
+                  </h1>
+                  <p className="mt-1 text-xs text-gray-500 @2xl:text-sm dark:text-gray-500">
+                    Manage your subscription and payment information
+                  </p>
+                </div>
               {/* Payment Information Tab */}
               {activeTab === "payment" && (
-                <div className="space-y-8">
-                  {/* Current Subscription Status */}
-                  <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium text-primary-900 dark:text-primary-200">
-                          Current Subscription
-                        </h3>
-                        <p className="text-primary-700 dark:text-primary-300">
-                          You're currently on the{" "}
-                          <span className="font-semibold capitalize">
-                            {currentPlanSlug}
-                          </span>{" "}
-                          plan
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary-900 dark:text-primary-200">
-                          $
-                          {livePlans[currentPlanSlug]?.price ??
-                            (currentPlanSlug === "basic"
-                              ? 9.99
-                              : currentPlanSlug === "premium"
-                              ? 18
-                              : 99)}
-                        </div>
-                        <div className="text-sm text-primary-600 dark:text-primary-300">
-                          per month
-                        </div>
-                      </div>
+                <div className="space-y-6 text-left">
+                  {/* Current Subscription — a slim row: plan name as a small teal
+                      pill, price on the right. */}
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-gray-200 px-4 py-3.5 @lg:px-5 dark:border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-300">
+                        Current plan
+                      </h3>
+                      <span className="rounded-full bg-[#e7f5f2] px-2.5 py-0.5 text-xs font-bold capitalize text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]">
+                        {currentPlanSlug}
+                      </span>
                     </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      <span className="text-base font-bold text-gray-900 dark:text-gray-300">
+                        $
+                        {livePlans[currentPlanSlug]?.price ??
+                          (currentPlanSlug === "basic"
+                            ? 9.99
+                            : currentPlanSlug === "premium"
+                            ? 18
+                            : 99)}
+                      </span>
+                      /month
+                    </p>
                   </div>
 
                   {/* Saved Payment Methods */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
+                  <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-4 @lg:p-6">
+                    <h2 className="mb-4 text-base font-bold text-gray-900 @2xl:text-lg dark:text-gray-300">
                       Payment Methods
                     </h2>
 
@@ -533,18 +601,18 @@ const Billing = () => {
                         {paymentMethods.map((pm) => (
                           <div
                             key={pm.id}
-                            className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700"
+                            className="flex items-center justify-between p-4 border border-gray-200 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5"
                             data-testid={`billing-payment-method-${pm.id}`}
                           >
                             <div className="flex items-center gap-4">
-                              <div className="p-2 bg-white dark:bg-gray-600 rounded-md shadow-sm">
-                                <CreditCard className="h-5 w-5 text-gray-500 dark:text-gray-300" />
+                              <div className="p-2 bg-white dark:bg-white/10 rounded-md shadow-sm">
+                                <CreditCard className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-300 capitalize">
                                   {pm.brand} ending in {pm.last_four}
                                 </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500 dark:text-gray-500">
                                   Expires {String(pm.exp_month).padStart(2, "0")}/{pm.exp_year}
                                 </p>
                               </div>
@@ -559,32 +627,34 @@ const Billing = () => {
                       </div>
                     ) : (
                       <div className="text-center py-8" data-testid="billing-no-payment-method">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center">
                           <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                         </div>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        <p className="text-gray-500 dark:text-gray-500 text-sm">
                           No payment method on file. Add one when you subscribe to a plan.
                         </p>
                       </div>
                     )}
 
-                    <div className="mt-6 flex items-center gap-3">
+                    {/* Extra empty row above the manage button — reserved space
+                        for upcoming payment info. */}
+                    <div className="mt-24 flex flex-col items-start gap-3 @md:flex-row @md:items-center">
                       <button
                         onClick={handleOpenPortal}
                         disabled={portalLoading}
-                        className="inline-flex items-center gap-2 bg-primary-600 dark:bg-primary-700 text-white px-6 py-2 rounded-lg hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="inline-flex w-full justify-center @md:w-auto items-center gap-2 whitespace-nowrap text-sm font-semibold bg-primary-600 text-white dark:bg-teal-700 dark:text-white px-5 py-2.5 rounded-[10px] hover:bg-primary-700 dark:hover:bg-teal-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                         data-testid="billing-update-payment-btn"
                       >
                         {portalLoading ? (
                           <>
-                            <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                            <span className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
                             Opening portal…
                           </>
                         ) : (
                           "Manage Payment Methods"
                         )}
                       </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1">
                         <Shield className="w-3.5 h-3.5" />
                         Secured by Stripe — card data never touches our servers
                       </p>
@@ -596,155 +666,154 @@ const Billing = () => {
 
               {/* Plans & Subscriptions Tab */}
               {activeTab === "plans" && (
-                <div className="space-y-8">
+                <div>
                   {/* Billing Cycle Toggle */}
                   <div className="flex items-center justify-center">
-                    <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                    <div className="inline-flex gap-0.5 rounded-xl bg-gray-100 p-1 dark:bg-white/5">
                       <button
                         onClick={() => setBillingCycle("monthly")}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                        className={`rounded-lg px-4 py-2 text-[13px] font-medium transition-colors @2xl:px-5 @2xl:text-sm ${
                           billingCycle === "monthly"
-                            ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
-                            : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                            ? "bg-white font-semibold text-gray-900 shadow-sm dark:bg-gray-600 dark:text-gray-300 dark:shadow-[0_1px_2px_rgba(0,0,0,.3)]"
+                            : "text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-200"
                         }`}
                       >
                         Monthly
                       </button>
                       <button
                         onClick={() => setBillingCycle("yearly")}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                        className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] font-medium transition-colors @2xl:px-5 @2xl:text-sm ${
                           billingCycle === "yearly"
-                            ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
-                            : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                            ? "bg-white font-semibold text-gray-900 shadow-sm dark:bg-gray-600 dark:text-gray-300 dark:shadow-[0_1px_2px_rgba(0,0,0,.3)]"
+                            : "text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-200"
                         }`}
                       >
                         Yearly
-                        {yearlySavingsPct > 0 && (
-                          <span className="ml-1 text-xs bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
-                            Save {yearlySavingsPct}%
+                        {popularSavings && (
+                          <span className="rounded-md bg-[#e7f5f2] px-1.5 py-0.5 text-[10.5px] font-bold text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]">
+                            Save ${popularSavings}
                           </span>
                         )}
                       </button>
                     </div>
                   </div>
 
-                  {/* Pricing Plans */}
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:gap-6">
-                    {plans.map((plan) => (
-                      <div
-                        key={plan.id}
-                        className={`relative flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
-                          selectedPlan === plan.id
-                            ? PLAN_STYLES[plan.color].selectedBorder
-                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                        }`}
-                      >
-                        {plan.popular && (
-                          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                            <span className="bg-primary-500 dark:bg-primary-600 text-white px-4 py-1 text-sm font-medium rounded-full">
+                  {/* Pricing Plans — all three side by side whenever the column
+                      allows; on phones they stack as compact summary cards
+                      (name + price on one row, dot-separated features). */}
+                  <div className="mt-6 grid grid-cols-1 gap-4 text-left @lg:grid-cols-3 @lg:gap-3 @2xl:mt-8 @2xl:gap-5">
+                    {plans.map((plan) => {
+                      const isCurrent = plan.id === currentPlanSlug;
+                      return (
+                        <div
+                          key={plan.id}
+                          className={`relative flex flex-col gap-3 rounded-2xl p-5 @lg:min-h-[440px] @lg:gap-3.5 @lg:p-4 @2xl:min-h-[500px] @2xl:p-6 @4xl:gap-[18px] @4xl:px-6 @4xl:py-7 ${
+                            plan.popular
+                              ? "border-[1.5px] border-primary-600 bg-[#fbfefd] shadow-[0_12px_32px_rgba(21,132,119,.16)] dark:border-[#2dd4bf] dark:bg-gray-800 dark:shadow-[0_12px_32px_rgba(45,212,191,.15)]"
+                              : "border border-gray-200 dark:border-white/10"
+                          }`}
+                        >
+                          {plan.popular && (
+                            <span className="absolute -top-3 left-4 whitespace-nowrap rounded-full bg-primary-600 px-3 py-1 text-[10px] font-bold text-white @lg:left-1/2 @lg:-translate-x-1/2 @2xl:px-3.5 @2xl:text-[11px] dark:bg-teal-700 dark:text-white">
                               Most Popular
                             </span>
-                          </div>
-                        )}
+                          )}
 
-                        <div className="flex flex-1 flex-col p-5 xl:p-8">
-                          <div className="text-center">
-                            <h3 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                              {plan.name}
-                            </h3>
-                            <p className="mt-2 text-sm xl:text-base text-gray-500 dark:text-gray-400">
-                              {plan.description}
-                            </p>
-
-                            <div className="mt-4 xl:mt-6">
-                              <div className="flex items-baseline justify-center">
-                                <span className="text-3xl xl:text-4xl font-bold text-gray-900 dark:text-gray-100">
-                                  ${getPlanPrice(plan)}
-                                </span>
-                                <span className="text-gray-500 dark:text-gray-400 ml-2">
-                                  /
-                                  {billingCycle === "monthly"
-                                    ? "month"
-                                    : "year"}
-                                </span>
-                              </div>
-
-                              {billingCycle === "yearly" &&
-                                plan.monthlyPrice > 0 && (
-                                  <div className="mt-2">
-                                    <span className="text-sm text-green-600 dark:text-green-400">
-                                      Save {getSavingsPercent(plan)}% vs monthly
-                                    </span>
-                                  </div>
-                                )}
+                          {/* Name + price: one row when stacked (phones), name/
+                              description block with the price below in columns. */}
+                          <div className="flex items-baseline justify-between gap-2 @lg:block">
+                            <div>
+                              <h3 className="text-base font-bold text-gray-900 @2xl:text-lg dark:text-gray-300">
+                                {plan.name}
+                              </h3>
+                              <p className="mt-1 hidden text-xs text-gray-400 @lg:block @2xl:text-[13px] dark:text-gray-500">
+                                {plan.description}
+                              </p>
+                            </div>
+                            <div className="flex items-baseline gap-1 @lg:mt-3.5">
+                              <span className="text-xl font-extrabold text-gray-900 @lg:text-2xl @2xl:text-3xl @4xl:text-[34px] dark:text-gray-300">
+                                ${getPlanPrice(plan)}
+                              </span>
+                              <span className="text-[11px] text-gray-400 @2xl:text-[13px] dark:text-gray-500">
+                                /{billingCycle === "monthly" ? "month" : "year"}
+                              </span>
                             </div>
                           </div>
 
-                          <ul className="mt-6 xl:mt-8 flex-1 space-y-2.5 xl:space-y-3">
+                          {billingCycle === "yearly" && yearlySavingsAmount(plan) && (
+                            <div className="-mt-1 text-xs text-primary-600 dark:text-[#2dd4bf]">
+                              Save ${yearlySavingsAmount(plan)} a year vs monthly
+                            </div>
+                          )}
+
+                          {/* Features: dot-separated line when stacked, check
+                              rows in columns. */}
+                          <p className="text-xs text-gray-400 @lg:hidden dark:text-gray-500">
+                            {plan.features.slice(0, 3).join(" · ")}
+                          </p>
+                          <ul className="hidden flex-1 flex-col gap-2 text-xs text-gray-700 @lg:flex @2xl:gap-2.5 @2xl:text-[13.5px] dark:text-gray-400">
                             {plan.features.map((feature, index) => (
-                              <li key={index} className="flex items-start">
-                                <Check className="h-4 w-4 xl:h-5 xl:w-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                                <span className="ml-2.5 xl:ml-3 text-sm text-gray-700 dark:text-gray-300">
-                                  {feature}
-                                </span>
+                              <li key={index} className="flex items-start gap-2">
+                                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-600 @2xl:h-4 @2xl:w-4 dark:text-[#2dd4bf]" />
+                                {feature}
                               </li>
                             ))}
                           </ul>
 
-                          <div className="mt-6 xl:mt-8 pt-2">
-                            <button
-                              onClick={() => {
-                                if (plan.id !== currentPlanSlug && plan.id !== "basic") {
-                                  handleUpgrade(plan.id, billingCycle);
-                                }
-                              }}
-                              disabled={
-                                plan.id === currentPlanSlug ||
-                                plan.id === "basic" ||
-                                checkoutLoading
+                          <button
+                            onClick={() => {
+                              if (!isCurrent && plan.id !== "basic") {
+                                handleUpgrade(plan.id, billingCycle);
                               }
-                              className={`w-full py-3 px-4 rounded-md text-sm font-medium transition-colors ${
-                                plan.id === currentPlanSlug || plan.id === "basic"
-                                  ? "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                                  : selectedPlan === plan.id
-                                  ? PLAN_STYLES[plan.color].solidBtn
-                                  : PLAN_STYLES[plan.color].outlineBtn
-                              }`}
-                              data-testid={`billing-plan-select-${plan.id}-btn`}
-                            >
-                              {checkoutLoading && selectedPlan === plan.id ? (
-                                <span className="flex items-center justify-center gap-2">
-                                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                                  Loading...
-                                </span>
-                              ) : plan.id === currentPlanSlug ? (
-                                "Current Plan"
-                              ) : plan.id === "basic" ? (
-                                "Downgrade to Basic"
-                              ) : (
-                                "Upgrade to " + plan.name
-                              )}
-                            </button>
-                          </div>
+                            }}
+                            disabled={isCurrent || plan.id === "basic" || checkoutLoading}
+                            className={`w-full rounded-[10px] px-2 py-2.5 text-xs font-semibold transition-colors @lg:mt-auto @2xl:py-3 @2xl:text-[13.5px] ${
+                              isCurrent
+                                ? "cursor-default bg-[#e7f5f2] text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
+                                : plan.id === "basic"
+                                ? "cursor-not-allowed bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-500"
+                                : "bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-70 dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
+                            }`}
+                            data-testid={`billing-plan-select-${plan.id}-btn`}
+                          >
+                            {checkoutLoading && selectedPlan === plan.id ? (
+                              <span className="flex items-center justify-center gap-2">
+                                <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
+                                Loading...
+                              </span>
+                            ) : isCurrent ? (
+                              "Current Plan"
+                            ) : plan.id === "basic" ? (
+                              <>
+                                <span className="@lg:hidden">Downgrade</span>
+                                <span className="hidden @lg:inline">Downgrade to Basic</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="@lg:hidden">Upgrade</span>
+                                <span className="hidden @lg:inline">{"Upgrade to " + plan.name}</span>
+                              </>
+                            )}
+                          </button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
               {/* Invoice History Tab */}
               {activeTab === "invoices" && (
-                <div className="space-y-8">
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                <div className="space-y-6 text-left">
+                  <div className="rounded-2xl border border-gray-200 dark:border-white/10 p-4 @lg:p-6">
+                    <div className="flex flex-col gap-3 @lg:flex-row @lg:items-center @lg:justify-between mb-6">
+                      <h2 className="text-base font-bold text-gray-900 @2xl:text-lg dark:text-gray-300">
                         Invoice History
                       </h2>
                       <button
                         onClick={handleOpenPortal}
                         disabled={portalLoading}
-                        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-white/10 rounded-[10px] text-sm font-medium text-gray-700 dark:text-gray-400 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-70 disabled:cursor-not-allowed"
                         data-testid="billing-invoices-portal-btn"
                       >
                         {portalLoading ? (
@@ -761,124 +830,117 @@ const Billing = () => {
                       </button>
                     </div>
 
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                      <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-primary-100 dark:bg-primary-800 rounded-lg">
-                            <DollarSign className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-                          </div>
-                          <div className="ml-4">
-                            <p className="text-sm font-medium text-primary-900 dark:text-primary-200">Total Paid</p>
-                            <p className="text-2xl font-bold text-primary-900 dark:text-primary-200" data-testid="invoices-total-paid">
-                              $
-                              {userInvoices
-                                .filter((inv) => inv.status === "paid")
-                                .reduce((sum, inv) => sum + (parseFloat(inv.total_amount) || 0), 0)
-                                .toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-green-100 dark:bg-green-800 rounded-lg">
-                            <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div className="ml-4">
-                            <p className="text-sm font-medium text-green-900 dark:text-green-200">Invoices Paid</p>
-                            <p className="text-2xl font-bold text-green-900 dark:text-green-200" data-testid="invoices-paid-count">
-                              {userInvoices.filter((inv) => inv.status === "paid").length}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-gray-100 dark:bg-gray-600 rounded-lg">
-                            <Calendar className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-                          </div>
-                          <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Next Invoice</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="invoices-next-date">
-                              {subscription?.current_period_end
-                                ? new Date(subscription.current_period_end).toLocaleDateString()
-                                : "N/A"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Invoice Table */}
                     {isLoading ? (
                       <div className="text-center py-12" data-testid="invoices-loading-spinner">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
                       </div>
                     ) : userInvoices.length > 0 ? (
-                      <div className="overflow-x-auto" data-testid="invoices-table">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                          <thead className="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice #</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plan</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {userInvoices.map((inv) => (
-                              <tr
-                                key={inv.id}
-                                className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                                data-testid={`invoice-row-${inv.id}`}
-                              >
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100" data-testid={`invoice-number-${inv.id}`}>
-                                    {inv.invoice_number || inv.stripe_invoice_id || `INV-${inv.id.slice(0, 8).toUpperCase()}`}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <>
+                        {/* Narrow columns (phones, or the squeezed Settings tab):
+                            stacked cards instead of a cramped sideways-scrolling table. */}
+                        <div className="space-y-3 @2xl:hidden" data-testid="invoices-list-mobile">
+                          {userInvoices.map((inv) => (
+                            <div
+                              key={inv.id}
+                              className="border border-gray-200 dark:border-white/10 rounded-lg p-4"
+                              data-testid={`invoice-card-${inv.id}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium text-gray-900 dark:text-gray-300 truncate">
+                                  {inv.invoice_number || inv.stripe_invoice_id || `INV-${inv.id.slice(0, 8).toUpperCase()}`}
+                                </span>
+                                <span
+                                  className={`inline-flex flex-shrink-0 px-2 py-1 text-xs font-semibold rounded-full ${
+                                    inv.status === "paid"
+                                      ? "bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200"
+                                      : inv.status === "failed" || inv.status === "void"
+                                      ? "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200"
+                                      : "bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200"
+                                  }`}
+                                >
+                                  {inv.status === "paid" ? "Paid" : inv.status}
+                                </span>
+                              </div>
+                              <div className="mt-2 flex items-center justify-between text-sm">
+                                <span className="text-gray-500 dark:text-gray-500">
                                   {new Date(inv.created_at).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 capitalize">
-                                  {subscription?.subscription_plans?.slug ?? "—"} subscription
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100" data-testid={`invoice-amount-${inv.id}`}>
+                                </span>
+                                <span className="font-medium text-gray-900 dark:text-gray-300">
                                   ${(parseFloat(inv.total_amount) || 0).toFixed(2)}{" "}
                                   <span className="text-xs text-gray-400 uppercase">{inv.currency}</span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      inv.status === "paid"
-                                        ? "bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200"
-                                        : inv.status === "failed" || inv.status === "void"
-                                        ? "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200"
-                                        : "bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200"
-                                    }`}
-                                    data-testid={`invoice-status-${inv.id}`}
-                                  >
-                                    {inv.status === "paid" ? "Paid" : inv.status}
-                                  </span>
-                                </td>
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                                Subscription
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Wider columns: the full table. */}
+                        <div className="hidden @2xl:block overflow-x-auto" data-testid="invoices-table">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                            <thead className="bg-gray-50 dark:bg-white/5">
+                              <tr>
+                                <th className="px-4 @4xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">Invoice #</th>
+                                <th className="px-4 @4xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">Date</th>
+                                <th className="px-4 @4xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">Plan</th>
+                                <th className="px-4 @4xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">Amount</th>
+                                <th className="px-4 @4xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">Status</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+                              {userInvoices.map((inv) => (
+                                <tr
+                                  key={inv.id}
+                                  className="hover:bg-gray-50 dark:hover:bg-white/5"
+                                  data-testid={`invoice-row-${inv.id}`}
+                                >
+                                  <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-300" data-testid={`invoice-number-${inv.id}`}>
+                                      {inv.invoice_number || inv.stripe_invoice_id || `INV-${inv.id.slice(0, 8).toUpperCase()}`}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    {new Date(inv.created_at).toLocaleDateString()}
+                                  </td>
+                                  <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    Subscription
+                                  </td>
+                                  <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300" data-testid={`invoice-amount-${inv.id}`}>
+                                    ${(parseFloat(inv.total_amount) || 0).toFixed(2)}{" "}
+                                    <span className="text-xs text-gray-400 uppercase">{inv.currency}</span>
+                                  </td>
+                                  <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap">
+                                    <span
+                                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        inv.status === "paid"
+                                          ? "bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200"
+                                          : inv.status === "failed" || inv.status === "void"
+                                          ? "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200"
+                                          : "bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200"
+                                      }`}
+                                      data-testid={`invoice-status-${inv.id}`}
+                                    >
+                                      {inv.status === "paid" ? "Paid" : inv.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     ) : (
                       <div className="text-center py-12" data-testid="invoices-empty-state">
-                        <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                        <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center">
                           <Calendar className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300 mb-2">
                           No invoices yet
                         </h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-6">
+                        <p className="text-gray-500 dark:text-gray-500 mb-6">
                           Your invoices will appear here after your first payment.
                         </p>
                         <button
@@ -892,116 +954,6 @@ const Billing = () => {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Admin All Payments Table */}
-          {user?.role === "admin" && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
-                  All Payment Transactions
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Plan
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Payment Method
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {payments.slice(0, 15).map((payment) => (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <User className="h-5 w-5 text-gray-500" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {payment.userName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {payment.userEmail}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${
-                              payment.plan === "premium"
-                                ? "bg-primary-100 text-primary-800"
-                                : payment.plan === "enterprise"
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {payment.plan}
-                          </span>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {payment.billingCycle}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${payment.amount.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              payment.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : payment.status === "failed"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {payment.status}
-                          </span>
-                          {payment.failureReason && (
-                            <div className="text-xs text-red-600 mt-1">
-                              {payment.failureReason}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {payment.createdAt.toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="flex items-center">
-                            <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="capitalize">
-                              {payment.cardBrand}
-                            </span>
-                            <span className="ml-1">
-                              ****{payment.cardLast4}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </div>
           )}
@@ -1018,7 +970,7 @@ const Billing = () => {
             >
               <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">
                     Complete Subscription
                   </h3>
                   <button
@@ -1031,20 +983,30 @@ const Billing = () => {
                 </div>
 
                 {/* The price lives here, next to the plan/cycle — not in the button. */}
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-500 mb-4">
                   Subscribing to the{" "}
                   <span className="font-semibold">{modalPlan?.name ?? selectedPlan}</span>{" "}
                   plan ({billingCycle}) —{" "}
-                  <span className="font-semibold text-gray-900 dark:text-gray-100" data-testid="billing-payment-modal-price">
-                    ${getPlanPrice(modalPlan)}/{billingCycle === "monthly" ? "month" : "year"}
+                  <span className="font-semibold text-gray-900 dark:text-gray-300" data-testid="billing-payment-modal-price">
+                    ${paymentMode === "setup" ? 0 : getPlanPrice(modalPlan)}/{billingCycle === "monthly" ? "month" : "year"}
                   </span>
                   .
+                  {paymentMode === "setup" && (
+                    <span data-testid="billing-payment-modal-setup-note">
+                      {" "}Your coupon covers today&apos;s payment — save a card so the
+                      plan renews automatically after the discount ends.
+                    </span>
+                  )}
                 </p>
 
                 <StripePaymentForm
                   clientSecret={clientSecret}
-                  submitLabel="Confirm subscription"
-                  onSuccess={handlePaymentSuccess}
+                  mode={paymentMode}
+                  submitLabel={paymentMode === "setup" ? "Save card & activate" : "Confirm subscription"}
+                  onSuccess={() => {
+                    if (paymentMode === "setup") toast.success("Card saved — subscription active!");
+                    handlePaymentSuccess();
+                  }}
                   onCancel={handlePaymentCancel}
                 />
               </div>
@@ -1054,6 +1016,7 @@ const Billing = () => {
           })()}
         </div>
       </div>
+    </div>
     </div>
   );
 };
