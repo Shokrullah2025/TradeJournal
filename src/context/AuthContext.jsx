@@ -323,6 +323,15 @@ export const AuthProvider = ({ children }) => {
       toast.error(msg);
       throw new Error(msg);
     }
+    // No error but also no session/user — the sign-in did NOT complete (e.g. a
+    // degraded auth response). Without this guard the function fell through to
+    // "Welcome back!" while the user was never actually signed in.
+    if (!data?.session || !data?.user) {
+      dispatch({ type: ActionTypes.SET_LOADING, payload: false });
+      const msg = "Sign-in didn't complete. Please try again.";
+      toast.error(msg);
+      throw new Error(msg);
+    }
     // A password sign-in only reaches aal1. If the account has a verified TOTP
     // factor, require the 6-digit code before completing login — defer the
     // activity log / new-login notification / welcome toast to completeMfaLogin().
@@ -607,10 +616,14 @@ export const AuthProvider = ({ children }) => {
     if (error) throw new Error("Invalid code. Please try again.");
     dispatch({ type: ActionTypes.SET_MFA_REQUIRED, payload: false });
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      logActivity(user.id, "login", {});
-      notifyNewLogin(user.id);
+    if (!user) {
+      // Code verified but no session materialized — don't claim success.
+      const msg = "Sign-in didn't complete. Please try again.";
+      toast.error(msg);
+      throw new Error(msg);
     }
+    logActivity(user.id, "login", {});
+    notifyNewLogin(user.id);
     toast.success("Welcome back!");
   }, []);
 

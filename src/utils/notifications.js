@@ -49,6 +49,16 @@ export async function emitNotification({ userId, record, prefs }) {
   const wantsEmail = channelPrefs.email && EMAIL_EVENTS.has(payload.event_type);
 
   try {
+    // The insert runs with whatever token the client currently holds. Emits
+    // are fire-and-forget and can outlive the session that scheduled them
+    // (e.g. a sign-out or account switch racing a new_login emit) — without a
+    // session the request goes out as `anon` and Postgres rejects it with
+    // 42501 before RLS even runs. Quietly drop the notification instead.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user || session.user.id !== userId) {
+      return { data: null, error: null };
+    }
+
     const { data, error } = await supabase
       .from("notifications")
       .insert({
