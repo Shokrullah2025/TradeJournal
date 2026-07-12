@@ -108,15 +108,57 @@ describe("BillingContext", () => {
         error: null,
       });
 
-    let clientSecret;
+    let session;
     await act(async () => {
-      clientSecret = await api.createCheckoutSession("premium", "monthly");
+      session = await api.createCheckoutSession("premium", "monthly");
     });
 
-    expect(clientSecret).toBe("cs_test_abc");
+    expect(session).toEqual({
+      clientSecret: "cs_test_abc",
+      paidInFull: false,
+      setupClientSecret: null,
+    });
     expect(mockInvoke).toHaveBeenNthCalledWith(1, "stripe-create-customer");
     expect(mockInvoke).toHaveBeenNthCalledWith(2, "stripe-create-subscription", {
       body: { customerId: "cus_123", planSlug: "premium", billingCycle: "monthly" },
+    });
+  });
+
+  it("createCheckoutSession surfaces paidInFull and the SetupIntent secret for a $0 checkout", async () => {
+    await renderBilling();
+
+    mockInvoke
+      .mockResolvedValueOnce({
+        data: { success: true, data: { customerId: "cus_123" } },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        // 100%-off coupon: no PaymentIntent; the SetupIntent saves the card
+        // that renewal invoices will auto-charge after the free period.
+        data: {
+          success: true,
+          data: { clientSecret: null, paidInFull: true, setupClientSecret: "seti_secret_1" },
+        },
+        error: null,
+      });
+
+    let session;
+    await act(async () => {
+      session = await api.createCheckoutSession("premium", "monthly", "FRIEND100");
+    });
+
+    expect(session).toEqual({
+      clientSecret: null,
+      paidInFull: true,
+      setupClientSecret: "seti_secret_1",
+    });
+    expect(mockInvoke).toHaveBeenNthCalledWith(2, "stripe-create-subscription", {
+      body: {
+        customerId: "cus_123",
+        planSlug: "premium",
+        billingCycle: "monthly",
+        promotionCode: "FRIEND100",
+      },
     });
   });
 

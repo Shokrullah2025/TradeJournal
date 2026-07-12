@@ -47,6 +47,40 @@ export function resolveAudience({ role, planSlug, isTrial } = {}) {
   return "free";
 }
 
+// How long an 'active' row keeps its entitlement past current_period_end.
+// Covers webhook lag on renewals (the renewal payment succeeds on Stripe but
+// the status/period update takes a moment to land) without stranding paid
+// users; anything longer would hand out free access when a webhook is lost.
+export const ENTITLEMENT_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
+
+// Derive what a user_subscriptions row actually entitles the user to, RIGHT
+// NOW. The DB status only flips when a Stripe webhook lands; if that webhook
+// never arrives (endpoint change, outage, orphaned Stripe account) the row
+// stays 'trialing'/'active' forever — so entitlement must ALSO die with the
+// period itself:
+//   • a trialing row past trial_end grants nothing — its plan slug must not
+//     leak into the paid-plan branch of resolveAudience (this exact leak let
+//     expired trials keep full premium access);
+//   • an active row keeps access up to ENTITLEMENT_GRACE_MS past
+//     current_period_end, then grants nothing until a paid renewal lands.
+// Returns { isTrial, planSlug } ready to feed into resolveAudience.
+export function deriveEntitlement(row, nowMs = Date.now()) {
+  if (!row) return { isTrial: false, planSlug: null };
+
+  const isTrialRow = row.status === "trialing";
+  const isTrial =
+    isTrialRow && !!row.trial_end && new Date(row.trial_end).getTime() > nowMs;
+
+  const periodLive =
+    !row.current_period_end ||
+    new Date(row.current_period_end).getTime() + ENTITLEMENT_GRACE_MS > nowMs;
+
+  const planSlug =
+    isTrialRow || !periodLive ? null : (row.subscription_plans?.slug ?? null);
+
+  return { isTrial, planSlug };
+}
+
 // Decide whether a feature is on for a given audience.
 //  - No flag record at all  → on (fail open; never hide a feature by accident).
 //  - Master `enabled` false → off for everyone.

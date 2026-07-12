@@ -285,6 +285,31 @@ Deno.serve(async (req: Request) => {
           const userId = await resolveUserId(supabase, pm.customer as string);
           if (!userId || !pm.card) break;
 
+          // Every checkout tokenizes the card into a brand-new pm_… id, so
+          // keying on stripe_payment_method_id alone lets the same physical
+          // card pile up as duplicates. Collapse rows matching the card's
+          // identity (brand + last4 + expiry) into one, keeping the default
+          // flag if any of them carried it.
+          const { data: sameCard } = await supabase
+            .from("payment_methods")
+            .select("id, stripe_payment_method_id, is_default")
+            .eq("user_id", userId)
+            .eq("brand", pm.card.brand)
+            .eq("last_four", pm.card.last4)
+            .eq("exp_month", pm.card.exp_month)
+            .eq("exp_year", pm.card.exp_year);
+
+          const wasDefault = (sameCard ?? []).some((r) => r.is_default);
+          const stale = (sameCard ?? []).filter(
+            (r) => r.stripe_payment_method_id !== pm.id,
+          );
+          if (stale.length) {
+            await supabase
+              .from("payment_methods")
+              .delete()
+              .in("id", stale.map((r) => r.id));
+          }
+
           await supabase.from("payment_methods").upsert(
             {
               user_id: userId,
@@ -294,7 +319,7 @@ Deno.serve(async (req: Request) => {
               brand: pm.card.brand,
               exp_month: pm.card.exp_month,
               exp_year: pm.card.exp_year,
-              is_default: false,
+              is_default: wasDefault,
             },
             { onConflict: "stripe_payment_method_id" },
           );
