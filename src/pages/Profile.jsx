@@ -176,10 +176,10 @@ const Profile = () => {
     <div className="max-w-4xl mx-auto space-y-6" data-testid="profile-page">
       {/* Hero / summary header */}
       <div
-        className="card overflow-hidden p-0"
+        className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
         data-testid="profile-header-card"
       >
-        <div className="h-24 bg-gradient-to-r from-primary-600 to-primary-400" />
+        <div className="h-[88px] bg-gradient-to-br from-primary-600 to-[#0f6b60]" />
         <div className="px-6 pb-6 -mt-12">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div className="flex items-end space-x-4">
@@ -190,7 +190,7 @@ const Profile = () => {
               />
               <div className="pb-1">
                 <h1
-                  className="text-2xl font-bold text-gray-900 dark:text-gray-100"
+                  className="text-2xl font-bold text-gray-900 dark:text-gray-300"
                   data-testid="profile-name-value"
                 >
                   {fullName}
@@ -216,7 +216,7 @@ const Profile = () => {
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="btn btn-primary flex items-center space-x-2 self-start sm:self-auto"
+                className="flex items-center gap-2 self-start rounded-[10px] bg-primary-600 px-5 py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-primary-700 sm:self-auto dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
                 data-testid="profile-edit-btn"
               >
                 <Edit3 className="w-4 h-4" />
@@ -226,7 +226,7 @@ const Profile = () => {
               <div className="flex space-x-2 self-start sm:self-auto">
                 <button
                   onClick={handleCancel}
-                  className="btn btn-secondary flex items-center space-x-2"
+                  className="flex items-center gap-2 rounded-[10px] border border-gray-300 px-4 py-2.5 text-[13.5px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
                   disabled={isSubmitting}
                   data-testid="profile-cancel-btn"
                 >
@@ -235,7 +235,7 @@ const Profile = () => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="btn btn-gradient flex items-center space-x-2"
+                  className="flex items-center gap-2 rounded-[10px] bg-primary-600 px-5 py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-primary-700 disabled:opacity-60 dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
                   disabled={isSubmitting}
                   data-testid="profile-save-btn"
                 >
@@ -274,10 +274,12 @@ const Profile = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6" data-testid="profile-form">
         {/* Personal Information */}
-        <div className="card">
-          <div className="flex items-center space-x-2 mb-4">
-            <User className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <div className="rounded-[14px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] lg:p-8 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
+          <div className="mb-5 flex items-center gap-2.5">
+            <span className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-[#e7f5f2] dark:bg-[#2dd4bf]/10">
+              <User className="h-4 w-4 text-primary-600 dark:text-[#2dd4bf]" />
+            </span>
+            <h2 className="text-[15px] font-bold text-gray-900 lg:text-[17px] dark:text-gray-300">
               Personal Information
             </h2>
           </div>
@@ -374,10 +376,12 @@ const Profile = () => {
         </div>
 
         {/* Address Information */}
-        <div className="card">
-          <div className="flex items-center space-x-2 mb-4">
-            <MapPin className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <div className="rounded-[14px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] lg:p-8 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
+          <div className="mb-5 flex items-center gap-2.5">
+            <span className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-[#e7f5f2] dark:bg-[#2dd4bf]/10">
+              <MapPin className="h-4 w-4 text-primary-600 dark:text-[#2dd4bf]" />
+            </span>
+            <h2 className="text-[15px] font-bold text-gray-900 lg:text-[17px] dark:text-gray-300">
               Address Information
             </h2>
           </div>
@@ -482,10 +486,12 @@ const Profile = () => {
         </div>
 
         {/* Trading Profile */}
-        <div className="card">
-          <div className="flex items-center space-x-2 mb-4">
-            <Briefcase className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <div className="rounded-[14px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] lg:p-8 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
+          <div className="mb-5 flex items-center gap-2.5">
+            <span className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-[#e7f5f2] dark:bg-[#2dd4bf]/10">
+              <Briefcase className="h-4 w-4 text-primary-600 dark:text-[#2dd4bf]" />
+            </span>
+            <h2 className="text-[15px] font-bold text-gray-900 lg:text-[17px] dark:text-gray-300">
               Trading Profile
             </h2>
           </div>

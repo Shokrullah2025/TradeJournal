@@ -21,7 +21,6 @@ import {
   Eye,
   EyeOff,
   ChevronDown,
-  ChevronRight,
   X,
   Check,
   Shield,
@@ -34,10 +33,8 @@ import {
   Bell,
   UserCircle,
   CreditCard,
-  ArrowLeft,
 } from "lucide-react";
 import { useTrades } from "../context/TradeContext";
-import useIsMobile from "../hooks/useIsMobile";
 import InfoTooltip from "../components/common/InfoTooltip";
 import { exportToExcel, importFromFile } from "../utils/exportUtils";
 import { useNotificationPrefs } from "../hooks/useNotificationPrefs";
@@ -105,16 +102,6 @@ const Settings = () => {
     const t = searchParams.get("tab");
     return VALID_TABS.includes(t) ? t : "general";
   });
-  const isMobile = useIsMobile();
-  // On mobile we use an iOS-style drill-in: show the section menu first, then
-  // open the chosen section full-screen. Ignored on desktop (all hides below
-  // are gated behind `isMobile`), where the sidebar + content always show.
-  // A deep link (?tab=...) skips the menu and opens the section directly.
-  const [mobileShowMenu, setMobileShowMenu] = useState(() => {
-    const t = searchParams.get("tab");
-    return !(t && VALID_TABS.includes(t));
-  });
-
   // Follow `?tab=` changes that happen while Settings is already mounted — e.g.
   // clicking the "password changed" notification (→ /settings?tab=security), or
   // browser back/forward between tabs.
@@ -122,7 +109,6 @@ const Settings = () => {
     const t = searchParams.get("tab");
     if (t && VALID_TABS.includes(t) && t !== activeTab) {
       setActiveTab(t);
-      setMobileShowMenu(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -132,43 +118,43 @@ const Settings = () => {
       id: "profile",
       name: "Profile",
       icon: UserCircle,
-      description: "Your personal info and trading profile",
+      description: "Personal info & trading profile",
     },
     {
       id: "general",
       name: "General",
       icon: SettingsIcon,
-      description: "Basic preferences and display settings",
+      description: "Preferences & display",
     },
     {
       id: "notifications",
       name: "Notifications",
       icon: Bell,
-      description: "Choose which alerts you receive and how",
+      description: "Alerts you receive & how",
     },
     {
       id: "templates",
       name: "Trade Templates",
       icon: Layout,
-      description: "Manage your trade entry templates",
+      description: "Manage entry templates",
     },
     {
       id: "data",
       name: "Data Management",
       icon: Database,
-      description: "Import, export, and backup your data",
+      description: "Import, export & backup",
     },
     {
       id: "billing",
       name: "Billing",
       icon: CreditCard,
-      description: "Manage your plan, payment, and invoices",
+      description: "Plan, payment & invoices",
     },
     {
       id: "security",
       name: "Security",
       icon: Shield,
-      description: "Password, two-factor, and login activity",
+      description: "Password, 2FA, login activity",
     },
   ];
 
@@ -508,6 +494,14 @@ const Settings = () => {
   };
 
   // Template management functions
+  // Closing the modal without saving must clear the create/edit flags too —
+  // leaving isCreatingTemplate set kept the "No templates yet" card hidden.
+  const handleCloseTemplateModal = () => {
+    setShowTemplateModal(false);
+    setIsCreatingTemplate(false);
+    setEditingTemplate(null);
+  };
+
   const handleCreateNewTemplate = () => {
     setShowTemplateModal(true);
     setActiveTemplateTab("basic");
@@ -1027,28 +1021,53 @@ const Settings = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:h-full">
-      {/* Vertical Tab Navigation — on mobile this is the drill-in menu (hidden
-          once a section is open); on lg+ it's the always-visible left sidebar. */}
-      <div
-        className={`w-full lg:w-80 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6 lg:block ${
-          isMobile && !mobileShowMenu ? "hidden" : ""
-        }`}
-      >
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage your preferences, templates, and data
-          </p>
-        </div>
+    // Redesigned shell: page heading, then a 272px card subnav beside the
+    // content on desktop; on mobile the subnav becomes a horizontal chip row.
+    <div className="p-4 lg:pl-7 lg:pr-8 lg:pt-3 lg:pb-10">
+      <div>
+        <h1 className="text-[22px] font-bold tracking-tight text-gray-900 lg:text-[28px] dark:text-gray-300">
+          Settings
+        </h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+          Manage your preferences, templates, and data
+        </p>
+      </div>
 
+      {/* Mobile: horizontal chip nav (replaces the old drill-in menu). */}
+      <div
+        className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden"
+        data-testid="settings-nav-mobile"
+      >
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setSearchParams({ tab: tab.id }, { replace: true });
+              }}
+              data-testid={`settings-chip-${tab.id}-link`}
+              className={`flex-none whitespace-nowrap rounded-full px-3.5 py-2 text-[12.5px] transition-colors ${
+                isActive
+                  ? "bg-[#e7f5f2] font-bold text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
+                  : "border border-gray-200 text-gray-500 dark:border-white/10 dark:text-gray-500"
+              }`}
+            >
+              {tab.name}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 lg:mt-7 lg:grid lg:grid-cols-[272px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        {/* Desktop subnav card */}
         <nav
-          className="flex flex-col gap-1"
+          className="hidden lg:sticky lg:top-6 lg:block rounded-[14px] border border-gray-200 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
           aria-label="Settings Navigation"
           data-testid="settings-nav"
         >
           {tabs.map((tab) => {
-            const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -1056,74 +1075,39 @@ const Settings = () => {
                 onClick={() => {
                   setActiveTab(tab.id);
                   setSearchParams({ tab: tab.id }, { replace: true });
-                  if (isMobile) setMobileShowMenu(false);
                 }}
                 data-testid={`settings-nav-${tab.id}-link`}
-                className={`relative w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all duration-150 group active:opacity-70 lg:active:opacity-100 ${
+                className={`mb-0.5 block w-full rounded-[10px] p-3 text-left transition-colors last:mb-0 ${
                   isActive
-                    ? "bg-primary-50 dark:bg-primary-900/30"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-700/60"
+                    ? "bg-[#e7f5f2] dark:bg-[#2dd4bf]/10"
+                    : "hover:bg-gray-50 dark:hover:bg-white/5"
                 }`}
               >
                 <span
-                  className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${
-                    isActive ? "bg-primary-600 dark:bg-primary-400" : "bg-transparent"
-                  }`}
-                />
-                <Icon
-                  className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
+                  className={`block text-[13.5px] ${
                     isActive
-                      ? "text-primary-600 dark:text-primary-400"
-                      : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-400"
+                      ? "font-bold text-primary-600 dark:text-[#2dd4bf]"
+                      : "font-semibold text-gray-900 dark:text-gray-300"
                   }`}
-                />
-                <span className="min-w-0">
-                  <span
-                    className={`block text-sm font-bold ${
-                      isActive
-                        ? "text-primary-700 dark:text-primary-300"
-                        : "text-gray-900 dark:text-gray-200"
-                    }`}
-                  >
-                    {tab.name}
-                  </span>
-                  <span className="block mt-0.5 text-xs leading-snug text-gray-500 dark:text-gray-400">
-                    {tab.description}
-                  </span>
+                >
+                  {tab.name}
                 </span>
-                {/* Drill-in affordance — mobile only */}
-                <ChevronRight className="h-5 w-5 mt-0.5 ml-auto flex-shrink-0 self-center text-gray-400 dark:text-gray-500 lg:hidden" />
+                <span
+                  className={`mt-0.5 block text-[11.5px] leading-snug ${
+                    isActive
+                      ? "text-primary-600/75 dark:text-[#2dd4bf]/75"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
+                >
+                  {tab.description}
+                </span>
               </button>
             );
           })}
         </nav>
-      </div>
 
-      {/* Tab Content — on mobile this is hidden until a section is opened from
-          the drill-in menu; on lg+ it always shows beside the sidebar. */}
-      <div
-        className={`flex-1 p-4 lg:p-6 overflow-y-auto lg:block ${
-          isMobile && mobileShowMenu ? "hidden" : ""
-        }`}
-      >
-        {/* Mobile-only sticky top app bar for the drill-in view: a single
-            back arrow on the left and the section title — one name per page. */}
-        <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-2 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-3 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setMobileShowMenu(true)}
-            aria-label="Back to settings menu"
-            data-testid="settings-mobile-back-btn"
-            className="flex-shrink-0 rounded-lg p-1.5 text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {tabs.find((t) => t.id === activeTab)?.name}
-          </h2>
-        </div>
         {/*tab content area*/}
-        <div className="mt-6">
+        <div className="min-w-0">
           {/* Profile Tab — reuses the full Profile page */}
           {activeTab === "profile" && (
             <Suspense fallback={<TabSpinner />}>
@@ -1134,21 +1118,19 @@ const Settings = () => {
           {/* General Tab (Option A row content) */}
           {activeTab === "general" && (
             <div className="max-w-3xl space-y-6" data-testid="settings-general-panel">
-              {/* Header + Save — title hidden on mobile (the top app bar already
-                  names the page); Save uses the brand teal and goes full-width
-                  on mobile. */}
+              {/* Header + Save */}
               <div className="flex items-center justify-between gap-6">
-                <div className="hidden lg:block">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                <div>
+                  <h2 className="text-[17px] font-bold text-gray-900 lg:text-[22px] dark:text-gray-300">
                     General
                   </h2>
-                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-0.5 hidden text-[13.5px] text-gray-500 lg:block dark:text-gray-500">
                     Trading preferences &amp; display settings
                   </p>
                 </div>
                 <button
                   onClick={handleSavePreferences}
-                  className="btn btn-primary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
+                  className="flex flex-shrink-0 items-center justify-center gap-2 rounded-[10px] bg-primary-600 px-5 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-primary-700 lg:text-[13.5px] dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
                   data-testid="settings-save-preferences-btn"
                 >
                   <Save className="w-4 h-4" />
@@ -1158,7 +1140,7 @@ const Settings = () => {
 
               {/* Stats strip */}
               <div
-                className="flex flex-wrap rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                className="grid grid-cols-2 overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] lg:grid-cols-4 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
                 data-testid="settings-stats-strip"
               >
                 {[
@@ -1181,15 +1163,15 @@ const Settings = () => {
                 ].map((stat) => (
                   <div
                     key={stat.id}
-                    className="flex-1 min-w-[120px] px-5 py-4 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-700 last:border-r-0"
+                    className="border-b border-r border-gray-100 px-4 py-4 [&:nth-child(2n)]:border-r-0 [&:nth-child(n+3)]:border-b-0 lg:border-b-0 lg:px-6 lg:py-5 lg:[&:nth-child(2n)]:border-r lg:last:border-r-0 dark:border-white/5"
                   >
                     <div
-                      className="text-2xl font-extrabold tabular-nums text-gray-900 dark:text-gray-100"
+                      className="text-xl font-extrabold tabular-nums text-gray-900 lg:text-[26px] dark:text-gray-300"
                       data-testid={`settings-stat-${stat.id}-value`}
                     >
                       {stat.value}
                     </div>
-                    <div className="mt-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 text-[11px] text-gray-400 lg:text-[12.5px] dark:text-gray-500">
                       {stat.label}
                     </div>
                   </div>
@@ -1197,12 +1179,12 @@ const Settings = () => {
               </div>
 
               {/* Preference rows */}
-              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70">
+              <div className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] divide-y divide-gray-100 dark:divide-white/5 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
                 {/* Default currency */}
                 <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
                         Default currency
                       </div>
                       <InfoTooltip
@@ -1211,7 +1193,7 @@ const Settings = () => {
                         testId="settings-currency-hint"
                       />
                     </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                       Used across journals and reports
                     </div>
                   </div>
@@ -1236,7 +1218,7 @@ const Settings = () => {
                 <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
                         Timezone
                       </div>
                       <InfoTooltip
@@ -1245,7 +1227,7 @@ const Settings = () => {
                         testId="settings-timezone-hint"
                       />
                     </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                       Timestamps on every trade
                     </div>
                   </div>
@@ -1272,7 +1254,7 @@ const Settings = () => {
                 <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
                         Date format
                       </div>
                       <InfoTooltip
@@ -1281,7 +1263,7 @@ const Settings = () => {
                         testId="settings-date-format-hint"
                       />
                     </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                       How dates display in the app
                     </div>
                   </div>
@@ -1303,7 +1285,7 @@ const Settings = () => {
                 <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
                         Default risk percentage
                       </div>
                       <InfoTooltip
@@ -1312,7 +1294,7 @@ const Settings = () => {
                         testId="settings-risk-percentage-hint"
                       />
                     </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                       Used for position sizing calculations
                     </div>
                   </div>
@@ -1338,39 +1320,9 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* Auto backup */}
-                <div className="flex items-center justify-between gap-4 px-5 py-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                        Auto backup
-                      </div>
-                      <InfoTooltip
-                        text="Automatically back up your data weekly"
-                        className="lg:hidden"
-                        testId="settings-auto-backup-hint"
-                      />
-                    </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
-                      Automatically back up your data weekly
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={preferences.autoBackup}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          autoBackup: e.target.checked,
-                        })
-                      }
-                      className="sr-only peer"
-                      data-testid="settings-auto-backup-toggle"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
-                  </label>
-                </div>
+                {/* Auto backup row intentionally hidden — the weekly backup
+                    feature isn't live yet. The autoBackup preference is kept in
+                    state so re-adding the row later needs no data changes. */}
               </div>
             </div>
           )}
@@ -1378,13 +1330,13 @@ const Settings = () => {
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
             <div className="max-w-3xl space-y-6" data-testid="notifications-settings-tab">
-              {/* Header — hidden on mobile (the top app bar names the page) */}
-              <div className="hidden items-start justify-between gap-6 lg:flex">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-6">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  <h2 className="text-[17px] font-bold text-gray-900 lg:text-[22px] dark:text-gray-300">
                     Notification preferences
                   </h2>
-                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400 max-w-xl">
+                  <p className="mt-1 max-w-xl text-xs text-gray-500 lg:text-[13.5px] dark:text-gray-500">
                     Choose which alerts appear in your notification bell and which
                     are also sent to your email. Email requires the in-app channel
                     to be on.
@@ -1395,17 +1347,17 @@ const Settings = () => {
               {notificationPrefsLoading ? (
                 <div
                   data-testid="notifications-settings-loading"
-                  className="flex items-center justify-center py-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                  className="flex items-center justify-center rounded-[14px] border border-gray-200 bg-white py-10 shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800"
                 >
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
                 </div>
               ) : (
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-                  <div className="flex items-center justify-end gap-8 px-5 py-3 border-b border-gray-100 dark:border-gray-700/70 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <div className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
+                  <div className="flex items-center justify-end gap-8 border-b border-gray-100 px-5 py-3 text-xs font-semibold text-gray-400 dark:border-white/5 dark:text-gray-500">
                     <span className="w-12 text-center">In-App</span>
                     <span className="w-12 text-center">Email</span>
                   </div>
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700/70">
+                  <div className="divide-y divide-gray-100 dark:divide-white/5">
                     {NOTIFICATION_CATEGORY_META.map((cat) => {
                       const channel = notificationPrefs[cat.id];
                       return (
@@ -1416,7 +1368,7 @@ const Settings = () => {
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
                                 {cat.label}
                               </div>
                               <InfoTooltip
@@ -1425,7 +1377,7 @@ const Settings = () => {
                                 testId={`notifications-settings-${cat.id}-hint`}
                               />
                             </div>
-                            <p className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                            <p className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                               {cat.description}
                             </p>
                           </div>
@@ -1444,7 +1396,7 @@ const Settings = () => {
                                 }
                                 className="sr-only peer"
                               />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:bg-gray-700"></div>
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-teal-700 dark:bg-white/10"></div>
                             </label>
                             <label
                               className={`relative inline-flex items-center w-12 justify-center ${
@@ -1472,7 +1424,7 @@ const Settings = () => {
                                 }
                                 className="sr-only peer"
                               />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 peer-disabled:opacity-40 dark:bg-gray-700"></div>
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-teal-700 peer-disabled:opacity-40 dark:bg-white/10"></div>
                             </label>
                           </div>
                         </div>
@@ -1487,52 +1439,53 @@ const Settings = () => {
           {/* Templates Tab */}
           {activeTab === "templates" && (
             <div className="max-w-6xl space-y-6">
-              {/* Header — title hidden on mobile (named by the top app bar) */}
+              {/* Header + New Template */}
               <div className="flex items-center justify-between gap-6">
-                <div className="hidden lg:block">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                <div>
+                  <h2 className="text-[17px] font-bold text-gray-900 lg:text-[22px] dark:text-gray-300">
                     Trade Templates
                   </h2>
-                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-0.5 hidden text-[13.5px] text-gray-500 lg:block dark:text-gray-500">
                     Create reusable templates to speed up trade entry
                   </p>
                 </div>
                 <button
                   onClick={handleCreateNewTemplate}
-                  className="btn btn-primary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
+                  className="flex flex-shrink-0 items-center justify-center gap-2 rounded-[10px] bg-primary-600 px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-primary-700 lg:px-5 lg:text-[13.5px] dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
                   data-testid="settings-new-template-btn"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>New Template</span>
+                  <span className="lg:hidden">New</span>
+                  <span className="hidden lg:inline">New Template</span>
                 </button>
               </div>
 
               {/* Templates List */}
               {templates.length === 0 && !isCreatingTemplate && !templatesLoading ? (
                 <div
-                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center py-12"
+                  className="flex flex-col items-center rounded-2xl border border-gray-200 bg-white px-6 py-11 text-center shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] lg:py-[70px] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
                   data-testid="settings-templates-empty"
                 >
-                  <Layout className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                  <h3 className="mt-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-gray-100 dark:bg-white/5">
+                    <Layout className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <h3 className="mt-5 text-base font-bold text-gray-900 lg:text-lg dark:text-gray-300">
                     No templates yet
                   </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-1.5 text-[12.5px] text-gray-400 lg:text-[13.5px] dark:text-gray-500">
                     Get started by creating your first trade template.
                   </p>
-                  <div className="mt-4">
-                    <button
-                      onClick={handleCreateNewTemplate}
-                      className="btn btn-primary inline-flex items-center space-x-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Create Template</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleCreateNewTemplate}
+                    className="mt-5 inline-flex items-center gap-2 rounded-[10px] bg-primary-600 px-6 py-3 text-[13.5px] font-bold text-white transition-colors hover:bg-primary-700 dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Template</span>
+                  </button>
                 </div>
               ) : (
                 <div
-                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70"
+                  className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] divide-y divide-gray-100 dark:divide-white/5 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
                   data-testid="settings-templates-list"
                 >
                   {templates.map((template) => (
@@ -1543,7 +1496,7 @@ const Settings = () => {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
-                          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-300">
                             {template.name}
                           </h3>
                           {template.isDefault && (
@@ -1553,7 +1506,7 @@ const Settings = () => {
                             </span>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">
                           {template.description}
                         </p>
 
@@ -1566,7 +1519,7 @@ const Settings = () => {
                               return (
                                 <span
                                   key={key}
-                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300"
                                 >
                                   {value}
                                 </span>
@@ -1628,23 +1581,23 @@ const Settings = () => {
           {/* Data Management Tab */}
           {activeTab === "data" && (
             <div className="max-w-2xl space-y-6">
-              {/* Header — hidden on mobile (named by the top app bar) */}
-              <div className="hidden lg:block">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              {/* Header */}
+              <div>
+                <h2 className="text-[17px] font-bold text-gray-900 lg:text-[22px] dark:text-gray-300">
                   Data Management
                 </h2>
-                <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-0.5 hidden text-[13.5px] text-gray-500 lg:block dark:text-gray-500">
                   Import, export, and manage your trading data
                 </p>
               </div>
 
               {/* Rows */}
-              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/70">
+              <div className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] divide-y divide-gray-100 dark:divide-white/5 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
                 {/* Export */}
                 <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
                         Export data
                       </div>
                       <InfoTooltip
@@ -1653,7 +1606,7 @@ const Settings = () => {
                         testId="settings-export-hint"
                       />
                     </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                       Download your complete trading data as an Excel file for
                       backup or analysis in other tools.
                     </div>
@@ -1661,7 +1614,7 @@ const Settings = () => {
                   <button
                     onClick={handleExportData}
                     disabled={trades.length === 0}
-                    className="btn btn-secondary flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
+                    className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-gray-300 px-5 py-2.5 text-[13.5px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto lg:flex-shrink-0 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
                     data-testid="settings-export-data-btn"
                   >
                     <Download className="w-4 h-4" />
@@ -1673,7 +1626,7 @@ const Settings = () => {
                 <div className="flex flex-col gap-2 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-300">
                         Import data
                       </div>
                       <InfoTooltip
@@ -1682,12 +1635,12 @@ const Settings = () => {
                         testId="settings-import-hint"
                       />
                     </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                       Import trade data from a CSV or Excel file. Make sure your
                       file includes the required columns.
                     </div>
                   </div>
-                  <label className="btn btn-secondary flex items-center justify-center space-x-2 cursor-pointer w-full lg:w-auto lg:flex-shrink-0">
+                  <label className="flex w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-gray-300 px-5 py-2.5 text-[13.5px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 lg:w-auto lg:flex-shrink-0 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10">
                     <Upload className="w-4 h-4" />
                     <span>Import from File</span>
                     <input
@@ -1713,14 +1666,14 @@ const Settings = () => {
                         testId="settings-clear-data-hint"
                       />
                     </div>
-                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-400 lg:block">
+                    <div className="mt-0.5 hidden text-xs text-gray-500 dark:text-gray-500 lg:block">
                       Permanently delete all your trading data. This action
                       cannot be undone.
                     </div>
                   </div>
                   <button
                     onClick={handleClearData}
-                    className="btn btn-danger flex items-center justify-center space-x-2 w-full lg:w-auto lg:flex-shrink-0"
+                    className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-[#dc4a3f]/30 px-5 py-2.5 text-[13.5px] font-semibold text-[#dc4a3f] transition-colors hover:bg-red-50 lg:w-auto lg:flex-shrink-0 dark:border-red-400/30 dark:text-red-400 dark:hover:bg-red-500/10"
                     data-testid="settings-clear-data-btn"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -2383,7 +2336,7 @@ const Settings = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowTemplateModal(false)}
+                  onClick={handleCloseTemplateModal}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-6 h-6" />
@@ -3206,7 +3159,7 @@ const Settings = () => {
                 </p>
                 <div className="flex flex-1 sm:flex-none items-center space-x-3">
                   <button
-                    onClick={() => setShowTemplateModal(false)}
+                    onClick={handleCloseTemplateModal}
                     className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm"
                     data-testid="settings-template-cancel-btn"
                   >

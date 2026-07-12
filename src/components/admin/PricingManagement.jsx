@@ -51,10 +51,11 @@ const detailFromPlan = (p) => ({
   features: Array.isArray(p?.features) ? p.features.join("\n") : "",
 });
 
-// Cards sit in a centered, wrapping row so 1–2 plans stay centered instead of
-// leaving an empty grid column on the right.
-const CARD_ROW = "flex flex-wrap justify-center gap-4";
-const CARD = "card p-5 w-full sm:w-80 flex flex-col gap-4";
+// Cards share a responsive grid: equal widths that shrink to fit the admin
+// content area, so the Add card stays on the same row instead of wrapping to
+// a lonely centered second row when the screen is under ~1330px.
+const CARD_ROW = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
+const CARD = "card p-5 w-full flex flex-col gap-4";
 
 const PricingManagement = () => {
   const { user } = useAuth();
@@ -648,7 +649,7 @@ const AddCard = ({ adding, newName, setNewName, onStart, onCancel, onCreate, cre
         type="button"
         onClick={onStart}
         data-testid="admin-plan-add-btn"
-        className="w-full sm:w-80 min-h-[180px] rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="w-full min-h-[180px] rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
       >
         <Plus className="w-6 h-6" />
         <span className="text-sm font-medium">Add plan</span>
