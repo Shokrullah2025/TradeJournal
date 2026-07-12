@@ -19,6 +19,7 @@ import Seo from "../../components/seo/Seo";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "../../utils/seo";
 import CTASection from "../../components/site/CTASection";
 import { PRICING_TIERS, TESTIMONIALS, STATS_BAND } from "../../components/site/content";
+import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
 
 /**
  * Public landing page (route "/") — implementation of the approved landing
@@ -409,7 +410,21 @@ const initials = (name) =>
     .join("")
     .toUpperCase();
 
-const Home = () => (
+const Home = () => {
+  // Live prices/names/features from the admin Pricing tab, overlaid on the
+  // static tier content so the landing page always matches /pricing and the
+  // in-app Billing cards. During prerender the effect doesn't run, so the
+  // static defaults render; the client syncs to live amounts on hydration.
+  const { plans: livePlans } = useSubscriptionPlans();
+  const tiers = PRICING_TIERS.map((t) => ({
+    ...t,
+    name: livePlans[t.id]?.name ?? t.name,
+    description: livePlans[t.id]?.description ?? t.description,
+    features: livePlans[t.id]?.features?.length ? livePlans[t.id].features : t.features,
+    monthlyPrice: livePlans[t.id]?.price ?? t.monthlyPrice,
+  }));
+
+  return (
   <div data-testid="site-home-page">
     <Seo
       title="Trading Journal & Performance Analytics"
@@ -724,7 +739,7 @@ const Home = () => (
         </h2>
       </div>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        {PRICING_TIERS.map((tier) => (
+        {tiers.map((tier) => (
           <div
             key={tier.id}
             data-testid={`home-pricing-${tier.id}-card`}
@@ -799,6 +814,7 @@ const Home = () => (
 
     <CTASection />
   </div>
-);
+  );
+};
 
 export default Home;
