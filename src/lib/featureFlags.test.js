@@ -163,12 +163,15 @@ describe("catalog integrity", () => {
 
   it("exposes the expected audience columns in order", () => {
     expect(AUDIENCES.map((a) => a.key)).toEqual([
-      "free",
       "trial",
       "basic",
       "premium",
       "enterprise",
       "admin",
     ]);
+  });
+
+  it("offers no Free column — there is no free plan to grant features to", () => {
+    expect(AUDIENCES.map((a) => a.key)).not.toContain("free");
   });
 });

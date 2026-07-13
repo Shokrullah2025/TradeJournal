@@ -28,8 +28,13 @@ export const isComingSoon = (featureKey) =>
 // Audiences a flag can target. Order matters for the admin UI columns.
 // NOTE: keys must match the `subscription_plans.slug` values in Supabase. The
 // mid-tier plan's slug is "premium" (its display name is "Pro").
+//
+// "free" is deliberately absent: there is no free plan. resolveAudience() still
+// returns "free" as the internal signal for "no live trial and no paid plan",
+// but that user is held behind the non-dismissible TrialGate and never reaches
+// a gated feature — so a Free column in the admin grid would toggle access for
+// people who cannot get into the app at all.
 export const AUDIENCES = [
-  { key: "free",       label: "Free" },
   { key: "trial",      label: "Trial" },
   { key: "basic",      label: "Basic" },
   { key: "premium",    label: "Pro" },
