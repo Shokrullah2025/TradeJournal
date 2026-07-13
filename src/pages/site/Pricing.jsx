@@ -72,9 +72,11 @@ const Pricing = () => {
       </section>
 
       {/* Tiers — symmetric vertical padding so the card row sits centered in
-          the background band instead of hugging its top edge. */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+          the background band instead of hugging its top edge. The container
+          width and gutter mirror the Home pricing section (max-w-6xl / gap-5)
+          so a card is the same width on both surfaces. */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {tiers.map((tier) => (
             <PricingCard key={tier.id} tier={tier} cycle={cycle} />
           ))}
