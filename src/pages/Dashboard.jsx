@@ -39,6 +39,7 @@ import PreMarketBriefing from "../components/dashboard/PreMarketBriefing";
 import TradeScatterChart from "../components/dashboard/TradeScatterChart";
 import AIInsights from "../components/dashboard/AIInsights";
 import FeatureGate from "../components/common/FeatureGate";
+import { AiInsightsLockedPreview } from "../components/common/LockedPreview";
 import { MiniLineChart, MiniBarChart, MiniDonutChart, MiniAreaChart, MiniRiskRewardChart, MiniDrawdownChart } from "../components/dashboard/MiniCharts";
 
 const Dashboard = () => {
@@ -186,7 +187,7 @@ const Dashboard = () => {
 
       {/* Pre-Market Briefing — daily personalized edge summary, dismissible.
           AI Insights is a Pro feature: gate it in place with the upgrade blur. */}
-      <FeatureGate feature="ai_insights" variant="inline">
+      <FeatureGate feature="ai_insights" variant="inline" preview={<AiInsightsLockedPreview />}>
         <PreMarketBriefing trades={trades} user={user} />
       </FeatureGate>
 
@@ -400,7 +401,7 @@ const Dashboard = () => {
 
           {/* Trading Insights — real AI feedback generated from the user's
               stats. Pro feature: gate in place with the upgrade blur. */}
-          <FeatureGate feature="ai_insights" variant="inline">
+          <FeatureGate feature="ai_insights" variant="inline" preview={<AiInsightsLockedPreview />}>
             <AIInsights trades={trades} stats={stats} />
           </FeatureGate>
         </div>

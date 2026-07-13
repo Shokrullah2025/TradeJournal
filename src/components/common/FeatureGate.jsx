@@ -5,24 +5,28 @@ import { Lock, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
 import { FEATURE_CATALOG, PLAN_LABELS } from "../../lib/featureFlags";
+import { GenericLockedPreview } from "./LockedPreview";
 
 // ── Feature gate ───────────────────────────────────────────────────────────
 // Route/section wrapper that enforces a feature flag for the current user's
-// audience. Modelled on ComingSoonGate: when the feature is locked for the
-// user's plan, the real page still renders underneath — blurred, inert, and
-// covered by an "Upgrade" card linking to billing — so users see the feature
-// they're missing and have somewhere to click. Fails open while flags load to
-// avoid a flash of the locked state.
+// audience. When the feature is locked for the user's plan we render a FAKE
+// grayscale preview (never the real children) behind an "Upgrade" card linking
+// to billing. Rendering a mock — not the real page — is the whole point: the
+// real component and its Supabase queries never mount for a locked user, so
+// there is no live data in the browser to reveal by stripping the blur in
+// devtools. Fails open while flags load to avoid a flash of the locked state.
 //
 // States (see getFeatureState in lib/featureFlags.js):
-//   "on"     → render children.
-//   "locked" → blurred children + upgrade overlay.
+//   "on"     → render the real children.
+//   "locked" → fake preview (blurred, inert) + upgrade overlay; NO real data.
 //   "hidden" → master kill-switch off; plain "unavailable" card, no upsell.
 //
-// `inert=""` blocks keyboard focus into the blurred content — React 18 passes
-// it through as a plain attribute (the boolean form only works in React 19).
+// `preview` lets a call site supply a feature-specific mock; otherwise a
+// generic analytics-style ghost is shown. `inert=""` blocks keyboard focus
+// into the preview — React 18 passes it through as a plain attribute (the
+// boolean form only works in React 19).
 
-const FeatureGate = ({ feature, children, title, variant }) => {
+const FeatureGate = ({ feature, children, title, variant, preview }) => {
   const { user } = useAuth();
   const { getFeatureState, requiredPlan, loading } = useFeatureFlags();
 
@@ -66,7 +70,7 @@ const FeatureGate = ({ feature, children, title, variant }) => {
   // Admins resolve to the `admin` audience, which passes every flag, so a
   // locked state for an admin only happens when an admin explicitly denied the
   // admin audience to preview the gate. Let them through (they need to QA the
-  // page) with a banner instead of the blur — mirrors ComingSoonGate.
+  // real page) with a banner — mirrors ComingSoonGate.
   if (user?.role === "admin") {
     return (
       <div className="space-y-4">
@@ -92,14 +96,21 @@ const FeatureGate = ({ feature, children, title, variant }) => {
       ? "absolute inset-0 z-10 flex items-center justify-center px-4"
       : "absolute inset-0 z-10 flex justify-center px-4 pt-16 sm:pt-24";
 
+  // Fake teaser only — the real `children` are intentionally NOT rendered so
+  // no live query runs and there is nothing real to un-blur.
+  const previewContent =
+    preview ?? (variant === "inline" ? null : <GenericLockedPreview />);
+
   return (
     <div className="relative" data-testid={`feature-gate-locked-${feature}`}>
       <div
-        className="pointer-events-none select-none opacity-70 blur-[6px]"
+        className={`pointer-events-none select-none opacity-80 blur-[3px] ${
+          variant === "inline" ? "min-h-[8rem]" : "min-h-[16rem]"
+        }`}
         aria-hidden="true"
         inert=""
       >
-        {children}
+        {previewContent}
       </div>
 
       <div className={overlayPosition}>
@@ -141,6 +152,9 @@ FeatureGate.propTypes = {
   children: PropTypes.node,
   title: PropTypes.string,
   variant: PropTypes.oneOf(["page", "inline"]),
+  // Feature-specific fake preview shown when locked. Defaults to a generic
+  // grayscale ghost (page variant) or nothing (inline).
+  preview: PropTypes.node,
 };
 
 FeatureGate.defaultProps = {
