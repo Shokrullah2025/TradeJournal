@@ -9,50 +9,62 @@ const fmt = (n) => (Number.isInteger(n) ? `${n}` : n.toFixed(2));
  * A single pricing tier card. Highlights the popular plan and shows the price
  * for the selected billing cycle ("monthly" | "annual"). On annual it also
  * shows the effective monthly rate and the real yearly saving.
+ *
+ * Styled to match the pricing cards in the Home landing section so a plan reads
+ * identically on both surfaces — same type scale, divider, check list and CTA.
+ * The only thing this card adds is the billing-detail line, which the Home
+ * section has no use for (it never offers the annual cycle).
  */
 const PricingCard = ({ tier, cycle }) => {
   const isAnnual = cycle === "annual";
   const isFree = !tier.monthlyPrice || tier.monthlyPrice <= 0;
   const price = isAnnual && !isFree ? tier.yearlyPrice : tier.monthlyPrice;
-  const suffix = isFree ? "" : isAnnual ? "/year" : "/month";
+  const suffix = isFree ? "forever" : isAnnual ? "/yr" : "/mo";
   const perMonth = isAnnual && !isFree ? Math.round((tier.yearlyPrice / 12) * 100) / 100 : null;
   const saved = !isFree ? Math.max(0, tier.monthlyPrice * 12 - tier.yearlyPrice) : 0;
 
   return (
     <div
       data-testid={`pricing-card-${tier.id}`}
-      className={`relative flex flex-col rounded-2xl border p-8 sm:p-10 sm:min-h-[34rem] transition-all duration-200 hover:-translate-y-1 ${
+      className={`relative flex flex-col rounded-2xl border p-6 sm:min-h-[34rem] ${
         tier.popular
-          ? "z-10 border-accent-500 bg-white shadow-2xl ring-1 ring-accent-500 dark:bg-gray-800 lg:scale-[1.04]"
-          : "border-gray-200 bg-white shadow-sm hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          ? "border-accent-500 bg-white shadow-xl dark:border-accent-500 dark:bg-gray-900"
+          : "border-accent-100 bg-white dark:border-gray-700 dark:bg-gray-900"
       }`}
     >
       {tier.popular && (
         <span
           data-testid={`pricing-card-badge-${tier.id}`}
-          className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent-600 px-4 py-1 text-xs font-semibold text-white shadow"
+          className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent-600 px-3 py-1 font-nums text-[11px] font-semibold tracking-wide text-white"
         >
-          Most popular
+          MOST POPULAR
         </span>
       )}
 
-      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{tier.name}</h3>
-      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{tier.description}</p>
+      <p
+        className={`text-[15px] font-semibold ${
+          tier.popular
+            ? "text-accent-600 dark:text-accent-400"
+            : "text-gray-900 dark:text-gray-100"
+        }`}
+      >
+        {tier.name}
+      </p>
 
-      <div className="mt-6 flex items-end gap-1">
+      <p className="mt-3 flex items-baseline gap-1">
         <span
           data-testid={`pricing-card-price-${tier.id}`}
-          className="text-5xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100"
+          className="font-nums text-4xl font-semibold text-gray-900 dark:text-gray-100"
         >
           ${fmt(price)}
         </span>
-        {suffix && (
-          <span className="mb-1.5 text-sm text-gray-500 dark:text-gray-400">{suffix}</span>
-        )}
-      </div>
+        <span className="text-sm text-gray-500 dark:text-gray-400">{suffix}</span>
+      </p>
 
-      {/* Billing detail line — reserves height so cards stay aligned */}
-      <p className="mt-2 min-h-[1.25rem] text-sm">
+      {/* Billing detail line — unique to this page (Home has no annual cycle).
+          min-h reserves its height so the rows below stay aligned across cards
+          when only some of them have a saving to report. */}
+      <p className="mt-1.5 min-h-[1.125rem] text-[13px]">
         {isFree ? (
           <span className="text-gray-400 dark:text-gray-500">Free</span>
         ) : isAnnual ? (
@@ -65,24 +77,33 @@ const PricingCard = ({ tier, cycle }) => {
         )}
       </p>
 
-      <ul className="mt-8 flex-1 space-y-3.5">
+      <p className="mt-1.5 text-[13px] text-gray-500 dark:text-gray-400">
+        {tier.description}
+      </p>
+
+      <div className="my-5 h-px bg-accent-100 dark:bg-gray-700" />
+
+      {/* flex-1 absorbs the uneven feature counts so every CTA lands on the same
+          baseline at the foot of the card. */}
+      <ul className="flex-1 space-y-2.5">
         {tier.features.map((feature) => (
-          <li key={feature} className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-success-100 dark:bg-success-500/20">
-              <Check className="h-3.5 w-3.5 text-success-600 dark:text-success-400" />
-            </span>
-            <span className="text-sm text-gray-600 dark:text-gray-300">{feature}</span>
+          <li
+            key={feature}
+            className="flex items-start gap-2.5 text-[13px] text-gray-700 dark:text-gray-300"
+          >
+            <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-accent-600 dark:text-accent-400" />
+            {feature}
           </li>
         ))}
       </ul>
 
       <Link
-        to="/register"
+        to={tier.id === "enterprise" ? "/contact" : "/register"}
         data-testid={`pricing-card-cta-${tier.id}`}
-        className={`mt-8 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+        className={`mt-6 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
           tier.popular
-            ? "bg-accent-600 text-white shadow-sm hover:bg-accent-700"
-            : "border border-gray-300 text-gray-900 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"
+            ? "btn-site"
+            : "border border-accent-200 bg-accent-50 text-gray-900 hover:bg-accent-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
         }`}
       >
         {tier.cta}

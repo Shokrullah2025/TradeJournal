@@ -743,7 +743,7 @@ const Home = () => {
           <div
             key={tier.id}
             data-testid={`home-pricing-${tier.id}-card`}
-            className={`relative flex flex-col rounded-2xl border p-6 ${
+            className={`relative flex flex-col rounded-2xl border p-6 sm:min-h-[34rem] ${
               tier.popular
                 ? "border-accent-500 bg-white shadow-xl dark:border-accent-500 dark:bg-gray-900"
                 : "border-accent-100 bg-white dark:border-gray-700 dark:bg-gray-900"
@@ -774,19 +774,10 @@ const Home = () => {
             <p className="mt-1.5 text-[13px] text-gray-500 dark:text-gray-400">
               {tier.description}
             </p>
-            <Link
-              to={tier.id === "enterprise" ? "/contact" : "/register"}
-              data-testid={`home-pricing-${tier.id}-btn`}
-              className={`mt-5 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
-                tier.popular
-                  ? "btn-site"
-                  : "border border-accent-200 bg-accent-50 text-gray-900 hover:bg-accent-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-              }`}
-            >
-              {tier.cta}
-            </Link>
             <div className="my-5 h-px bg-accent-100 dark:bg-gray-700" />
-            <ul className="space-y-2.5">
+            {/* flex-1 absorbs the uneven feature counts so every CTA lands on the
+                same baseline at the foot of the card, matching /pricing. */}
+            <ul className="flex-1 space-y-2.5">
               {tier.features.map((feature) => (
                 <li
                   key={feature}
@@ -797,6 +788,17 @@ const Home = () => {
                 </li>
               ))}
             </ul>
+            <Link
+              to={tier.id === "enterprise" ? "/contact" : "/register"}
+              data-testid={`home-pricing-${tier.id}-btn`}
+              className={`mt-6 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
+                tier.popular
+                  ? "btn-site"
+                  : "border border-accent-200 bg-accent-50 text-gray-900 hover:bg-accent-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              {tier.cta}
+            </Link>
           </div>
         ))}
       </div>
