@@ -14,9 +14,9 @@ import ModalPortal from "../common/ModalPortal";
 // if that public read fails) — same slugs/amounts as the seeded DB rows.
 const PLAN_ORDER = ["basic", "premium", "enterprise"];
 const PLAN_FALLBACKS = {
-  basic: { name: "Basic", price: 9.99, features: ["Trade logging", "Basic analytics", "Email support"] },
-  premium: { name: "Pro", price: 18, features: ["Unlimited trades", "Advanced analytics", "Priority support", "Export features"] },
-  enterprise: { name: "Enterprise", price: 40, features: ["Everything in Pro", "Team collaboration", "Custom integrations", "Phone support"] },
+  basic: { name: "Starter", price: 9.99, features: ["Up to 50 trades per month", "Trade journal & core dashboard", "CSV import", "Email support"] },
+  premium: { name: "Pro", price: 18, features: ["Unlimited trades", "Advanced analytics", "Backtesting studio", "Priority support"] },
+  enterprise: { name: "Elite", price: 40, features: ["Everything in Pro", "Unlimited trading accounts", "Prop-firm tracking", "Priority chat support"] },
 };
 
 // The gate shown to a signed-in user who has already consumed their one free

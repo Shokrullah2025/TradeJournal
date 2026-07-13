@@ -39,7 +39,7 @@ const Pricing = () => {
       description: livePlans[t.id]?.description ?? t.description,
       features: livePlans[t.id]?.features?.length ? livePlans[t.id].features : t.features,
       monthlyPrice,
-      yearlyPrice: annualPriceFor(monthlyPrice, livePlans[t.id]?.priceAnnually ?? null),
+      yearlyPrice: annualPriceFor(monthlyPrice, livePlans[t.id]?.priceAnnually ?? t.yearlyPrice),
     };
   });
 

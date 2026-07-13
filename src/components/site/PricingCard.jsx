@@ -98,7 +98,7 @@ const PricingCard = ({ tier, cycle }) => {
       </ul>
 
       <Link
-        to={tier.id === "enterprise" ? "/contact" : "/register"}
+        to="/register"
         data-testid={`pricing-card-cta-${tier.id}`}
         className={`mt-6 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
           tier.popular

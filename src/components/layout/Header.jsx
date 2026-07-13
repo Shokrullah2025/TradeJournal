@@ -282,10 +282,11 @@ const Header = ({ onMenuClick }) => {
                   {displayName}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {user?.subscription === 'premium' ? 'Premium Account' : 
-                   user?.subscription === 'trial' ? 'Trial Account' : 
-                   user?.subscription === 'basic' ? 'Basic Account' : 
-                   user ? 'Pro Account' : 'Not logged in'}
+                  {user?.subscription === 'trial' ? 'Trial Account' :
+                   user?.subscription === 'basic' ? 'Starter Account' :
+                   user?.subscription === 'premium' ? 'Pro Account' :
+                   user?.subscription === 'enterprise' ? 'Elite Account' :
+                   user ? 'Account' : 'Not logged in'}
                 </p>
               </div>
 
