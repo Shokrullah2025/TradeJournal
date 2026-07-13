@@ -17,7 +17,7 @@ const FeatureGate = ({ feature, children, title }) => {
   return (
     <div
       className="card text-center py-16"
-      data-testid={`feature-gate-locked-${feature}`}
+      data-test-id={`feature-gate-locked-${feature}`}
     >
       <div className="max-w-md mx-auto">
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">

@@ -48,7 +48,7 @@ const Pricing = () => {
   const savingsPct = popular ? savingsPercent(popular.monthlyPrice, popular.yearlyPrice) : 0;
 
   return (
-    <div data-testid="site-pricing-page">
+    <div data-test-id="site-pricing-page">
       <Seo
         title="Pricing"
         description="Simple, transparent pricing. Try ZalorTrade free for 7 days, then pick a plan — trade logging, advanced analytics, backtesting, and CSV import. Cancel anytime."

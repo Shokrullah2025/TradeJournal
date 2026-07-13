@@ -161,7 +161,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   key={item.name}
                   to={item.href}
                   onClick={() => onClose()}
-                  data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
+                  data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                   className={({ isActive }) =>
                     `group flex items-center text-sm font-medium rounded-lg transition-all duration-200 ${
                       isCollapsed ? "px-2 py-1.5 justify-center" : "px-2 py-1.5"
@@ -185,7 +185,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       )}
                       {!isCollapsed && item.soon && (
                         <span
-                          data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-soon-pill`}
+                          data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-soon-pill`}
                           className="ml-2 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-600 dark:bg-primary-900/30 dark:text-primary-300"
                         >
                           Soon
@@ -213,7 +213,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       to={item.href}
                       end={item.end}
                       onClick={() => onClose()}
-                      data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
+                      data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link`}
                       className={({ isActive }) =>
                         `group flex items-center px-2 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                           isActive
@@ -232,7 +232,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                           </span>
                           {item.badge > 0 && (
                             <span
-                              data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-badge`}
+                              data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-badge`}
                               className="ml-2 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-danger-500 text-[11px] font-semibold text-white"
                             >
                               {item.badge > 99 ? "99+" : item.badge}
@@ -258,7 +258,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                     to={item.href}
                     end={item.end}
                     onClick={() => onClose()}
-                    data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link-collapsed`}
+                    data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-link-collapsed`}
                     className={({ isActive }) =>
                       `group flex items-center justify-center px-2 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                         isActive
@@ -279,7 +279,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                         </span>
                         {item.badge > 0 && (
                           <span
-                            data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-dot`}
+                            data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-dot`}
                             className="absolute -top-1.5 -right-1.5 min-w-[1rem] h-4 px-1 flex items-center justify-center rounded-full bg-danger-500 text-[9px] font-semibold text-white"
                           >
                             {item.badge > 9 ? "9+" : item.badge}

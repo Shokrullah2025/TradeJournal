@@ -109,7 +109,7 @@ const SiteNavbar = () => {
     <Link
       key={item.to}
       to={item.to}
-      data-testid={`site-nav-${slugify(menuLabel)}-${slugify(item.label)}-link`}
+      data-test-id={`site-nav-${slugify(menuLabel)}-${slugify(item.label)}-link`}
       className="group flex gap-3 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
     >
       {item.emoji && (
@@ -142,14 +142,14 @@ const SiteNavbar = () => {
     <>
       {/* Announcement bar — scrolls away; only the nav below is sticky */}
       <div
-        data-testid="site-announcement-bar"
+        data-test-id="site-announcement-bar"
         className="bg-accent-600 px-4 py-2 text-center text-[13px] text-white"
       >
         New — <strong className="font-semibold">AI Trade Insights</strong> now
         reads your journal and tells you exactly where you leak money.{" "}
         <Link
           to="/features/ai-insights"
-          data-testid="site-announcement-link"
+          data-test-id="site-announcement-link"
           className="underline underline-offset-2"
         >
           See how →
@@ -158,7 +158,7 @@ const SiteNavbar = () => {
 
     <header
       ref={headerRef}
-      data-testid="site-navbar"
+      data-test-id="site-navbar"
       className="sticky top-0 z-40 w-full border-b border-accent-100 dark:border-gray-800 bg-accent-50/85 dark:bg-gray-950/85 backdrop-blur-md"
     >
       <nav className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -166,7 +166,7 @@ const SiteNavbar = () => {
           {/* Brand */}
           <Link
             to="/"
-            data-testid="site-nav-brand-link"
+            data-test-id="site-nav-brand-link"
             className="flex items-center gap-2"
           >
             <img
@@ -187,7 +187,7 @@ const SiteNavbar = () => {
                   <NavLink
                     key={menu.label}
                     to={menu.to}
-                    data-testid={`site-nav-${slugify(menu.label)}-link`}
+                    data-test-id={`site-nav-${slugify(menu.label)}-link`}
                     className={linkClass}
                   >
                     {menu.label}
@@ -204,7 +204,7 @@ const SiteNavbar = () => {
                 >
                   <button
                     type="button"
-                    data-testid={`site-nav-${slugify(menu.label)}-menu-btn`}
+                    data-test-id={`site-nav-${slugify(menu.label)}-menu-btn`}
                     aria-haspopup="true"
                     aria-expanded={openMenu === menu.label}
                     onClick={() =>
@@ -223,7 +223,7 @@ const SiteNavbar = () => {
                   {/* Simple dropdown panel */}
                   {menu.type === "dropdown" && openMenu === menu.label && (
                     <div
-                      data-testid={`site-nav-${slugify(menu.label)}-panel`}
+                      data-test-id={`site-nav-${slugify(menu.label)}-panel`}
                       className="absolute left-1/2 top-full w-72 -translate-x-1/2 pt-3"
                     >
                       <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-2xl dark:border-gray-700 dark:bg-gray-800">
@@ -243,14 +243,14 @@ const SiteNavbar = () => {
             <button
               type="button"
               onClick={handleSignIn}
-              data-testid="site-nav-signin-btn"
+              data-test-id="site-nav-signin-btn"
               className="btn btn-ghost btn-sm"
             >
               Sign in
             </button>
             <Link
               to="/register"
-              data-testid="site-nav-getstarted-btn"
+              data-test-id="site-nav-getstarted-btn"
               className="btn btn-site btn-sm"
             >
               Get Started
@@ -262,7 +262,7 @@ const SiteNavbar = () => {
             <button
               type="button"
               onClick={() => setMobileOpen((o) => !o)}
-              data-testid="site-nav-mobile-toggle"
+              data-test-id="site-nav-mobile-toggle"
               aria-label="Toggle navigation menu"
               aria-expanded={mobileOpen}
               className="btn-icon text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
@@ -282,7 +282,7 @@ const SiteNavbar = () => {
         ).map((menu) => (
           <div
             key={menu.label}
-            data-testid={`site-nav-${slugify(menu.label)}-panel`}
+            data-test-id={`site-nav-${slugify(menu.label)}-panel`}
             onMouseEnter={() => openNow(menu.label)}
             onMouseLeave={scheduleClose}
             className="absolute left-1/2 top-full hidden w-full max-w-4xl -translate-x-1/2 pt-3 lg:block"
@@ -311,7 +311,7 @@ const SiteNavbar = () => {
                         <Link
                           key={item.to}
                           to={item.to}
-                          data-testid={`site-nav-${slugify(menu.label)}-${slugify(item.label)}-link`}
+                          data-test-id={`site-nav-${slugify(menu.label)}-${slugify(item.label)}-link`}
                           className="group -mx-3 flex gap-3 rounded-xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                         >
                           <span
@@ -352,7 +352,7 @@ const SiteNavbar = () => {
                     </p>
                     <Link
                       to={menu.highlight.to}
-                      data-testid={`site-nav-${slugify(menu.label)}-highlight-link`}
+                      data-test-id={`site-nav-${slugify(menu.label)}-highlight-link`}
                       className="mt-auto text-sm font-semibold text-accent-600 hover:underline dark:text-accent-400"
                     >
                       Learn more →
@@ -369,7 +369,7 @@ const SiteNavbar = () => {
                   </span>
                   <Link
                     to={menu.footerLink.to}
-                    data-testid={`site-nav-${slugify(menu.label)}-all-link`}
+                    data-test-id={`site-nav-${slugify(menu.label)}-all-link`}
                     className="text-xs font-semibold text-accent-600 hover:underline dark:text-accent-400"
                   >
                     {menu.footerLink.label} →
@@ -384,7 +384,7 @@ const SiteNavbar = () => {
       {/* Mobile drawer — each menu becomes an accordion section */}
       {mobileOpen && (
         <div
-          data-testid="site-nav-mobile-menu"
+          data-test-id="site-nav-mobile-menu"
           className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 lg:hidden"
         >
           <div className="space-y-1 px-4 py-4">
@@ -394,7 +394,7 @@ const SiteNavbar = () => {
                   <NavLink
                     key={menu.label}
                     to={menu.to}
-                    data-testid={`site-nav-mobile-${slugify(menu.label)}-link`}
+                    data-test-id={`site-nav-mobile-${slugify(menu.label)}-link`}
                     className={({ isActive }) =>
                       `block rounded-lg px-3 py-3 text-base font-medium ${
                         isActive
@@ -418,7 +418,7 @@ const SiteNavbar = () => {
                 <div key={menu.label}>
                   <button
                     type="button"
-                    data-testid={`site-nav-mobile-${slugify(menu.label)}-btn`}
+                    data-test-id={`site-nav-mobile-${slugify(menu.label)}-btn`}
                     aria-expanded={expanded}
                     onClick={() =>
                       setExpandedSection(expanded ? null : menu.label)
@@ -438,7 +438,7 @@ const SiteNavbar = () => {
                         <Link
                           key={item.to}
                           to={item.to}
-                          data-testid={`site-nav-mobile-${slugify(menu.label)}-${slugify(item.label)}-link`}
+                          data-test-id={`site-nav-mobile-${slugify(menu.label)}-${slugify(item.label)}-link`}
                           className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
                           {item.emoji && (
@@ -467,14 +467,14 @@ const SiteNavbar = () => {
               <button
                 type="button"
                 onClick={handleSignIn}
-                data-testid="site-nav-mobile-signin-btn"
+                data-test-id="site-nav-mobile-signin-btn"
                 className="btn btn-ghost inline-flex w-56 max-w-full items-center justify-center border border-gray-200 dark:border-gray-700"
               >
                 Sign in
               </button>
               <Link
                 to="/register"
-                data-testid="site-nav-mobile-getstarted-btn"
+                data-test-id="site-nav-mobile-getstarted-btn"
                 className="btn btn-site inline-flex w-56 max-w-full items-center justify-center"
               >
                 Get Started

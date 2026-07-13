@@ -60,7 +60,7 @@ const Blog = () => {
   }, []);
 
   return (
-    <div data-testid="blog-index-page">
+    <div data-test-id="blog-index-page">
       <Seo
         title="Blog"
         description="Practical guides on trading journals, performance metrics, risk management, and prop firm evaluations — written for traders who trust data over hunches."
@@ -87,14 +87,14 @@ const Blog = () => {
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div
-          data-testid="blog-post-list"
+          data-test-id="blog-post-list"
           className="mx-auto grid max-w-4xl grid-cols-1 gap-6"
         >
           {posts.map((post) => (
             <Link
               key={post.slug}
               to={`/blog/${post.slug}`}
-              data-testid={`blog-card-${post.slug}`}
+              data-test-id={`blog-card-${post.slug}`}
               className="group overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 transition-colors hover:border-accent-300 dark:hover:border-accent-700"
             >
               {post.coverImage && (
@@ -102,7 +102,7 @@ const Blog = () => {
                   src={post.coverImage}
                   alt=""
                   loading="lazy"
-                  data-testid={`blog-card-cover-${post.slug}`}
+                  data-test-id={`blog-card-cover-${post.slug}`}
                   className="aspect-[2/1] w-full object-cover"
                 />
               )}

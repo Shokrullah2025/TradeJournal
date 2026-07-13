@@ -36,7 +36,7 @@ const VALUES = [
  * the product.
  */
 const About = () => (
-  <div data-testid="site-about-page">
+  <div data-test-id="site-about-page">
     <Seo
       title="About"
       description="ZalorTrade is built by traders, for traders — to make keeping a disciplined trading journal effortless and turn your record into a measurable edge."

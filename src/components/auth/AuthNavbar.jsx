@@ -14,7 +14,7 @@ import { Home } from "lucide-react";
  */
 const AuthNavbar = () => (
   <header
-    data-testid="auth-navbar"
+    data-test-id="auth-navbar"
     className="sticky top-0 z-40 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md"
   >
     <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -22,7 +22,7 @@ const AuthNavbar = () => (
         {/* Brand — returns to the public home page */}
         <Link
           to="/"
-          data-testid="auth-nav-brand-link"
+          data-test-id="auth-nav-brand-link"
           className="flex items-center gap-2"
         >
           <img
@@ -41,7 +41,7 @@ const AuthNavbar = () => (
               dashboard CTA used to occupy. */}
           <Link
             to="/"
-            data-testid="auth-nav-home-link"
+            data-test-id="auth-nav-home-link"
             className="btn btn-primary btn-sm inline-flex items-center gap-1"
           >
             <Home className="h-4 w-4" />

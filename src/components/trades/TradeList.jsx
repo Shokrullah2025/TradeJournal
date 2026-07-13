@@ -248,7 +248,7 @@ const TradeList = ({
                 <tr
                   key={trade.id}
                   ref={(el) => (rowRefs.current[trade.id] = el)}
-                  data-testid={`trade-row-${trade.id}`}
+                  data-test-id={`trade-row-${trade.id}`}
                   className={`transition-all duration-700 ${
                     flashId === trade.id
                       ? "bg-primary-100 dark:bg-primary-900/40 ring-2 ring-inset ring-primary-400"
@@ -405,14 +405,14 @@ const TradeImageThumbs = ({ images }) => {
   const shown = sorted.slice(0, 3);
 
   return (
-    <div className="flex items-center ml-3 space-x-1" data-testid="trade-row-images">
+    <div className="flex items-center ml-3 space-x-1" data-test-id="trade-row-images">
       {shown.map((img, i) => (
         <div
           key={img.id}
           className="relative"
           onMouseEnter={() => setZoomedIdx(i)}
           onMouseLeave={() => setZoomedIdx(null)}
-          data-testid={`trade-row-image-thumb-${i}`}
+          data-test-id={`trade-row-image-thumb-${i}`}
         >
           {img.previewUrl ? (
             <img

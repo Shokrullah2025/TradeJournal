@@ -1036,7 +1036,7 @@ const Settings = () => {
       {/* Mobile: horizontal chip nav (replaces the old drill-in menu). */}
       <div
         className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden"
-        data-testid="settings-nav-mobile"
+        data-test-id="settings-nav-mobile"
       >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -1047,7 +1047,7 @@ const Settings = () => {
                 setActiveTab(tab.id);
                 setSearchParams({ tab: tab.id }, { replace: true });
               }}
-              data-testid={`settings-chip-${tab.id}-link`}
+              data-test-id={`settings-chip-${tab.id}-link`}
               className={`flex-none whitespace-nowrap rounded-full px-3.5 py-2 text-[12.5px] transition-colors ${
                 isActive
                   ? "bg-[#e7f5f2] font-bold text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
@@ -1065,7 +1065,7 @@ const Settings = () => {
         <nav
           className="hidden lg:sticky lg:top-6 lg:block rounded-[14px] border border-gray-200 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
           aria-label="Settings Navigation"
-          data-testid="settings-nav"
+          data-test-id="settings-nav"
         >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -1076,7 +1076,7 @@ const Settings = () => {
                   setActiveTab(tab.id);
                   setSearchParams({ tab: tab.id }, { replace: true });
                 }}
-                data-testid={`settings-nav-${tab.id}-link`}
+                data-test-id={`settings-nav-${tab.id}-link`}
                 className={`mb-0.5 block w-full rounded-[10px] p-3 text-left transition-colors last:mb-0 ${
                   isActive
                     ? "bg-[#e7f5f2] dark:bg-[#2dd4bf]/10"
@@ -1117,7 +1117,7 @@ const Settings = () => {
 
           {/* General Tab (Option A row content) */}
           {activeTab === "general" && (
-            <div className="max-w-3xl space-y-6" data-testid="settings-general-panel">
+            <div className="max-w-3xl space-y-6" data-test-id="settings-general-panel">
               {/* Header + Save */}
               <div className="flex items-center justify-between gap-6">
                 <div>
@@ -1131,7 +1131,7 @@ const Settings = () => {
                 <button
                   onClick={handleSavePreferences}
                   className="flex flex-shrink-0 items-center justify-center gap-2 rounded-[10px] bg-primary-600 px-5 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-primary-700 lg:text-[13.5px] dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
-                  data-testid="settings-save-preferences-btn"
+                  data-test-id="settings-save-preferences-btn"
                 >
                   <Save className="w-4 h-4" />
                   <span>Save</span>
@@ -1141,7 +1141,7 @@ const Settings = () => {
               {/* Stats strip */}
               <div
                 className="grid grid-cols-2 overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] lg:grid-cols-4 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
-                data-testid="settings-stats-strip"
+                data-test-id="settings-stats-strip"
               >
                 {[
                   { id: "total", label: "Total Trades", value: trades.length },
@@ -1167,7 +1167,7 @@ const Settings = () => {
                   >
                     <div
                       className="text-xl font-extrabold tabular-nums text-gray-900 lg:text-[26px] dark:text-gray-300"
-                      data-testid={`settings-stat-${stat.id}-value`}
+                      data-test-id={`settings-stat-${stat.id}-value`}
                     >
                       {stat.value}
                     </div>
@@ -1203,7 +1203,7 @@ const Settings = () => {
                       setPreferences({ ...preferences, currency: e.target.value })
                     }
                     className="input w-full lg:w-64 lg:flex-shrink-0"
-                    data-testid="settings-currency-select"
+                    data-test-id="settings-currency-select"
                   >
                     <option value="USD">USD — US Dollar</option>
                     <option value="EUR">EUR — Euro</option>
@@ -1237,7 +1237,7 @@ const Settings = () => {
                       setPreferences({ ...preferences, timezone: e.target.value })
                     }
                     className="input w-full lg:w-64 lg:flex-shrink-0"
-                    data-testid="settings-timezone-select"
+                    data-test-id="settings-timezone-select"
                   >
                     <option value="America/New_York">Eastern Time (ET)</option>
                     <option value="America/Chicago">Central Time (CT)</option>
@@ -1273,7 +1273,7 @@ const Settings = () => {
                       setPreferences({ ...preferences, dateFormat: e.target.value })
                     }
                     className="input w-full lg:w-64 lg:flex-shrink-0"
-                    data-testid="settings-date-format-select"
+                    data-test-id="settings-date-format-select"
                   >
                     <option value="MM/dd/yyyy">MM/DD/YYYY (US)</option>
                     <option value="dd/MM/yyyy">DD/MM/YYYY (EU)</option>
@@ -1312,7 +1312,7 @@ const Settings = () => {
                         })
                       }
                       className="input pr-9"
-                      data-testid="settings-risk-percentage-input"
+                      data-test-id="settings-risk-percentage-input"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 dark:text-gray-500 pointer-events-none">
                       %
@@ -1329,7 +1329,7 @@ const Settings = () => {
 
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
-            <div className="max-w-3xl space-y-6" data-testid="notifications-settings-tab">
+            <div className="max-w-3xl space-y-6" data-test-id="notifications-settings-tab">
               {/* Header */}
               <div className="flex items-start justify-between gap-6">
                 <div>
@@ -1346,7 +1346,7 @@ const Settings = () => {
 
               {notificationPrefsLoading ? (
                 <div
-                  data-testid="notifications-settings-loading"
+                  data-test-id="notifications-settings-loading"
                   className="flex items-center justify-center rounded-[14px] border border-gray-200 bg-white py-10 shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800"
                 >
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
@@ -1364,7 +1364,7 @@ const Settings = () => {
                         <div
                           key={cat.id}
                           className="flex items-center justify-between gap-6 px-5 py-4"
-                          data-testid={`notifications-settings-row-${cat.id}`}
+                          data-test-id={`notifications-settings-row-${cat.id}`}
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
@@ -1385,7 +1385,7 @@ const Settings = () => {
                             <label className="relative inline-flex items-center cursor-pointer w-12 justify-center">
                               <input
                                 type="checkbox"
-                                data-testid={`notifications-settings-${cat.id}-inapp-toggle`}
+                                data-test-id={`notifications-settings-${cat.id}-inapp-toggle`}
                                 checked={channel.inApp}
                                 onChange={(e) =>
                                   setNotificationChannel(
@@ -1412,7 +1412,7 @@ const Settings = () => {
                             >
                               <input
                                 type="checkbox"
-                                data-testid={`notifications-settings-${cat.id}-email-toggle`}
+                                data-test-id={`notifications-settings-${cat.id}-email-toggle`}
                                 checked={channel.inApp && channel.email}
                                 disabled={!channel.inApp}
                                 onChange={(e) =>
@@ -1452,7 +1452,7 @@ const Settings = () => {
                 <button
                   onClick={handleCreateNewTemplate}
                   className="flex flex-shrink-0 items-center justify-center gap-2 rounded-[10px] bg-primary-600 px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-primary-700 lg:px-5 lg:text-[13.5px] dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
-                  data-testid="settings-new-template-btn"
+                  data-test-id="settings-new-template-btn"
                 >
                   <Plus className="w-4 h-4" />
                   <span className="lg:hidden">New</span>
@@ -1464,7 +1464,7 @@ const Settings = () => {
               {templates.length === 0 && !isCreatingTemplate && !templatesLoading ? (
                 <div
                   className="flex flex-col items-center rounded-2xl border border-gray-200 bg-white px-6 py-11 text-center shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] lg:py-[70px] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
-                  data-testid="settings-templates-empty"
+                  data-test-id="settings-templates-empty"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-gray-100 dark:bg-white/5">
                     <Layout className="h-6 w-6 text-gray-400 dark:text-gray-500" />
@@ -1486,13 +1486,13 @@ const Settings = () => {
               ) : (
                 <div
                   className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] divide-y divide-gray-100 dark:divide-white/5 dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"
-                  data-testid="settings-templates-list"
+                  data-test-id="settings-templates-list"
                 >
                   {templates.map((template) => (
                     <div
                       key={template.id}
                       className="flex items-start justify-between gap-4 px-5 py-4"
-                      data-testid={`settings-template-row-${template.id}`}
+                      data-test-id={`settings-template-row-${template.id}`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
@@ -1538,7 +1538,7 @@ const Settings = () => {
                           onClick={() => toggleTemplateDefault(template.id)}
                           className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400"
                           title="Toggle default"
-                          data-testid={`settings-template-default-btn-${template.id}`}
+                          data-test-id={`settings-template-default-btn-${template.id}`}
                         >
                           {template.isDefault ? (
                             <Star className="w-4 h-4 fill-current" />
@@ -1550,7 +1550,7 @@ const Settings = () => {
                           onClick={() => handleEditTemplate(template)}
                           className="text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400"
                           title="Edit template"
-                          data-testid={`settings-template-edit-btn-${template.id}`}
+                          data-test-id={`settings-template-edit-btn-${template.id}`}
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -1558,7 +1558,7 @@ const Settings = () => {
                           onClick={() => handleDuplicateTemplate(template)}
                           className="text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400"
                           title="Duplicate template"
-                          data-testid={`settings-template-duplicate-btn-${template.id}`}
+                          data-test-id={`settings-template-duplicate-btn-${template.id}`}
                         >
                           <Copy className="w-4 h-4" />
                         </button>
@@ -1566,7 +1566,7 @@ const Settings = () => {
                           onClick={() => handleDeleteTemplate(template.id)}
                           className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                           title="Delete template"
-                          data-testid={`settings-template-delete-btn-${template.id}`}
+                          data-test-id={`settings-template-delete-btn-${template.id}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1615,7 +1615,7 @@ const Settings = () => {
                     onClick={handleExportData}
                     disabled={trades.length === 0}
                     className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-gray-300 px-5 py-2.5 text-[13.5px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto lg:flex-shrink-0 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
-                    data-testid="settings-export-data-btn"
+                    data-test-id="settings-export-data-btn"
                   >
                     <Download className="w-4 h-4" />
                     <span>Export to Excel</span>
@@ -1648,7 +1648,7 @@ const Settings = () => {
                       accept=".csv,.xlsx,.xls"
                       onChange={handleImportData}
                       className="hidden"
-                      data-testid="settings-import-data-input"
+                      data-test-id="settings-import-data-input"
                     />
                   </label>
                 </div>
@@ -1674,7 +1674,7 @@ const Settings = () => {
                   <button
                     onClick={handleClearData}
                     className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-[#dc4a3f]/30 px-5 py-2.5 text-[13.5px] font-semibold text-[#dc4a3f] transition-colors hover:bg-red-50 lg:w-auto lg:flex-shrink-0 dark:border-red-400/30 dark:text-red-400 dark:hover:bg-red-500/10"
-                    data-testid="settings-clear-data-btn"
+                    data-test-id="settings-clear-data-btn"
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>Clear All Data</span>
@@ -2322,7 +2322,7 @@ const Settings = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
           <div
             className="settings-modal bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
-            data-testid="settings-template-modal"
+            data-test-id="settings-template-modal"
           >
             <div className="p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -3114,7 +3114,7 @@ const Settings = () => {
                                       isEnabled ? "bg-primary-600" : "bg-gray-300"
                                     }`}
                                     aria-pressed={isEnabled}
-                                    data-testid={`template-field-toggle-${fieldKey}`}
+                                    data-test-id={`template-field-toggle-${fieldKey}`}
                                   >
                                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${isEnabled ? "translate-x-5" : "translate-x-0"}`} />
                                   </button>
@@ -3161,14 +3161,14 @@ const Settings = () => {
                   <button
                     onClick={handleCloseTemplateModal}
                     className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm"
-                    data-testid="settings-template-cancel-btn"
+                    data-test-id="settings-template-cancel-btn"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveTemplate}
                     className="btn-gradient-blue flex-1 sm:flex-none justify-center px-6 py-2 rounded-md transition-colors flex items-center space-x-2 text-sm"
-                    data-testid="settings-template-save-btn"
+                    data-test-id="settings-template-save-btn"
                   >
                     <Save className="w-4 h-4" />
                     <span>

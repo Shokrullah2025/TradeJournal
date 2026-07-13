@@ -126,7 +126,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
     <ModalPortal>
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
-      data-testid="broker-modal"
+      data-test-id="broker-modal"
     >
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
@@ -144,7 +144,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            data-testid="modal-close-btn"
+            data-test-id="modal-close-btn"
           >
             <X className="w-6 h-6" />
           </button>
@@ -162,7 +162,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                     <div>
                       {propFirm ? (
                         <>
-                          <div className="font-semibold text-gray-900 dark:text-gray-100 text-lg" data-testid="broker-firm-name">
+                          <div className="font-semibold text-gray-900 dark:text-gray-100 text-lg" data-test-id="broker-firm-name">
                             {propFirm}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-1">
@@ -192,14 +192,14 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                   <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2">
                     <DollarSign className="w-4 h-4 text-green-500" />
                     <span>Account balance:</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100" data-testid="broker-account-balance">
+                    <span className="font-semibold text-gray-900 dark:text-gray-100" data-test-id="broker-account-balance">
                       {formatBalance(connectedAccount.balance)}
                     </span>
                   </div>
                 )}
 
                 {connectionError && (
-                  <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400 flex items-center space-x-1" data-testid="broker-connection-error">
+                  <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400 flex items-center space-x-1" data-test-id="broker-connection-error">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{connectionError}</span>
                   </div>
@@ -228,7 +228,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                     onClick={handleSync}
                     disabled={syncStatus === "syncing"}
                     className="btn btn-primary text-sm flex items-center space-x-1.5 disabled:opacity-60"
-                    data-testid="broker-sync-now-btn"
+                    data-test-id="broker-sync-now-btn"
                   >
                     <RefreshCw className={`w-4 h-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`} />
                     <span>Sync Now</span>
@@ -241,7 +241,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                       checked={autoSync}
                       onChange={(e) => toggleAutoSync(e.target.checked)}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      data-testid="broker-autosync-toggle"
+                      data-test-id="broker-autosync-toggle"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Auto-sync</span>
                   </label>
@@ -251,7 +251,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                       value={syncInterval}
                       onChange={(e) => setSyncInterval(parseInt(e.target.value))}
                       className="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg px-2 py-1.5"
-                      data-testid="broker-sync-interval-select"
+                      data-test-id="broker-sync-interval-select"
                     >
                       <option value={300000}>Every 5 min</option>
                       <option value={900000}>Every 15 min</option>
@@ -267,7 +267,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                 <button
                   onClick={() => disconnectBroker()}
                   className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline"
-                  data-testid="broker-disconnect-btn"
+                  data-test-id="broker-disconnect-btn"
                 >
                   Disconnect broker
                 </button>
@@ -337,7 +337,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                               ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                               : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                           }`}
-                          data-testid={`broker-option-${brokerKey}`}
+                          data-test-id={`broker-option-${brokerKey}`}
                         >
                           <div className="flex items-center space-x-3 mb-2">
                             <span className="text-2xl">{broker.logo}</span>
@@ -362,7 +362,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                       onClick={handleNextStep}
                       disabled={isConnecting}
                       className="w-full btn btn-primary flex items-center justify-center space-x-2"
-                      data-testid="broker-next-btn"
+                      data-test-id="broker-next-btn"
                     >
                       <span>
                         {hasPropFirms(selectedBrokerKey)
@@ -403,7 +403,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                             ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                         }`}
-                        data-testid={`prop-firm-option-${firm.id}`}
+                        data-test-id={`prop-firm-option-${firm.id}`}
                       >
                         <div className="flex items-center space-x-2">
                           <span className="text-xl">{firm.logo}</span>
@@ -417,7 +417,7 @@ const BrokerModal = ({ isOpen, onClose, onTradesImported }) => {
                     onClick={handleConnect}
                     disabled={isConnecting || !selectedFirm}
                     className="w-full btn btn-primary flex items-center justify-center space-x-2 disabled:opacity-60"
-                    data-testid="broker-connect-btn"
+                    data-test-id="broker-connect-btn"
                   >
                     {isConnecting ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />

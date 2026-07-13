@@ -84,7 +84,7 @@ const BrokerConfiguration = ({ onTradesImported }) => {
           <button
             onClick={handleConnectBroker}
             className="btn btn-secondary text-sm"
-            data-testid="broker-config-connect-btn"
+            data-test-id="broker-config-connect-btn"
           >
             Connect
           </button>
@@ -129,7 +129,7 @@ const BrokerConfiguration = ({ onTradesImported }) => {
           {connectedAccount && formatBalance(connectedAccount.balance) && (
             <div className="mt-2 flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
               <DollarSign className="w-3.5 h-3.5 text-green-500" />
-              <span className="font-medium" data-testid="broker-config-balance">
+              <span className="font-medium" data-test-id="broker-config-balance">
                 {formatBalance(connectedAccount.balance)}
               </span>
             </div>

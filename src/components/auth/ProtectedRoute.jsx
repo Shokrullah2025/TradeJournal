@@ -9,12 +9,12 @@ import MfaStepUp from "./MfaStepUp";
 const LoadingScreen = () => (
   <div
     className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"
-    data-testid="auth-loading-screen"
+    data-test-id="auth-loading-screen"
   >
     <div className="text-center">
       <div
         className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"
-        data-testid="auth-loading-spinner"
+        data-test-id="auth-loading-spinner"
       />
       <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
     </div>
@@ -99,7 +99,7 @@ export const AdminRoute = ({ children }) => {
     return (
       <div
         className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"
-        data-testid="admin-access-denied"
+        data-test-id="admin-access-denied"
       >
         <div className="text-center">
           <div className="text-red-500 text-5xl mb-4 font-bold">403</div>
@@ -130,7 +130,7 @@ export const BillingRoute = ({ children }) => {
     return (
       <div
         className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"
-        data-testid="billing-access-denied"
+        data-test-id="billing-access-denied"
       >
         <div className="text-center">
           <div className="text-red-500 text-5xl mb-4 font-bold">403</div>

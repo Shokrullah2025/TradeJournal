@@ -101,7 +101,7 @@ const PnLOverviewHero = ({ trades = [], timeLabel = "All Time" }) => {
   return (
     <section
       className="relative overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-6 py-5"
-      data-testid="analytics-pnl-hero"
+      data-test-id="analytics-pnl-hero"
     >
       <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
         {/* Left: headline + mini stats */}
@@ -115,7 +115,7 @@ const PnLOverviewHero = ({ trades = [], timeLabel = "All Time" }) => {
                 ? "text-success-600 dark:text-success-400"
                 : "text-danger-600 dark:text-danger-400"
             }`}
-            data-testid="analytics-net-pnl-value"
+            data-test-id="analytics-net-pnl-value"
           >
             {formatMoney(data.netPnL)}
           </div>

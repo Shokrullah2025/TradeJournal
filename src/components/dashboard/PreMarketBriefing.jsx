@@ -38,7 +38,7 @@ const Tile = ({ label, value, valueClass, sub, testId }) => (
     <div className="text-[11px] text-gray-500 dark:text-gray-400">{label}</div>
     <div
       className={`text-lg font-bold ${valueClass || "text-gray-900 dark:text-gray-100"}`}
-      data-testid={testId}
+      data-test-id={testId}
     >
       {value}
     </div>
@@ -88,7 +88,7 @@ const PreMarketBriefing = ({ trades, user }) => {
   return (
     <div
       className="card !p-4 border-l-4 border-l-success-500"
-      data-testid="pre-market-briefing"
+      data-test-id="pre-market-briefing"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -107,7 +107,7 @@ const PreMarketBriefing = ({ trades, user }) => {
           onClick={handleDismiss}
           className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           aria-label="Dismiss briefing for today"
-          data-testid="pre-market-briefing-dismiss-btn"
+          data-test-id="pre-market-briefing-dismiss-btn"
         >
           <X className="w-4 h-4" />
         </button>
@@ -171,7 +171,7 @@ const PreMarketBriefing = ({ trades, user }) => {
       {warning && (
         <div
           className="mt-3 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2"
-          data-testid="briefing-warning"
+          data-test-id="briefing-warning"
         >
           {warning.type === "hour"
             ? `⚠️ Heads-up: your trades around ${fmtHourRange(

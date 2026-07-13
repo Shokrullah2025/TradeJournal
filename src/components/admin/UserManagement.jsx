@@ -107,7 +107,7 @@ const UserManagement = () => {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-4" data-testid="admin-user-management">
+    <div className="space-y-4" data-test-id="admin-user-management">
       {/* Search + filters */}
       <div className="card">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -118,14 +118,14 @@ const UserManagement = () => {
               placeholder="Search by name…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              data-testid="admin-user-search-input"
+              data-test-id="admin-user-search-input"
             />
           </div>
           <select
             className="select"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-            data-testid="admin-user-status-filter"
+            data-test-id="admin-user-status-filter"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -136,7 +136,7 @@ const UserManagement = () => {
             className="select"
             value={roleFilter}
             onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}
-            data-testid="admin-user-role-filter"
+            data-test-id="admin-user-role-filter"
           >
             <option value="all">All Roles</option>
             <option value="user">User</option>
@@ -163,11 +163,11 @@ const UserManagement = () => {
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-users-loading-spinner">Loading…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-test-id="admin-users-loading-spinner">Loading…</td></tr>
             ) : error ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-danger-600 dark:text-danger-400" data-testid="admin-users-error">{error}</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-danger-600 dark:text-danger-400" data-test-id="admin-users-error">{error}</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-users-empty-state">No users found.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-test-id="admin-users-empty-state">No users found.</td></tr>
             ) : (
               rows.map((u) => {
                 const name =
@@ -175,7 +175,7 @@ const UserManagement = () => {
                   `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() ||
                   u.id.slice(0, 8);
                 return (
-                  <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40" data-testid={`admin-user-row-${u.id}`}>
+                  <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40" data-test-id={`admin-user-row-${u.id}`}>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
                         {u.avatar_url ? (
@@ -202,20 +202,20 @@ const UserManagement = () => {
                           onClick={() => handleUpdate(u.id, { status: "suspended" })}
                           disabled={savingId === u.id}
                           className="text-danger-600 dark:text-danger-400 hover:underline text-xs disabled:opacity-50 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                          data-testid={`admin-suspend-btn-${u.id}`}
+                          data-test-id={`admin-suspend-btn-${u.id}`}
                         >Suspend</button>
                       ) : (
                         <button
                           onClick={() => handleUpdate(u.id, { status: "active" })}
                           disabled={savingId === u.id}
                           className="text-success-600 dark:text-success-400 hover:underline text-xs disabled:opacity-50 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                          data-testid={`admin-activate-btn-${u.id}`}
+                          data-test-id={`admin-activate-btn-${u.id}`}
                         >Activate</button>
                       )}
                       <button
                         onClick={() => setSelectedId(u.id)}
                         className="text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1 text-xs rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                        data-testid={`admin-view-user-btn-${u.id}`}
+                        data-test-id={`admin-view-user-btn-${u.id}`}
                       >
                         <Eye className="w-3.5 h-3.5" /> View
                       </button>
@@ -230,7 +230,7 @@ const UserManagement = () => {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="admin-users-count">
+        <p className="text-sm text-gray-500 dark:text-gray-400" data-test-id="admin-users-count">
           {total.toLocaleString()} user{total === 1 ? "" : "s"}
         </p>
         <div className="flex items-center gap-2">
@@ -238,7 +238,7 @@ const UserManagement = () => {
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
-            data-testid="admin-users-prev-btn"
+            data-test-id="admin-users-prev-btn"
             aria-label="Previous page"
           >
             <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
@@ -250,7 +250,7 @@ const UserManagement = () => {
             onClick={() => setPage((p) => (p + 1 < totalPages ? p + 1 : p))}
             disabled={page + 1 >= totalPages}
             className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
-            data-testid="admin-users-next-btn"
+            data-test-id="admin-users-next-btn"
             aria-label="Next page"
           >
             <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />

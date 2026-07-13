@@ -172,7 +172,7 @@ const FieldError = ({ id, message }) =>
   message ? (
     <p
       id={id}
-      data-testid={id}
+      data-test-id={id}
       className="mt-1 text-xs text-danger-600 dark:text-danger-400"
     >
       {message}
@@ -505,7 +505,7 @@ const BlogManagement = () => {
     return (
       <div
         className="flex items-center justify-center py-16"
-        data-testid="admin-blog-loading-spinner"
+        data-test-id="admin-blog-loading-spinner"
       >
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
       </div>
@@ -530,7 +530,7 @@ const BlogManagement = () => {
   const migrationNotice = tableMissing && (
     <div
       className="rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 px-4 py-3 text-sm text-warning-700 dark:text-warning-300 flex items-start gap-2"
-      data-testid="admin-blog-table-missing"
+      data-test-id="admin-blog-table-missing"
     >
       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
       <span>
@@ -543,12 +543,12 @@ const BlogManagement = () => {
 
   if (view === "editor") {
     return (
-      <div className="space-y-6" data-testid="admin-blog-editor">
+      <div className="space-y-6" data-test-id="admin-blog-editor">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <button
             type="button"
             onClick={backToList}
-            data-testid="admin-blog-editor-back-btn"
+            data-test-id="admin-blog-editor-back-btn"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -559,7 +559,7 @@ const BlogManagement = () => {
               type="button"
               disabled={saving || uploadingImage}
               onClick={() => save("draft")}
-              data-testid="admin-blog-save-draft-btn"
+              data-test-id="admin-blog-save-draft-btn"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
@@ -573,7 +573,7 @@ const BlogManagement = () => {
               type="button"
               disabled={saving || uploadingImage}
               onClick={() => save("published")}
-              data-testid="admin-blog-publish-btn"
+              data-test-id="admin-blog-publish-btn"
               className="btn-gradient inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
@@ -587,7 +587,7 @@ const BlogManagement = () => {
         </div>
 
         <form
-          data-testid="admin-blog-post-form"
+          data-test-id="admin-blog-post-form"
           onSubmit={(e) => {
             e.preventDefault();
             save();
@@ -607,7 +607,7 @@ const BlogManagement = () => {
                 value={form.title}
                 onChange={(e) => setField("title", e.target.value)}
                 placeholder="e.g. Five Habits of Consistently Profitable Traders"
-                data-testid="admin-blog-title-input"
+                data-test-id="admin-blog-title-input"
                 className="input w-full"
               />
               <FieldError id="admin-blog-title-error" message={errors.title} />
@@ -630,7 +630,7 @@ const BlogManagement = () => {
                     )
                   }
                   placeholder="five-habits-of-profitable-traders"
-                  data-testid="admin-blog-slug-input"
+                  data-test-id="admin-blog-slug-input"
                   className="input w-full font-mono text-sm"
                 />
                 <FieldError id="admin-blog-slug-error" message={errors.slug} />
@@ -650,7 +650,7 @@ const BlogManagement = () => {
                   value={form.readingTime}
                   onChange={(e) => setField("readingTime", e.target.value)}
                   placeholder={String(liveEstimate)}
-                  data-testid="admin-blog-reading-time-input"
+                  data-test-id="admin-blog-reading-time-input"
                   className="input w-full"
                 />
                 <FieldError
@@ -669,7 +669,7 @@ const BlogManagement = () => {
                 value={form.tagsText}
                 onChange={(e) => setField("tagsText", e.target.value)}
                 placeholder="Journaling, Psychology, Beginners"
-                data-testid="admin-blog-tags-input"
+                data-test-id="admin-blog-tags-input"
                 className="input w-full"
               />
               <FieldError id="admin-blog-tags-error" message={errors.tags} />
@@ -702,14 +702,14 @@ const BlogManagement = () => {
                 <img
                   src={form.coverImageUrl}
                   alt="Cover preview"
-                  data-testid="admin-blog-cover-preview-img"
+                  data-test-id="admin-blog-cover-preview-img"
                   className="w-full rounded-xl border border-gray-200 dark:border-gray-700 object-cover aspect-video"
                 />
                 <button
                   type="button"
                   onClick={handleImageRemove}
                   disabled={uploadingImage}
-                  data-testid="admin-blog-cover-remove-btn"
+                  data-test-id="admin-blog-cover-remove-btn"
                   aria-label="Remove cover image"
                   className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-danger-500 hover:bg-danger-600 text-white flex items-center justify-center shadow ring-2 ring-white dark:ring-gray-800"
                 >
@@ -721,13 +721,13 @@ const BlogManagement = () => {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingImage}
-                data-testid="admin-blog-cover-upload-btn"
+                data-test-id="admin-blog-cover-upload-btn"
                 className="w-full max-w-md aspect-video rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 transition-colors flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 disabled:cursor-not-allowed"
               >
                 {uploadingImage ? (
                   <Loader2
                     className="w-8 h-8 animate-spin"
-                    data-testid="admin-blog-cover-uploading-spinner"
+                    data-test-id="admin-blog-cover-uploading-spinner"
                   />
                 ) : (
                   <ImagePlus className="w-8 h-8" />
@@ -744,7 +744,7 @@ const BlogManagement = () => {
               accept="image/*"
               onChange={handleImageSelect}
               className="hidden"
-              data-testid="admin-blog-cover-file-input"
+              data-test-id="admin-blog-cover-file-input"
             />
           </div>
 
@@ -757,7 +757,7 @@ const BlogManagement = () => {
               <button
                 type="button"
                 onClick={addSection}
-                data-testid="admin-blog-add-section-btn"
+                data-test-id="admin-blog-add-section-btn"
                 className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
               >
                 <Plus className="w-4 h-4" />
@@ -768,7 +768,7 @@ const BlogManagement = () => {
             {form.sections.map((section, index) => (
               <div
                 key={index}
-                data-testid={`admin-blog-section-${index}`}
+                data-test-id={`admin-blog-section-${index}`}
                 className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3"
               >
                 <div className="flex items-center justify-between gap-2">
@@ -780,7 +780,7 @@ const BlogManagement = () => {
                       type="button"
                       onClick={() => moveSection(index, -1)}
                       disabled={index === 0}
-                      data-testid={`admin-blog-section-up-btn-${index}`}
+                      data-test-id={`admin-blog-section-up-btn-${index}`}
                       aria-label={`Move section ${index + 1} up`}
                       className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:opacity-30"
                     >
@@ -790,7 +790,7 @@ const BlogManagement = () => {
                       type="button"
                       onClick={() => moveSection(index, 1)}
                       disabled={index === form.sections.length - 1}
-                      data-testid={`admin-blog-section-down-btn-${index}`}
+                      data-test-id={`admin-blog-section-down-btn-${index}`}
                       aria-label={`Move section ${index + 1} down`}
                       className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:opacity-30"
                     >
@@ -800,7 +800,7 @@ const BlogManagement = () => {
                       type="button"
                       onClick={() => removeSection(index)}
                       disabled={form.sections.length === 1}
-                      data-testid={`admin-blog-section-remove-btn-${index}`}
+                      data-test-id={`admin-blog-section-remove-btn-${index}`}
                       aria-label={`Remove section ${index + 1}`}
                       className="p-1.5 rounded-md text-gray-400 hover:text-danger-600 dark:hover:text-danger-400 disabled:opacity-30"
                     >
@@ -818,7 +818,7 @@ const BlogManagement = () => {
                     value={section.heading}
                     onChange={(e) => updateSection(index, { heading: e.target.value })}
                     placeholder="e.g. Why most trading journals fail"
-                    data-testid={`admin-blog-section-heading-input-${index}`}
+                    data-test-id={`admin-blog-section-heading-input-${index}`}
                     className="input w-full"
                   />
                   <FieldError
@@ -862,7 +862,7 @@ const BlogManagement = () => {
               <button
                 type="button"
                 onClick={addFaq}
-                data-testid="admin-blog-add-faq-btn"
+                data-test-id="admin-blog-add-faq-btn"
                 className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
               >
                 <Plus className="w-4 h-4" />
@@ -877,7 +877,7 @@ const BlogManagement = () => {
             {form.faqs.map((faq, index) => (
               <div
                 key={index}
-                data-testid={`admin-blog-faq-${index}`}
+                data-test-id={`admin-blog-faq-${index}`}
                 className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3"
               >
                 <div className="flex items-center justify-between">
@@ -887,7 +887,7 @@ const BlogManagement = () => {
                   <button
                     type="button"
                     onClick={() => removeFaq(index)}
-                    data-testid={`admin-blog-faq-remove-btn-${index}`}
+                    data-test-id={`admin-blog-faq-remove-btn-${index}`}
                     aria-label={`Remove FAQ ${index + 1}`}
                     className="p-1.5 rounded-md text-gray-400 hover:text-danger-600 dark:hover:text-danger-400"
                   >
@@ -903,7 +903,7 @@ const BlogManagement = () => {
                     type="text"
                     value={faq.question}
                     onChange={(e) => updateFaq(index, { question: e.target.value })}
-                    data-testid={`admin-blog-faq-question-input-${index}`}
+                    data-test-id={`admin-blog-faq-question-input-${index}`}
                     className="input w-full"
                   />
                   <FieldError
@@ -918,7 +918,7 @@ const BlogManagement = () => {
                     rows={3}
                     value={faq.answer}
                     onChange={(e) => updateFaq(index, { answer: e.target.value })}
-                    data-testid={`admin-blog-faq-answer-input-${index}`}
+                    data-test-id={`admin-blog-faq-answer-input-${index}`}
                     className="input w-full"
                   />
                   <FieldError
@@ -944,7 +944,7 @@ const BlogManagement = () => {
                 type="text"
                 value={form.seoTitle}
                 onChange={(e) => setField("seoTitle", e.target.value)}
-                data-testid="admin-blog-seo-title-input"
+                data-test-id="admin-blog-seo-title-input"
                 className="input w-full"
               />
               <FieldError id="admin-blog-seo-title-error" message={errors.seoTitle} />
@@ -961,7 +961,7 @@ const BlogManagement = () => {
                 rows={2}
                 value={form.seoDescription}
                 onChange={(e) => setField("seoDescription", e.target.value)}
-                data-testid="admin-blog-seo-description-input"
+                data-test-id="admin-blog-seo-description-input"
                 className="input w-full"
               />
               <FieldError
@@ -976,14 +976,14 @@ const BlogManagement = () => {
   }
 
   return (
-    <div className="space-y-4" data-testid="admin-blog-management">
+    <div className="space-y-4" data-test-id="admin-blog-management">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         {header}
         <button
           type="button"
           onClick={openNew}
           disabled={tableMissing}
-          data-testid="admin-blog-new-post-btn"
+          data-test-id="admin-blog-new-post-btn"
           className="btn-gradient inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
@@ -996,7 +996,7 @@ const BlogManagement = () => {
       {!tableMissing && posts.length === 0 && (
         <div
           className="card p-10 text-center text-gray-500 dark:text-gray-400"
-          data-testid="admin-blog-empty-state"
+          data-test-id="admin-blog-empty-state"
         >
           <Newspaper className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No posts yet</p>
@@ -1007,7 +1007,7 @@ const BlogManagement = () => {
       )}
 
       {posts.length > 0 && (
-        <div className="card overflow-x-auto p-0" data-testid="admin-blog-post-list">
+        <div className="card overflow-x-auto p-0" data-test-id="admin-blog-post-list">
           <table className="min-w-[720px] w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
@@ -1027,7 +1027,7 @@ const BlogManagement = () => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {posts.map((post) => (
-                <tr key={post.id} data-testid={`admin-blog-post-row-${post.id}`}>
+                <tr key={post.id} data-test-id={`admin-blog-post-row-${post.id}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3 min-w-0">
                       {post.cover_image_url ? (
@@ -1064,7 +1064,7 @@ const BlogManagement = () => {
                           href={`/blog/${post.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          data-testid={`admin-blog-view-btn-${post.id}`}
+                          data-test-id={`admin-blog-view-btn-${post.id}`}
                           aria-label={`View ${post.title} on the site`}
                           title="View on site"
                           className="p-2 rounded-md text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
@@ -1076,7 +1076,7 @@ const BlogManagement = () => {
                         type="button"
                         onClick={() => togglePublish(post)}
                         disabled={busyId === post.id}
-                        data-testid={`admin-blog-toggle-publish-btn-${post.id}`}
+                        data-test-id={`admin-blog-toggle-publish-btn-${post.id}`}
                         title={post.status === "published" ? "Unpublish" : "Publish"}
                         className="p-2 rounded-md text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-40"
                       >
@@ -1091,7 +1091,7 @@ const BlogManagement = () => {
                       <button
                         type="button"
                         onClick={() => openEdit(post)}
-                        data-testid={`admin-blog-edit-btn-${post.id}`}
+                        data-test-id={`admin-blog-edit-btn-${post.id}`}
                         title="Edit"
                         className="p-2 rounded-md text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
                       >
@@ -1101,7 +1101,7 @@ const BlogManagement = () => {
                         type="button"
                         onClick={() => deletePost(post)}
                         disabled={busyId === post.id}
-                        data-testid={`admin-blog-delete-btn-${post.id}`}
+                        data-test-id={`admin-blog-delete-btn-${post.id}`}
                         title="Delete"
                         className="p-2 rounded-md text-gray-400 hover:text-danger-600 dark:hover:text-danger-400 disabled:opacity-40"
                       >

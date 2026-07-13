@@ -20,7 +20,7 @@ const tradeDate = (t) =>
 // Full-width cumulative-P&L area chart. Green when net positive, red otherwise.
 const SummarySparkline = ({ data, positive }) => {
   if (!data || data.length < 2) {
-    return <div className="h-20" data-testid="pnl-summary-sparkline-empty" />;
+    return <div className="h-20" data-test-id="pnl-summary-sparkline-empty" />;
   }
 
   const max = Math.max(...data);
@@ -38,7 +38,7 @@ const SummarySparkline = ({ data, positive }) => {
     .join(" ");
 
   return (
-    <div className="h-20" data-testid="pnl-summary-sparkline">
+    <div className="h-20" data-test-id="pnl-summary-sparkline">
       <svg
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
@@ -75,7 +75,7 @@ const StatRow = ({ label, value, valueClass, testId }) => (
     <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
     <span
       className={`text-sm font-semibold ${valueClass}`}
-      data-testid={testId}
+      data-test-id={testId}
     >
       {value}
     </span>
@@ -149,7 +149,7 @@ const TradePnLSummary = ({ trades, variant }) => {
   const positive = stats.total >= 0;
 
   return (
-    <div className="space-y-4" data-testid="trade-pnl-summary">
+    <div className="space-y-4" data-test-id="trade-pnl-summary">
       {/* Headline summary card */}
       <div className="card">
         <div className="flex items-center justify-between mb-3">
@@ -168,7 +168,7 @@ const TradePnLSummary = ({ trades, variant }) => {
               ? "text-success-600 dark:text-success-400"
               : "text-danger-600 dark:text-danger-400"
           }`}
-          data-testid="pnl-summary-total-value"
+          data-test-id="pnl-summary-total-value"
         >
           {fmtMoney(stats.total)}
         </div>
@@ -215,7 +215,7 @@ const TradePnLSummary = ({ trades, variant }) => {
             </span>
             <span
               className="text-sm font-semibold text-gray-900 dark:text-gray-100"
-              data-testid="pnl-summary-win-rate-value"
+              data-test-id="pnl-summary-win-rate-value"
             >
               {stats.winRate.toFixed(1)}%
             </span>
@@ -232,7 +232,7 @@ const TradePnLSummary = ({ trades, variant }) => {
       {/* Two compact stat cards */}
       <div className="grid grid-cols-2 gap-4">
         {variant === "list" ? (
-          <div className="card text-center" data-testid="pnl-summary-open-card">
+          <div className="card text-center" data-test-id="pnl-summary-open-card">
             <div className="text-base font-bold tabular-nums text-primary-600 dark:text-primary-400">
               {stats.openPositions}
             </div>
@@ -241,7 +241,7 @@ const TradePnLSummary = ({ trades, variant }) => {
             </div>
           </div>
         ) : (
-          <div className="card text-center" data-testid="pnl-summary-total-card">
+          <div className="card text-center" data-test-id="pnl-summary-total-card">
             <div className="text-base font-bold tabular-nums text-gray-900 dark:text-gray-100">
               {stats.totalTrades}
             </div>
@@ -251,7 +251,7 @@ const TradePnLSummary = ({ trades, variant }) => {
           </div>
         )}
 
-        <div className="card text-center" data-testid="pnl-summary-monthly-card">
+        <div className="card text-center" data-test-id="pnl-summary-monthly-card">
           <div
             className={`text-base font-bold tabular-nums ${
               stats.monthlyPnL >= 0

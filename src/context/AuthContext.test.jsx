@@ -56,7 +56,7 @@ import { AuthProvider, useAuth } from "./AuthContext";
 let auth;
 const Probe = () => {
   auth = useAuth();
-  return <div data-testid="auth-flag">{String(auth.isAuthenticated)}</div>;
+  return <div data-test-id="auth-flag">{String(auth.isAuthenticated)}</div>;
 };
 
 const fakeSession = {

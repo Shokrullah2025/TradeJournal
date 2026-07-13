@@ -108,18 +108,18 @@ const BillingOverview = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16" data-testid="admin-billing-loading-spinner">
+      <div className="flex items-center justify-center py-16" data-test-id="admin-billing-loading-spinner">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6" data-testid="admin-billing-overview">
+    <div className="space-y-6" data-test-id="admin-billing-overview">
       {error && (
         <div
           className="rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 px-4 py-3 text-sm text-warning-700 dark:text-warning-300"
-          data-testid="admin-billing-error"
+          data-test-id="admin-billing-error"
         >
           {error}
         </div>
@@ -132,7 +132,7 @@ const BillingOverview = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card" data-testid="admin-billing-plan-mix">
+        <div className="card" data-test-id="admin-billing-plan-mix">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Subscription Mix</h3>
           {planMix.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 py-12 text-center">No active subscriptions.</p>
@@ -162,7 +162,7 @@ const BillingOverview = () => {
           )}
         </div>
 
-        <div className="card" data-testid="admin-billing-invoices">
+        <div className="card" data-test-id="admin-billing-invoices">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
             <FileText className="w-4 h-4 text-gray-400" /> Recent Invoices
           </h3>
@@ -171,7 +171,7 @@ const BillingOverview = () => {
           ) : (
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {invoices.map((inv) => (
-                <li key={inv.id} className="flex items-center justify-between py-2.5" data-testid={`admin-invoice-row-${inv.id}`}>
+                <li key={inv.id} className="flex items-center justify-between py-2.5" data-test-id={`admin-invoice-row-${inv.id}`}>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{inv.invoice_number}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{new Date(inv.created_at).toLocaleDateString()}</div>

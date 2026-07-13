@@ -180,7 +180,7 @@ const Header = ({ onMenuClick }) => {
                     ? "text-success-600 dark:text-success-400"
                     : "text-danger-600 dark:text-danger-400"
                 }`}
-                data-testid="header-total-pnl-value"
+                data-test-id="header-total-pnl-value"
               >
                 {`${stats.totalPnL < 0 ? "-" : "+"}$${Math.abs(
                   stats.totalPnL
@@ -194,7 +194,7 @@ const Header = ({ onMenuClick }) => {
               </span>
               <span
                 className="text-sm font-semibold font-mono text-primary-600 dark:text-primary-400"
-                data-testid="header-win-rate-value"
+                data-test-id="header-win-rate-value"
               >
                 {stats.winRate}%
               </span>
@@ -215,7 +215,7 @@ const Header = ({ onMenuClick }) => {
                   onChange={handleSearchChange}
                   onKeyDown={handleSearchKeyDown}
                   onFocus={() => searchTerm && setIsSearchOpen(true)}
-                  data-testid="header-search-input"
+                  data-test-id="header-search-input"
                   className="bg-transparent border-none outline-none text-sm w-52 dark:text-gray-100 dark:placeholder-gray-400"
                 />
               </div>
@@ -226,7 +226,7 @@ const Header = ({ onMenuClick }) => {
               {isSearchOpen && searchTerm.trim() && (
                 <div
                   className="absolute left-0 top-full mt-2 w-full bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 py-1.5 z-[200]"
-                  data-testid="header-search-suggestions"
+                  data-test-id="header-search-suggestions"
                 >
                   {suggestions.length > 0 ? (
                     suggestions.map((s, i) => (
@@ -240,7 +240,7 @@ const Header = ({ onMenuClick }) => {
                           applySearch(s.value);
                         }}
                         onMouseEnter={() => setActiveSuggestion(i)}
-                        data-testid={`header-search-suggestion-${i}`}
+                        data-test-id={`header-search-suggestion-${i}`}
                         className={`flex items-center justify-between w-full px-3 py-2 text-sm text-left transition-colors ${
                           i === activeSuggestion
                             ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
@@ -256,7 +256,7 @@ const Header = ({ onMenuClick }) => {
                   ) : (
                     <div
                       className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400"
-                      data-testid="header-search-no-results"
+                      data-test-id="header-search-no-results"
                     >
                       <p className="font-medium text-gray-700 dark:text-gray-200">
                         No matches for “{searchTerm.trim()}”
@@ -278,7 +278,7 @@ const Header = ({ onMenuClick }) => {
           <div className="header__profile relative" ref={profileMenuRef}>
             <div className="flex items-center space-x-3">
               <div className="header__profile-info hidden md:block text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100" data-testid="header-profile-name">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100" data-test-id="header-profile-name">
                   {displayName}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -294,7 +294,7 @@ const Header = ({ onMenuClick }) => {
                 onClick={toggleProfileMenu}
                 className="header__profile-avatar w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors duration-200 overflow-hidden"
                 title="Profile Menu"
-                data-testid="header-profile-menu-btn"
+                data-test-id="header-profile-menu-btn"
               >
                 {user?.avatarUrl ? (
                   <img

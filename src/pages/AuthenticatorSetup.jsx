@@ -228,7 +228,7 @@ const AuthenticatorSetup = () => {
       // Same background as the app shell's <main> (App.jsx) so opening this
       // page from Settings doesn't visibly jump to a different surface.
       className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-primary-900/30 flex items-center justify-center px-4 py-10"
-      data-testid="authenticator-setup-page"
+      data-test-id="authenticator-setup-page"
     >
       <div className="w-full max-w-xl">
         {/* Progress rail (hidden on the pre-flight states) */}
@@ -241,14 +241,14 @@ const AuthenticatorSetup = () => {
         <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl shadow-gray-900/5 overflow-hidden">
           {/* ── Loading ─────────────────────────────────────────────────── */}
           {step === "loading" && (
-            <div className="flex items-center justify-center py-24" data-testid="mfa-setup-loading">
+            <div className="flex items-center justify-center py-24" data-test-id="mfa-setup-loading">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
             </div>
           )}
 
           {/* ── Already enrolled ────────────────────────────────────────── */}
           {step === "already" && (
-            <div className="px-6 sm:px-10 py-10 text-center" data-testid="mfa-setup-already-enabled">
+            <div className="px-6 sm:px-10 py-10 text-center" data-test-id="mfa-setup-already-enabled">
               <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl bg-green-100 dark:bg-green-900/30 mb-5">
                 <ShieldCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
@@ -267,7 +267,7 @@ const AuthenticatorSetup = () => {
                   type="button"
                   onClick={() => navigate("/dashboard")}
                   className="btn btn-gradient justify-center"
-                  data-testid="mfa-setup-dashboard-btn"
+                  data-test-id="mfa-setup-dashboard-btn"
                 >
                   Go to dashboard
                 </button>
@@ -275,7 +275,7 @@ const AuthenticatorSetup = () => {
                   type="button"
                   onClick={() => navigate("/settings?tab=security")}
                   className="btn btn-secondary justify-center"
-                  data-testid="mfa-setup-manage-btn"
+                  data-test-id="mfa-setup-manage-btn"
                 >
                   Manage in settings
                 </button>
@@ -285,7 +285,7 @@ const AuthenticatorSetup = () => {
 
           {/* ── Step 1: Intro ───────────────────────────────────────────── */}
           {step === "intro" && (
-            <div data-testid="mfa-setup-intro">
+            <div data-test-id="mfa-setup-intro">
               <div className="px-6 sm:px-10 pt-10 pb-8 text-center bg-gradient-to-b from-primary-50/70 to-transparent dark:from-primary-900/15">
                 <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-lg shadow-primary-600/30 mb-5">
                   <Shield className="w-8 h-8 text-white" />
@@ -335,7 +335,7 @@ const AuthenticatorSetup = () => {
                   onClick={startEnroll}
                   disabled={busy}
                   className="btn btn-gradient flex items-center justify-center gap-2"
-                  data-testid="mfa-setup-start-btn"
+                  data-test-id="mfa-setup-start-btn"
                 >
                   {busy ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />
@@ -351,7 +351,7 @@ const AuthenticatorSetup = () => {
                   onClick={leave}
                   disabled={busy}
                   className="btn btn-secondary justify-center text-gray-600 dark:text-gray-300"
-                  data-testid="mfa-setup-skip-btn"
+                  data-test-id="mfa-setup-skip-btn"
                 >
                   {onboarding ? "Skip for now" : "Back to settings"}
                 </button>
@@ -361,7 +361,7 @@ const AuthenticatorSetup = () => {
 
           {/* ── Step 2: Scan QR ─────────────────────────────────────────── */}
           {step === "scan" && enroll && (
-            <div data-testid="mfa-setup-scan">
+            <div data-test-id="mfa-setup-scan">
               <div className="px-6 sm:px-10 pt-8 pb-6 text-center">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   Scan with your authenticator app
@@ -377,7 +377,7 @@ const AuthenticatorSetup = () => {
                     src={enroll.qr}
                     alt="Two-factor authentication QR code"
                     className="w-48 h-48"
-                    data-testid="mfa-setup-qr"
+                    data-test-id="mfa-setup-qr"
                   />
                 </div>
 
@@ -388,7 +388,7 @@ const AuthenticatorSetup = () => {
                   <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 px-3 py-2.5">
                     <code
                       className="flex-1 min-w-0 break-all text-center text-sm font-semibold tracking-wide text-gray-800 dark:text-gray-200"
-                      data-testid="mfa-setup-secret"
+                      data-test-id="mfa-setup-secret"
                     >
                       {prettySecret}
                     </code>
@@ -397,7 +397,7 @@ const AuthenticatorSetup = () => {
                       onClick={copySecret}
                       className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 transition-colors"
                       aria-label="Copy setup key"
-                      data-testid="mfa-setup-copy-secret-btn"
+                      data-test-id="mfa-setup-copy-secret-btn"
                     >
                       {copied
                         ? <Check className="w-4 h-4 text-green-500" />
@@ -412,7 +412,7 @@ const AuthenticatorSetup = () => {
                   type="button"
                   onClick={() => setStep("verify")}
                   className="btn btn-gradient flex items-center justify-center gap-2"
-                  data-testid="mfa-setup-scanned-btn"
+                  data-test-id="mfa-setup-scanned-btn"
                 >
                   I've added it — continue
                   <ArrowRight className="w-4 h-4" />
@@ -421,7 +421,7 @@ const AuthenticatorSetup = () => {
                   type="button"
                   onClick={cancelEnroll}
                   className="btn btn-secondary flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300"
-                  data-testid="mfa-setup-scan-back-btn"
+                  data-test-id="mfa-setup-scan-back-btn"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back
@@ -432,7 +432,7 @@ const AuthenticatorSetup = () => {
 
           {/* ── Step 3: Verify code ─────────────────────────────────────── */}
           {step === "verify" && enroll && (
-            <div data-testid="mfa-setup-verify">
+            <div data-test-id="mfa-setup-verify">
               <div className="px-6 sm:px-10 pt-8 pb-6 text-center">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   Enter your first code
@@ -445,7 +445,7 @@ const AuthenticatorSetup = () => {
               <form
                 className="px-6 sm:px-10 pb-8"
                 onSubmit={(e) => { e.preventDefault(); verify(code); }}
-                data-testid="mfa-setup-verify-form"
+                data-test-id="mfa-setup-verify-form"
               >
                 <TotpCodeInput
                   value={code}
@@ -458,7 +458,7 @@ const AuthenticatorSetup = () => {
                 {codeError && (
                   <p
                     className="mt-3 text-sm text-danger-600 dark:text-danger-400 text-center"
-                    data-testid="mfa-setup-verify-error"
+                    data-test-id="mfa-setup-verify-error"
                   >
                     {codeError}
                   </p>
@@ -472,7 +472,7 @@ const AuthenticatorSetup = () => {
                     type="submit"
                     disabled={busy || code.length !== 6}
                     className="btn btn-gradient justify-center disabled:opacity-50"
-                    data-testid="mfa-setup-verify-btn"
+                    data-test-id="mfa-setup-verify-btn"
                   >
                     {busy ? (
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />
@@ -485,7 +485,7 @@ const AuthenticatorSetup = () => {
                     onClick={() => setStep("scan")}
                     disabled={busy}
                     className="btn btn-secondary flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300"
-                    data-testid="mfa-setup-verify-back-btn"
+                    data-test-id="mfa-setup-verify-back-btn"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Back to QR code
@@ -497,7 +497,7 @@ const AuthenticatorSetup = () => {
 
           {/* ── Step 4: Done ────────────────────────────────────────────── */}
           {step === "done" && (
-            <div className="px-6 sm:px-10 py-12 text-center" data-testid="mfa-setup-done">
+            <div className="px-6 sm:px-10 py-12 text-center" data-test-id="mfa-setup-done">
               <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-5">
                 <PartyPopper className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
@@ -513,7 +513,7 @@ const AuthenticatorSetup = () => {
                   type="button"
                   onClick={leave}
                   className="btn btn-gradient justify-center"
-                  data-testid="mfa-setup-done-btn"
+                  data-test-id="mfa-setup-done-btn"
                 >
                   {onboarding ? "Continue to dashboard" : "Back to settings"}
                 </button>

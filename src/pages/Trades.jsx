@@ -39,7 +39,7 @@ const cumulativeSeries = (trades, predicate) => {
 };
 
 const StatTile = ({ label, value, valueClass, badge, sparkline, subtitle, testId }) => (
-  <div className="card flex flex-col gap-2" data-testid={testId}>
+  <div className="card flex flex-col gap-2" data-test-id={testId}>
     <div className="flex items-center justify-between">
       <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
         {label}
@@ -170,11 +170,11 @@ const Trades = () => {
   const viewToggle = (
     <div
       className="inline-flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1"
-      data-testid="trades-view-toggle"
+      data-test-id="trades-view-toggle"
     >
       <button
         onClick={() => setActiveView("calendar")}
-        data-testid="trades-calendar-view-btn"
+        data-test-id="trades-calendar-view-btn"
         className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           activeView === "calendar"
             ? "bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm"
@@ -186,7 +186,7 @@ const Trades = () => {
       </button>
       <button
         onClick={() => setActiveView("list")}
-        data-testid="trades-list-view-btn"
+        data-test-id="trades-list-view-btn"
         className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           activeView === "list"
             ? "bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm"
@@ -214,7 +214,7 @@ const Trades = () => {
           <button
             onClick={() => setShowCsvModal(true)}
             className={SECONDARY_BTN}
-            data-testid="open-csv-import-btn"
+            data-test-id="open-csv-import-btn"
             title="Import trades from a CSV file"
           >
             <Upload className="w-4 h-4" />
@@ -256,14 +256,14 @@ const Trades = () => {
               placeholder="Search symbol, strategy, notes, tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              data-testid="trades-search-input"
+              data-test-id="trades-search-input"
               className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            data-testid="trades-filters-toggle-btn"
+            data-test-id="trades-filters-toggle-btn"
             title="Filter trades"
             className={
               showFilters

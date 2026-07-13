@@ -107,7 +107,7 @@ const AIInsights = ({ trades, stats }) => {
   }, [payload]);
 
   return (
-    <div className="card" data-testid="ai-insights-card">
+    <div className="card" data-test-id="ai-insights-card">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           <div className="flex items-center space-x-2">
@@ -120,7 +120,7 @@ const AIInsights = ({ trades, stats }) => {
             type="button"
             onClick={generate}
             disabled={loading}
-            data-testid="ai-insights-refresh-btn"
+            data-test-id="ai-insights-refresh-btn"
             className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium flex items-center space-x-1 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -133,7 +133,7 @@ const AIInsights = ({ trades, stats }) => {
       {!hasTrades && (
         <div
           className="text-sm text-gray-500 dark:text-gray-400 text-center py-4"
-          data-testid="ai-insights-empty-state"
+          data-test-id="ai-insights-empty-state"
         >
           Add closed trades to get personalized AI feedback.
         </div>
@@ -143,7 +143,7 @@ const AIInsights = ({ trades, stats }) => {
       {hasTrades && loading && insights.length === 0 && (
         <div
           className="flex items-center justify-center py-6 text-gray-500 dark:text-gray-400"
-          data-testid="ai-insights-loading-spinner"
+          data-test-id="ai-insights-loading-spinner"
         >
           <RefreshCw className="w-5 h-5 animate-spin mr-2" />
           <span className="text-sm">Analyzing your trades…</span>
@@ -154,7 +154,7 @@ const AIInsights = ({ trades, stats }) => {
       {hasTrades && error && !loading && (
         <div
           className="p-3 rounded-lg bg-danger-50 dark:bg-danger-900/30 border border-danger-100 dark:border-danger-800 flex items-start space-x-2"
-          data-testid="ai-insights-error"
+          data-test-id="ai-insights-error"
         >
           <AlertCircle className="w-4 h-4 text-danger-600 dark:text-danger-400 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-danger-700 dark:text-danger-300">{error}</p>
@@ -170,7 +170,7 @@ const AIInsights = ({ trades, stats }) => {
           <button
             type="button"
             onClick={generate}
-            data-testid="ai-insights-generate-btn"
+            data-test-id="ai-insights-generate-btn"
             className="btn-primary inline-flex items-center space-x-2 text-sm"
           >
             <Sparkles className="w-4 h-4" />
@@ -181,12 +181,12 @@ const AIInsights = ({ trades, stats }) => {
 
       {/* Results */}
       {insights.length > 0 && (
-        <div className="space-y-3" data-testid="ai-insights-list">
+        <div className="space-y-3" data-test-id="ai-insights-list">
           {insights.map((insight, i) => (
             <div
               key={i}
               className={`p-3 rounded-lg border ${TONE_STYLES[insight.tone] || TONE_STYLES.info}`}
-              data-testid={`ai-insight-${i}`}
+              data-test-id={`ai-insight-${i}`}
             >
               <p className="text-sm">{insight.text}</p>
             </div>

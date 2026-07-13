@@ -671,7 +671,7 @@ const ContactMessages = () => {
     if (!el) return;
     const key = pendingScrollRef.current;
     const target = key
-      ? el.querySelector(`[data-testid="admin-contact-thread-message-${key}"]`)
+      ? el.querySelector(`[data-test-id="admin-contact-thread-message-${key}"]`)
       : null;
     if (target) {
       // Align the first unread message to the top of the scroll container.
@@ -691,7 +691,7 @@ const ContactMessages = () => {
     : conversation.length;
 
   return (
-    <div className="space-y-6" data-testid="admin-contact-page">
+    <div className="space-y-6" data-test-id="admin-contact-page">
       <div className="flex items-center gap-3">
         <Mail className="h-6 w-6 text-primary-600 dark:text-primary-400" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -707,7 +707,7 @@ const ContactMessages = () => {
           return (
             <button
               key={f.value}
-              data-testid={`admin-contact-filter-${f.value}`}
+              data-test-id={`admin-contact-filter-${f.value}`}
               onClick={() => {
                 setStatusFilter(f.value);
                 setPage(0);
@@ -721,7 +721,7 @@ const ContactMessages = () => {
               {f.label}
               {count != null && (
                 <span
-                  data-testid={
+                  data-test-id={
                     f.value === "new"
                       ? "admin-contact-new-tab-badge"
                       : `admin-contact-tab-count-${f.value}`
@@ -745,14 +745,14 @@ const ContactMessages = () => {
       {/* Bulk actions for checked rows */}
       {selectedEmails.size > 0 && (
         <div
-          data-testid="admin-contact-selection-bar"
+          data-test-id="admin-contact-selection-bar"
           className="flex items-center justify-between rounded-lg border border-danger-200 dark:border-danger-900/50 bg-danger-50 dark:bg-danger-900/15 px-4 py-2"
         >
           <p className="text-sm font-medium text-danger-700 dark:text-danger-300">
             {selectedEmails.size} selected
           </p>
           <button
-            data-testid="admin-contact-delete-selected-btn"
+            data-test-id="admin-contact-delete-selected-btn"
             onClick={deleteSelected}
             disabled={deleting}
             className="inline-flex items-center gap-1.5 rounded-lg bg-danger-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-danger-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -770,7 +770,7 @@ const ContactMessages = () => {
               <th className="w-10 px-4 py-3">
                 <input
                   type="checkbox"
-                  data-testid="admin-contact-select-all"
+                  data-test-id="admin-contact-select-all"
                   aria-label="Select all conversations"
                   checked={threads.length > 0 && selectedEmails.size === threads.length}
                   onChange={toggleSelectAll}
@@ -800,7 +800,7 @@ const ContactMessages = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td colSpan={7} data-testid="admin-contact-loading" className="px-6 py-12">
+                <td colSpan={7} data-test-id="admin-contact-loading" className="px-6 py-12">
                   <div className="flex flex-col items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
                     <span>Loading conversations…</span>
@@ -811,7 +811,7 @@ const ContactMessages = () => {
               <tr>
                 <td
                   colSpan={7}
-                  data-testid="admin-contact-error"
+                  data-test-id="admin-contact-error"
                   className="px-6 py-10 text-center text-sm text-danger-600 dark:text-danger-400"
                 >
                   Couldn't load conversations. Please refresh and try again.
@@ -821,7 +821,7 @@ const ContactMessages = () => {
               <tr>
                 <td
                   colSpan={7}
-                  data-testid="admin-contact-empty"
+                  data-test-id="admin-contact-empty"
                   className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
                   <Inbox className="mx-auto mb-2 h-8 w-8 text-gray-400 dark:text-gray-500" />
@@ -832,7 +832,7 @@ const ContactMessages = () => {
               threads.map((t) => (
                 <tr
                   key={t.email}
-                  data-testid={`admin-contact-row-${t.latest_id}`}
+                  data-test-id={`admin-contact-row-${t.latest_id}`}
                   onClick={() => openThread(t)}
                   className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
                 >
@@ -842,7 +842,7 @@ const ContactMessages = () => {
                         once the thread is opened (marks it read). */}
                     {t.new_count > 0 && (
                       <span
-                        data-testid={`admin-contact-row-new-dot-${t.latest_id}`}
+                        data-test-id={`admin-contact-row-new-dot-${t.latest_id}`}
                         aria-label={`${t.new_count} new`}
                         className="absolute left-0.5 top-0.5 inline-flex h-[1.125rem] min-w-[1.125rem] px-1 items-center justify-center rounded-full bg-danger-600 text-[10px] font-semibold text-white ring-2 ring-white dark:ring-gray-800"
                       >
@@ -851,7 +851,7 @@ const ContactMessages = () => {
                     )}
                     <input
                       type="checkbox"
-                      data-testid={`admin-contact-select-${t.latest_id}`}
+                      data-test-id={`admin-contact-select-${t.latest_id}`}
                       aria-label={`Select conversation with ${t.email}`}
                       checked={selectedEmails.has(t.email)}
                       onChange={() => toggleSelected(t.email)}
@@ -875,7 +875,7 @@ const ContactMessages = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      data-testid={`admin-contact-thread-count-${t.latest_id}`}
+                      data-test-id={`admin-contact-thread-count-${t.latest_id}`}
                       className="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
                     >
                       <MessagesSquare className="h-4 w-4 text-gray-400 dark:text-gray-500" />
@@ -887,7 +887,7 @@ const ContactMessages = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      data-testid={`admin-contact-status-${t.latest_id}`}
+                      data-test-id={`admin-contact-status-${t.latest_id}`}
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${
                         STATUS_BADGE[t.new_count > 0 ? "new" : t.latest_status] ??
                         STATUS_BADGE.read
@@ -904,7 +904,7 @@ const ContactMessages = () => {
                   >
                     <div className="inline-flex items-center gap-1">
                       <button
-                        data-testid={`admin-contact-row-read-btn-${t.latest_id}`}
+                        data-test-id={`admin-contact-row-read-btn-${t.latest_id}`}
                         onClick={() => applyRowStatus(t.email, "read")}
                         disabled={busyEmail === t.email}
                         title="Mark read"
@@ -913,7 +913,7 @@ const ContactMessages = () => {
                         <CheckCircle className="h-4 w-4" />
                       </button>
                       <button
-                        data-testid={`admin-contact-row-archive-btn-${t.latest_id}`}
+                        data-test-id={`admin-contact-row-archive-btn-${t.latest_id}`}
                         onClick={() => applyRowStatus(t.email, "archived")}
                         disabled={busyEmail === t.email}
                         title="Archive"
@@ -922,7 +922,7 @@ const ContactMessages = () => {
                         <Archive className="h-4 w-4" />
                       </button>
                       <button
-                        data-testid={`admin-contact-row-spam-btn-${t.latest_id}`}
+                        data-test-id={`admin-contact-row-spam-btn-${t.latest_id}`}
                         onClick={() => applyRowStatus(t.email, "spam")}
                         disabled={busyEmail === t.email}
                         title="Mark as spam"
@@ -931,7 +931,7 @@ const ContactMessages = () => {
                         <ShieldAlert className="h-4 w-4" />
                       </button>
                       <button
-                        data-testid={`admin-contact-row-block-btn-${t.latest_id}`}
+                        data-test-id={`admin-contact-row-block-btn-${t.latest_id}`}
                         onClick={() => toggleBlockEmail(t.email)}
                         disabled={busyEmail === t.email}
                         title={
@@ -963,7 +963,7 @@ const ContactMessages = () => {
             </p>
             <div className="flex gap-2">
               <button
-                data-testid="admin-contact-prev-btn"
+                data-test-id="admin-contact-prev-btn"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
                 className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -971,7 +971,7 @@ const ContactMessages = () => {
                 <ChevronLeft className="h-4 w-4" /> Prev
               </button>
               <button
-                data-testid="admin-contact-next-btn"
+                data-test-id="admin-contact-next-btn"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
                 className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -991,7 +991,7 @@ const ContactMessages = () => {
           onClick={closeThread}
         >
           <div
-            data-testid="admin-contact-detail-modal"
+            data-test-id="admin-contact-detail-modal"
             // Fixed height so the modal doesn't grow/shrink with the thread —
             // the message list flexes and scrolls inside it.
             className="flex h-[min(85vh,46rem)] w-full max-w-2xl flex-col rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl"
@@ -1003,14 +1003,14 @@ const ContactMessages = () => {
                   {selectedThread.latest_name} &lt;{selectedThread.email}&gt;
                 </h2>
                 <p
-                  data-testid="admin-contact-thread-message-count"
+                  data-test-id="admin-contact-thread-message-count"
                   className="mt-1 text-sm text-gray-500 dark:text-gray-400"
                 >
                   {threadCount} {threadCount === 1 ? "message" : "messages"}
                 </p>
               </div>
               <button
-                data-testid="admin-contact-modal-close-btn"
+                data-test-id="admin-contact-modal-close-btn"
                 onClick={closeThread}
                 className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
@@ -1021,14 +1021,14 @@ const ContactMessages = () => {
             <div ref={threadListRef} className="mt-4 flex-1 min-h-0 space-y-3 overflow-y-auto">
               {threadLoading ? (
                 <div
-                  data-testid="admin-contact-thread-loading"
+                  data-test-id="admin-contact-thread-loading"
                   className="flex items-center justify-center py-10"
                 >
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
                 </div>
               ) : conversation.length === 0 ? (
                 <p
-                  data-testid="admin-contact-thread-empty"
+                  data-test-id="admin-contact-thread-empty"
                   className="py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
                   No messages found for this sender.
@@ -1065,7 +1065,7 @@ const ContactMessages = () => {
                         {entry.editedAt && <span className="ml-1 italic">(edited)</span>}
                       </p>
                       <div
-                        data-testid={`admin-contact-thread-message-${entry.key}`}
+                        data-test-id={`admin-contact-thread-message-${entry.key}`}
                         className={`rounded-lg p-4 ${
                           entry.kind === "admin"
                             ? "bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
@@ -1098,7 +1098,7 @@ const ContactMessages = () => {
                                   visitor's message stays their words. */}
                               {entry.kind === "admin" && (
                                 <button
-                                  data-testid={`admin-contact-message-edit-btn-${entry.key}`}
+                                  data-test-id={`admin-contact-message-edit-btn-${entry.key}`}
                                   onClick={() => startEdit(entry)}
                                   disabled={messageBusy}
                                   title="Edit reply"
@@ -1108,7 +1108,7 @@ const ContactMessages = () => {
                                 </button>
                               )}
                               <button
-                                data-testid={`admin-contact-message-delete-btn-${entry.key}`}
+                                data-test-id={`admin-contact-message-delete-btn-${entry.key}`}
                                 onClick={() => deleteEntry(entry)}
                                 disabled={messageBusy}
                                 title="Delete message"
@@ -1132,7 +1132,7 @@ const ContactMessages = () => {
                           />
                           <div className="mt-2 flex justify-end gap-2">
                             <button
-                              data-testid={`admin-contact-message-edit-cancel-${entry.key}`}
+                              data-test-id={`admin-contact-message-edit-cancel-${entry.key}`}
                               onClick={cancelEdit}
                               disabled={messageBusy}
                               className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
@@ -1140,7 +1140,7 @@ const ContactMessages = () => {
                               Cancel
                             </button>
                             <button
-                              data-testid={`admin-contact-message-edit-save-${entry.key}`}
+                              data-test-id={`admin-contact-message-edit-save-${entry.key}`}
                               onClick={() => saveEdit(entry)}
                               disabled={messageBusy}
                               className="rounded-lg bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
@@ -1172,7 +1172,7 @@ const ContactMessages = () => {
                           visible, clicking expands the full chain. */}
                       {!isEditing && entry.quoted && (
                         <details
-                          data-testid={`admin-contact-quoted-${entry.key}`}
+                          data-test-id={`admin-contact-quoted-${entry.key}`}
                           className="group mt-4 border-l-2 border-gray-300 dark:border-gray-600 pl-2"
                         >
                           <summary className="cursor-pointer select-none text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
@@ -1205,7 +1205,7 @@ const ContactMessages = () => {
                     New message
                   </span>
                   <button
-                    data-testid="admin-contact-reply-close-btn"
+                    data-test-id="admin-contact-reply-close-btn"
                     onClick={() => setComposerOpen(false)}
                     disabled={replySending}
                     title="Close"
@@ -1216,7 +1216,7 @@ const ContactMessages = () => {
                 </div>
                 <input
                   type="text"
-                  data-testid="admin-contact-reply-subject-input"
+                  data-test-id="admin-contact-reply-subject-input"
                   value={replySubject}
                   onChange={(e) => setReplySubject(e.target.value)}
                   placeholder="Subject"
@@ -1232,7 +1232,7 @@ const ContactMessages = () => {
                 />
                 <div className="mt-2 flex justify-end gap-2">
                   <button
-                    data-testid="admin-contact-send-reply-btn"
+                    data-test-id="admin-contact-send-reply-btn"
                     onClick={sendReply}
                     disabled={
                       replySending ||
@@ -1255,7 +1255,7 @@ const ContactMessages = () => {
             <div className="mt-4 flex flex-col items-end gap-2">
               {!composerOpen && (
                 <button
-                  data-testid="admin-contact-new-message-btn"
+                  data-test-id="admin-contact-new-message-btn"
                   onClick={() => setComposerOpen(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
                 >
@@ -1263,7 +1263,7 @@ const ContactMessages = () => {
                 </button>
               )}
               <a
-                data-testid="admin-contact-reply-btn"
+                data-test-id="admin-contact-reply-btn"
                 href={`mailto:${selectedThread.email}?subject=Re: ${encodeURIComponent(
                   latestMessage?.subject ?? selectedThread.latest_subject,
                 )}`}

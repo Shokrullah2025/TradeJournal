@@ -82,7 +82,7 @@ const MfaStepUp = () => {
       // Always light (bg-white like /login): this gate is part of the sign-in
       // flow, and ThemeScope strips the dark class while mfaRequired is true.
       className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white px-4 py-10"
-      data-testid="mfa-stepup-screen"
+      data-test-id="mfa-stepup-screen"
     >
       {/* Decorative brand glow — purely visual, sits behind the card. */}
       <div
@@ -121,7 +121,7 @@ const MfaStepUp = () => {
             {loadingFactor ? (
               <div
                 className="flex items-center justify-center py-10"
-                data-testid="mfa-stepup-loading"
+                data-test-id="mfa-stepup-loading"
               >
                 <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600" />
               </div>
@@ -129,7 +129,7 @@ const MfaStepUp = () => {
               <form
                 onSubmit={handleSubmit}
                 className="space-y-5"
-                data-testid="mfa-stepup-form"
+                data-test-id="mfa-stepup-form"
               >
                 <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   <KeyRound className="h-3.5 w-3.5" />
@@ -148,7 +148,7 @@ const MfaStepUp = () => {
                 {error && (
                   <div
                     className="flex items-center justify-center gap-2 rounded-xl border border-danger-200 bg-danger-50 px-3 py-2.5 text-sm text-danger-600 dark:border-danger-900/50 dark:bg-danger-900/20 dark:text-danger-400"
-                    data-testid="mfa-stepup-error"
+                    data-test-id="mfa-stepup-error"
                     role="alert"
                   >
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -160,7 +160,7 @@ const MfaStepUp = () => {
                   type="submit"
                   disabled={submitting || code.length !== 6}
                   className="btn btn-gradient w-full disabled:cursor-not-allowed disabled:opacity-60"
-                  data-testid="mfa-stepup-submit-btn"
+                  data-test-id="mfa-stepup-submit-btn"
                 >
                   <span className="inline-flex w-full items-center justify-center gap-2 leading-none">
                     {submitting ? (
@@ -188,7 +188,7 @@ const MfaStepUp = () => {
               type="button"
               onClick={logout}
               className="flex w-full items-center justify-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              data-testid="mfa-stepup-signout-btn"
+              data-test-id="mfa-stepup-signout-btn"
             >
               <LogOut className="h-4 w-4" />
               Sign out

@@ -207,7 +207,7 @@ const TrialActivation = ({
         {errorMessage && (
           <div
             className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700"
-            data-testid="trial-error-message"
+            data-test-id="trial-error-message"
             role="alert"
           >
             {errorMessage}
@@ -218,7 +218,7 @@ const TrialActivation = ({
           // Card already verified; the trial start failed. Retry just that step.
           <div className="space-y-3">
             <form
-              data-testid="trial-retry-form"
+              data-test-id="trial-retry-form"
               onSubmit={(e) => {
                 e.preventDefault();
                 activateTrial(paymentMethodId);
@@ -227,7 +227,7 @@ const TrialActivation = ({
               <button
                 type="submit"
                 disabled={isWorking}
-                data-testid="trial-retry-submit-btn"
+                data-test-id="trial-retry-submit-btn"
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isWorking ? (
@@ -244,7 +244,7 @@ const TrialActivation = ({
               type="button"
               onClick={useDifferentCard}
               disabled={isWorking}
-              data-testid="trial-different-card-btn"
+              data-test-id="trial-different-card-btn"
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Use a different card
@@ -253,7 +253,7 @@ const TrialActivation = ({
         ) : trialStatus === "card" && clientSecret ? (
           <div
             className="border border-gray-200 rounded-lg p-4 bg-white"
-            data-testid="trial-card-input"
+            data-test-id="trial-card-input"
           >
             <div className="flex items-center mb-3 text-sm font-medium text-gray-900">
               <CreditCard className="w-4 h-4 mr-2 text-blue-600" />
@@ -268,7 +268,7 @@ const TrialActivation = ({
               onCancel={() => setTrialStatus("intro")}
             />
             {/* Coupon applied to the plan that starts after the trial */}
-            <div className="mt-4 border-t border-gray-100 pt-4 space-y-1.5" data-testid="trial-coupon">
+            <div className="mt-4 border-t border-gray-100 pt-4 space-y-1.5" data-test-id="trial-coupon">
               <p className="text-xs font-medium text-gray-500">Have a coupon code?</p>
               <CouponField
                 onApply={setCouponCode}
@@ -279,7 +279,7 @@ const TrialActivation = ({
           </div>
         ) : (
           <form
-            data-testid="trial-activate-form"
+            data-test-id="trial-activate-form"
             onSubmit={(e) => {
               e.preventDefault();
               beginTrial();
@@ -288,7 +288,7 @@ const TrialActivation = ({
             <button
               type="submit"
               disabled={isWorking}
-              data-testid="trial-activate-submit-btn"
+              data-test-id="trial-activate-submit-btn"
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isWorking ? (

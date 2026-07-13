@@ -662,7 +662,7 @@ const ProductVisual = ({ variant }) => {
   const Body = config.render;
 
   return (
-    <div data-testid={`product-visual-${variant}`} aria-hidden="true">
+    <div data-test-id={`product-visual-${variant}`} aria-hidden="true">
       <Frame path={config.path} active={config.active}>
         <Body />
       </Frame>

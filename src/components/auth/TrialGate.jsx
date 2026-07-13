@@ -25,7 +25,7 @@ const TrialGate = ({ children }) => {
   const { logout } = useAuth();
 
   return (
-    <div className="relative h-screen overflow-hidden" data-testid="trial-gate">
+    <div className="relative h-screen overflow-hidden" data-test-id="trial-gate">
       {/* Background app shell — heavily blurred (unreadable) and fully inert. The
           strong blur, not opacity, is what hides the content, so the dim layer
           above can stay light/transparent. */}
@@ -40,7 +40,7 @@ const TrialGate = ({ children }) => {
           blocks all interaction with the page behind it. */}
       <div
         className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-gray-900/10 backdrop-blur-sm p-4"
-        data-testid="trial-gate-overlay"
+        data-test-id="trial-gate-overlay"
         role="dialog"
         aria-modal="true"
       >
@@ -49,7 +49,7 @@ const TrialGate = ({ children }) => {
             // Don't flash the wrong offer while trial history is still loading.
             <div
               className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-10 flex justify-center"
-              data-testid="trial-gate-loading"
+              data-test-id="trial-gate-loading"
             >
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
             </div>
@@ -66,7 +66,7 @@ const TrialGate = ({ children }) => {
             <button
               type="button"
               onClick={logout}
-              data-testid="trial-gate-signout-btn"
+              data-test-id="trial-gate-signout-btn"
               className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 transition-colors hover:bg-white hover:text-gray-900"
             >
               <LogOut className="h-4 w-4" />

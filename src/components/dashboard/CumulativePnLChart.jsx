@@ -172,7 +172,7 @@ const CumulativePnLChart = ({
     return (
       <div
         className="flex-1 min-h-0 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm text-center"
-        data-testid="cumulative-pnl-chart-empty-state"
+        data-test-id="cumulative-pnl-chart-empty-state"
       >
         <div>
           <div className="font-medium mb-1">No trading data yet</div>
@@ -200,7 +200,7 @@ const CumulativePnLChart = ({
       onTouchStart={handleTouchMove}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleMouseLeave}
-      data-testid="cumulative-pnl-chart"
+      data-test-id="cumulative-pnl-chart"
     >
       {/* Same gentle fade-in as the Daily P&L chart — opacity + slight rise. */}
       <style>{`
@@ -288,7 +288,7 @@ const CumulativePnLChart = ({
                 fill={c.tick}
                 fontFamily="inherit"
                 style={{ fontVariantNumeric: 'tabular-nums' }}
-                data-testid={`cumulative-pnl-chart-ylabel-${i}`}
+                data-test-id={`cumulative-pnl-chart-ylabel-${i}`}
               >
                 {fmtK(Math.round(v))}
               </text>
@@ -389,7 +389,7 @@ const CumulativePnLChart = ({
           const ey = py(data[n - 1]);
           const endColor = data[n - 1] >= 0 ? lineGreen : lineRed;
           return (
-            <g data-testid="cumulative-pnl-chart-endpoint">
+            <g data-test-id="cumulative-pnl-chart-endpoint">
               <circle cx={ex.toFixed(1)} cy={ey.toFixed(1)} r="8" fill={endColor} opacity="0.12" />
               <circle
                 cx={ex.toFixed(1)}
@@ -432,7 +432,7 @@ const CumulativePnLChart = ({
       {hovered && (
         <div
           className="absolute pointer-events-none z-20 px-3 py-2 rounded-xl bg-gray-900/95 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl ring-1 ring-white/10 dark:ring-black/5 backdrop-blur-sm text-xs whitespace-nowrap tabular-nums"
-          data-testid="cumulative-pnl-chart-tooltip"
+          data-test-id="cumulative-pnl-chart-tooltip"
           style={{
             // Anchored to the hovered point on the line (not the cursor):
             // centered on the snapped x, sitting just above the dot. The x is
@@ -457,7 +457,7 @@ const CumulativePnLChart = ({
           {hovered.day !== null && (
             <div
               className="flex items-baseline justify-between gap-3"
-              data-testid="cumulative-pnl-chart-tooltip-day"
+              data-test-id="cumulative-pnl-chart-tooltip-day"
             >
               <span className="opacity-75">Day</span>
               <span
@@ -480,7 +480,7 @@ const CumulativePnLChart = ({
                   ? "font-semibold text-green-400 dark:text-green-600"
                   : "font-semibold text-red-400 dark:text-red-600"
               }
-              data-testid="cumulative-pnl-chart-tooltip-value"
+              data-test-id="cumulative-pnl-chart-tooltip-value"
             >
               {fmtFull(hovered.v)}
             </span>

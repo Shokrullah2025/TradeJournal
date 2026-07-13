@@ -150,7 +150,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
           ? "w-full max-w-4xl bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
           : "min-h-screen flex items-center justify-center bg-gray-50 py-4 px-4 sm:px-6 lg:px-8"
       }
-      data-testid="subscribe-activation"
+      data-test-id="subscribe-activation"
     >
       <div className="max-w-4xl w-full space-y-4">
         {/* Extra bottom padding nudges the logo/header up within the centered
@@ -170,11 +170,11 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
 
         {/* Billing cycle toggle */}
         <div className="flex justify-center">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" data-testid="subscribe-cycle-toggle">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" data-test-id="subscribe-cycle-toggle">
             <button
               type="button"
               onClick={() => setCycle("monthly")}
-              data-testid="subscribe-cycle-monthly-btn"
+              data-test-id="subscribe-cycle-monthly-btn"
               className={`px-4 py-1.5 text-sm font-medium rounded-md ${
                 cycle === "monthly" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
               }`}
@@ -184,7 +184,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
             <button
               type="button"
               onClick={() => setCycle("annually")}
-              data-testid="subscribe-cycle-annually-btn"
+              data-test-id="subscribe-cycle-annually-btn"
               className={`px-4 py-1.5 text-sm font-medium rounded-md ${
                 cycle === "annually" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
               }`}
@@ -197,7 +197,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
         {errorMessage && (
           <div
             className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700"
-            data-testid="subscribe-error-message"
+            data-test-id="subscribe-error-message"
             role="alert"
           >
             {errorMessage}
@@ -206,7 +206,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
 
         {/* Plan cards */}
         {plansLoading ? (
-          <div className="flex justify-center py-10" data-testid="subscribe-plans-loading">
+          <div className="flex justify-center py-10" data-test-id="subscribe-plans-loading">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
           </div>
         ) : (
@@ -216,7 +216,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
               return (
                 <div
                   key={plan.slug}
-                  data-testid={`subscribe-plan-card-${plan.slug}`}
+                  data-test-id={`subscribe-plan-card-${plan.slug}`}
                   className={`relative flex flex-col rounded-xl border p-6 min-h-[29rem] ${
                     isPopular ? "border-primary-500 ring-1 ring-primary-500" : "border-gray-200"
                   }`}
@@ -228,7 +228,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
                   )}
                   <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
                   <p className="mt-2">
-                    <span className="text-3xl font-bold text-gray-900" data-testid={`subscribe-plan-price-${plan.slug}`}>
+                    <span className="text-3xl font-bold text-gray-900" data-test-id={`subscribe-plan-price-${plan.slug}`}>
                       ${priceFor(plan)}
                     </span>
                     <span className="text-sm text-gray-500">/{cycle === "annually" ? "yr" : "mo"}</span>
@@ -247,7 +247,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
                     type="button"
                     onClick={() => selectPlan(plan.slug)}
                     disabled={preparingSlug !== null}
-                    data-testid={`subscribe-plan-select-${plan.slug}-btn`}
+                    data-test-id={`subscribe-plan-select-${plan.slug}-btn`}
                     className={`mt-6 w-full flex justify-center py-2.5 px-4 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed ${
                       isPopular
                         ? "bg-primary-600 text-white hover:bg-primary-700"
@@ -283,7 +283,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
         <ModalPortal>
           <div
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4"
-            data-testid="subscribe-payment-modal"
+            data-test-id="subscribe-payment-modal"
             role="dialog"
             aria-modal="true"
           >
@@ -300,7 +300,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
                     type="button"
                     onClick={closeModal}
                     className="flex items-center justify-center w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    data-testid="subscribe-modal-close-btn"
+                    data-test-id="subscribe-modal-close-btn"
                     aria-label="Close checkout"
                   >
                     ✕
@@ -318,7 +318,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
                   </p>
                 </div>
                 <p className="text-right">
-                  <span className="text-2xl font-bold text-gray-900" data-testid="subscribe-price">
+                  <span className="text-2xl font-bold text-gray-900" data-test-id="subscribe-price">
                     ${setupSecret && !clientSecret ? 0 : priceFor(selectedPlan)}
                   </span>
                   <span className="text-sm text-gray-500">/{cycle === "annually" ? "yr" : "mo"}</span>
@@ -328,7 +328,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
               {setupSecret && !clientSecret && !activating && (
                 <p
                   className="text-xs text-gray-600 bg-primary-50 border border-primary-100 rounded-md px-3 py-2 mb-4"
-                  data-testid="subscribe-setup-note"
+                  data-test-id="subscribe-setup-note"
                 >
                   Your coupon covers today&apos;s payment. Save a card so your plan
                   renews automatically at ${priceFor(selectedPlan)}/
@@ -337,12 +337,12 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
               )}
 
               {activating ? (
-                <div className="flex flex-col items-center gap-3 py-6" data-testid="subscribe-activating">
+                <div className="flex flex-col items-center gap-3 py-6" data-test-id="subscribe-activating">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
                   <p className="text-sm text-gray-600">Activating your subscription…</p>
                 </div>
               ) : rebuilding ? (
-                <div className="flex flex-col items-center gap-3 py-10" data-testid="subscribe-coupon-updating">
+                <div className="flex flex-col items-center gap-3 py-10" data-test-id="subscribe-coupon-updating">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
                   <p className="text-sm text-gray-600">Updating your total…</p>
                 </div>
@@ -355,7 +355,7 @@ const SubscribeActivation = ({ planSlug = "premium", billingCycle = "monthly", v
                   onSuccess={handlePaid}
                   onCancel={closeModal}
                   footer={
-                    <div className="space-y-1.5" data-testid="subscribe-coupon">
+                    <div className="space-y-1.5" data-test-id="subscribe-coupon">
                       <p className="text-xs font-medium text-gray-500">Have a coupon code?</p>
                       <CouponField
                         initialApplied={coupon}

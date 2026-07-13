@@ -45,11 +45,11 @@ const DashboardEmptyState = () => {
   const logFirstTrade = () => navigate("/trades");
 
   return (
-    <div className="space-y-6" data-testid="dashboard-empty-state">
+    <div className="space-y-6" data-test-id="dashboard-empty-state">
       {/* No-trades banner — the single teal CTA on the page */}
       <div
         className="card flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5"
-        data-testid="empty-state-banner"
+        data-test-id="empty-state-banner"
       >
         <div className="w-9 h-9 rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 flex items-center justify-center flex-shrink-0">
           <BarChart3 className="w-4 h-4" />
@@ -67,7 +67,7 @@ const DashboardEmptyState = () => {
           type="button"
           onClick={logFirstTrade}
           className="btn btn-primary flex items-center gap-1.5 self-start sm:self-auto"
-          data-testid="empty-state-log-trade-btn"
+          data-test-id="empty-state-log-trade-btn"
         >
           <Plus className="w-4 h-4" />
           Log your first trade
@@ -110,7 +110,7 @@ const DashboardEmptyState = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div
           className="card flex flex-col h-[340px]"
-          data-testid="empty-chart-daily-pnl-card"
+          data-test-id="empty-chart-daily-pnl-card"
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -128,7 +128,7 @@ const DashboardEmptyState = () => {
 
         <div
           className="card flex flex-col h-[340px]"
-          data-testid="empty-chart-cumulative-pnl-card"
+          data-test-id="empty-chart-cumulative-pnl-card"
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -146,7 +146,7 @@ const DashboardEmptyState = () => {
 
         <div
           className="card hidden lg:flex flex-col h-[340px]"
-          data-testid="empty-chart-when-you-win-card"
+          data-test-id="empty-chart-when-you-win-card"
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -165,7 +165,7 @@ const DashboardEmptyState = () => {
 
       {/* Ghost bottom row: recent trades + outcomes/insights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 card" data-testid="empty-recent-trades-card">
+        <div className="lg:col-span-2 card" data-test-id="empty-recent-trades-card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Recent Trades
@@ -190,7 +190,7 @@ const DashboardEmptyState = () => {
               type="button"
               onClick={logFirstTrade}
               className="btn btn-primary inline-flex items-center gap-1.5 mt-3"
-              data-testid="empty-recent-trades-log-trade-btn"
+              data-test-id="empty-recent-trades-log-trade-btn"
             >
               <Plus className="w-4 h-4" />
               Log your first trade
@@ -199,7 +199,7 @@ const DashboardEmptyState = () => {
         </div>
 
         <div className="space-y-6">
-          <div className="card hidden lg:block" data-testid="empty-trade-outcomes-card">
+          <div className="card hidden lg:block" data-test-id="empty-trade-outcomes-card">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Trade Outcomes
@@ -214,7 +214,7 @@ const DashboardEmptyState = () => {
             </p>
           </div>
 
-          <div className="card" data-testid="empty-ai-insights-card">
+          <div className="card" data-test-id="empty-ai-insights-card">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Trading Insights

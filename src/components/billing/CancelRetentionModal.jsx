@@ -17,7 +17,7 @@ const CancelRetentionModal = ({
     <ModalPortal>
       <div
         className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 p-4"
-        data-testid="cancel-retention-modal"
+        data-test-id="cancel-retention-modal"
         role="dialog"
         aria-modal="true"
       >
@@ -27,7 +27,7 @@ const CancelRetentionModal = ({
             onClick={onClose}
             disabled={isWorking}
             className="absolute top-4 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
-            data-testid="cancel-retention-close-btn"
+            data-test-id="cancel-retention-close-btn"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -74,7 +74,7 @@ const CancelRetentionModal = ({
               type="button"
               onClick={onAcceptOffer}
               disabled={isWorking}
-              data-testid="cancel-retention-accept-btn"
+              data-test-id="cancel-retention-accept-btn"
               className="w-full flex justify-center items-center py-3 px-4 rounded-md text-sm font-medium text-white bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isWorking ? (
@@ -91,7 +91,7 @@ const CancelRetentionModal = ({
               type="button"
               onClick={onDeclineToCancel}
               disabled={isWorking}
-              data-testid="cancel-retention-decline-btn"
+              data-test-id="cancel-retention-decline-btn"
               className="w-full flex justify-center py-2.5 px-4 rounded-md text-sm font-medium text-gray-600 dark:text-gray-400 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               No thanks, I'd still like to cancel

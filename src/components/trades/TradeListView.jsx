@@ -68,7 +68,7 @@ const TradeRow = ({ trade, onEditTrade, flash, rowRef }) => {
           onEditTrade?.(trade);
         }
       }}
-      data-testid={`trade-row-${trade.id}`}
+      data-test-id={`trade-row-${trade.id}`}
       className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors focus:outline-none ${
         flash
           ? "bg-primary-100 dark:bg-primary-900/40 ring-2 ring-inset ring-primary-400"
@@ -88,7 +88,7 @@ const TradeRow = ({ trade, onEditTrade, flash, rowRef }) => {
       <div className="min-w-0 w-28 sm:w-32">
         <div
           className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate"
-          data-testid={`trade-row-instrument-${trade.id}`}
+          data-test-id={`trade-row-instrument-${trade.id}`}
         >
           {trade.instrument}
         </div>
@@ -133,7 +133,7 @@ const TradeRow = ({ trade, onEditTrade, flash, rowRef }) => {
             ? "text-success-600 dark:text-success-400"
             : "text-danger-600 dark:text-danger-400"
         }`}
-        data-testid={`trade-row-pnl-${trade.id}`}
+        data-test-id={`trade-row-pnl-${trade.id}`}
       >
         {fmtSigned(trade.pnl || 0)}
       </div>
@@ -160,7 +160,7 @@ TradeRow.propTypes = {
 const GroupHeader = ({ title, subtitle, total, testId }) => (
   <div
     className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700"
-    data-testid={testId}
+    data-test-id={testId}
   >
     <div className="text-sm">
       <span className="font-semibold text-gray-900 dark:text-gray-100">
@@ -266,7 +266,7 @@ const TradeListView = ({ trades, onEditTrade, highlightTradeId, searchTerm }) =>
   };
 
   return (
-    <div data-testid="trade-list-view" className="space-y-4">
+    <div data-test-id="trade-list-view" className="space-y-4">
       {/* Header: title + tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -279,14 +279,14 @@ const TradeListView = ({ trades, onEditTrade, highlightTradeId, searchTerm }) =>
         </div>
         <div
           className="flex items-center gap-4 text-sm"
-          data-testid="trade-list-tabs"
+          data-test-id="trade-list-tabs"
         >
           {TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              data-testid={`trade-list-tab-${tab.key}-btn`}
+              data-test-id={`trade-list-tab-${tab.key}-btn`}
               className={`font-medium transition-colors ${
                 activeTab === tab.key
                   ? "text-primary-600 dark:text-primary-400"
@@ -300,7 +300,7 @@ const TradeListView = ({ trades, onEditTrade, highlightTradeId, searchTerm }) =>
       </div>
 
       {ordered.length === 0 ? (
-        <div className="card text-center py-12" data-testid="trades-empty-state">
+        <div className="card text-center py-12" data-test-id="trades-empty-state">
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
             {searchTerm
               ? `No trades match “${searchTerm}”`
@@ -378,13 +378,13 @@ const TradeListView = ({ trades, onEditTrade, highlightTradeId, searchTerm }) =>
             {totalPages > 1 && (
               <div
                 className="flex items-center gap-1"
-                data-testid="trade-list-pagination"
+                data-test-id="trade-list-pagination"
               >
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={safePage === 1}
-                  data-testid="trade-list-prev-btn"
+                  data-test-id="trade-list-prev-btn"
                   className="px-2.5 py-1 rounded-md text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   ‹
@@ -394,7 +394,7 @@ const TradeListView = ({ trades, onEditTrade, highlightTradeId, searchTerm }) =>
                     key={p}
                     type="button"
                     onClick={() => setPage(p)}
-                    data-testid={`trade-list-page-${p}-btn`}
+                    data-test-id={`trade-list-page-${p}-btn`}
                     className={`min-w-[28px] px-2 py-1 rounded-md text-sm font-medium transition-colors ${
                       p === safePage
                         ? "bg-primary-600 text-white"
@@ -408,7 +408,7 @@ const TradeListView = ({ trades, onEditTrade, highlightTradeId, searchTerm }) =>
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={safePage === totalPages}
-                  data-testid="trade-list-next-btn"
+                  data-test-id="trade-list-next-btn"
                   className="px-2.5 py-1 rounded-md text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   ›

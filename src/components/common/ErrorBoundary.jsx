@@ -28,7 +28,7 @@ class ErrorBoundary extends Component {
     if (this.state.error) {
       return (
         <div
-          data-testid="app-error-boundary"
+          data-test-id="app-error-boundary"
           className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-6 text-center"
         >
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -39,7 +39,7 @@ class ErrorBoundary extends Component {
             keeps happening, please contact support.
           </p>
           <button
-            data-testid="app-error-reload-btn"
+            data-test-id="app-error-reload-btn"
             onClick={this.handleReload}
             className="btn btn-primary"
           >

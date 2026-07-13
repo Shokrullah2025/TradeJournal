@@ -10,7 +10,7 @@ import { FEATURE_CATEGORIES } from "../../components/site/content";
  * shared content module, alternating background tone for visual rhythm.
  */
 const Features = () => (
-  <div data-testid="site-features-page">
+  <div data-test-id="site-features-page">
     <Seo
       title="Features"
       description="Explore ZalorTrade's features: performance analytics, backtesting, risk management, a fast structured trade journal — and broker auto-sync coming soon."
@@ -35,7 +35,7 @@ const Features = () => (
     {FEATURE_CATEGORIES.map((category, index) => (
       <section
         key={category.id}
-        data-testid={`features-category-${category.id}`}
+        data-test-id={`features-category-${category.id}`}
         className={
           index % 2 === 1
             ? "bg-gray-50 dark:bg-gray-800/40"
