@@ -64,11 +64,11 @@ describe("Billing Page Integration", () => {
     render(<Billing />);
     goToPlansTab();
 
-    expect(screen.getByText("Basic")).toBeInTheDocument();
-    expect(screen.getByText("Premium")).toBeInTheDocument();
-    expect(screen.getByText("Enterprise")).toBeInTheDocument();
-    // Premium monthly. Prices are DB-driven (useSubscriptionPlans); with no
-    // plans loaded in the test the card shows the fallback, which is now $18.
+    expect(screen.getByText("Starter")).toBeInTheDocument();
+    expect(screen.getByText("Pro")).toBeInTheDocument();
+    expect(screen.getByText("Elite")).toBeInTheDocument();
+    // Pro monthly. Prices are DB-driven (useSubscriptionPlans); with no plans
+    // loaded in the test the card shows the fallback, which is $18.
     expect(screen.getByText("$18")).toBeInTheDocument();
   });
 
@@ -78,10 +78,10 @@ describe("Billing Page Integration", () => {
 
     fireEvent.click(screen.getByText("Yearly"));
 
-    // Annual prices are derived from the monthly price via the shared
-    // 2-months-free formula (utils/pricing): 18*10 and 99*10.
-    expect(screen.getByText("$180")).toBeInTheDocument(); // Premium yearly
-    expect(screen.getByText("$990")).toBeInTheDocument(); // Enterprise yearly
+    // With no live plans loaded the cards fall back to the static annual prices,
+    // which mirror the seeded subscription_plans rows Stripe charges against.
+    expect(screen.getByText("$180")).toBeInTheDocument(); // Pro yearly
+    expect(screen.getByText("$360")).toBeInTheDocument(); // Elite yearly
   });
 
   it("opens the Stripe checkout modal when an upgrade button is clicked", async () => {

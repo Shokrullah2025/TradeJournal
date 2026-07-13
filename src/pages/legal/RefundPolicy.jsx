@@ -57,9 +57,9 @@ const RefundPolicy = () => (
 
     <h2>3. Subscription Plans and Pricing</h2>
     <ul>
-      <li><strong>Basic:</strong> $9.99/month or $99.90/year (save ~17%)</li>
-      <li><strong>Pro:</strong> $19.99/month or $199.90/year (save ~17%)</li>
-      <li><strong>Enterprise:</strong> $49.99/month or $499.90/year (save ~17%)</li>
+      <li><strong>Starter:</strong> $9.99/month or $90.00/year (save ~25%)</li>
+      <li><strong>Pro:</strong> $18.00/month or $180.00/year (save ~17%)</li>
+      <li><strong>Elite:</strong> $40.00/month or $360.00/year (save ~25%)</li>
     </ul>
     <p>
       All prices are in U.S. dollars and are exclusive of applicable taxes. You are responsible for all taxes imposed on your subscription by applicable law.

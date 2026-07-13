@@ -34,9 +34,9 @@ const TermsOfService = () => (
     <h2>3. Subscription Plans and Fees</h2>
     <p>ZalorTrade offers the following subscription plans (prices in USD):</p>
     <ul>
-      <li><strong>Basic — $9.99/month or $99.90/year:</strong> Up to 100 trades per month, 1 trading account, basic analytics, email support.</li>
-      <li><strong>Pro — $19.99/month or $199.90/year:</strong> Unlimited trades, up to 3 trading accounts, advanced analytics, data export, priority support.</li>
-      <li><strong>Enterprise — $49.99/month or $499.90/year:</strong> Everything in Pro, plus team collaboration, custom integrations, up to 10 trading accounts, dedicated phone support.</li>
+      <li><strong>Starter — $9.99/month or $90.00/year:</strong> Up to 50 trades per month, 1 trading account, trade journal, core dashboard, CSV and Excel import, risk calculator, email support.</li>
+      <li><strong>Pro — $18.00/month or $180.00/year:</strong> Everything in Starter, plus unlimited trades, up to 3 trading accounts, advanced analytics, backtesting, custom reports and data export, priority email support.</li>
+      <li><strong>Elite — $40.00/month or $360.00/year:</strong> Everything in Pro, plus unlimited trading accounts, prop-firm and funded account tracking, unlimited saved backtest strategies, early access to broker auto-sync, priority chat support.</li>
     </ul>
     <p>
       We reserve the right to modify plan features, pricing, or available tiers at any time with at least 30 days' advance notice to existing subscribers. Pricing displayed on the Service at the time of purchase governs your initial subscription term.
