@@ -56,7 +56,10 @@ const Admin = () => {
 
       {/* Tab navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Admin sections">
+        {/* pb-2 below sm: the tab strip only overflows on phones, where the
+            scrollbar lands hard against the tab labels. Wider screens fit every
+            tab, show no scrollbar, and keep the underline flush with the rule. */}
+        <nav className="-mb-px flex space-x-6 overflow-x-auto pb-2 sm:pb-0" aria-label="Admin sections">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;

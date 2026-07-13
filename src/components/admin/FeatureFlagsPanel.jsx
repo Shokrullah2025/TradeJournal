@@ -192,7 +192,10 @@ const FeatureFlagsPanel = () => {
         </div>
       )}
 
-      <div className="card overflow-x-auto p-0">
+      {/* pb-2 below sm: the grid is wider than a phone, so the scrollbar sits
+          directly under the last row's toggles. Laptops fit it without
+          scrolling and need no extra space. */}
+      <div className="card overflow-x-auto p-0 pb-2 sm:pb-0">
         <table className="min-w-[760px] w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
