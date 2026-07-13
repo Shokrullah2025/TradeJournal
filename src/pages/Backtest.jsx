@@ -2413,6 +2413,14 @@ const Backtest = () => {
         .select("id")
         .single();
 
+      // DB-side plan cap backstop (raced/bypassed client pre-check): abort and
+      // show the same upgrade modal rather than starting an unsaved session.
+      if (insertErr && typeof insertErr.message === "string" && insertErr.message.includes("PLAN_LIMIT_BACKTEST")) {
+        setSessionLimitInfo({ used: maxBacktestSessions, max: maxBacktestSessions });
+        setIsLoadingData(false);
+        return;
+      }
+
       if (insertErr || !inserted?.id) {
         // Without a DB row every later save is a no-op update, so the whole
         // session would vanish on refresh — surface it instead of hiding it.

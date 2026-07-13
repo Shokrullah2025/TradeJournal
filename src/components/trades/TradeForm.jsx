@@ -1125,7 +1125,13 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       onClose();
     } catch (error) {
       console.error("Error saving trade:", error);
-      toast.error("Failed to save trade. Please try again.");
+      // The DB trigger is the backstop if the client pre-check was raced or
+      // bypassed — turn its error into the same friendly upgrade modal.
+      if (typeof error?.message === "string" && error.message.includes("PLAN_LIMIT_TRADES")) {
+        setLimitInfo({ used: maxTradesPerMonth, max: maxTradesPerMonth });
+      } else {
+        toast.error("Failed to save trade. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
