@@ -34,4 +34,7 @@ Disallow: /register
 Disallow: /auth/
 Disallow: /verify-email
 
-Sitemap: https://www.zalortrade.com/sitemap.xml
+# Apex host, no www: it is what the canonical tags, the <loc> entries inside
+# sitemap.xml, and the IndexNow host all use. A www sitemap URL here would point
+# crawlers at a second, non-canonical origin for the same content.
+Sitemap: https://zalortrade.com/sitemap.xml
