@@ -64,6 +64,9 @@ import { tagColor } from "../utils/tagColor";
 import { useTemplates } from "../hooks/useTemplates";
 import { useUserSettings } from "../hooks/useUserSettings";
 import useIsMobile from "../hooks/useIsMobile";
+import { usePlanLimits } from "../hooks/usePlanLimits";
+import { limitReached } from "../utils/planLimits";
+import PlanLimitModal from "../components/common/PlanLimitModal";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { sessionMetaSchema, sessionTagSchema, MAX_SESSION_TAGS } from "../lib/schemas/backtest";
@@ -1193,6 +1196,10 @@ function ChartContextMenu({ x, y, onSettings, onPlaceOrder, onClose }) {
 const Backtest = () => {
   const { user } = useAuth();
   const { sessions, createSession, getSession } = useBacktest();
+  const { maxBacktestSessions, upgradeLabel } = usePlanLimits();
+  // Populated (with the current session count) when creating a session is
+  // blocked by the plan cap, which opens the upgrade modal instead.
+  const [sessionLimitInfo, setSessionLimitInfo] = useState(null);
 
   // ── Dark mode detection ──
   const [isDark, setIsDark] = useState(
@@ -2334,6 +2341,20 @@ const Backtest = () => {
     ) {
       toast.error("Please fill in all required fields");
       return;
+    }
+
+    // Enforce the saved-session plan cap before doing any work. Count from the
+    // DB (source of truth) rather than the possibly-paginated `sessions` list.
+    // A failed count fails open — never block a save on a count hiccup.
+    if (maxBacktestSessions > 0 && user?.id) {
+      const { count, error: countErr } = await supabase
+        .from("backtest_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      if (!countErr && count != null && limitReached(count, maxBacktestSessions)) {
+        setSessionLimitInfo({ used: count, max: maxBacktestSessions });
+        return;
+      }
     }
 
     const sessionBalance = balance;
@@ -3675,6 +3696,7 @@ const Backtest = () => {
 
   if (currentView === "setup") {
     return (
+      <>
       <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
@@ -4026,6 +4048,18 @@ const Backtest = () => {
           </div>
         </div>
       </div>
+
+      <PlanLimitModal
+        open={!!sessionLimitInfo}
+        onClose={() => setSessionLimitInfo(null)}
+        title="Backtest session limit reached"
+        message={`Your plan includes ${maxBacktestSessions} saved backtest sessions. Upgrade to run more.`}
+        used={sessionLimitInfo?.used ?? 0}
+        max={sessionLimitInfo?.max ?? maxBacktestSessions}
+        upgradeLabel={upgradeLabel}
+        testId="backtest-limit-modal"
+      />
+      </>
     );
   }
 

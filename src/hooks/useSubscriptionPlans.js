@@ -17,7 +17,7 @@ let inflight = null; // shared by components that mount while the first read run
 async function loadPlans() {
   const { data, error } = await supabase
     .from("subscription_plans")
-    .select("slug, name, description, features, price, price_annually, currency")
+    .select("slug, name, description, features, price, price_annually, currency, max_trades_per_month, max_backtest_sessions")
     .eq("is_active", true);
   if (error) throw new Error(error.message);
 
@@ -30,6 +30,9 @@ async function loadPlans() {
       price: p.price != null ? Number(p.price) : null,
       priceAnnually: p.price_annually != null ? Number(p.price_annually) : null,
       currency: (p.currency || "usd").toUpperCase(),
+      // Usage caps consumed by usePlanLimits (0 = unlimited).
+      maxTradesPerMonth: p.max_trades_per_month ?? 0,
+      maxBacktestSessions: p.max_backtest_sessions ?? 0,
     };
   });
 
