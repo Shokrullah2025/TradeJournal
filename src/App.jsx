@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
@@ -301,6 +301,16 @@ function App() {
                                   <Route
                                     path="/billing"
                                     element={<Billing />}
+                                  />
+                                  {/* Fallback. The outer "/*" route hands every
+                                      non-public URL to this shell, so without a
+                                      catch-all here an unmatched path renders the
+                                      sidebar and header around an EMPTY <main> —
+                                      the app looks dead until the user clicks a
+                                      nav link. Send them to the dashboard instead. */}
+                                  <Route
+                                    path="*"
+                                    element={<Navigate to="/dashboard" replace />}
                                   />
                                 </Routes>
                                 </div>
