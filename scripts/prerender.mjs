@@ -5,10 +5,12 @@
  *   1. Renders every route in src/prerender/routes.js to static HTML with the
  *      SSR bundle (ReactDOMServer.renderToString — no headless browser, so it
  *      works in any CI, including Cloudflare Pages).
- *   2. Writes dist/<route>/index.html for each. Static hosts serve an existing
- *      file before the SPA fallback, so crawlers get real per-page HTML —
- *      unique title/description/canonical/OG/JSON-LD plus the rendered body —
- *      while unknown paths still fall back to the SPA shell.
+ *   2. Writes dist/<route>.html for each (see outputPathFor — the flat .html
+ *      layout is what keeps /pricing a 200 instead of a 308 to /pricing/).
+ *      Static hosts serve an existing file before the SPA fallback, so crawlers
+ *      get real per-page HTML — unique title/description/canonical/OG/JSON-LD
+ *      plus the rendered body — while unknown paths still fall back to the SPA
+ *      shell.
  *   3. Emits dist/sitemap.xml from the same route list (with lastmod where a
  *      real content date exists).
  *
@@ -92,10 +94,23 @@ function injectBody(shell, appHtml) {
   return shell.replace(ROOT_DIV, `<div id="root">${appHtml}</div>`);
 }
 
+// Emit dist/<route>.html — NOT dist/<route>/index.html.
+//
+// Cloudflare Pages canonicalizes directory-style output: with only
+// dist/pricing/index.html on disk, a request for /pricing answers 308 -> /pricing/.
+// That made every non-homepage URL in sitemap.xml a redirect, while the page
+// that finally served 200 (/pricing/) declared its canonical as /pricing — the
+// URL that had just redirected. Crawlers report that as "page with redirect".
+//
+// With dist/pricing.html, Pages serves /pricing at 200 directly (and 308s the
+// trailing-slash form to it instead). Every URL we publish — sitemap <loc>,
+// canonical tags, internal links, URLs already pushed to IndexNow — is
+// unchanged and now resolves in one hop.
 function outputPathFor(route) {
-  return route === "/"
-    ? SHELL_PATH
-    : path.join(DIST, ...route.split("/").filter(Boolean), "index.html");
+  if (route === "/") return SHELL_PATH;
+  const segments = route.split("/").filter(Boolean);
+  const leaf = `${segments.pop()}.html`;
+  return path.join(DIST, ...segments, leaf);
 }
 
 function buildSitemap(routes, siteUrl) {
