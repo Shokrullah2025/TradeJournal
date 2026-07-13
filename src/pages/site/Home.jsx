@@ -743,7 +743,7 @@ const Home = () => {
           <div
             key={tier.id}
             data-testid={`home-pricing-${tier.id}-card`}
-            className={`relative flex flex-col rounded-2xl border p-6 ${
+            className={`relative flex flex-col rounded-2xl border p-6 sm:min-h-[34rem] ${
               tier.popular
                 ? "border-accent-500 bg-white shadow-xl dark:border-accent-500 dark:bg-gray-900"
                 : "border-accent-100 bg-white dark:border-gray-700 dark:bg-gray-900"
