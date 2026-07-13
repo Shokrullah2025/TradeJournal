@@ -789,7 +789,7 @@ const Home = () => {
               ))}
             </ul>
             <Link
-              to={tier.id === "enterprise" ? "/contact" : "/register"}
+              to="/register"
               data-testid={`home-pricing-${tier.id}-btn`}
               className={`mt-6 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                 tier.popular

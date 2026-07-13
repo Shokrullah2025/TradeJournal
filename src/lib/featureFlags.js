@@ -26,8 +26,10 @@ export const isComingSoon = (featureKey) =>
   COMING_SOON_FEATURES.includes(featureKey);
 
 // Audiences a flag can target. Order matters for the admin UI columns.
-// NOTE: keys must match the `subscription_plans.slug` values in Supabase. The
-// mid-tier plan's slug is "premium" (its display name is "Pro").
+// NOTE: keys must match the `subscription_plans.slug` values in Supabase, which
+// are frozen because Stripe and every existing subscriber row key off them. The
+// display names have since diverged from the slugs: basic → "Starter",
+// premium → "Pro", enterprise → "Elite".
 //
 // "free" is deliberately absent: there is no free plan. resolveAudience() still
 // returns "free" as the internal signal for "no live trial and no paid plan",
@@ -36,9 +38,9 @@ export const isComingSoon = (featureKey) =>
 // people who cannot get into the app at all.
 export const AUDIENCES = [
   { key: "trial",      label: "Trial" },
-  { key: "basic",      label: "Basic" },
+  { key: "basic",      label: "Starter" },
   { key: "premium",    label: "Pro" },
-  { key: "enterprise", label: "Enterprise" },
+  { key: "enterprise", label: "Elite" },
   { key: "admin",      label: "Admin" },
 ];
 
