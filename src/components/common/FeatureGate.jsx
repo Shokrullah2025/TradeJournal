@@ -5,6 +5,7 @@ import { Lock, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
 import { FEATURE_CATALOG, PLAN_LABELS } from "../../lib/featureFlags";
+import { UPGRADE_PLANS_PATH } from "../../utils/navigation";
 import { GenericLockedPreview } from "./LockedPreview";
 
 // ── Feature gate ───────────────────────────────────────────────────────────
@@ -134,7 +135,7 @@ const FeatureGate = ({ feature, children, title, variant, preview }) => {
               "This feature is included in a higher plan. Upgrade to unlock it."}
           </p>
           <Link
-            to="/billing"
+            to={UPGRADE_PLANS_PATH}
             data-test-id={`feature-gate-upgrade-btn-${feature}`}
             className="btn btn-primary mt-6 inline-flex items-center justify-center gap-2 whitespace-nowrap"
           >

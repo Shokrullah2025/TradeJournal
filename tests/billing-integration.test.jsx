@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 // The Billing page is now tab-based (Payment Information / Plans & Subscriptions
 // / Invoice History) and drives checkout through Stripe via BillingContext. We
@@ -25,6 +26,15 @@ vi.mock("../src/components/billing/StripePaymentForm", () => ({
 }));
 
 import Billing from "../src/pages/Billing";
+
+// Billing resolves its active section from `?section=` (the app's upgrade CTAs
+// deep-link straight to the plan cards), so it needs a router in the tree.
+const renderBilling = (path = "/billing") =>
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <Billing />
+    </MemoryRouter>
+  );
 
 const goToPlansTab = () => {
   fireEvent.click(screen.getByText("Plans & Subscriptions"));
@@ -52,7 +62,7 @@ describe("Billing Page Integration", () => {
 
   // ── Happy path ────────────────────────────────────────────────────────────
   it("renders the billing header and the three tabs", () => {
-    render(<Billing />);
+    renderBilling();
 
     expect(screen.getByText("Subscription & Billing")).toBeInTheDocument();
     expect(screen.getByText("Payment Information")).toBeInTheDocument();
@@ -60,8 +70,31 @@ describe("Billing Page Integration", () => {
     expect(screen.getByText("Invoice History")).toBeInTheDocument();
   });
 
+  // The upgrade CTAs (FeatureGate's "Upgrade to Pro", PlanLimitModal) send the
+  // user to UPGRADE_PLANS_PATH — /settings?tab=billing&section=plans. Landing on
+  // the default Payment Information tab would show someone who just asked to
+  // upgrade their saved cards, leaving them to hunt for the plans themselves.
+  it("opens the Plans section directly when deep-linked with ?section=plans", () => {
+    renderBilling("/settings?tab=billing&section=plans");
+
+    // Plan cards are on screen with no click — this is the Plans section.
+    expect(screen.getByText("Starter")).toBeInTheDocument();
+    expect(screen.getByText("Elite")).toBeInTheDocument();
+    // ...and not the Payment Information section it would otherwise default to.
+    expect(screen.queryByTestId("billing-no-payment-method")).not.toBeInTheDocument();
+  });
+
+  it("falls back to Payment Information for a missing or unknown ?section=", () => {
+    const { unmount } = renderBilling("/billing");
+    expect(screen.getByTestId("billing-no-payment-method")).toBeInTheDocument();
+    unmount();
+
+    renderBilling("/billing?section=bogus");
+    expect(screen.getByTestId("billing-no-payment-method")).toBeInTheDocument();
+  });
+
   it("shows the pricing plans on the Plans tab", () => {
-    render(<Billing />);
+    renderBilling();
     goToPlansTab();
 
     expect(screen.getByText("Starter")).toBeInTheDocument();
@@ -73,7 +106,7 @@ describe("Billing Page Integration", () => {
   });
 
   it("updates prices when the billing cycle switches to yearly", () => {
-    render(<Billing />);
+    renderBilling();
     goToPlansTab();
 
     fireEvent.click(screen.getByText("Yearly"));
@@ -90,7 +123,7 @@ describe("Billing Page Integration", () => {
       paidInFull: false,
       setupClientSecret: null,
     });
-    render(<Billing />);
+    renderBilling();
     goToPlansTab();
 
     const upgradeButtons = screen.getAllByText(/Upgrade to/);
@@ -114,7 +147,7 @@ describe("Billing Page Integration", () => {
       paidInFull: true,
       setupClientSecret: "seti_test_123",
     });
-    render(<Billing />);
+    renderBilling();
     goToPlansTab();
 
     fireEvent.click(screen.getAllByText(/Upgrade to/)[0]); // Premium
@@ -127,7 +160,7 @@ describe("Billing Page Integration", () => {
 
   it("opens the Stripe portal when Manage Payment Methods is clicked", async () => {
     billingState.openPortal.mockResolvedValue(undefined);
-    render(<Billing />);
+    renderBilling();
 
     // Payment Information is the default tab.
     fireEvent.click(screen.getByTestId("billing-update-payment-btn"));
@@ -139,7 +172,7 @@ describe("Billing Page Integration", () => {
 
   // ── Edge case: empty states ───────────────────────────────────────────────
   it("shows the empty payment-method and invoice states", () => {
-    render(<Billing />);
+    renderBilling();
 
     // Default Payment tab: no saved cards.
     expect(screen.getByTestId("billing-no-payment-method")).toBeInTheDocument();
@@ -155,7 +188,7 @@ describe("Billing Page Integration", () => {
     billingState.createCheckoutSession.mockRejectedValue(
       new Error("Failed to initialize checkout. Please try again.")
     );
-    render(<Billing />);
+    renderBilling();
     goToPlansTab();
 
     fireEvent.click(screen.getAllByText(/Upgrade to/)[0]);

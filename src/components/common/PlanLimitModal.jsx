@@ -4,12 +4,13 @@ import { Link } from "react-router-dom";
 import { Lock, X } from "lucide-react";
 import ModalPortal from "./ModalPortal";
 import { formatUsage } from "../../utils/planLimits";
+import { UPGRADE_PLANS_PATH } from "../../utils/navigation";
 
 // ── Plan limit modal ────────────────────────────────────────────────────────
 // Shown when a user hits a plan usage cap (manual trades / month, saved
 // backtest sessions). Mirrors the FeatureGate upgrade card so the whole app
-// speaks one "you've hit a limit → upgrade" language, and links to /billing
-// (the in-app billing page, not the public /pricing route).
+// speaks one "you've hit a limit → upgrade" language, and links to the in-app
+// plan cards (Settings → Billing → Plans), not the public /pricing route.
 
 const PlanLimitModal = ({
   open,
@@ -81,7 +82,7 @@ const PlanLimitModal = ({
               Not now
             </button>
             <Link
-              to="/billing"
+              to={UPGRADE_PLANS_PATH}
               onClick={onClose}
               className="btn btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap"
               data-test-id={`${testId}-upgrade-btn`}

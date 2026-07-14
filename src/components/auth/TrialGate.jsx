@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { ArrowLeft, LogOut } from "lucide-react";
 import TrialActivation from "./TrialActivation";
@@ -49,6 +49,24 @@ const TrialGate = ({ children }) => {
       : null
   );
 
+  // Which activation panel to show, decided ONCE when billing first resolves and
+  // then held for the life of the gate. It deliberately does NOT track
+  // hasUsedTrial live: the instant stripe-start-trial inserts the trialing row,
+  // BillingContext's realtime channel flips hasUsedTrial to true — which happens
+  // *mid-activation*, while TrialActivation is still showing its success panel.
+  // Re-deriving here would unmount TrialActivation and mount SubscribeActivation
+  // in its place, so a user who had just succeeded saw the plans and a pay-now
+  // checkout flash back at them on the way to the dashboard.
+  const offerRef = useRef(null);
+  if (!isLoading && offerRef.current === null) {
+    offerRef.current = hasUsedTrial ? "subscribe" : "trial";
+  }
+  const offer = offerRef.current;
+
+  // Set once the trial is live. Everything but the success panel is hidden from
+  // here on — the flow is over and there is nothing left for the user to decide.
+  const [settling, setSettling] = useState(false);
+
   const showPlanStep = !isLoading && !choice;
 
   return (
@@ -72,7 +90,7 @@ const TrialGate = ({ children }) => {
         aria-modal="true"
       >
         <div className="flex w-full max-w-4xl flex-col items-center gap-4 py-4">
-          {isLoading ? (
+          {isLoading || !offer ? (
             // Don't flash the wrong offer while trial history is still loading.
             <div
               className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-10 flex justify-center"
@@ -86,7 +104,7 @@ const TrialGate = ({ children }) => {
                 setChoice({ planSlug, billingCycle })
               }
             />
-          ) : hasUsedTrial ? (
+          ) : offer === "subscribe" ? (
             <SubscribeActivation
               variant="overlay"
               planSlug={choice.planSlug}
@@ -97,14 +115,17 @@ const TrialGate = ({ children }) => {
               variant="overlay"
               planSlug={choice.planSlug}
               billingCycle={choice.billingCycle}
+              onTrialActivated={() => setSettling(true)}
             />
           )}
 
           {/* Back to the plan chooser. Hidden on the plan step itself, and for a
               user who arrived with a plan already chosen (there is no earlier
               step of theirs to go back to — but they can still change it, so we
-              show it once they're past the choice). */}
-          {!isLoading && choice && (
+              show it once they're past the choice). Also hidden once the trial
+              is live: offering to change the plan they just paid for, on the way
+              out, is the "plan flashed back at me" complaint in button form. */}
+          {!isLoading && choice && !settling && (
             <button
               type="button"
               onClick={() => setChoice(null)}
@@ -118,8 +139,9 @@ const TrialGate = ({ children }) => {
 
           {/* Escape hatch — the gate is otherwise non-dismissible, so this lets
               a trapped customer sign out and switch accounts. Hidden while the
-              offer is still resolving to avoid a lone button on a blank gate. */}
-          {!isLoading && (
+              offer is still resolving to avoid a lone button on a blank gate,
+              and once the trial is live (they're on their way in, not out). */}
+          {!isLoading && !settling && (
             <button
               type="button"
               onClick={logout}

@@ -52,7 +52,18 @@ const TrialActivation = ({
   // Fallback reload if the in-place entitlement refresh somehow doesn't clear
   // the gate. Cleared on unmount — which is exactly what happens when it works.
   const reloadFallback = useRef(null);
-  useEffect(() => () => clearTimeout(reloadFallback.current), []);
+  // Refreshing entitlement can unmount us *during* the await (the gate drops the
+  // moment the audience leaves "free"). Without this flag we'd arm the fallback
+  // timer after the unmount cleanup had already run, so nothing could cancel it
+  // and the success path ALWAYS ended in a full-page reload a few seconds later.
+  const isMounted = useRef(true);
+  useEffect(
+    () => () => {
+      isMounted.current = false;
+      clearTimeout(reloadFallback.current);
+    },
+    []
+  );
   // Live price for the plan and cycle the user actually chose (admin Pricing
   // tab); falls back to the derived annual amount when none is configured. The
   // copy below must quote what Stripe will really charge when the trial ends.
@@ -120,6 +131,14 @@ const TrialActivation = ({
       // dashboard take several seconds to appear. Time-boxed: if the refresh
       // stalls we still navigate, and the fallback below repairs it.
       await withTimeout(refreshEntitlement(), 5000, null).catch(() => {});
+
+      // The refreshed audience may already have unmounted us — RequireSubscription
+      // drops the gate as soon as it leaves "free". That IS the success path: the
+      // app is on screen behind us and there is nothing left to do. Arming the
+      // fallback below at this point would schedule a full reload that no cleanup
+      // can cancel, which is what made the dashboard take seconds to settle.
+      if (!isMounted.current) return;
+
       navigate("/dashboard", { replace: true });
 
       // Safety net: a refreshed audience unmounts this component (the gate goes

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import ModalPortal from "../components/common/ModalPortal";
 import {
   CreditCard,
@@ -20,6 +21,11 @@ import StripePaymentForm from "../components/billing/StripePaymentForm";
 import useSubscriptionPlans from "../hooks/useSubscriptionPlans";
 import useAdminBillingData from "../hooks/useAdminBillingData";
 import { annualPriceFor } from "../utils/pricing";
+
+// Sections of this page that may be opened directly via `?section=` — used by
+// the upgrade CTAs (FeatureGate, PlanLimitModal) to land the user straight on
+// the plan cards instead of the default Payment Information tab.
+const BILLING_SECTIONS = ["payment", "plans", "invoices"];
 
 const Billing = () => {
   const { user } = useAuth();
@@ -55,7 +61,38 @@ const Billing = () => {
   const [paymentMode, setPaymentMode] = useState("payment");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("payment");
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Open the section named in `?section=` (deep link), falling back to Payment.
+  const [activeTab, setActiveTab] = useState(() => {
+    const s = searchParams.get("section");
+    return BILLING_SECTIONS.includes(s) ? s : "payment";
+  });
+  // Follow `?section=` changes while this page is already mounted — e.g. an
+  // upgrade CTA clicked from a locked page the user reached *from* Settings, or
+  // browser back/forward between sections.
+  useEffect(() => {
+    const s = searchParams.get("section");
+    if (s && BILLING_SECTIONS.includes(s) && s !== activeTab) {
+      setActiveTab(s);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Reflect a section change in the URL so it stays deep-linkable and the back
+  // button works. Merges into the existing params rather than replacing them —
+  // dropping `tab=billing` would kick the user out of the Settings billing tab.
+  const selectSection = (id) => {
+    setActiveTab(id);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("section", id);
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
   // Admin billing card tab — admins manage everyone's billing here, they don't
   // see their own plan/invoices.
   const [adminTab, setAdminTab] = useState("overview");
@@ -541,7 +578,7 @@ const Billing = () => {
                 ].map(({ id, label, short }) => (
                   <button
                     key={id}
-                    onClick={() => setActiveTab(id)}
+                    onClick={() => selectSection(id)}
                     data-test-id={`billing-tab-${id}-btn`}
                     className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs transition-colors @2xl:px-3.5 @2xl:py-2 @2xl:text-[13px] ${
                       activeTab === id
@@ -953,7 +990,7 @@ const Billing = () => {
                           Your invoices will appear here after your first payment.
                         </p>
                         <button
-                          onClick={() => setActiveTab("plans")}
+                          onClick={() => selectSection("plans")}
                           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600"
                         >
                           View Plans
