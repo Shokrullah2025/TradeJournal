@@ -40,6 +40,16 @@ const goToPlansTab = () => {
   fireEvent.click(screen.getByText("Plans & Subscriptions"));
 };
 
+// Clicking a plan card only opens the confirmation dialog now — checkout is
+// deliberately one step further away, because for an existing paying subscriber
+// confirming charges the card on file immediately.
+const chooseUpgrade = (index = 0) => {
+  fireEvent.click(screen.getAllByText(/Upgrade to/)[index]);
+};
+const confirmUpgrade = () => {
+  fireEvent.click(screen.getByTestId("billing-plan-confirm-btn"));
+};
+
 describe("Billing Page Integration", () => {
   beforeEach(() => {
     authState.user = { role: "user", currency: "USD" };
@@ -117,7 +127,7 @@ describe("Billing Page Integration", () => {
     expect(screen.getByText("$360")).toBeInTheDocument(); // Elite yearly
   });
 
-  it("opens the Stripe checkout modal when an upgrade button is clicked", async () => {
+  it("opens the Stripe checkout modal once the upgrade is confirmed", async () => {
     billingState.createCheckoutSession.mockResolvedValue({
       clientSecret: "cs_test_123",
       paidInFull: false,
@@ -126,8 +136,8 @@ describe("Billing Page Integration", () => {
     renderBilling();
     goToPlansTab();
 
-    const upgradeButtons = screen.getAllByText(/Upgrade to/);
-    fireEvent.click(upgradeButtons[0]); // Premium
+    chooseUpgrade(); // Premium
+    confirmUpgrade();
 
     await waitFor(() => {
       expect(billingState.createCheckoutSession).toHaveBeenCalledWith(
@@ -150,12 +160,89 @@ describe("Billing Page Integration", () => {
     renderBilling();
     goToPlansTab();
 
-    fireEvent.click(screen.getAllByText(/Upgrade to/)[0]); // Premium
+    chooseUpgrade(); // Premium
+    confirmUpgrade();
 
     expect(await screen.findByTestId("billing-payment-modal")).toBeInTheDocument();
     expect(screen.getByTestId("stripe-payment-form-mock")).toBeInTheDocument();
     expect(screen.getByTestId("billing-payment-modal-setup-note")).toBeInTheDocument();
     expect(screen.getByTestId("billing-payment-modal-price")).toHaveTextContent("$0/month");
+  });
+
+  // ── Plan-change confirmation ───────────────────────────────────────────────
+  // Confirming an upgrade as an existing paying subscriber charges the card on
+  // file immediately (Stripe swaps the price with always_invoice proration) —
+  // there is no card form left to back out of. So the click must not act alone.
+  describe("plan change confirmation", () => {
+    it("does not touch checkout until the user confirms", async () => {
+      renderBilling();
+      goToPlansTab();
+
+      chooseUpgrade();
+
+      expect(screen.getByTestId("billing-plan-confirm-modal")).toBeInTheDocument();
+      expect(billingState.createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it("abandons the change when the user backs out", () => {
+      renderBilling();
+      goToPlansTab();
+
+      chooseUpgrade();
+      fireEvent.click(screen.getByTestId("billing-plan-confirm-cancel-btn"));
+
+      expect(screen.queryByTestId("billing-plan-confirm-modal")).not.toBeInTheDocument();
+      expect(billingState.createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it("names the plan, cycle and price being confirmed", () => {
+      renderBilling();
+      goToPlansTab();
+      fireEvent.click(screen.getByText("Yearly"));
+
+      chooseUpgrade();
+
+      expect(screen.getByTestId("billing-plan-confirm-price")).toHaveTextContent("$180");
+      // No subscription in this fixture → the card form is still ahead of them.
+      expect(screen.getByTestId("billing-plan-confirm-message")).toHaveTextContent(
+        /card details on the next step/i
+      );
+    });
+
+    // The dangerous case: a paying subscriber gets charged on confirm, with no
+    // further prompt. The dialog is the last chance to say so.
+    it("warns a paying subscriber that the card on file is charged today", () => {
+      billingState.subscription = {
+        status: "active",
+        subscription_plans: { name: "Starter", slug: "basic", price: 9.99 },
+      };
+      renderBilling();
+      goToPlansTab();
+
+      chooseUpgrade();
+
+      expect(screen.getByTestId("billing-plan-confirm-message")).toHaveTextContent(
+        /card on file will be charged today/i
+      );
+    });
+
+    it("tells a trialing user that nothing is charged today", () => {
+      billingState.subscription = {
+        status: "trialing",
+        trial_start: new Date(Date.now() - 2 * 86400000).toISOString(),
+        trial_end: new Date(Date.now() + 5 * 86400000).toISOString(),
+        cancel_at_period_end: false,
+        subscription_plans: { name: "Starter", slug: "basic", price: 9.99 },
+      };
+      renderBilling();
+      goToPlansTab();
+
+      chooseUpgrade();
+
+      expect(screen.getByTestId("billing-plan-confirm-message")).toHaveTextContent(
+        /nothing is charged today/i
+      );
+    });
   });
 
   it("opens the Stripe portal when Manage Payment Methods is clicked", async () => {
@@ -191,7 +278,8 @@ describe("Billing Page Integration", () => {
     renderBilling();
     goToPlansTab();
 
-    fireEvent.click(screen.getAllByText(/Upgrade to/)[0]);
+    chooseUpgrade();
+    confirmUpgrade();
 
     await waitFor(() => {
       expect(toastMock.error).toHaveBeenCalledWith(
@@ -218,7 +306,7 @@ describe("Billing Page Integration", () => {
       };
     };
 
-    it("counts down the days left and says when the plan starts", () => {
+    it("counts down the days left and says when the card is charged", () => {
       trialingFor(5);
       renderBilling();
 
@@ -226,9 +314,8 @@ describe("Billing Page Integration", () => {
       expect(screen.getByTestId("billing-trial-banner")).toHaveTextContent("Free trial of Pro");
       // The charge is the thing they must not be surprised by.
       expect(screen.getByTestId("billing-trial-message")).toHaveTextContent(
-        /card on file is charged then/i
+        /then your card is charged/i
       );
-      expect(screen.getByTestId("billing-trial-progress")).toBeInTheDocument();
     });
 
     it("says a single day in the singular on the last day", () => {
@@ -245,20 +332,22 @@ describe("Billing Page Integration", () => {
       renderBilling();
 
       const message = screen.getByTestId("billing-trial-message");
-      expect(message).toHaveTextContent(/nothing will be charged/i);
-      expect(message).not.toHaveTextContent(/is charged then/i);
+      expect(message).toHaveTextContent(/won.t be charged/i);
+      expect(message).not.toHaveTextContent(/your card is charged/i);
     });
 
     // Edge — Stripe gave us no trial_end (shouldn't happen, but the row allows
-    // null): fall back to copy that needs no date, and drop the progress bar
-    // rather than rendering a bar with a made-up length.
+    // null): fall back to copy that needs no date rather than rendering
+    // "Ends Invalid Date".
     it("degrades gracefully when there is no trial end date", () => {
       trialingFor(5, { trial_end: null, trial_start: null });
       renderBilling();
 
       expect(screen.getByTestId("billing-trial-banner")).toBeInTheDocument();
       expect(screen.queryByTestId("billing-trial-days-left")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("billing-trial-progress")).not.toBeInTheDocument();
+      expect(screen.getByTestId("billing-trial-message")).toHaveTextContent(
+        /cancel before it ends/i
+      );
     });
 
     it("shows no banner at all when the user is not on a trial", () => {

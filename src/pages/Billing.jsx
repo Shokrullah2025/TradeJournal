@@ -61,7 +61,6 @@ const Billing = () => {
   // happens when it runs out, and how do I stop it. Derived here so the banner
   // markup below stays declarative.
   const isTrialing = subscription?.status === "trialing";
-  const trialStart = subscription?.trial_start ? new Date(subscription.trial_start) : null;
   const trialEnd = subscription?.trial_end ? new Date(subscription.trial_end) : null;
   const trialPlanName =
     subscription?.subscription_plans?.name ??
@@ -75,20 +74,6 @@ const Billing = () => {
   const trialDaysLeft = trialEnd
     ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / MS_PER_DAY))
     : null;
-  // How far through the trial they are. Uses the real start/end from Stripe
-  // rather than assuming 7 days, so a promotional trial of any length is right.
-  const trialElapsedPct =
-    trialStart && trialEnd && trialEnd > trialStart
-      ? Math.min(
-          100,
-          Math.max(
-            0,
-            ((Date.now() - trialStart.getTime()) /
-              (trialEnd.getTime() - trialStart.getTime())) *
-              100
-          )
-        )
-      : null;
   // Amber is for when the urgency is real — the last two days. For the rest of
   // the trial this is good news, so it wears the brand teal.
   const trialUrgent =
@@ -110,6 +95,13 @@ const Billing = () => {
   const [paymentMode, setPaymentMode] = useState("payment");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  // Plan the user has clicked but not yet confirmed: { plan, cycle }.
+  // A plan change moves money. For an existing paying subscriber
+  // stripe-create-subscription swaps the price in place with
+  // proration_behavior: "always_invoice", so the card on file is charged the
+  // difference IMMEDIATELY — no card form, no further prompt. A single stray
+  // click on a pricing card must never be able to do that.
+  const [pendingPlan, setPendingPlan] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   // Open the section named in `?section=` (deep link), falling back to Payment.
   const [activeTab, setActiveTab] = useState(() => {
@@ -179,6 +171,14 @@ const Billing = () => {
     } finally {
       setCheckoutLoading(false);
     }
+  };
+
+  // The user said yes in the confirmation dialog — now it's safe to move money.
+  const confirmPlanChange = () => {
+    if (!pendingPlan) return;
+    const { plan, cycle } = pendingPlan;
+    setPendingPlan(null);
+    handleUpgrade(plan.id, cycle);
   };
 
   const handlePaymentSuccess = () => {
@@ -391,10 +391,10 @@ const Billing = () => {
                       }`}
                     >
                       {!trialEnd
-                        ? "You have full access to every feature in your plan. Cancel before the trial ends to avoid being charged."
+                        ? "Cancel before it ends to avoid a charge."
                         : trialWillCancel
-                          ? `You've cancelled, so nothing will be charged. You keep full access until ${format(trialEnd, "MMM d, yyyy")}.`
-                          : `Full access to every feature. Your ${trialPlanName} plan starts on ${format(trialEnd, "MMM d, yyyy")} and the card on file is charged then — cancel any time before.`}
+                          ? `Ends ${format(trialEnd, "MMM d")}. You won't be charged.`
+                          : `Ends ${format(trialEnd, "MMM d")}, then your card is charged. Cancel any time before.`}
                     </p>
                   </div>
                 </div>
@@ -413,29 +413,6 @@ const Billing = () => {
                   {portalLoading ? "Opening…" : "Manage or cancel"}
                 </button>
               </div>
-
-              {/* How far through the trial they are — the "how long have I got"
-                  answer at a glance, without reading a date. */}
-              {trialElapsedPct !== null && (
-                <div
-                  className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/80 dark:bg-white/10"
-                  role="progressbar"
-                  aria-valuenow={Math.round(trialElapsedPct)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Free trial progress"
-                  data-test-id="billing-trial-progress"
-                >
-                  <div
-                    className={`h-full rounded-full ${
-                      trialUrgent
-                        ? "bg-amber-500"
-                        : "bg-primary-600 dark:bg-[#2dd4bf]"
-                    }`}
-                    style={{ width: `${trialElapsedPct}%` }}
-                  />
-                </div>
-              )}
             </div>
           )}
 
@@ -934,7 +911,9 @@ const Billing = () => {
                           <button
                             onClick={() => {
                               if (!isCurrent && plan.id !== "basic") {
-                                handleUpgrade(plan.id, billingCycle);
+                                // Confirm first — see pendingPlan.
+                                // Confirm first — see pendingPlan.
+                                setPendingPlan({ plan, cycle: billingCycle });
                               }
                             }}
                             disabled={isCurrent || plan.id === "basic" || checkoutLoading}
@@ -1132,6 +1111,86 @@ const Billing = () => {
               </div>
             </div>
           )}
+
+          {/* Plan-change confirmation. What happens on "Yes" differs sharply by
+              who is asking, and the copy has to say which — an existing paying
+              subscriber is charged the prorated difference on the spot, with no
+              card form in between. */}
+          {pendingPlan && (() => {
+            const { plan, cycle } = pendingPlan;
+            const price = getPlanPrice(plan);
+            const period = cycle === "monthly" ? "month" : "year";
+            const isPayingNow = subscription?.status === "active";
+
+            return (
+              <ModalPortal>
+                <div
+                  className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 p-4"
+                  data-test-id="billing-plan-confirm-modal"
+                  role="dialog"
+                  aria-modal="true"
+                >
+                  <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-200">
+                      Switch to {plan.name}?
+                    </h3>
+
+                    <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-white/10">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-300">
+                          {plan.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          Billed {cycle === "monthly" ? "monthly" : "yearly"}
+                        </p>
+                      </div>
+                      <p className="text-right">
+                        <span
+                          className="text-xl font-extrabold text-gray-900 dark:text-gray-300"
+                          data-test-id="billing-plan-confirm-price"
+                        >
+                          ${price}
+                        </span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          /{period}
+                        </span>
+                      </p>
+                    </div>
+
+                    <p
+                      className="mt-4 text-sm text-gray-600 dark:text-gray-400"
+                      data-test-id="billing-plan-confirm-message"
+                    >
+                      {isTrialing
+                        ? `You're on a free trial, so nothing is charged today. Your ${plan.name} plan starts${trialEnd ? ` on ${format(trialEnd, "MMM d")}` : " when the trial ends"} at $${price}/${period}.`
+                        : isPayingNow
+                          ? `Your card on file will be charged today for the rest of this billing period, then $${price}/${period} from your next renewal.`
+                          : `You'll enter your card details on the next step. Nothing is charged until you confirm.`}
+                    </p>
+
+                    <div className="mt-6 flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPendingPlan(null)}
+                        data-test-id="billing-plan-confirm-cancel-btn"
+                        className="rounded-[10px] border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
+                      >
+                        Keep current plan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={confirmPlanChange}
+                        data-test-id="billing-plan-confirm-btn"
+                        className="rounded-[10px] bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700 dark:bg-teal-700 dark:hover:bg-teal-600"
+                      >
+                        {isPayingNow ? "Confirm & pay" : `Switch to ${plan.name}`}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </ModalPortal>
+            );
+          })()}
 
           {/* Stripe Payment Modal */}
           {showPaymentForm && clientSecret && (() => {
