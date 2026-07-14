@@ -14,8 +14,14 @@ describe("resolveAudience", () => {
     expect(resolveAudience({ role: "admin", planSlug: "premium", isTrial: true })).toBe("admin");
   });
 
-  it("returns 'trial' for a trialing non-admin even if a plan is present", () => {
-    expect(resolveAudience({ role: "user", planSlug: "premium", isTrial: true })).toBe("trial");
+  // A trial is a free window on a real plan, not a tier of its own. Collapsing
+  // every trialing user into one "trial" audience threw away the plan they
+  // chose, so upgrading Starter → Pro mid-trial (the row stays
+  // status='trialing') unlocked nothing.
+  it("resolves a trialing user to the plan they are trialing, not a 'trial' tier", () => {
+    expect(resolveAudience({ role: "user", planSlug: "basic" })).toBe("basic");
+    expect(resolveAudience({ role: "user", planSlug: "premium" })).toBe("premium");
+    expect(resolveAudience({ role: "user", planSlug: "premium" })).not.toBe("trial");
   });
 
   it("returns the plan slug for paid non-trial users (happy path)", () => {
@@ -43,14 +49,31 @@ describe("deriveEntitlement", () => {
   const premium = { subscription_plans: { slug: "premium" } };
 
   // Happy path — a live trial grants the trial audience, never the paid one.
-  it("grants trial (and no plan slug) while a trial is still running", () => {
+  // A live trial entitles the user to the plan it is a trial OF, so the gate
+  // treats a trialing Pro exactly like a paying Pro.
+  it("grants the trialed plan's slug while a trial is still running", () => {
     const row = {
       status: "trialing",
       trial_end: new Date(NOW + DAY).toISOString(),
       current_period_end: new Date(NOW + DAY).toISOString(),
       ...premium,
     };
-    expect(deriveEntitlement(row, NOW)).toEqual({ isTrial: true, planSlug: null });
+    expect(deriveEntitlement(row, NOW)).toEqual({ isTrial: true, planSlug: "premium" });
+  });
+
+  // Upgrading mid-trial swaps the plan on the row; entitlement must follow it.
+  it("follows a mid-trial plan change (Starter → Pro)", () => {
+    const base = {
+      status: "trialing",
+      trial_end: new Date(NOW + DAY).toISOString(),
+      current_period_end: new Date(NOW + DAY).toISOString(),
+    };
+    expect(
+      deriveEntitlement({ ...base, subscription_plans: { slug: "basic" } }, NOW).planSlug
+    ).toBe("basic");
+    expect(
+      deriveEntitlement({ ...base, subscription_plans: { slug: "premium" } }, NOW).planSlug
+    ).toBe("premium");
   });
 
   // Regression — the production leak: an expired trial whose webhook never
@@ -163,7 +186,6 @@ describe("catalog integrity", () => {
 
   it("exposes the expected audience columns in order", () => {
     expect(AUDIENCES.map((a) => a.key)).toEqual([
-      "trial",
       "basic",
       "premium",
       "enterprise",
@@ -173,5 +195,12 @@ describe("catalog integrity", () => {
 
   it("offers no Free column — there is no free plan to grant features to", () => {
     expect(AUDIENCES.map((a) => a.key)).not.toContain("free");
+  });
+
+  // A Trial column would silently override every plan column: denying 'trial'
+  // locked the feature for trialing users on ALL plans, including ones the
+  // admin had just granted it to. Trials are governed by their plan's column.
+  it("offers no Trial column — a trial is governed by the plan it is a trial of", () => {
+    expect(AUDIENCES.map((a) => a.key)).not.toContain("trial");
   });
 });

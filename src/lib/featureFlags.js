@@ -36,8 +36,16 @@ export const isComingSoon = (featureKey) =>
 // but that user is held behind the non-dismissible TrialGate and never reaches
 // a gated feature — so a Free column in the admin grid would toggle access for
 // people who cannot get into the app at all.
+//
+// "trial" is deliberately absent too. A trial is NOT a tier — it is a free
+// window on a plan the user actually chose at signup, so a trialing Starter is
+// a Starter and a trialing Pro is a Pro. Collapsing every trialing user into
+// one "trial" audience threw that plan away, which broke two things at once:
+// upgrading Starter → Pro mid-trial changed nothing (the row stays
+// status='trialing', so the audience stayed "trial"), and the admin grid needed
+// a Trial column that silently overrode every plan column. The plan toggles
+// below now govern trial users too.
 export const AUDIENCES = [
-  { key: "trial",      label: "Trial" },
   { key: "basic",      label: "Starter" },
   { key: "premium",    label: "Pro" },
   { key: "enterprise", label: "Elite" },
@@ -45,12 +53,11 @@ export const AUDIENCES = [
 ];
 
 // Resolve which audience a user belongs to, given their role and active
-// subscription. Precedence: admin role > active trial > paid plan slug > free.
+// subscription. Precedence: admin role > plan slug (paid OR trialing) > free.
 // The whitelist mirrors the real subscription_plans slugs in Supabase.
-export function resolveAudience({ role, planSlug, isTrial } = {}) {
+export function resolveAudience({ role, planSlug } = {}) {
   if (role === "admin") return "admin";
-  if (isTrial) return "trial";
-  if (planSlug && ["basic", "premium", "enterprise"].includes(planSlug)) return planSlug;
+  if (planSlug && PLAN_ORDER.includes(planSlug)) return planSlug;
   return "free";
 }
 
@@ -65,12 +72,16 @@ export const ENTITLEMENT_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 // never arrives (endpoint change, outage, orphaned Stripe account) the row
 // stays 'trialing'/'active' forever — so entitlement must ALSO die with the
 // period itself:
-//   • a trialing row past trial_end grants nothing — its plan slug must not
-//     leak into the paid-plan branch of resolveAudience (this exact leak let
-//     expired trials keep full premium access);
+//   • a LIVE trial (trial_end in the future) entitles the user to the plan it
+//     is a trial OF — a Starter trial is Starter, a Pro trial is Pro. Upgrading
+//     mid-trial swaps the plan on the row and the entitlement follows it.
+//   • an EXPIRED trial grants nothing: its plan slug must not survive, or the
+//     trial never actually ends (this exact leak once let expired trials keep
+//     full premium access).
 //   • an active row keeps access up to ENTITLEMENT_GRACE_MS past
 //     current_period_end, then grants nothing until a paid renewal lands.
-// Returns { isTrial, planSlug } ready to feed into resolveAudience.
+// Returns { isTrial, planSlug }; isTrial is reported for billing UI, but only
+// planSlug decides entitlement (see resolveAudience).
 export function deriveEntitlement(row, nowMs = Date.now()) {
   if (!row) return { isTrial: false, planSlug: null };
 
@@ -82,8 +93,9 @@ export function deriveEntitlement(row, nowMs = Date.now()) {
     !row.current_period_end ||
     new Date(row.current_period_end).getTime() + ENTITLEMENT_GRACE_MS > nowMs;
 
-  const planSlug =
-    isTrialRow || !periodLive ? null : (row.subscription_plans?.slug ?? null);
+  // A trialing row lives or dies by trial_end; any other row by its period.
+  const entitled = isTrialRow ? isTrial : periodLive;
+  const planSlug = entitled ? (row.subscription_plans?.slug ?? null) : null;
 
   return { isTrial, planSlug };
 }

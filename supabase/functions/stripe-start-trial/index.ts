@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14?target=deno&no-check";
+import { createServerNotification } from "../_shared/notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -181,9 +182,39 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Tell the user their trial is live and, crucially, WHEN it converts — the
+    // card is already on file, so the first charge must never be a surprise.
+    // Never throws; a failed notification must not fail an activated trial — but
+    // the result is reported (below) rather than dropped, so a silent failure
+    // can't hide again.
+    const notified = await createServerNotification(supabase, {
+      userId: user.id,
+      category: "billing",
+      event_type: "trial_started",
+      title: "Your 7-day free trial has started",
+      body: trialEnd
+        ? `You have full access until ${new Date(trialEnd).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}. We'll charge your card then unless you cancel before.`
+        : "You have full access for the next 7 days. Cancel any time before it ends.",
+      severity: "success",
+      link_to: "/billing",
+      metadata: { stripe_subscription_id: subscription.id, plan: planSlug },
+    });
+
+    if (!notified.ok) {
+      console.error("[stripe-start-trial] trial_started notification failed:", notified.error);
+    }
+
     return successResponse({
       subscriptionId: subscription.id,
       trialEnd,
+      // Reported, not thrown: the trial is live either way, but a failure here
+      // is now visible in the response instead of vanishing into a swallowed
+      // catch. The client ignores it; it exists to be diagnosable.
+      notified,
     });
   } catch (err) {
     console.error("stripe-start-trial error:", err);

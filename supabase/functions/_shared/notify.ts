@@ -18,33 +18,72 @@ const EMAIL_EVENTS = new Set([
   "new_login",
 ]);
 
+// ── Global email kill-switch ───────────────────────────────────────────────
+// Notification emails are OFF unless NOTIFY_EMAIL_ENABLED is explicitly "true"
+// in the Edge Function environment. The Resend free tier is small enough that
+// one busy day of sign-ins would burn through it, and every send so far has
+// been failing anyway (email_status='failed' on every row). In-app
+// notifications are unaffected — they are the primary channel.
+//
+// Default OFF, not ON: forgetting to set an env var must not start spending
+// quota. To re-enable, set NOTIFY_EMAIL_ENABLED=true (and a valid RESEND_API_KEY).
+const EMAIL_ENABLED =
+  (Deno.env.get("NOTIFY_EMAIL_ENABLED") ?? "false").trim().toLowerCase() === "true";
+
 // Defaults applied when a user has no saved notification preferences.
 const DEFAULT_PREFS: Record<string, { inApp: boolean; email: boolean }> = {
   broker_sync: { inApp: true, email: true },
   billing: { inApp: true, email: true },
   performance: { inApp: true, email: false },
   security: { inApp: true, email: true },
+  // Account lifecycle (welcome, trial started). In-app only by default — the
+  // user has just been emailed a confirmation link, so another email is noise.
+  account: { inApp: true, email: false },
 };
 
+// Read the user's saved channel preferences, falling back to the category
+// defaults.
+//
+// NEVER throws and never rejects. This is the crux of a production bug: this
+// read is a *nice-to-have* (a per-user preference) that used to gate a
+// *must-have* (the notification itself). It ran inside createServerNotification's
+// try block, and supabase-js rejects — rather than returning { error } — on a
+// transport-level failure. One failed read therefore skipped the insert
+// entirely, and because the catch only console.error'd, the caller still
+// returned 200 and nobody ever knew. `trial_started` was never written for a
+// single user.
+//
+// A user who has never opened Settings has no preferences row at all, so the
+// defaults are the norm, not the exception. Losing this read must cost the user
+// their preference, not their notification.
 async function getChannelPrefs(
   supabase: Supa,
   userId: string,
   category: string,
 ): Promise<{ inApp: boolean; email: boolean }> {
-  const { data } = await supabase
-    .from("user_profiles")
-    .select("preferences")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const stored = (data?.preferences as Record<string, unknown> | null)
-    ?.notifications as Record<string, { inApp?: boolean; email?: boolean }> | undefined;
   const fallback = DEFAULT_PREFS[category] ?? { inApp: true, email: false };
-  return { ...fallback, ...(stored?.[category] ?? {}) };
+  try {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("preferences")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) {
+      console.error("[notify] prefs read failed, using defaults:", error.message);
+      return fallback;
+    }
+    const stored = (data?.preferences as Record<string, unknown> | null)
+      ?.notifications as Record<string, { inApp?: boolean; email?: boolean }> | undefined;
+    return { ...fallback, ...(stored?.[category] ?? {}) };
+  } catch (err) {
+    console.error("[notify] prefs read threw, using defaults:", err);
+    return fallback;
+  }
 }
 
 interface NotificationInput {
   userId: string;
-  category: "broker_sync" | "billing" | "performance" | "security";
+  category: "broker_sync" | "billing" | "performance" | "security" | "account";
   event_type: string;
   title: string;
   body?: string;
@@ -53,20 +92,39 @@ interface NotificationInput {
   metadata?: Record<string, unknown>;
 }
 
+// What happened to a notification. Returned (not thrown) so a caller can report
+// it — a silent void return is what let `trial_started` go missing unnoticed.
+export interface NotifyResult {
+  ok: boolean;
+  id?: string;
+  /** Set when the user has turned this category's in-app channel off. */
+  suppressed?: boolean;
+  error?: string;
+}
+
 /**
  * Create a notification server-side, honoring the user's in-app preference, and
- * send an email for key events when the email preference is on. Never throws.
+ * send an email for key events when the email preference is on AND email is
+ * globally enabled (see EMAIL_ENABLED).
+ *
+ * Never throws — a notification must not fail the operation that triggered it
+ * (an activated trial is still activated) — but it does REPORT, so a caller can
+ * surface the failure instead of pretending it succeeded.
  */
 export async function createServerNotification(
   supabase: Supa,
   input: NotificationInput,
-): Promise<void> {
+): Promise<NotifyResult> {
   try {
-    if (!input.userId) return;
-    const prefs = await getChannelPrefs(supabase, input.userId, input.category);
-    if (!prefs.inApp) return;
+    if (!input.userId) return { ok: false, error: "missing userId" };
 
-    const wantsEmail = prefs.email && EMAIL_EVENTS.has(input.event_type);
+    // Deliberately resolved before the insert but incapable of blocking it:
+    // getChannelPrefs swallows its own failures and returns defaults.
+    const prefs = await getChannelPrefs(supabase, input.userId, input.category);
+    if (!prefs.inApp) return { ok: true, suppressed: true };
+
+    const wantsEmail =
+      EMAIL_ENABLED && prefs.email && EMAIL_EVENTS.has(input.event_type);
 
     const { data, error } = await supabase
       .from("notifications")
@@ -86,14 +144,17 @@ export async function createServerNotification(
 
     if (error) {
       console.error("[notify] insert failed:", error.message);
-      return;
+      return { ok: false, error: error.message };
     }
 
     if (wantsEmail) {
-      await sendNotificationEmail(supabase, data.id);
+      await sendNotificationEmail(supabase, data.id as string);
     }
+    return { ok: true, id: data.id as string };
   } catch (err) {
-    console.error("[notify] unexpected error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[notify] unexpected error:", message);
+    return { ok: false, error: message };
   }
 }
 
@@ -131,6 +192,11 @@ export async function sendNotificationEmail(
     return status;
   };
 
+  // Global kill-switch first: when email is off, this is not a failure — there
+  // is simply no email channel. Marking it 'failed' (which is what a missing
+  // RESEND_API_KEY used to do) makes a deliberate configuration look like an
+  // outage, and that is exactly how every notification row ended up 'failed'.
+  if (!EMAIL_ENABLED) return finalize("skipped");
   if (!prefs.email) return finalize("skipped");
 
   const apiKey = Deno.env.get("RESEND_API_KEY");

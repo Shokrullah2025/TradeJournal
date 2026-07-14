@@ -11,10 +11,21 @@ import { BrowserRouter } from "react-router-dom";
 //     fetch has been removed.
 // These tests cover the current implementations. Auth, billing, the supabase
 // singleton, Stripe and toast are all mocked so nothing hits the network.
-const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock, hardNavigateMock } = vi.hoisted(() => ({
+const {
+  authApi,
+  billingApi,
+  flagsApi,
+  supabaseApi,
+  toastMock,
+  fetchMock,
+  stripeMock,
+  hardNavigateMock,
+  navigateMock,
+} = vi.hoisted(() => ({
   // jsdom's window.location is [LegacyUnforgeable] and can't be spied on, so
   // the component routes hard reloads through src/utils/navigation — mock that.
   hardNavigateMock: vi.fn(),
+  navigateMock: vi.fn(),
   authApi: {
     register: vi.fn(),
     sendEmailVerification: vi.fn(),
@@ -22,6 +33,11 @@ const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock, hard
   },
   billingApi: {
     startTrial: vi.fn(),
+  },
+  // A successful activation re-resolves entitlement in place (no full reload)
+  // so RequireSubscription drops the TrialGate.
+  flagsApi: {
+    refreshEntitlement: vi.fn(),
   },
   supabaseApi: {
     auth: { getSession: vi.fn() },
@@ -35,6 +51,13 @@ const { authApi, billingApi, supabaseApi, toastMock, fetchMock, stripeMock, hard
 vi.mock("../src/context/AuthContext", () => ({ useAuth: () => authApi }));
 vi.mock("../src/utils/navigation", () => ({ hardNavigate: hardNavigateMock }));
 vi.mock("../src/context/BillingContext", () => ({ useBilling: () => billingApi }));
+vi.mock("../src/context/FeatureFlagContext", () => ({
+  useFeatureFlags: () => flagsApi,
+}));
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => navigateMock,
+}));
 vi.mock("../src/lib/supabase", () => ({ supabase: supabaseApi }));
 vi.mock("react-hot-toast", () => ({ toast: toastMock, default: toastMock }));
 vi.mock("@stripe/stripe-js", () => ({ loadStripe: vi.fn(() => Promise.resolve({})) }));
@@ -72,6 +95,7 @@ describe("Registration & Trial Flow", () => {
       subscriptionId: "sub_123",
       trialEnd: "2026-07-01T00:00:00.000Z",
     });
+    flagsApi.refreshEntitlement.mockResolvedValue([undefined, undefined]);
     // Fresh SetupIntent — not yet confirmed, so handleSubmit proceeds to confirmSetup.
     stripeMock.retrieveSetupIntent.mockResolvedValue({
       setupIntent: { status: "requires_payment_method" },
@@ -247,12 +271,22 @@ describe("Registration & Trial Flow", () => {
         expect(billingApi.startTrial).toHaveBeenCalledWith("premium", "monthly", "pm_123", "cus_123", null);
       });
 
-      // No interstitial "welcome / complete your profile" page anymore —
-      // activation reloads straight into the dashboard so RequireSubscription
-      // re-resolves the fresh entitlement.
+      // Success is terminal: the offer is replaced by a "you're in" panel. It
+      // must NOT drop back to the verified-card retry UI — that panel shows the
+      // plan again under a "Try again" button, which is what a successful
+      // activation used to render while the redirect was in flight.
+      expect(await screen.findByTestId("trial-activated-state")).toBeInTheDocument();
+      expect(screen.queryByTestId("trial-retry-submit-btn")).not.toBeInTheDocument();
+      expect(screen.queryByText("Try again")).not.toBeInTheDocument();
+
+      // Entitlement is re-resolved in place and we navigate client-side — no
+      // full page reload, which is what made the dashboard take seconds.
       await waitFor(() => {
-        expect(hardNavigateMock).toHaveBeenCalledWith("/dashboard");
+        expect(navigateMock).toHaveBeenCalledWith("/dashboard", { replace: true });
       });
+      expect(flagsApi.refreshEntitlement).toHaveBeenCalled();
+      expect(hardNavigateMock).not.toHaveBeenCalled();
+
       expect(toastMock.success).toHaveBeenCalledWith(
         "Your 7-day free trial has started!"
       );
@@ -290,8 +324,12 @@ describe("Registration & Trial Flow", () => {
       expect(await screen.findByTestId("trial-error-message")).toHaveTextContent(
         "You've already used your free trial."
       );
-      // A failed activation must not redirect into the app.
+      // A genuine failure is the ONLY place the retry affordance belongs, and
+      // it must not redirect into the app or claim success.
+      expect(screen.getByTestId("trial-retry-submit-btn")).toBeInTheDocument();
+      expect(screen.queryByTestId("trial-activated-state")).not.toBeInTheDocument();
       expect(hardNavigateMock).not.toHaveBeenCalled();
+      expect(navigateMock).not.toHaveBeenCalled();
     });
   });
 });

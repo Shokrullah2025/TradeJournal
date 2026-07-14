@@ -32,6 +32,14 @@ export const FeatureFlagProvider = ({ children }) => {
   const [flags, setFlags] = useState({}); // keyed by flag.key
   const [audience, setAudience] = useState("free");
   const [loading, setLoading] = useState(true);
+  // True only while a live plan change is being re-resolved. Drives the brief
+  // "Updating your plan…" overlay below — distinct from `loading`, which gates
+  // the whole app shell on first sign-in and must not flip for a plan change.
+  const [entitlementSyncing, setEntitlementSyncing] = useState(false);
+  // Lets the realtime effect call the latest refreshEntitlement without taking
+  // it as a dependency — depending on it would tear down and re-subscribe the
+  // channel on every flags/audience change.
+  const refreshEntitlementRef = useRef(() => Promise.resolve());
   // True once the first authenticated resolution has completed. Subsequent
   // re-resolutions (e.g. a routine token refresh when the tab regains focus
   // hands AuthContext a new `user` object reference) must NOT flip `loading`
@@ -81,8 +89,10 @@ export const FeatureFlagProvider = ({ children }) => {
       // never lands — an expired trial or lapsed active row must resolve to
       // "free". The pure logic (and its edge cases) lives in
       // src/lib/featureFlags.js and is unit-tested in featureFlags.test.js.
-      const { isTrial, planSlug } = deriveEntitlement(data);
-      setAudience(resolveAudience({ role: user.role, planSlug, isTrial }));
+      // A live trial resolves to the plan it is a trial OF, so trialing users
+      // are gated exactly like paying users on that plan.
+      const { planSlug } = deriveEntitlement(data);
+      setAudience(resolveAudience({ role: user.role, planSlug }));
     } catch (err) {
       console.error("[FeatureFlags] audience resolve failed:", err.message);
       setAudience(resolveAudience({ role: user?.role }));
@@ -122,10 +132,75 @@ export const FeatureFlagProvider = ({ children }) => {
     };
   }, [isAuthenticated, refreshFlags, resolveUserAudience]);
 
+  // ── Live plan changes ────────────────────────────────────────────────────
+  // The audience used to be resolved exactly once, when the user signed in.
+  // Nothing re-resolved it afterwards, so upgrading Starter → Pro left every
+  // Pro feature locked: the subscription row said `premium` while this context
+  // still said `basic`. Re-subscribing on a plan change fixes it without a
+  // reload — components read `audience` from here, so the gates simply re-render
+  // open.
+  //
+  // Scoped to UPDATEs where plan_id or status actually moved. An INSERT is a
+  // brand-new trial, which TrialActivation already refreshes itself (and which
+  // renders under TrialGate, where an overlay would be a flash); and the webhook
+  // touches this row for plenty of reasons that don't change entitlement.
+  // payload.old carries the previous values thanks to REPLICA IDENTITY FULL
+  // (migration 20260714140000).
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id || user.role === "admin") return undefined;
+    let cancelled = false;
+
+    const channel = supabase
+      .channel(`entitlement-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "user_subscriptions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const before = payload.old ?? {};
+          const after = payload.new ?? {};
+          const moved =
+            before.plan_id !== after.plan_id || before.status !== after.status;
+          if (!moved || cancelled) return;
+
+          setEntitlementSyncing(true);
+          try {
+            await refreshEntitlementRef.current();
+          } finally {
+            if (!cancelled) setEntitlementSyncing(false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, user?.id, user?.role]);
+
   const isFeatureEnabled = useCallback(
     (key) => evaluateFlag(flags[key], audience),
     [flags, audience]
   );
+
+  // Re-resolve entitlement in place, without reloading the app. Used right after
+  // a subscription starts (TrialActivation): stripe-start-trial inserts the
+  // 'trialing' user_subscriptions row before it responds, so awaiting this is
+  // enough for `audience` to leave "free" — RequireSubscription then drops the
+  // TrialGate and lets the user straight into the app.
+  const refreshEntitlement = useCallback(
+    () => Promise.all([refreshFlags(), resolveUserAudience()]),
+    [refreshFlags, resolveUserAudience]
+  );
+
+  useEffect(() => {
+    refreshEntitlementRef.current = refreshEntitlement;
+  }, [refreshEntitlement]);
 
   // "on" | "locked" | "hidden" for the current audience — lets the UI keep a
   // locked feature visible (blurred, behind an upgrade gate) instead of the
@@ -143,26 +218,48 @@ export const FeatureFlagProvider = ({ children }) => {
       flags,
       audience,
       loading,
+      entitlementSyncing,
       isFeatureEnabled,
       getFeatureState: featureState,
       requiredPlan,
       refreshFlags,
+      refreshEntitlement,
       catalog: FEATURE_CATALOG,
     }),
     [
       flags,
       audience,
       loading,
+      entitlementSyncing,
       isFeatureEnabled,
       featureState,
       requiredPlan,
       refreshFlags,
+      refreshEntitlement,
     ]
   );
 
   return (
     <FeatureFlagContext.Provider value={value}>
       {children}
+      {/* Plan change in flight. Brief and self-clearing: it covers the moment
+          between the subscription row changing and this context re-resolving,
+          so the user isn't looking at a Pro plan next to a locked Pro page. */}
+      {entitlementSyncing && (
+        <div
+          className="fixed inset-0 z-[9998] flex items-center justify-center bg-white/70 backdrop-blur-sm dark:bg-gray-900/70"
+          data-test-id="entitlement-syncing-overlay"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-2xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600 dark:border-[#2dd4bf]" />
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Updating your plan…
+            </p>
+          </div>
+        </div>
+      )}
     </FeatureFlagContext.Provider>
   );
 };

@@ -9,10 +9,20 @@ import { logActivity } from "../../utils/logActivity";
 import { AUDIENCES, FEATURE_CATALOG } from "../../lib/featureFlags";
 
 // ── Feature flags admin panel ──────────────────────────────────────────────
-// Each row is one feature. A master switch turns it off for everyone; the
-// per-audience switches let an admin decide which plan/role can load it (e.g.
-// hide Backtesting from Free, or AI Insights from Trial). Edits are staged
+// Each row is one feature; each column is a plan (plus Admin). A toggle decides
+// whether that plan can load that feature — turn Backtesting off for Starter and
+// every Starter sees it locked behind an upgrade prompt. Edits are staged
 // locally and saved per row so a misclick never half-writes.
+//
+// There is deliberately no Trial column: a trial is a free window on a real
+// plan, so a trialing Starter is governed by the Starter toggle and a trialing
+// Pro by the Pro toggle. A separate Trial switch used to override all of them,
+// which is why upgrading mid-trial appeared to do nothing.
+//
+// There is also no master on/off switch. It only ever duplicated "turn every
+// plan off", and an admin who flipped it saw the per-plan grid go dead with no
+// explanation. The `enabled` column still exists in the DB as a kill switch and
+// is preserved on save; it just isn't editable from here.
 
 const Toggle = ({ checked, disabled, onChange, testId, label }) => (
   <button
@@ -104,11 +114,6 @@ const FeatureFlagsPanel = () => {
 
   const markDirty = (key) => setDirty((d) => ({ ...d, [key]: true }));
 
-  const setMaster = (key, value) => {
-    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, enabled: value } : r)));
-    markDirty(key);
-  };
-
   const setAudience = (key, audienceKey, allowed) => {
     setRows((prev) =>
       prev.map((r) => {
@@ -171,9 +176,10 @@ const FeatureFlagsPanel = () => {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Feature Access</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Control which features load for each type of user. The master switch
-            turns a feature off entirely; the audience switches let it load for
-            some plans and not others (e.g. hide a feature from free-trial users).
+            Choose which plans can use each feature. Turning a feature off for a
+            plan shows those users a locked preview with an upgrade prompt.
+            Trials follow the plan they’re a trial of — a Starter trial gets
+            Starter access.
           </p>
         </div>
       </div>
@@ -202,9 +208,6 @@ const FeatureFlagsPanel = () => {
               <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Feature
               </th>
-              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Enabled
-              </th>
               {AUDIENCES.map((a) => (
                 <th key={a.key} className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {a.label}
@@ -217,23 +220,11 @@ const FeatureFlagsPanel = () => {
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {rows.map((row) => {
-              const masterOff = row.enabled === false;
               return (
                 <tr key={row.key} data-test-id={`admin-flag-row-${row.key}`} className="bg-white dark:bg-gray-800">
                   <td className="sticky left-0 z-10 bg-white dark:bg-gray-800 px-4 py-3 max-w-xs">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{row.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{row.description}</div>
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <div className="flex justify-center">
-                      <Toggle
-                        checked={!!row.enabled}
-                        disabled={tableMissing}
-                        onChange={(v) => setMaster(row.key, v)}
-                        testId={`admin-flag-master-${row.key}`}
-                        label={`${row.name} master switch`}
-                      />
-                    </div>
                   </td>
                   {AUDIENCES.map((a) => {
                     const allowed = !((row.audiences || {})[a.key] === false);
@@ -241,8 +232,8 @@ const FeatureFlagsPanel = () => {
                       <td key={a.key} className="px-3 py-3 text-center">
                         <div className="flex justify-center">
                           <Toggle
-                            checked={allowed && !masterOff}
-                            disabled={tableMissing || masterOff}
+                            checked={allowed}
+                            disabled={tableMissing}
                             onChange={(v) => setAudience(row.key, a.key, v)}
                             testId={`admin-flag-${row.key}-${a.key}`}
                             label={`${row.name} for ${a.label}`}

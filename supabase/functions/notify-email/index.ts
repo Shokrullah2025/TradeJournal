@@ -11,6 +11,10 @@ const corsHeaders = {
 // emitNotification() for key events (e.g. new_login). The notification row and
 // the user's email preference are the source of truth — this function only
 // delivers and records the outcome on the row.
+//
+// While the global email kill-switch is off (NOTIFY_EMAIL_ENABLED != "true")
+// sendNotificationEmail returns "skipped" without contacting Resend, so an
+// older cached frontend that still invokes this endpoint cannot spend quota.
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

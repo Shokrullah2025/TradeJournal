@@ -38,6 +38,7 @@ import { useTrades } from "../context/TradeContext";
 import InfoTooltip from "../components/common/InfoTooltip";
 import { exportToExcel, importFromFile } from "../utils/exportUtils";
 import { useNotificationPrefs } from "../hooks/useNotificationPrefs";
+import { EMAIL_NOTIFICATIONS_ENABLED } from "../utils/notifications";
 import toast from "react-hot-toast";
 
 // Reuse the full Profile and Billing pages as Settings tabs — lazy so the
@@ -1337,9 +1338,9 @@ const Settings = () => {
                     Notification preferences
                   </h2>
                   <p className="mt-1 max-w-xl text-xs text-gray-500 lg:text-[13.5px] dark:text-gray-500">
-                    Choose which alerts appear in your notification bell and which
-                    are also sent to your email. Email requires the in-app channel
-                    to be on.
+                    {EMAIL_NOTIFICATIONS_ENABLED
+                      ? "Choose which alerts appear in your notification bell and which are also sent to your email. Email requires the in-app channel to be on."
+                      : "Choose which alerts appear in your notification bell."}
                   </p>
                 </div>
               </div>
@@ -1353,9 +1354,15 @@ const Settings = () => {
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]">
+                  {/* Email column is hidden while the email channel is switched
+                      off app-wide — offering a toggle that sends nothing is
+                      worse than offering no toggle. Saved email prefs are left
+                      untouched, so they come back as they were if it's re-enabled. */}
                   <div className="flex items-center justify-end gap-8 border-b border-gray-100 px-5 py-3 text-xs font-semibold text-gray-400 dark:border-white/5 dark:text-gray-500">
                     <span className="w-12 text-center">In-App</span>
-                    <span className="w-12 text-center">Email</span>
+                    {EMAIL_NOTIFICATIONS_ENABLED && (
+                      <span className="w-12 text-center">Email</span>
+                    )}
                   </div>
                   <div className="divide-y divide-gray-100 dark:divide-white/5">
                     {NOTIFICATION_CATEGORY_META.map((cat) => {
@@ -1398,34 +1405,36 @@ const Settings = () => {
                               />
                               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-teal-700 dark:bg-white/10"></div>
                             </label>
-                            <label
-                              className={`relative inline-flex items-center w-12 justify-center ${
-                                channel.inApp
-                                  ? "cursor-pointer"
-                                  : "cursor-not-allowed"
-                              }`}
-                              title={
-                                channel.inApp
-                                  ? "Also send this to email"
-                                  : "Enable in-app first to receive email"
-                              }
-                            >
-                              <input
-                                type="checkbox"
-                                data-test-id={`notifications-settings-${cat.id}-email-toggle`}
-                                checked={channel.inApp && channel.email}
-                                disabled={!channel.inApp}
-                                onChange={(e) =>
-                                  setNotificationChannel(
-                                    cat.id,
-                                    "email",
-                                    e.target.checked
-                                  )
+                            {EMAIL_NOTIFICATIONS_ENABLED && (
+                              <label
+                                className={`relative inline-flex items-center w-12 justify-center ${
+                                  channel.inApp
+                                    ? "cursor-pointer"
+                                    : "cursor-not-allowed"
+                                }`}
+                                title={
+                                  channel.inApp
+                                    ? "Also send this to email"
+                                    : "Enable in-app first to receive email"
                                 }
-                                className="sr-only peer"
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-teal-700 peer-disabled:opacity-40 dark:bg-white/10"></div>
-                            </label>
+                              >
+                                <input
+                                  type="checkbox"
+                                  data-test-id={`notifications-settings-${cat.id}-email-toggle`}
+                                  checked={channel.inApp && channel.email}
+                                  disabled={!channel.inApp}
+                                  onChange={(e) =>
+                                    setNotificationChannel(
+                                      cat.id,
+                                      "email",
+                                      e.target.checked
+                                    )
+                                  }
+                                  className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-teal-700 peer-disabled:opacity-40 dark:bg-white/10"></div>
+                              </label>
+                            )}
                           </div>
                         </div>
                       );

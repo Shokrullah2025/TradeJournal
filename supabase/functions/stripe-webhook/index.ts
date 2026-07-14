@@ -205,6 +205,31 @@ Deno.serve(async (req: Request) => {
               .eq("status", "suspended");
           }
 
+          // Tell the user they were charged. Stripe also raises this event for
+          // the $0 invoice that opens a trial — skip those, or every trial
+          // would start with a "we charged you $0.00" notification.
+          const amountPaid = (inv.amount_paid ?? 0) / 100;
+          if (amountPaid > 0) {
+            const notified = await createServerNotification(supabase, {
+              userId,
+              category: "billing",
+              event_type: "payment_succeeded",
+              title: "Payment received",
+              body: `We've received your payment of ${formatMoney(
+                amountPaid,
+                inv.currency,
+              )}. Your subscription is active${
+                inv.number ? ` — invoice ${inv.number}` : ""
+              }.`,
+              severity: "success",
+              link_to: "/billing",
+              metadata: { invoice: inv.id, amount: amountPaid, currency: inv.currency },
+            });
+            if (!notified.ok) {
+              console.error("[stripe-webhook] payment_succeeded notification failed:", notified.error);
+            }
+          }
+
           break;
         }
 
@@ -242,7 +267,7 @@ Deno.serve(async (req: Request) => {
               .eq("user_id", userId);
           }
 
-          await createServerNotification(supabase, {
+          const notified = await createServerNotification(supabase, {
             userId,
             category: "billing",
             event_type: "payment_failed",
@@ -253,6 +278,9 @@ Deno.serve(async (req: Request) => {
             link_to: "/billing",
             metadata: { invoice: inv.id },
           });
+          if (!notified.ok) {
+            console.error("[stripe-webhook] payment_failed notification failed:", notified.error);
+          }
 
           break;
         }
@@ -266,7 +294,7 @@ Deno.serve(async (req: Request) => {
             ? new Date(sub.trial_end * 1000).toLocaleDateString()
             : "soon";
 
-          await createServerNotification(supabase, {
+          const notified = await createServerNotification(supabase, {
             userId,
             category: "billing",
             event_type: "trial_ending",
@@ -276,6 +304,9 @@ Deno.serve(async (req: Request) => {
             link_to: "/billing",
             metadata: { subscription: sub.id },
           });
+          if (!notified.ok) {
+            console.error("[stripe-webhook] trial_ending notification failed:", notified.error);
+          }
 
           break;
         }
@@ -354,6 +385,20 @@ Deno.serve(async (req: Request) => {
 // never throw on a missing field.
 function toIso(seconds?: number | null): string | null {
   return typeof seconds === "number" ? new Date(seconds * 1000).toISOString() : null;
+}
+
+// Money for notification copy. Intl can throw on an unexpected currency code
+// from Stripe, so fall back to a plain "12.00 USD" rather than losing the
+// notification entirely.
+function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currency.toUpperCase()}`;
+  }
 }
 
 async function resolveUserId(

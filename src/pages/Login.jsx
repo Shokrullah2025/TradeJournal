@@ -33,8 +33,8 @@ const Login = () => {
   const verifyEmailAddress = location.state?.email || "";
 
   // Shown once after the confirmation link is clicked: the address is verified
-  // and the user just needs to sign in (their first login offers the
-  // authenticator setup). Driven by navigation state from AuthConfirm.
+  // and the user just needs to sign in to pick a plan and start their trial.
+  // Driven by navigation state from AuthConfirm.
   const [showConfirmedNotice, setShowConfirmedNotice] = useState(
     () => !!location.state?.emailConfirmed
   );
@@ -74,13 +74,11 @@ const Login = () => {
       // straight back here — the "login page flashes before the
       // Authenticator" bug.
       if (result?.status === "mfa_required") return;
-      // First sign-in with no authenticator enrolled → one-time setup offer.
-      // The wizard's onboarding mode has "Skip for now" → dashboard.
-      if (result?.offerMfaSetup) {
-        navigate("/security/2fa?onboarding=1", { replace: true });
-      } else {
-        navigate(from, { replace: true });
-      }
+      // Straight into the app. A first-time user with no subscription lands on
+      // the dashboard behind the TrialGate, which asks them to pick a plan and
+      // add a card. 2FA enrollment is never forced here — it's opt-in from
+      // Settings → Security.
+      navigate(from, { replace: true });
     } catch {
       // error already shown via toast in AuthContext
     }

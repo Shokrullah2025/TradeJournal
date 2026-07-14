@@ -60,6 +60,12 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 import ThemeScope from "./components/common/ThemeScope";
 import RecoveryRedirect from "./components/auth/RecoveryRedirect";
 import FeatureGate from "./components/common/FeatureGate";
+import {
+  BacktestingLockedPreview,
+  BrokerSyncLockedPreview,
+  AdvancedAnalyticsLockedPreview,
+  RiskCalculatorLockedPreview,
+} from "./components/common/LockedPreview";
 import ComingSoonGate from "./components/common/ComingSoonGate";
 import {
   ProtectedRoute,
@@ -217,7 +223,11 @@ function App() {
                                   <Route
                                     path="/backtest"
                                     element={
-                                      <FeatureGate feature="backtesting" title="Backtesting unavailable">
+                                      <FeatureGate
+                                        feature="backtesting"
+                                        title="Backtesting unavailable"
+                                        preview={<BacktestingLockedPreview />}
+                                      >
                                         <Backtest />
                                       </FeatureGate>
                                     }
@@ -229,7 +239,11 @@ function App() {
                                   <Route
                                     path="/brokers"
                                     element={
-                                      <FeatureGate feature="broker_sync" title="Broker Sync unavailable">
+                                      <FeatureGate
+                                        feature="broker_sync"
+                                        title="Broker Sync unavailable"
+                                        preview={<BrokerSyncLockedPreview />}
+                                      >
                                         <ComingSoonGate
                                           feature="broker_sync"
                                           title="Broker Sync"
@@ -243,7 +257,11 @@ function App() {
                                   <Route
                                     path="/analytics"
                                     element={
-                                      <FeatureGate feature="advanced_analytics" title="Advanced Analytics unavailable">
+                                      <FeatureGate
+                                        feature="advanced_analytics"
+                                        title="Advanced Analytics unavailable"
+                                        preview={<AdvancedAnalyticsLockedPreview />}
+                                      >
                                         <Analytics />
                                       </FeatureGate>
                                     }
@@ -251,7 +269,11 @@ function App() {
                                   <Route
                                     path="/risk-calculator"
                                     element={
-                                      <FeatureGate feature="risk_calculator" title="Risk Calculator unavailable">
+                                      <FeatureGate
+                                        feature="risk_calculator"
+                                        title="Risk Calculator unavailable"
+                                        preview={<RiskCalculatorLockedPreview />}
+                                      >
                                         <RiskCalculator />
                                       </FeatureGate>
                                     }

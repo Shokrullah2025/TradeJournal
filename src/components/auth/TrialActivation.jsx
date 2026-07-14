@@ -1,11 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
+import { useNavigate } from "react-router-dom";
 import { CheckCircle, Star, CreditCard } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 import { useBilling } from "../../context/BillingContext";
+import { useFeatureFlags } from "../../context/FeatureFlagContext";
+import { withTimeout } from "../../utils/withTimeout";
 import { hardNavigate } from "../../utils/navigation";
 import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
+import { annualPriceFor } from "../../utils/pricing";
+import { PLAN_LABELS } from "../../lib/featureFlags";
 import StripePaymentForm from "../billing/StripePaymentForm";
 import CouponField from "../billing/CouponField";
 
@@ -18,9 +23,15 @@ const TrialActivation = ({
   // "page" renders full-screen (standalone route); "overlay" renders just the
   // card panel so it can sit inside the blurred TrialGate over the dashboard.
   const isOverlay = variant === "overlay";
-  // intro → card (collect card); a successful activation leaves the page with
-  // a full reload straight into the dashboard — there is no "activated" step.
+  // intro → card (collect card) → activated (terminal).
   const [trialStatus, setTrialStatus] = useState("intro");
+  // Terminal success flag. Once the trial exists, the component must NEVER fall
+  // back into the "retry" UI below: `paymentMethodId` is set by then and
+  // `isWorking` goes false in the finally, which used to render the verified-
+  // card retry panel — so a SUCCESSFUL activation showed the plan again with a
+  // "Try again" button until the redirect landed. This flag short-circuits the
+  // whole body to a success panel instead.
+  const [activated, setActivated] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [clientSecret, setClientSecret] = useState(null);
   const [customerId, setCustomerId] = useState(null);
@@ -36,15 +47,36 @@ const TrialActivation = ({
   // trial. Null until the user applies a valid one.
   const [couponCode, setCouponCode] = useState(null);
   const { startTrial } = useBilling();
-  // Live monthly price for this plan (admin Pricing tab); fall back until loaded.
+  const { refreshEntitlement } = useFeatureFlags();
+  const navigate = useNavigate();
+  // Fallback reload if the in-place entitlement refresh somehow doesn't clear
+  // the gate. Cleared on unmount — which is exactly what happens when it works.
+  const reloadFallback = useRef(null);
+  // Refreshing entitlement can unmount us *during* the await (the gate drops the
+  // moment the audience leaves "free"). Without this flag we'd arm the fallback
+  // timer after the unmount cleanup had already run, so nothing could cancel it
+  // and the success path ALWAYS ended in a full-page reload a few seconds later.
+  const isMounted = useRef(true);
+  useEffect(
+    () => () => {
+      isMounted.current = false;
+      clearTimeout(reloadFallback.current);
+    },
+    []
+  );
+  // Live price for the plan and cycle the user actually chose (admin Pricing
+  // tab); falls back to the derived annual amount when none is configured. The
+  // copy below must quote what Stripe will really charge when the trial ends.
   const { plans } = useSubscriptionPlans();
-  const monthlyPrice = plans[planSlug]?.price ?? 29.99;
+  const plan = plans[planSlug];
+  const monthlyPrice = plan?.price ?? 29.99;
+  const isAnnual = billingCycle === "annually";
+  const renewalPrice = isAnnual
+    ? annualPriceFor(monthlyPrice, plan?.priceAnnually)
+    : monthlyPrice;
+  const renewalPeriod = isAnnual ? "year" : "month";
+  const planName = plan?.name ?? PLAN_LABELS[planSlug] ?? "Pro";
 
-  // After the trial is activated the user's subscription becomes "trialing", but
-  // the in-memory FeatureFlag audience is still "free" until the app re-resolves
-  // it. hardNavigate reloads so RequireSubscription reads the fresh entitlement
-  // and lets the user into the app instead of bouncing them back here. (A
-  // client-side navigate would loop against the route guard.)
 
   // Step 1 — create a SetupIntent so the user can enter a card without being charged.
   const beginTrial = async () => {
@@ -86,12 +118,34 @@ const TrialActivation = ({
     setErrorMessage("");
     try {
       const result = await startTrial(planSlug, billingCycle, pmId, customerId, couponCode);
+      // The trial now exists. Everything from here is just getting the user to
+      // the dashboard — never show them a failure affordance again.
+      setActivated(true);
       toast.success("Your 7-day free trial has started!");
       onTrialActivated?.(result);
-      // Straight into the app — no interstitial "welcome / complete your
-      // profile" page. Full reload so RequireSubscription reads the fresh
-      // entitlement (see the note above).
-      hardNavigate("/dashboard");
+
+      // stripe-start-trial inserts the 'trialing' user_subscriptions row before
+      // it responds, so entitlement is already live server-side — re-resolving
+      // the audience in place is enough for RequireSubscription to drop the
+      // TrialGate. This replaces a full-page reload, which is what made the
+      // dashboard take several seconds to appear. Time-boxed: if the refresh
+      // stalls we still navigate, and the fallback below repairs it.
+      await withTimeout(refreshEntitlement(), 5000, null).catch(() => {});
+
+      // The refreshed audience may already have unmounted us — RequireSubscription
+      // drops the gate as soon as it leaves "free". That IS the success path: the
+      // app is on screen behind us and there is nothing left to do. Arming the
+      // fallback below at this point would schedule a full reload that no cleanup
+      // can cancel, which is what made the dashboard take seconds to settle.
+      if (!isMounted.current) return;
+
+      navigate("/dashboard", { replace: true });
+
+      // Safety net: a refreshed audience unmounts this component (the gate goes
+      // away), which clears this timer. If it's still running 2.5s later the
+      // audience never updated, so fall back to the full reload — that always
+      // re-resolves entitlement from scratch.
+      reloadFallback.current = setTimeout(() => hardNavigate("/dashboard"), 2500);
     } catch (err) {
       setErrorMessage(err.message || "We couldn't start your trial. Please try again.");
       toast.error(err.message || "We couldn't start your trial. Please try again.");
@@ -152,14 +206,42 @@ const TrialActivation = ({
     },
   ];
 
+  const shellClass = isOverlay
+    ? "w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
+    : "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8";
+
+  // Terminal state — the trial is live and we're on our way into the app. Shown
+  // instead of the whole offer so the user never re-reads the plan they just
+  // bought, and never sees a "Try again" button after a success.
+  if (activated) {
+    return (
+      <div className={shellClass}>
+        <div
+          className="max-w-lg w-full space-y-4 text-center"
+          data-test-id="trial-activated-state"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-gray-900">
+            You’re in — your {planName} trial has started
+          </h2>
+          <p className="text-sm text-gray-600">
+            Setting up your dashboard…
+          </p>
+          <div
+            className="mx-auto h-6 w-6 animate-spin rounded-full border-b-2 border-primary-600"
+            data-test-id="trial-activated-spinner"
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={
-        isOverlay
-          ? "w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
-          : "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
-      }
-    >
+    <div className={shellClass}>
       <div className="max-w-lg w-full space-y-8">
         <div className="text-center">
           <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mx-auto">
@@ -169,8 +251,11 @@ const TrialActivation = ({
             Ready to Start Your Trial?
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            You're all set! Activate your 7-day free trial and start tracking
-            your trades like a pro.
+            Add a card to activate your 7-day free trial of{" "}
+            <span className="font-semibold" data-test-id="trial-plan-name">
+              {planName}
+            </span>
+            . You won’t be charged today.
           </p>
         </div>
 
@@ -181,9 +266,9 @@ const TrialActivation = ({
             </h3>
             <span className="text-2xl font-bold text-blue-600">$0</span>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
-            No commitment, cancel anytime. After your 7 days, your plan continues
-            automatically at ${monthlyPrice}/month unless you cancel.
+          <p className="text-sm text-gray-600 mb-4" data-test-id="trial-renewal-copy">
+            No commitment, cancel anytime. After your 7 days, {planName} continues
+            automatically at ${renewalPrice}/{renewalPeriod} unless you cancel.
           </p>
           <p className="text-xs text-gray-500 mb-4">
             Prices are in USD. Your bank may convert to your local currency at

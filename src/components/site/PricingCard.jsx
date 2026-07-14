@@ -97,8 +97,13 @@ const PricingCard = ({ tier, cycle }) => {
         ))}
       </ul>
 
+      {/* Carry the chosen plan into signup. It's persisted to auth metadata at
+          registration, so after the user verifies their email and signs in the
+          TrialGate skips the plan chooser and opens straight on activation.
+          The tier id IS the plan slug (basic/premium/enterprise); the backend
+          billing cycle is "monthly" | "annually". */}
       <Link
-        to="/register"
+        to={`/register?plan=${tier.id}&cycle=${isAnnual ? "annually" : "monthly"}`}
         data-test-id={`pricing-card-cta-${tier.id}`}
         className={`mt-6 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
           tier.popular
