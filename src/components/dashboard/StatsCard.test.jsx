@@ -46,7 +46,7 @@ describe("StatsCard", () => {
     render(
       <StatsCard
         {...baseProps}
-        miniChart={<div data-testid="injected-mini-chart">chart</div>}
+        miniChart={<div data-test-id="injected-mini-chart">chart</div>}
       />
     );
 

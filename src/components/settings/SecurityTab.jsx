@@ -96,7 +96,7 @@ const ChangePasswordSection = () => {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50/60 dark:hover:bg-white/5"
-        data-testid="security-change-password-expand-btn"
+        data-test-id="security-change-password-expand-btn"
       >
         <div>
           <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ const ChangePasswordSection = () => {
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="border-t border-gray-100 px-5 py-4 space-y-4 dark:border-white/5"
-        data-testid="security-change-password-form"
+        data-test-id="security-change-password-form"
       >
         {fields.map((f) => (
           <div key={f.name}>
@@ -131,14 +131,14 @@ const ChangePasswordSection = () => {
                 type={show[f.key] ? "text" : "password"}
                 autoComplete={f.key === "current" ? "current-password" : "new-password"}
                 className="input w-full pr-10"
-                data-testid={`${f.testid}-input`}
+                data-test-id={`${f.testid}-input`}
               />
               <button
                 type="button"
                 onClick={() => setShow((s) => ({ ...s, [f.key]: !s[f.key] }))}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 aria-label={show[f.key] ? "Hide password" : "Show password"}
-                data-testid={`${f.testid}-toggle-btn`}
+                data-test-id={`${f.testid}-toggle-btn`}
               >
                 {show[f.key]
                   ? <EyeOff className="h-5 w-5 text-gray-400" />
@@ -146,7 +146,7 @@ const ChangePasswordSection = () => {
               </button>
             </div>
             {errors[f.name] && (
-              <p className="mt-1 text-sm text-danger-600 dark:text-danger-400" data-testid={`${f.testid}-error`}>
+              <p className="mt-1 text-sm text-danger-600 dark:text-danger-400" data-test-id={`${f.testid}-error`}>
                 {errors[f.name].message}
               </p>
             )}
@@ -157,10 +157,10 @@ const ChangePasswordSection = () => {
           type="submit"
           disabled={isSubmitting}
           className={`${BTN_PRIMARY} flex items-center justify-center`}
-          data-testid="security-change-password-submit-btn"
+          data-test-id="security-change-password-submit-btn"
         >
           {isSubmitting ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" data-testid="security-change-password-spinner" />
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" data-test-id="security-change-password-spinner" />
           ) : (
             "Update password"
           )}
@@ -222,7 +222,7 @@ const TwoFactorSection = () => {
   };
 
   return (
-    <section className={CARD} data-testid="security-2fa-section">
+    <section className={CARD} data-test-id="security-2fa-section">
       <header className="px-5 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Smartphone className="w-4 h-4 text-gray-500 dark:text-gray-500" />
@@ -235,7 +235,7 @@ const TwoFactorSection = () => {
                 ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
                 : "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-500"
             }`}
-            data-testid="security-2fa-status-badge"
+            data-test-id="security-2fa-status-badge"
           >
             {factor ? "ON" : "OFF"}
           </span>
@@ -244,16 +244,16 @@ const TwoFactorSection = () => {
 
       <div className="px-5 py-4">
         {loading ? (
-          <div className="flex items-center justify-center py-6" data-testid="security-2fa-loading">
+          <div className="flex items-center justify-center py-6" data-test-id="security-2fa-loading">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
           </div>
         ) : error ? (
-          <p className="text-sm text-danger-600 dark:text-danger-400" data-testid="security-2fa-error">
+          <p className="text-sm text-danger-600 dark:text-danger-400" data-test-id="security-2fa-error">
             {error}
           </p>
         ) : factor ? (
           // Enabled state
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" data-testid="security-2fa-enabled">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" data-test-id="security-2fa-enabled">
             <div className="flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-green-500 mt-0.5" />
               <div>
@@ -268,14 +268,14 @@ const TwoFactorSection = () => {
               onClick={removeFactor}
               disabled={busy}
               className={`${BTN_DANGER_OUTLINE} flex-shrink-0`}
-              data-testid="security-2fa-remove-btn"
+              data-test-id="security-2fa-remove-btn"
             >
               Remove
             </button>
           </div>
         ) : (
           // Disabled state — enrollment happens in the /security/2fa wizard.
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" data-testid="security-2fa-disabled">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" data-test-id="security-2fa-disabled">
             <div>
               <div className="text-sm font-bold text-gray-900 dark:text-gray-300">Add an extra layer of security</div>
               <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">
@@ -286,7 +286,7 @@ const TwoFactorSection = () => {
               type="button"
               onClick={() => navigate("/security/2fa")}
               className={`${BTN_PRIMARY} flex-shrink-0`}
-              data-testid="security-2fa-enroll-btn"
+              data-test-id="security-2fa-enroll-btn"
             >
               Set up
             </button>
@@ -382,25 +382,25 @@ const LoginActivitySection = () => {
       </header>
 
       {loading ? (
-        <div className="flex items-center justify-center py-8" data-testid="security-activity-loading">
+        <div className="flex items-center justify-center py-8" data-test-id="security-activity-loading">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
         </div>
       ) : error ? (
-        <p className="px-5 py-6 text-sm text-danger-600 dark:text-danger-400" data-testid="security-activity-error">
+        <p className="px-5 py-6 text-sm text-danger-600 dark:text-danger-400" data-test-id="security-activity-error">
           {error}
         </p>
       ) : rows.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-500" data-testid="security-activity-empty">
+        <p className="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-500" data-test-id="security-activity-empty">
           No recent login activity.
         </p>
       ) : (
         <>
-          <ul className="divide-y divide-gray-100 dark:divide-white/5" data-testid="security-activity-list">
+          <ul className="divide-y divide-gray-100 dark:divide-white/5" data-test-id="security-activity-list">
             {visibleRows.map((row) => (
               <li
                 key={row.id}
                 className="flex items-center justify-between gap-4 px-5 py-3"
-                data-testid={`security-activity-row-${row.id}`}
+                data-test-id={`security-activity-row-${row.id}`}
               >
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-300">
@@ -425,14 +425,14 @@ const LoginActivitySection = () => {
                   setPage(0);
                 }}
                 className="text-[13px] font-semibold text-primary-600 hover:text-primary-700 dark:text-[#2dd4bf]"
-                data-testid="security-activity-viewall-btn"
+                data-test-id="security-activity-viewall-btn"
               >
                 {expanded ? "Show recent only" : `Show all (${rows.length})`}
               </button>
               {expanded && totalPages > 1 && (
                 <div
                   className="flex items-center gap-2"
-                  data-testid="security-activity-pagination"
+                  data-test-id="security-activity-pagination"
                 >
                   <button
                     type="button"
@@ -440,7 +440,7 @@ const LoginActivitySection = () => {
                     disabled={page === 0}
                     aria-label="Previous page"
                     className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-500 dark:hover:bg-white/5"
-                    data-testid="security-activity-prev-btn"
+                    data-test-id="security-activity-prev-btn"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -453,7 +453,7 @@ const LoginActivitySection = () => {
                     disabled={page >= totalPages - 1}
                     aria-label="Next page"
                     className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-500 dark:hover:bg-white/5"
-                    data-testid="security-activity-next-btn"
+                    data-test-id="security-activity-next-btn"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -470,7 +470,7 @@ const LoginActivitySection = () => {
           onClick={handleSignOutAll}
           disabled={signingOut}
           className={`${BTN_DANGER_OUTLINE} inline-flex items-center gap-2`}
-          data-testid="security-signout-all-btn"
+          data-test-id="security-signout-all-btn"
         >
           <LogOut className="w-4 h-4" />
           {signingOut ? "Signing out…" : "Sign out of all devices"}
@@ -482,7 +482,7 @@ const LoginActivitySection = () => {
 
 // ── Security tab ───────────────────────────────────────────────────────────────
 const SecurityTab = () => (
-  <div className="max-w-3xl space-y-6" data-testid="settings-security-panel">
+  <div className="max-w-3xl space-y-6" data-test-id="settings-security-panel">
     <div>
       <h2 className="text-[17px] font-bold text-gray-900 lg:text-[22px] dark:text-gray-300">Security</h2>
       <p className="mt-0.5 text-xs lg:text-[13.5px] text-gray-500 dark:text-gray-500">

@@ -126,14 +126,14 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
   // Compact, avatar-only variant — the avatar itself is the upload control.
   if (variant === "avatar") {
     return (
-      <div className="relative flex-shrink-0" data-testid="avatar-upload">
+      <div className="relative flex-shrink-0" data-test-id="avatar-upload">
         <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 ring-4 ring-white dark:ring-gray-800 shadow flex items-center justify-center">
           {previewUrl ? (
             <img
               src={previewUrl}
               alt="Profile"
               className="w-full h-full object-cover"
-              data-testid="avatar-preview-img"
+              data-test-id="avatar-preview-img"
             />
           ) : (
             <User className="w-12 h-12 text-gray-400" />
@@ -146,13 +146,13 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
-          data-testid="avatar-overlay-btn"
+          data-test-id="avatar-overlay-btn"
           aria-label="Change profile picture"
         >
           {isUploading ? (
             <div
               className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"
-              data-testid="avatar-loading-spinner"
+              data-test-id="avatar-loading-spinner"
             />
           ) : (
             <Camera className="w-6 h-6 text-white" />
@@ -165,7 +165,7 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
             type="button"
             onClick={handleRemove}
             className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow ring-2 ring-white dark:ring-gray-800"
-            data-testid="avatar-remove-btn"
+            data-test-id="avatar-remove-btn"
             aria-label="Remove profile picture"
             title="Remove photo"
           >
@@ -179,14 +179,14 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
           accept="image/*"
           onChange={handleFileSelect}
           className="hidden"
-          data-testid="avatar-file-input"
+          data-test-id="avatar-file-input"
         />
       </div>
     );
   }
 
   return (
-    <div className="flex items-center space-x-6" data-testid="avatar-upload">
+    <div className="flex items-center space-x-6" data-test-id="avatar-upload">
       {/* Profile Picture Display */}
       <div className="relative">
         <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center ring-2 ring-white dark:ring-gray-800 shadow">
@@ -195,7 +195,7 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
               src={previewUrl}
               alt="Profile"
               className="w-full h-full object-cover"
-              data-testid="avatar-preview-img"
+              data-test-id="avatar-preview-img"
             />
           ) : (
             <User className="w-12 h-12 text-gray-400" />
@@ -208,13 +208,13 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
-          data-testid="avatar-overlay-btn"
+          data-test-id="avatar-overlay-btn"
           aria-label="Change profile picture"
         >
           {isUploading ? (
             <div
               className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"
-              data-testid="avatar-loading-spinner"
+              data-test-id="avatar-loading-spinner"
             />
           ) : (
             <Camera className="w-6 h-6 text-white" />
@@ -230,7 +230,7 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             className="btn btn-secondary flex items-center space-x-2"
-            data-testid="avatar-upload-btn"
+            data-test-id="avatar-upload-btn"
           >
             <Upload className="w-4 h-4" />
             <span>{isUploading ? "Uploading..." : "Upload Photo"}</span>
@@ -242,7 +242,7 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
               onClick={handleRemove}
               disabled={isUploading}
               className="btn btn-danger flex items-center space-x-2"
-              data-testid="avatar-remove-btn"
+              data-test-id="avatar-remove-btn"
             >
               <X className="w-4 h-4" />
               <span>Remove</span>
@@ -262,7 +262,7 @@ const ProfilePictureUpload = ({ user, onUpdate, variant = "full" }) => {
         accept="image/*"
         onChange={handleFileSelect}
         className="hidden"
-        data-testid="avatar-file-input"
+        data-test-id="avatar-file-input"
       />
     </div>
   );

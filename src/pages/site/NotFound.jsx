@@ -12,7 +12,7 @@ import Seo from "../../components/seo/Seo";
  */
 const NotFound = () => (
   <div
-    data-testid="site-not-found-page"
+    data-test-id="site-not-found-page"
     className="mx-auto flex max-w-3xl flex-col items-center px-4 py-24 text-center sm:px-6 sm:py-32 lg:px-8"
   >
     <Seo title="Page not found" path="/404" noindex />
@@ -30,7 +30,7 @@ const NotFound = () => (
     <div className="mt-8 flex flex-wrap justify-center gap-3">
       <Link
         to="/"
-        data-testid="not-found-home-link"
+        data-test-id="not-found-home-link"
         className="btn btn-site inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
       >
         Back to home
@@ -38,14 +38,14 @@ const NotFound = () => (
       </Link>
       <Link
         to="/features"
-        data-testid="not-found-features-link"
+        data-test-id="not-found-features-link"
         className="btn inline-flex items-center gap-2 border border-accent-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 hover:bg-accent-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
       >
         Explore features
       </Link>
       <Link
         to="/blog"
-        data-testid="not-found-blog-link"
+        data-test-id="not-found-blog-link"
         className="btn inline-flex items-center gap-2 border border-accent-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 hover:bg-accent-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
       >
         Read the blog

@@ -221,7 +221,7 @@ const RMultipleChart = ({ trades = [] }) => {
     return (
       <div
         className="h-72 w-full flex items-center justify-center"
-        data-testid="r-multiple-chart-empty-state"
+        data-test-id="r-multiple-chart-empty-state"
       >
         <div className="text-gray-500 dark:text-gray-400 text-center">
           <div className="text-sm font-medium mb-1">
@@ -244,14 +244,14 @@ const RMultipleChart = ({ trades = [] }) => {
   return (
     <div
       className="h-72 w-full flex flex-col"
-      data-testid="r-multiple-chart"
+      data-test-id="r-multiple-chart"
     >
       {/* Stats strip */}
       <div
         className="-mt-1 mb-2 px-0.5 flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400 flex-wrap"
-        data-testid="r-multiple-chart-stats"
+        data-test-id="r-multiple-chart-stats"
       >
-        <span data-testid="r-multiple-chart-stats-expectancy">
+        <span data-test-id="r-multiple-chart-stats-expectancy">
           Expectancy
           <span
             className={
@@ -263,19 +263,19 @@ const RMultipleChart = ({ trades = [] }) => {
             {formatR(stats.expectancy)}
           </span>
         </span>
-        <span data-testid="r-multiple-chart-stats-winrate">
+        <span data-test-id="r-multiple-chart-stats-winrate">
           Win rate
           <span className="font-semibold text-gray-800 dark:text-gray-200 ml-1">
             {Math.round(stats.winRate)}%
           </span>
         </span>
-        <span data-testid="r-multiple-chart-stats-avgwin">
+        <span data-test-id="r-multiple-chart-stats-avgwin">
           Avg win
           <span className="font-semibold text-green-600 dark:text-green-400 ml-1">
             {formatR(stats.avgWin)}
           </span>
         </span>
-        <span data-testid="r-multiple-chart-stats-avgloss">
+        <span data-test-id="r-multiple-chart-stats-avgloss">
           Avg loss
           <span className="font-semibold text-red-600 dark:text-red-400 ml-1">
             {formatR(stats.avgLoss)}
@@ -284,7 +284,7 @@ const RMultipleChart = ({ trades = [] }) => {
         {fallbackUsed && (
           <span
             className="text-[10px] text-gray-400 dark:text-gray-500 italic"
-            data-testid="r-multiple-chart-fallback-note"
+            data-test-id="r-multiple-chart-fallback-note"
             title="Some trades lacked a stop-loss; their R-multiple was estimated using your average losing trade as 1R."
           >
             (est. baseline)
@@ -296,7 +296,7 @@ const RMultipleChart = ({ trades = [] }) => {
       <div
         ref={containerRef}
         className="relative flex-1 min-h-0"
-        data-testid="r-multiple-chart-svg-container"
+        data-test-id="r-multiple-chart-svg-container"
         onMouseLeave={handleLeave}
       >
         <svg
@@ -357,7 +357,7 @@ const RMultipleChart = ({ trades = [] }) => {
                   fill={colors.fill}
                   fillOpacity={dimmed ? 0.4 : 0.85}
                   className="transition-opacity duration-150"
-                  data-testid={`r-multiple-chart-bar-${b.key}`}
+                  data-test-id={`r-multiple-chart-bar-${b.key}`}
                 />
                 {/* Count above bar */}
                 {b.count > 0 && (
@@ -403,7 +403,7 @@ const RMultipleChart = ({ trades = [] }) => {
         {hoveredBucket && (
           <div
             className="absolute pointer-events-none z-20 px-2.5 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-50 text-white dark:text-gray-900 shadow-xl text-xs whitespace-nowrap"
-            data-testid="r-multiple-chart-tooltip"
+            data-test-id="r-multiple-chart-tooltip"
             style={{
               left: `${hover.x}px`,
               top: `${hover.y - 10}px`,
@@ -419,7 +419,7 @@ const RMultipleChart = ({ trades = [] }) => {
                   ? "font-semibold text-red-400 dark:text-red-600"
                   : "font-semibold text-green-400 dark:text-green-600"
               }
-              data-testid="r-multiple-chart-tooltip-label"
+              data-test-id="r-multiple-chart-tooltip-label"
             >
               {hoveredBucket.label} bucket
             </div>

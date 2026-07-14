@@ -109,7 +109,7 @@ const Login = () => {
 
           {/* Forgot-password panel */}
           {showForgotPassword ? (
-            <div data-testid="forgot-password-panel">
+            <div data-test-id="forgot-password-panel">
               <h2 className="text-2xl font-extrabold mb-2">Reset your password</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Enter your email and we'll send you a reset link.
@@ -118,12 +118,12 @@ const Login = () => {
               {resetSent ? (
                 <div
                   className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg text-green-800 dark:text-green-300 text-sm"
-                  data-testid="reset-sent-confirmation"
+                  data-test-id="reset-sent-confirmation"
                 >
                   Check your inbox — a reset link is on its way.
                 </div>
               ) : (
-                <form onSubmit={onForgotPassword} className="space-y-4" data-testid="forgot-password-form">
+                <form onSubmit={onForgotPassword} className="space-y-4" data-test-id="forgot-password-form">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Email address
@@ -134,14 +134,14 @@ const Login = () => {
                       onChange={e => setForgotEmail(e.target.value)}
                       className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="Enter your email"
-                      data-testid="forgot-password-email-input"
+                      data-test-id="forgot-password-email-input"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={!forgotEmail}
                     className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    data-testid="forgot-password-submit-btn"
+                    data-test-id="forgot-password-submit-btn"
                   >
                     Send Reset Link
                   </button>
@@ -151,7 +151,7 @@ const Login = () => {
               <button
                 onClick={() => { setShowForgotPassword(false); setResetSent(false); setForgotEmail(""); }}
                 className="mt-4 text-sm text-primary-600 dark:text-primary-400 hover:underline"
-                data-testid="back-to-login-btn"
+                data-test-id="back-to-login-btn"
               >
                 ← Back to sign in
               </button>
@@ -161,7 +161,7 @@ const Login = () => {
               {showConfirmedNotice && (
                 <div
                   className="mb-6 flex items-start gap-3 rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-800 dark:text-green-200"
-                  data-testid="login-email-confirmed-notice"
+                  data-test-id="login-email-confirmed-notice"
                   role="status"
                 >
                   <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
@@ -176,7 +176,7 @@ const Login = () => {
                     onClick={() => setShowConfirmedNotice(false)}
                     className="flex-shrink-0 text-green-500 hover:text-green-700 dark:hover:text-green-300"
                     aria-label="Dismiss"
-                    data-testid="login-email-confirmed-notice-dismiss-btn"
+                    data-test-id="login-email-confirmed-notice-dismiss-btn"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -186,7 +186,7 @@ const Login = () => {
               {showVerifyNotice && (
                 <div
                   className="mb-6 flex items-start gap-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 p-4 text-sm text-primary-800 dark:text-primary-200"
-                  data-testid="login-verify-email-notice"
+                  data-test-id="login-verify-email-notice"
                   role="status"
                 >
                   <MailCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
@@ -203,7 +203,7 @@ const Login = () => {
                     onClick={() => setShowVerifyNotice(false)}
                     className="flex-shrink-0 text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
                     aria-label="Dismiss"
-                    data-testid="login-verify-email-notice-dismiss-btn"
+                    data-test-id="login-verify-email-notice-dismiss-btn"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -216,7 +216,7 @@ const Login = () => {
                 <Link
                   to="/register"
                   className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500"
-                  data-testid="go-to-register-link"
+                  data-test-id="go-to-register-link"
                 >
                   Sign up for free
                 </Link>
@@ -225,7 +225,7 @@ const Login = () => {
               <form
                 className="space-y-6"
                 onSubmit={handleSubmit(onSubmit)}
-                data-testid="login-form"
+                data-test-id="login-form"
               >
                 {/* Email */}
                 <div>
@@ -238,10 +238,10 @@ const Login = () => {
                     autoComplete="email"
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     placeholder="Enter your email"
-                    data-testid="login-email-input"
+                    data-test-id="login-email-input"
                   />
                   {errors.email && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-testid="login-email-error">
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-test-id="login-email-error">
                       {errors.email.message}
                     </p>
                   )}
@@ -259,13 +259,13 @@ const Login = () => {
                       autoComplete="current-password"
                       className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="Enter your password"
-                      data-testid="login-password-input"
+                      data-test-id="login-password-input"
                     />
                     <button
                       type="button"
                       className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
                       onClick={() => setShowPassword(p => !p)}
-                      data-testid="login-toggle-password-btn"
+                      data-test-id="login-toggle-password-btn"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword
@@ -274,7 +274,7 @@ const Login = () => {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-testid="login-password-error">
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400" data-test-id="login-password-error">
                       {errors.password.message}
                     </p>
                   )}
@@ -288,7 +288,7 @@ const Login = () => {
                       checked={rememberMe}
                       onChange={e => setRememberMe(e.target.checked)}
                       className="h-4 w-4 text-primary-600 border-gray-300 rounded cursor-pointer"
-                      data-testid="login-remember-me-checkbox"
+                      data-test-id="login-remember-me-checkbox"
                     />
                     Remember me
                   </label>
@@ -296,7 +296,7 @@ const Login = () => {
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
                     className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500"
-                    data-testid="forgot-password-link"
+                    data-test-id="forgot-password-link"
                   >
                     Forgot password?
                   </button>
@@ -307,10 +307,10 @@ const Login = () => {
                   type="submit"
                   disabled={isSubmitting || loading}
                   className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid="login-submit-btn"
+                  data-test-id="login-submit-btn"
                 >
                   {isSubmitting || loading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" data-testid="login-loading-spinner" />
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" data-test-id="login-loading-spinner" />
                   ) : (
                     <>
                       <LogIn className="w-5 h-5 mr-2" />

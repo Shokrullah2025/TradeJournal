@@ -24,7 +24,7 @@ function InfoTooltip({ text, className = "", label = "More info", testId = "info
         onClick={() => setOpen((v) => !v)}
         onBlur={() => setOpen(false)}
         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 active:opacity-70"
-        data-testid={`${testId}-btn`}
+        data-test-id={`${testId}-btn`}
       >
         <Info className="h-4 w-4" />
       </button>
@@ -32,7 +32,7 @@ function InfoTooltip({ text, className = "", label = "More info", testId = "info
         <span
           role="tooltip"
           className="absolute left-1/2 top-6 z-30 w-56 max-w-[70vw] -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium leading-snug text-white shadow-lg dark:bg-gray-700"
-          data-testid={`${testId}-content`}
+          data-test-id={`${testId}-content`}
         >
           {text}
         </span>

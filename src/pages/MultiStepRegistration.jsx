@@ -145,14 +145,14 @@ const MultiStepRegistration = () => {
         {isSubmitting && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 backdrop-blur-[2px]"
-            data-testid="register-loading-overlay"
+            data-test-id="register-loading-overlay"
             role="status"
             aria-live="polite"
           >
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-2xl">
               <div
                 className="h-10 w-10 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"
-                data-testid="register-loading-spinner"
+                data-test-id="register-loading-spinner"
               />
               <p className="text-sm font-medium text-gray-700">
                 Creating your account…
@@ -278,14 +278,14 @@ const MultiStepRegistration = () => {
               <div
                 className="mt-6 rounded-md border border-amber-300 bg-amber-50 p-4"
                 role="alert"
-                data-testid="register-already-exists-banner"
+                data-test-id="register-already-exists-banner"
               >
                 <p className="text-sm text-amber-800">
                   An account with this email already exists.{" "}
                   <Link
                     to="/login"
                     className="font-medium text-primary-600 underline hover:text-primary-500"
-                    data-testid="register-already-exists-signin-link"
+                    data-test-id="register-already-exists-signin-link"
                   >
                     Sign in instead
                   </Link>
@@ -391,7 +391,7 @@ const MultiStepRegistration = () => {
                       className="absolute inset-y-0 right-0 w-10 flex items-center justify-center"
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? "Hide password" : "Show password"}
-                      data-testid="register-form-toggle-password-btn"
+                      data-test-id="register-form-toggle-password-btn"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5 text-gray-400" />
@@ -453,7 +453,7 @@ const MultiStepRegistration = () => {
                       aria-label={
                         showConfirmPassword ? "Hide password" : "Show password"
                       }
-                      data-testid="register-form-toggle-confirm-password-btn"
+                      data-test-id="register-form-toggle-confirm-password-btn"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-5 w-5 text-gray-400" />
@@ -475,7 +475,7 @@ const MultiStepRegistration = () => {
                     id="agreeToTerms"
                     type="checkbox"
                     className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    data-testid="register-form-terms-checkbox"
+                    data-test-id="register-form-terms-checkbox"
                   />
                   <label
                     htmlFor="agreeToTerms"
@@ -502,7 +502,7 @@ const MultiStepRegistration = () => {
                   </label>
                 </div>
                 {errors.agreeToTerms && (
-                  <p className="mt-1 text-sm text-red-600" data-testid="register-form-terms-error">
+                  <p className="mt-1 text-sm text-red-600" data-test-id="register-form-terms-error">
                     {errors.agreeToTerms.message}
                   </p>
                 )}
@@ -513,7 +513,7 @@ const MultiStepRegistration = () => {
                     id="agreeToRefundPolicy"
                     type="checkbox"
                     className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    data-testid="register-form-refund-ack-checkbox"
+                    data-test-id="register-form-refund-ack-checkbox"
                   />
                   <label
                     htmlFor="agreeToRefundPolicy"
@@ -534,7 +534,7 @@ const MultiStepRegistration = () => {
                   </label>
                 </div>
                 {errors.agreeToRefundPolicy && (
-                  <p className="mt-1 text-sm text-red-600" data-testid="register-form-refund-error">
+                  <p className="mt-1 text-sm text-red-600" data-test-id="register-form-refund-error">
                     {errors.agreeToRefundPolicy.message}
                   </p>
                 )}

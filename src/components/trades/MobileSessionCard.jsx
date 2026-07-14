@@ -10,7 +10,7 @@ import { tagColor } from "../../utils/tagColor";
  * the data vertically so nothing overlaps on a narrow screen and gives the
  * replay action a full-width tap target.
  *
- * data-testid values mirror the desktop card so automated tests target either
+ * data-test-id values mirror the desktop card so automated tests target either
  * layout the same way (CLAUDE.md §9 — stable, shared testids).
  */
 function MobileSessionCard({ session: s, onOpen, onPlay }) {
@@ -22,7 +22,7 @@ function MobileSessionCard({ session: s, onOpen, onPlay }) {
 
   return (
     <div
-      data-testid={`session-card-${s.id}`}
+      data-test-id={`session-card-${s.id}`}
       onClick={() => onOpen(s)}
       className="relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 pl-5 cursor-pointer overflow-hidden transition-transform active:scale-[0.99]"
     >
@@ -100,7 +100,7 @@ function MobileSessionCard({ session: s, onOpen, onPlay }) {
             return (
               <span
                 key={tag}
-                data-testid={`session-card-tag-${s.id}-${tag}`}
+                data-test-id={`session-card-tag-${s.id}-${tag}`}
                 className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                 style={{ background: c.bg, color: c.text }}
               >
@@ -119,7 +119,7 @@ function MobileSessionCard({ session: s, onOpen, onPlay }) {
       {/* Replay — full-width tap target */}
       {hasTrades && (
         <button
-          data-testid={`session-card-play-btn-${s.id}`}
+          data-test-id={`session-card-play-btn-${s.id}`}
           onClick={(e) => {
             e.stopPropagation();
             onPlay(s);

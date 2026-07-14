@@ -20,7 +20,7 @@ vi.mock("../src/context/BillingContext", () => ({
 vi.mock("react-hot-toast", () => ({ toast: toastMock, default: toastMock }));
 vi.mock("../src/components/billing/StripePaymentForm", () => ({
   default: ({ amount }) => (
-    <div data-testid="stripe-payment-form-mock">Stripe checkout for ${amount}</div>
+    <div data-test-id="stripe-payment-form-mock">Stripe checkout for ${amount}</div>
   ),
 }));
 

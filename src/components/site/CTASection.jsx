@@ -13,7 +13,7 @@ const CTASection = () => {
 
   return (
     <section
-      data-testid="site-cta-section"
+      data-test-id="site-cta-section"
       className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24"
     >
       <div className="rounded-3xl bg-gradient-to-br from-accent-400 via-accent-500 to-accent-700 px-6 py-14 text-center text-white shadow-2xl shadow-accent-600/30 sm:px-12">
@@ -28,7 +28,7 @@ const CTASection = () => {
           {isAuthenticated ? (
             <Link
               to="/dashboard"
-              data-testid="site-cta-dashboard-btn"
+              data-test-id="site-cta-dashboard-btn"
               className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-accent-700 transition-transform hover:-translate-y-px"
             >
               Go to your dashboard
@@ -37,7 +37,7 @@ const CTASection = () => {
           ) : (
             <Link
               to="/register"
-              data-testid="site-cta-getstarted-btn"
+              data-test-id="site-cta-getstarted-btn"
               className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-accent-700 transition-transform hover:-translate-y-px"
             >
               Start free trial
@@ -46,7 +46,7 @@ const CTASection = () => {
           )}
           <Link
             to="/contact"
-            data-testid="site-cta-contact-btn"
+            data-test-id="site-cta-contact-btn"
             className="inline-flex items-center gap-2 rounded-xl border border-white/35 bg-white/15 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/25"
           >
             Talk to us

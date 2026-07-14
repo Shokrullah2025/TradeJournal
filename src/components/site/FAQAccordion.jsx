@@ -12,7 +12,7 @@ import { FAQS } from "./content";
  */
 const FAQAccordion = ({ items = FAQS, idPrefix = "faq" }) => (
   <div
-    data-testid={`${idPrefix}-accordion`}
+    data-test-id={`${idPrefix}-accordion`}
     className="mx-auto max-w-3xl divide-y divide-gray-200 dark:divide-gray-700"
   >
     {items.map((faq, index) => (
@@ -20,7 +20,7 @@ const FAQAccordion = ({ items = FAQS, idPrefix = "faq" }) => (
         {({ open }) => (
           <>
             <Disclosure.Button
-              data-testid={`${idPrefix}-question-${index}`}
+              data-test-id={`${idPrefix}-question-${index}`}
               className="flex w-full items-center justify-between text-left"
             >
               <span className="text-base font-medium text-gray-900 dark:text-gray-100">
@@ -33,7 +33,7 @@ const FAQAccordion = ({ items = FAQS, idPrefix = "faq" }) => (
               />
             </Disclosure.Button>
             <Disclosure.Panel
-              data-testid={`${idPrefix}-answer-${index}`}
+              data-test-id={`${idPrefix}-answer-${index}`}
               className="mt-3 pr-8 text-sm leading-relaxed text-gray-600 dark:text-gray-400"
             >
               {faq.answer}

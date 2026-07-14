@@ -1311,12 +1311,12 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div
-          data-testid="trade-entry-modal"
+          data-test-id="trade-entry-modal"
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex items-center justify-center border border-gray-200 dark:border-gray-700 overflow-hidden"
         >
           <div
             className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"
-            data-testid="trade-form-loading-spinner"
+            data-test-id="trade-form-loading-spinner"
           />
         </div>
       </div>
@@ -1327,7 +1327,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     <ModalPortal>
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
       <div
-        data-testid="trade-entry-modal"
+        data-test-id="trade-entry-modal"
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden"
       >
         {/* HEADER — two zones mirror the body split so the tab switch lands on
@@ -1366,7 +1366,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                     setFieldVisibility(null); // show all fields again
                   } else if (templateId) applyTemplate(templateId);
                 }}
-                data-testid="trade-form-template-select"
+                data-test-id="trade-form-template-select"
               >
                 {!selectedTemplateId && <option value="">No template</option>}
                 {selectedTemplateId && <option value="clear">✕ Clear template</option>}
@@ -1382,7 +1382,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             <button
               type="button"
               onClick={onClose}
-              data-testid="modal-close-btn-mobile"
+              data-test-id="modal-close-btn-mobile"
               aria-label="Close"
               className="ml-auto md:hidden w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center transition-colors flex-shrink-0"
             >
@@ -1397,7 +1397,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               <button
                 type="button"
                 onClick={() => setActiveTab("quick")}
-                data-testid="trade-form-tab-quick"
+                data-test-id="trade-form-tab-quick"
                 className={`flex flex-1 md:flex-none items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                   activeTab === "quick"
                     ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm"
@@ -1410,7 +1410,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               <button
                 type="button"
                 onClick={() => setActiveTab("advanced")}
-                data-testid="trade-form-tab-advanced"
+                data-test-id="trade-form-tab-advanced"
                 className={`flex flex-1 md:flex-none items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
                   activeTab === "advanced"
                     ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm"
@@ -1426,7 +1426,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             <button
               type="button"
               onClick={onClose}
-              data-testid="modal-close-btn"
+              data-test-id="modal-close-btn"
               className="hidden md:flex w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 items-center justify-center transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
@@ -1439,7 +1439,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
           {/* LEFT: form fields */}
           <form
             id="trade-entry-form"
-            data-testid="trade-entry-form"
+            data-test-id="trade-entry-form"
             onSubmit={handleSubmit(onSubmit)}
             className="flex-1 min-w-0 md:overflow-y-auto p-4 md:p-6 space-y-6"
           >
@@ -1460,7 +1460,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       <select
                         {...register("instrumentType", { required: "Type is required" })}
                         className="input"
-                        data-testid="trade-form-type-select"
+                        data-test-id="trade-form-type-select"
                       >
                         <option value="stocks">Stocks</option>
                         <option value="forex">Forex</option>
@@ -1480,7 +1480,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       <div ref={instrumentRef} className="relative">
                         <button
                           type="button"
-                          data-testid="trade-form-instrument-btn"
+                          data-test-id="trade-form-instrument-btn"
                           onClick={() => setInstrumentOpen((o) => !o)}
                           className={`input w-full flex items-center justify-between text-left ${
                             !watchedInstrument
@@ -1502,7 +1502,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                               <input
                                 autoFocus
                                 type="text"
-                                data-testid="trade-form-instrument-search"
+                                data-test-id="trade-form-instrument-search"
                                 value={instrumentSearch}
                                 onChange={(e) => setInstrumentSearch(e.target.value)}
                                 placeholder="Search or type instrument…"
@@ -1528,7 +1528,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                                 <button
                                   key={inst}
                                   type="button"
-                                  data-testid={`trade-form-instrument-option-${inst}`}
+                                  data-test-id={`trade-form-instrument-option-${inst}`}
                                   onClick={() => handleSelectInstrument(inst)}
                                   className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
                                     watchedInstrument === inst
@@ -1543,7 +1543,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                               {canAddInstrument && (
                                 <button
                                   type="button"
-                                  data-testid="trade-form-instrument-add-btn"
+                                  data-test-id="trade-form-instrument-add-btn"
                                   onClick={() => handleAddInstrument(instrumentSearch.trim().toUpperCase())}
                                   className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 border-t border-gray-100 dark:border-gray-700 transition-colors"
                                 >
@@ -1575,7 +1575,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          data-testid="trade-form-direction-long-btn"
+                          data-test-id="trade-form-direction-long-btn"
                           onClick={() => setValue("tradeType", "long", { shouldValidate: true })}
                           className={`flex items-center justify-center gap-1.5 h-11 rounded-xl text-sm font-bold border transition-colors ${
                             watchedTradeType !== "short"
@@ -1588,7 +1588,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         </button>
                         <button
                           type="button"
-                          data-testid="trade-form-direction-short-btn"
+                          data-test-id="trade-form-direction-short-btn"
                           onClick={() => setValue("tradeType", "short", { shouldValidate: true })}
                           className={`flex items-center justify-center gap-1.5 h-11 rounded-xl text-sm font-bold border transition-colors ${
                             watchedTradeType === "short"
@@ -1634,7 +1634,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       <input
                         type="number"
                         step="0.01"
-                        data-testid="trade-form-entry-price-input"
+                        data-test-id="trade-form-entry-price-input"
                         {...register("entryPrice", { required: "Entry price is required" })}
                         className="input"
                         placeholder="0.00"
@@ -1647,7 +1647,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       <label className="label">Quantity *</label>
                       <input
                         type="number"
-                        data-testid="trade-form-quantity-input"
+                        data-test-id="trade-form-quantity-input"
                         {...register("quantity", { required: "Quantity is required" })}
                         className="input"
                         placeholder="100"
@@ -1669,7 +1669,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         }
                         className="input"
                         placeholder="0.00"
-                        data-testid="trade-form-stop-loss-input"
+                        data-test-id="trade-form-stop-loss-input"
                       />
                     </div>
                     <div>
@@ -1683,7 +1683,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                         }
                         className="input"
                         placeholder="0.00"
-                        data-testid="trade-form-take-profit-input"
+                        data-test-id="trade-form-take-profit-input"
                       />
                     </div>
                   </div>
@@ -1766,7 +1766,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-2.5" data-testid="trade-form-images-panel">
+                  <div className="grid grid-cols-4 gap-2.5" data-test-id="trade-form-images-panel">
                     {SLOT_LABELS.map((label, slotIndex) => {
                       const img = visibleImages.find(
                         (i) => (i.sortOrder ?? slotIndex) === slotIndex
@@ -1792,7 +1792,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                               setDragOverSlot(null);
                               handleSlotDropEvent(e, slotIndex);
                             }}
-                            data-testid={`screenshot-slot-${slotIndex}`}
+                            data-test-id={`screenshot-slot-${slotIndex}`}
                           >
                             {img?.previewUrl && !brokenSlots.has(slotIndex) ? (
                               <>
@@ -1813,7 +1813,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                                   type="button"
                                   onClick={(e) => handleSlotDeleteClick(e, img)}
                                   className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                  data-testid={`screenshot-slot-delete-${slotIndex}`}
+                                  data-test-id={`screenshot-slot-delete-${slotIndex}`}
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -1840,7 +1840,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                     type="button"
                     onClick={() => setShowImageUploader(true)}
                     className="mt-2 text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium"
-                    data-testid="screenshot-manage-btn"
+                    data-test-id="screenshot-manage-btn"
                   >
                     Manage screenshots
                   </button>
@@ -2094,7 +2094,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 <button
                   type="button"
                   onClick={() => setRrUnit("ticks")}
-                  data-testid="rr-unit-ticks-btn"
+                  data-test-id="rr-unit-ticks-btn"
                   className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
                     rrUnit === "ticks"
                       ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
@@ -2106,7 +2106,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 <button
                   type="button"
                   onClick={() => setRrUnit("points")}
-                  data-testid="rr-unit-points-btn"
+                  data-test-id="rr-unit-points-btn"
                   className={`px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
                     rrUnit === "points"
                       ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
@@ -2122,7 +2122,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             <div className="flex items-baseline gap-2.5">
               <div
                 className="tabular-nums text-5xl font-bold text-gray-900 dark:text-gray-100 leading-none tracking-tight"
-                data-testid="rr-ratio-value"
+                data-test-id="rr-ratio-value"
               >
                 {rrHub.rrText}
                 <span className="text-2xl text-gray-400 dark:text-gray-500 font-semibold"> : 1</span>
@@ -2156,7 +2156,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                       key={R}
                       type="button"
                       onClick={() => applyTargetRatio(R)}
-                      data-testid={`rr-ratio-${R}-btn`}
+                      data-test-id={`rr-ratio-${R}-btn`}
                       className={`h-8 rounded-lg tabular-nums text-xs font-bold border transition-colors ${
                         active
                           ? "bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 border-primary-300 dark:border-primary-700"
@@ -2184,7 +2184,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                     value={watchedStopLoss || ""}
                     onChange={(e) => setValue("stopLoss", e.target.value, { shouldValidate: true })}
                     placeholder="0.00"
-                    data-testid="rr-stop-loss-input"
+                    data-test-id="rr-stop-loss-input"
                     className="w-full h-10 px-3 rounded-lg border border-danger-300 dark:border-danger-700 bg-danger-50 dark:bg-danger-900/20 tabular-nums text-base font-semibold text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-danger-500 focus:ring-2 focus:ring-danger-500/20"
                   />
                   {rrHub.hasStop && (
@@ -2206,7 +2206,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                     value={watchedTakeProfit || ""}
                     onChange={(e) => setValue("takeProfit", e.target.value, { shouldValidate: true })}
                     placeholder="0.00"
-                    data-testid="rr-take-profit-input"
+                    data-test-id="rr-take-profit-input"
                     className="w-full h-10 px-3 rounded-lg border border-success-300 dark:border-success-700 bg-success-50 dark:bg-success-900/20 tabular-nums text-base font-semibold text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-success-500 focus:ring-2 focus:ring-success-500/20"
                   />
                   {rrHub.hasTP && (
@@ -2259,7 +2259,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 </div>
                 <div
                   className="tabular-nums text-xl font-bold text-gray-900 dark:text-gray-100 leading-none"
-                  data-testid="rr-reward-value"
+                  data-test-id="rr-reward-value"
                 >
                   {rrHub.rewardUsdStr ? `+${rrHub.rewardUsdStr}` : "—"}
                 </div>
@@ -2275,7 +2275,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
                 </div>
                 <div
                   className="tabular-nums text-xl font-bold text-gray-900 dark:text-gray-100 leading-none"
-                  data-testid="rr-risk-value"
+                  data-test-id="rr-risk-value"
                 >
                   {rrHub.riskUsdStr ? `−${rrHub.riskUsdStr}` : "—"}
                 </div>
@@ -2296,7 +2296,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             {isFieldVisible("screenshots") ? (
               <>
                 <Camera className="w-4 h-4" />
-                <span data-testid="trade-form-photo-count">Photos {visibleImages.length}/4</span>
+                <span data-test-id="trade-form-photo-count">Photos {visibleImages.length}/4</span>
               </>
             ) : null}
           </div>
@@ -2306,7 +2306,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               onClick={onClose}
               disabled={isSubmitting}
               className="h-11 px-5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-60"
-              data-testid="trade-form-cancel-btn"
+              data-test-id="trade-form-cancel-btn"
             >
               Cancel
             </button>
@@ -2315,7 +2315,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
               form="trade-entry-form"
               disabled={isSubmitting}
               className="btn-gradient h-11 px-6 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-colors disabled:opacity-60"
-              data-testid="trade-form-submit-btn"
+              data-test-id="trade-form-submit-btn"
             >
               {isSubmitting ? (
                 "Saving..."
@@ -2344,13 +2344,13 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
         <div
           className="fixed inset-0 z-[70] bg-black/80 flex flex-col items-center justify-center"
           onClick={() => setLightboxImage(null)}
-          data-testid="screenshot-lightbox"
+          data-test-id="screenshot-lightbox"
         >
           <button
             type="button"
             onClick={() => setLightboxImage(null)}
             className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors"
-            data-testid="screenshot-lightbox-close-btn"
+            data-test-id="screenshot-lightbox-close-btn"
           >
             <X className="w-5 h-5" />
           </button>
@@ -2359,7 +2359,7 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
             alt={lightboxImage.label}
             className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl"
             onClick={(e) => e.stopPropagation()}
-            data-testid="screenshot-lightbox-image"
+            data-test-id="screenshot-lightbox-image"
           />
           <span className="mt-3 text-white/80 text-sm font-semibold tracking-wide">
             {lightboxImage.label}

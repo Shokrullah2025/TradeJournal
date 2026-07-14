@@ -25,7 +25,7 @@ const PricingCard = ({ tier, cycle }) => {
 
   return (
     <div
-      data-testid={`pricing-card-${tier.id}`}
+      data-test-id={`pricing-card-${tier.id}`}
       className={`relative flex flex-col rounded-2xl border p-6 sm:min-h-[34rem] ${
         tier.popular
           ? "border-accent-500 bg-white shadow-xl dark:border-accent-500 dark:bg-gray-900"
@@ -34,7 +34,7 @@ const PricingCard = ({ tier, cycle }) => {
     >
       {tier.popular && (
         <span
-          data-testid={`pricing-card-badge-${tier.id}`}
+          data-test-id={`pricing-card-badge-${tier.id}`}
           className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent-600 px-3 py-1 font-nums text-[11px] font-semibold tracking-wide text-white"
         >
           MOST POPULAR
@@ -53,7 +53,7 @@ const PricingCard = ({ tier, cycle }) => {
 
       <p className="mt-3 flex items-baseline gap-1">
         <span
-          data-testid={`pricing-card-price-${tier.id}`}
+          data-test-id={`pricing-card-price-${tier.id}`}
           className="font-nums text-4xl font-semibold text-gray-900 dark:text-gray-100"
         >
           ${fmt(price)}
@@ -99,7 +99,7 @@ const PricingCard = ({ tier, cycle }) => {
 
       <Link
         to="/register"
-        data-testid={`pricing-card-cta-${tier.id}`}
+        data-test-id={`pricing-card-cta-${tier.id}`}
         className={`mt-6 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
           tier.popular
             ? "btn-site"

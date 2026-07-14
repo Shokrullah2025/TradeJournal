@@ -57,7 +57,7 @@ const ActivityLog = () => {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-4" data-testid="admin-activity-log">
+    <div className="space-y-4" data-test-id="admin-activity-log">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Audit trail of user and admin actions. Failures are highlighted.
@@ -67,7 +67,7 @@ const ActivityLog = () => {
             type="checkbox"
             checked={onlyFailures}
             onChange={(e) => { setOnlyFailures(e.target.checked); setPage(0); }}
-            data-testid="admin-activity-failures-only"
+            data-test-id="admin-activity-failures-only"
             className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
           />
           Failures only
@@ -87,16 +87,16 @@ const ActivityLog = () => {
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-activity-loading-spinner">Loading…</td></tr>
+              <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-test-id="admin-activity-loading-spinner">Loading…</td></tr>
             ) : error ? (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-danger-600 dark:text-danger-400" data-testid="admin-activity-error">{error}</td></tr>
+              <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-danger-600 dark:text-danger-400" data-test-id="admin-activity-error">{error}</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-testid="admin-activity-empty-state">No activity to show.</td></tr>
+              <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400" data-test-id="admin-activity-empty-state">No activity to show.</td></tr>
             ) : (
               rows.map((row) => {
                 const failed = isFailureEvent(row);
                 return (
-                  <tr key={row.id} className={failed ? "bg-danger-50/50 dark:bg-danger-900/10" : ""} data-testid={`admin-activity-row-${row.id}`}>
+                  <tr key={row.id} className={failed ? "bg-danger-50/50 dark:bg-danger-900/10" : ""} data-test-id={`admin-activity-row-${row.id}`}>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {failed ? (
@@ -133,7 +133,7 @@ const ActivityLog = () => {
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
-            data-testid="admin-activity-prev-btn"
+            data-test-id="admin-activity-prev-btn"
             aria-label="Previous page"
           >
             <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
@@ -143,7 +143,7 @@ const ActivityLog = () => {
             onClick={() => setPage((p) => (p + 1 < totalPages ? p + 1 : p))}
             disabled={page + 1 >= totalPages}
             className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700"
-            data-testid="admin-activity-next-btn"
+            data-test-id="admin-activity-next-btn"
             aria-label="Next page"
           >
             <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />

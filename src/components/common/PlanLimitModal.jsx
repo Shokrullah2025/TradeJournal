@@ -30,21 +30,21 @@ const PlanLimitModal = ({
       <div
         className="fixed inset-0 z-[10000] flex items-center justify-center bg-gray-900/60 px-4"
         onClick={onClose}
-        data-testid={`${testId}-backdrop`}
+        data-test-id={`${testId}-backdrop`}
       >
         <div
           className="card w-full max-w-md text-center py-10 relative"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          data-testid={testId}
+          data-test-id={testId}
         >
           <button
             type="button"
             onClick={onClose}
             className="absolute right-4 top-4 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
             aria-label="Close"
-            data-testid={`${testId}-close-btn`}
+            data-test-id={`${testId}-close-btn`}
           >
             <X className="h-5 w-5" />
           </button>
@@ -62,7 +62,7 @@ const PlanLimitModal = ({
           {max > 0 && (
             <p
               className="mt-4 text-sm font-medium text-gray-600 dark:text-gray-300"
-              data-testid={`${testId}-usage`}
+              data-test-id={`${testId}-usage`}
             >
               Used this period:{" "}
               <span className="font-semibold text-gray-900 dark:text-gray-100">
@@ -76,7 +76,7 @@ const PlanLimitModal = ({
               type="button"
               onClick={onClose}
               className="btn-secondary"
-              data-testid={`${testId}-dismiss-btn`}
+              data-test-id={`${testId}-dismiss-btn`}
             >
               Not now
             </button>
@@ -84,7 +84,7 @@ const PlanLimitModal = ({
               to="/billing"
               onClick={onClose}
               className="btn-primary inline-flex items-center gap-2"
-              data-testid={`${testId}-upgrade-btn`}
+              data-test-id={`${testId}-upgrade-btn`}
             >
               <Lock className="h-4 w-4" />
               Upgrade to {planLabel}

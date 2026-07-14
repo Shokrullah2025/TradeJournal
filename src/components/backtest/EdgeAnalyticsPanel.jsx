@@ -114,7 +114,7 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
     <div
       className="flex flex-col flex-shrink-0 border-l overflow-hidden"
       style={{ width: 256, background: theme.surface, borderColor: theme.border }}
-      data-testid="edge-analytics-panel"
+      data-test-id="edge-analytics-panel"
     >
       {/* Header */}
       <div
@@ -131,7 +131,7 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
           style={{ color: theme.textMuted }}
           onMouseEnter={(e) => (e.currentTarget.style.color = theme.text)}
           onMouseLeave={(e) => (e.currentTarget.style.color = theme.textMuted)}
-          data-testid="analytics-close-btn"
+          data-test-id="analytics-close-btn"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -173,7 +173,7 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
                       background: stats.streakType === "W" ? "rgba(8,153,129,0.15)" : "rgba(242,54,69,0.15)",
                       color: stats.streakType === "W" ? "#089981" : "#f23645",
                     }}
-                    data-testid="analytics-streak-badge"
+                    data-test-id="analytics-streak-badge"
                   >
                     {stats.streakType}{stats.streak} streak
                   </span>
@@ -197,7 +197,7 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
                   <p
                     className="text-sm font-bold"
                     style={{ color: color || theme.text }}
-                    data-testid={`analytics-${label.toLowerCase().replace(/\s/g, "-")}-value`}
+                    data-test-id={`analytics-${label.toLowerCase().replace(/\s/g, "-")}-value`}
                   >
                     {value}
                   </p>
@@ -330,7 +330,7 @@ export default function EdgeAnalyticsPanel({ trades, initialBalance, isDark, onC
                       background: theme.bg,
                       borderColor: t.pnl >= 0 ? "rgba(8,153,129,0.3)" : "rgba(242,54,69,0.3)",
                     }}
-                    data-testid={`analytics-trade-row-${t.id ?? i}`}
+                    data-test-id={`analytics-trade-row-${t.id ?? i}`}
                   >
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="font-semibold" style={{ color: t.side === "buy" ? "#089981" : "#f23645" }}>

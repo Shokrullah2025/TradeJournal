@@ -171,7 +171,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
     <ModalPortal>
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
-      data-testid="csv-import-modal"
+      data-test-id="csv-import-modal"
     >
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
@@ -183,7 +183,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            data-testid="csv-modal-close-btn"
+            data-test-id="csv-modal-close-btn"
           >
             <X className="w-5 h-5" />
           </button>
@@ -204,7 +204,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 bg-gray-50 dark:bg-gray-700/40"
                 }`}
-                data-testid="csv-drop-zone"
+                data-test-id="csv-drop-zone"
               >
                 <input
                   ref={fileInputRef}
@@ -212,7 +212,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
                   accept={ACCEPTED_TYPES}
                   onChange={handleFileInput}
                   className="hidden"
-                  data-testid="csv-file-input"
+                  data-test-id="csv-file-input"
                 />
                 {phase === "parsing" ? (
                   <>
@@ -234,7 +234,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start space-x-2 text-sm text-red-700 dark:text-red-400" data-testid="csv-error-banner">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start space-x-2 text-sm text-red-700 dark:text-red-400" data-test-id="csv-error-banner">
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -291,7 +291,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
               {/* Summary row */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="csv-preview-total">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-test-id="csv-preview-total">
                     {parsed.trades.length}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">Trades found</div>
@@ -312,7 +312,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
 
               {/* Warnings */}
               {parsed.warnings.length > 0 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg" data-testid="csv-warnings">
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg" data-test-id="csv-warnings">
                   <div className="flex items-center space-x-2 mb-1">
                     <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
@@ -383,7 +383,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
                 <button
                   onClick={handleImport}
                   className="btn btn-primary flex items-center space-x-2"
-                  data-testid="csv-import-confirm-btn"
+                  data-test-id="csv-import-confirm-btn"
                 >
                   <Upload className="w-4 h-4" />
                   <span>Import {parsed.trades.length} Trade{parsed.trades.length !== 1 ? "s" : ""}</span>
@@ -406,7 +406,7 @@ export default function CsvImportModal({ isOpen, onClose, onImported }) {
             <div className="text-center py-8 space-y-4">
               <CheckCircle className="w-14 h-14 text-green-500 mx-auto" />
               <div>
-                <p className="text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="csv-import-result">
+                <p className="text-xl font-semibold text-gray-900 dark:text-gray-100" data-test-id="csv-import-result">
                   {result.imported > 0
                     ? `${result.imported} trade${result.imported !== 1 ? "s" : ""} imported`
                     : "Nothing new to import"}

@@ -110,7 +110,7 @@ const NotificationBell = () => {
   return (
     <div className="header__notification relative" ref={panelRef}>
       <button
-        data-testid="notifications-bell-button"
+        data-test-id="notifications-bell-button"
         onClick={() => setIsOpen((open) => !open)}
         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative"
         title="Notifications"
@@ -119,7 +119,7 @@ const NotificationBell = () => {
         <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
         {unreadCount > 0 && (
           <span
-            data-testid="notifications-unread-badge"
+            data-test-id="notifications-unread-badge"
             className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 flex items-center justify-center text-[10px] font-semibold text-white bg-danger-500 rounded-full"
           >
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -129,7 +129,7 @@ const NotificationBell = () => {
 
       {isOpen && (
         <div
-          data-testid="notifications-dropdown-panel"
+          data-test-id="notifications-dropdown-panel"
           className="fixed right-3 left-auto top-16 w-[78vw] max-w-[18rem] sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[200]"
         >
           <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -138,7 +138,7 @@ const NotificationBell = () => {
               {selectedCount > 0 ? (
                 <>
                   <button
-                    data-testid="notifications-markread-selected-button"
+                    data-test-id="notifications-markread-selected-button"
                     onClick={handleMarkSelectedRead}
                     className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 px-1.5 py-1 rounded"
                   >
@@ -146,7 +146,7 @@ const NotificationBell = () => {
                     Mark read
                   </button>
                   <button
-                    data-testid="notifications-delete-selected-button"
+                    data-test-id="notifications-delete-selected-button"
                     onClick={handleDeleteSelected}
                     className="inline-flex items-center gap-1 text-xs text-danger-600 hover:text-danger-700 px-1.5 py-1 rounded"
                   >
@@ -156,7 +156,7 @@ const NotificationBell = () => {
                 </>
               ) : (
                 <button
-                  data-testid="notifications-clearall-button"
+                  data-test-id="notifications-clearall-button"
                   onClick={handleClearAll}
                   disabled={notifications.length === 0}
                   className="inline-flex items-center gap-1 text-xs text-danger-600 hover:text-danger-700 disabled:text-gray-400 disabled:cursor-not-allowed"
@@ -174,19 +174,19 @@ const NotificationBell = () => {
           </div>
 
           <div
-            data-testid="notifications-list"
+            data-test-id="notifications-list"
             className="max-h-96 overflow-y-auto"
           >
             {isLoading ? (
               <div
-                data-testid="notifications-loading"
+                data-test-id="notifications-loading"
                 className="flex items-center justify-center py-10"
               >
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
               </div>
             ) : notifications.length === 0 ? (
               <div
-                data-testid="notifications-empty-state"
+                data-test-id="notifications-empty-state"
                 className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
               >
                 You're all caught up.
@@ -210,14 +210,14 @@ const NotificationBell = () => {
                     >
                       <input
                         type="checkbox"
-                        data-testid={`notifications-select-${n.id}`}
+                        data-test-id={`notifications-select-${n.id}`}
                         checked={selected}
                         onChange={() => toggleSelectOne(n.id)}
                         className="h-4 w-4 mt-4 ml-4 shrink-0 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                         aria-label="Select notification"
                       />
                       <button
-                        data-testid={`notifications-item-${n.id}`}
+                        data-test-id={`notifications-item-${n.id}`}
                         onClick={() => handleItemClick(n)}
                         className="flex-1 min-w-0 text-left flex gap-3 pl-2 pr-4 py-3"
                       >
@@ -244,7 +244,7 @@ const NotificationBell = () => {
                 })}
                 {hasMore && (
                   <button
-                    data-testid="notifications-loadmore-button"
+                    data-test-id="notifications-loadmore-button"
                     onClick={loadMore}
                     className="w-full py-3 text-xs font-medium text-primary-600 hover:text-primary-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   >

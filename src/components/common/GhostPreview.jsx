@@ -247,7 +247,7 @@ export const GhostInsightLines = () => (
 
 // Small stat/metric card: label, em-dash value, half-faded sketch, hint.
 export const GhostStatCard = ({ label, hint, testId, children }) => (
-  <div className="card p-4" data-testid={testId}>
+  <div className="card p-4" data-test-id={testId}>
     <div className="flex items-start justify-between gap-2">
       <div>
         <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">

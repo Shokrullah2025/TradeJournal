@@ -15,7 +15,7 @@ const MIN_QUERY_LENGTH = 3;
  * @param {Function} onSelect   - (parts) => void, fires when a suggestion is
  *                                 picked: { address, city, state, zipCode, country }
  * @param {boolean}  disabled
- * @param {string}   testId     - base data-testid
+ * @param {string}   testId     - base data-test-id
  */
 const AddressAutocomplete = ({
   value,
@@ -131,11 +131,11 @@ const AddressAutocomplete = ({
           placeholder="Start typing your street address..."
           disabled={disabled}
           autoComplete="off"
-          data-testid={`${testId}-input`}
+          data-test-id={`${testId}-input`}
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
           {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" data-testid={`${testId}-loading`} />
+            <Loader2 className="w-4 h-4 animate-spin" data-test-id={`${testId}-loading`} />
           ) : (
             <MapPin className="w-4 h-4" />
           )}
@@ -145,7 +145,7 @@ const AddressAutocomplete = ({
       {isOpen && suggestions.length > 0 && (
         <ul
           className="absolute z-20 mt-1 w-full max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg"
-          data-testid={`${testId}-suggestions`}
+          data-test-id={`${testId}-suggestions`}
         >
           {suggestions.map((place) => (
             <li key={place.place_id}>
@@ -153,7 +153,7 @@ const AddressAutocomplete = ({
                 type="button"
                 onClick={() => handlePick(place)}
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-start gap-2"
-                data-testid={`${testId}-suggestion-${place.place_id}`}
+                data-test-id={`${testId}-suggestion-${place.place_id}`}
               >
                 <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
                 <span>{place.display_name}</span>

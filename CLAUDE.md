@@ -237,13 +237,13 @@ describe('calculatePnL', () => {
 
 ---
 
-## 9. `data-testid` Attributes (Automation Readiness)
+## 9. `data-test-id` Attributes (Automation Readiness)
 
-### Rule: Every Interactive and Data-Displaying Element Must Have a `data-testid`
-Adding `data-testid` attributes now costs nothing and makes automated testing, QA, and debugging possible without touching the component code later.
+### Rule: Every Interactive and Data-Displaying Element Must Have a `data-test-id`
+Adding `data-test-id` attributes now costs nothing and makes automated testing, QA, and debugging possible without touching the component code later.
 
-### Where to Add `data-testid`
-Add `data-testid` to every element that:
+### Where to Add `data-test-id`
+Add `data-test-id` to every element that:
 - Is a **button or clickable action** (`<button>`, `<a>` used as action)
 - Is a **form input, select, or textarea**
 - Is a **form itself** (for submit targeting)
@@ -256,76 +256,76 @@ Add `data-testid` to every element that:
 - Is a **chart container** (even if the chart internals can't be tested)
 
 ### Naming Convention
-Format: `data-testid="[section]-[element]-[modifier?]"`
+Format: `data-test-id="[section]-[element]-[modifier?]"`
 
 ```
 // Buttons
-data-testid="trade-form-submit-btn"
-data-testid="trade-form-cancel-btn"
-data-testid="modal-close-btn"
-data-testid="sidebar-logout-btn"
+data-test-id="trade-form-submit-btn"
+data-test-id="trade-form-cancel-btn"
+data-test-id="modal-close-btn"
+data-test-id="sidebar-logout-btn"
 
 // Inputs
-data-testid="trade-form-instrument-input"
-data-testid="trade-form-entry-price-input"
-data-testid="trade-form-direction-select"
+data-test-id="trade-form-instrument-input"
+data-test-id="trade-form-entry-price-input"
+data-test-id="trade-form-direction-select"
 
 // Data display
-data-testid="stats-win-rate-value"
-data-testid="stats-total-pnl-value"
-data-testid="stats-trade-count-value"
-data-testid="trade-row-{id}"           // dynamic: use the trade ID
-data-testid="trade-row-pnl-{id}"
+data-test-id="stats-win-rate-value"
+data-test-id="stats-total-pnl-value"
+data-test-id="stats-trade-count-value"
+data-test-id="trade-row-{id}"           // dynamic: use the trade ID
+data-test-id="trade-row-pnl-{id}"
 
 // Navigation
-data-testid="sidebar-dashboard-link"
-data-testid="sidebar-trades-link"
-data-testid="sidebar-analytics-link"
-data-testid="header-profile-menu-btn"
+data-test-id="sidebar-dashboard-link"
+data-test-id="sidebar-trades-link"
+data-test-id="sidebar-analytics-link"
+data-test-id="header-profile-menu-btn"
 
 // Modals & containers
-data-testid="trade-entry-modal"
-data-testid="backtest-modal"
-data-testid="billing-modal"
-data-testid="day-detail-modal"
+data-test-id="trade-entry-modal"
+data-test-id="backtest-modal"
+data-test-id="billing-modal"
+data-test-id="day-detail-modal"
 
 // States
-data-testid="trades-loading-spinner"
-data-testid="trades-empty-state"
-data-testid="error-banner"
-data-testid="auth-error-message"
+data-test-id="trades-loading-spinner"
+data-test-id="trades-empty-state"
+data-test-id="error-banner"
+data-test-id="auth-error-message"
 
 // Forms
-data-testid="login-form"
-data-testid="register-form"
-data-testid="trade-entry-form"
+data-test-id="login-form"
+data-test-id="register-form"
+data-test-id="trade-entry-form"
 ```
 
 ### Rules
-- **`data-testid` values must be unique within a page** unless they are part of a list (where the ID is appended, e.g., `trade-row-{id}`).
-- **Never use `data-testid` as a CSS selector** — it is for testing only. Style with class names.
-- **`data-testid` must not change once assigned** — renaming them breaks automated tests. Treat them like a public API.
-- **Do not add `data-testid` to purely decorative elements** (icons, dividers, background shapes) — only meaningful UI elements.
-- **Dynamic lists**: the container gets a `data-testid`, and each item gets `data-testid="[item-name]-{id}"` using the record's database ID.
+- **`data-test-id` values must be unique within a page** unless they are part of a list (where the ID is appended, e.g., `trade-row-{id}`).
+- **Never use `data-test-id` as a CSS selector** — it is for testing only. Style with class names.
+- **`data-test-id` must not change once assigned** — renaming them breaks automated tests. Treat them like a public API.
+- **Do not add `data-test-id` to purely decorative elements** (icons, dividers, background shapes) — only meaningful UI elements.
+- **Dynamic lists**: the container gets a `data-test-id`, and each item gets `data-test-id="[item-name]-{id}"` using the record's database ID.
 
 ### Example
 ```jsx
 // Trade list item
-<tr data-testid={`trade-row-${trade.id}`}>
-  <td data-testid={`trade-row-instrument-${trade.id}`}>{trade.instrument}</td>
-  <td data-testid={`trade-row-pnl-${trade.id}`}
+<tr data-test-id={`trade-row-${trade.id}`}>
+  <td data-test-id={`trade-row-instrument-${trade.id}`}>{trade.instrument}</td>
+  <td data-test-id={`trade-row-pnl-${trade.id}`}
       className={trade.pnl >= 0 ? 'text-green-500' : 'text-red-500'}>
     {formatCurrency(trade.pnl)}
   </td>
 </tr>
 
 // Stats card
-<div data-testid="stats-win-rate-card">
-  <span data-testid="stats-win-rate-value">{winRate}%</span>
+<div data-test-id="stats-win-rate-card">
+  <span data-test-id="stats-win-rate-value">{winRate}%</span>
 </div>
 
 // Submit button
-<button data-testid="trade-form-submit-btn" type="submit">
+<button data-test-id="trade-form-submit-btn" type="submit">
   Save Trade
 </button>
 ```
@@ -356,5 +356,5 @@ Before implementing any feature or fix, confirm:
 - [ ] Does the column selection avoid `SELECT *`?
 - [ ] Are user-facing error messages friendly and not exposing internals?
 - [ ] Has the user confirmed they are happy with this feature? If yes → write the Jest test now.
-- [ ] Do all interactive elements and data displays have a `data-testid`?
-- [ ] Are `data-testid` values unique, stable, and following the `[section]-[element]-[modifier]` naming convention?
+- [ ] Do all interactive elements and data displays have a `data-test-id`?
+- [ ] Are `data-test-id` values unique, stable, and following the `[section]-[element]-[modifier]` naming convention?

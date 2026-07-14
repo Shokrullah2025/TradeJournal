@@ -41,7 +41,7 @@ const InfoTip = ({ text, testId }) => (
   <span className="relative inline-flex group">
     <button
       type="button"
-      data-testid={testId}
+      data-test-id={testId}
       aria-label="Chart explanation"
       className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
     >
@@ -304,7 +304,7 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
 
   if (completedTrades.length === 0) {
     return (
-      <div className="card text-center py-12" data-testid="time-empty-state">
+      <div className="card text-center py-12" data-test-id="time-empty-state">
         <Clock className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           No time data available
@@ -341,12 +341,12 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
   );
 
   return (
-    <div className="space-y-4" data-testid="time-analysis">
+    <div className="space-y-4" data-test-id="time-analysis">
       {/* Hourly & monthly performance, side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Hourly Analysis */}
         {hourlyData.length > 0 && (
-        <section className="card" data-testid="time-hourly-chart">
+        <section className="card" data-test-id="time-hourly-chart">
           <SectionHeader
             icon={Clock}
             tone="neutral"
@@ -418,7 +418,7 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
 
         {/* Monthly Analysis */}
         {detailed && monthlyData.length > 0 && (
-          <section className="card" data-testid="time-monthly-chart">
+          <section className="card" data-test-id="time-monthly-chart">
               <SectionHeader
                 icon={TrendingUp}
                 tone="neutral"
@@ -494,7 +494,7 @@ const TimeAnalysis = ({ trades = [], detailed = false }) => {
       {detailed && (
         <>
           {/* Time Insights */}
-          <section className="card" data-testid="time-insights">
+          <section className="card" data-test-id="time-insights">
             <SectionHeader
               icon={Lightbulb}
               tone="pos"

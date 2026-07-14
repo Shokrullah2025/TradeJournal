@@ -59,7 +59,7 @@ function formatBytes(bytes) {
 }
 
 const RangeToggle = ({ value, onChange, testId }) => (
-  <div className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5" data-testid={testId}>
+  <div className="flex gap-0.5 rounded-md bg-gray-100 dark:bg-gray-800 p-0.5" data-test-id={testId}>
     {RANGE_OPTIONS.map(({ value: v, label }) => {
       const active = value === v;
       return (
@@ -86,7 +86,7 @@ RangeToggle.propTypes = {
 };
 
 const ChartCard = ({ title, subtitle, headerRight, children, testId }) => (
-  <div className="card flex flex-col" data-testid={testId}>
+  <div className="card flex flex-col" data-test-id={testId}>
     <div className="mb-3 flex items-start justify-between gap-2">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
@@ -248,7 +248,7 @@ const SystemMetrics = () => {
   };
 
   return (
-    <div className="space-y-6" data-testid="admin-system-metrics">
+    <div className="space-y-6" data-test-id="admin-system-metrics">
       {/* Summary range selector */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -263,7 +263,7 @@ const SystemMetrics = () => {
       {error && (
         <div
           className="rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 px-4 py-3 text-sm text-warning-700 dark:text-warning-300"
-          data-testid="admin-metrics-error"
+          data-test-id="admin-metrics-error"
         >
           {error}
         </div>
@@ -285,7 +285,7 @@ const SystemMetrics = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16" data-testid="admin-metrics-loading-spinner">
+        <div className="flex items-center justify-center py-16" data-test-id="admin-metrics-loading-spinner">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
         </div>
       ) : (
@@ -365,7 +365,7 @@ const SystemMetrics = () => {
           </ChartCard>
 
           {/* Storage usage donut */}
-          <div className="card flex flex-col" data-testid="admin-chart-storage">
+          <div className="card flex flex-col" data-test-id="admin-chart-storage">
             <div className="mb-3">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Storage</h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -373,7 +373,7 @@ const SystemMetrics = () => {
               </p>
             </div>
             {storageLoading ? (
-              <div className="flex items-center justify-center h-64" data-testid="admin-storage-loading">
+              <div className="flex items-center justify-center h-64" data-test-id="admin-storage-loading">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
               </div>
             ) : (
@@ -399,7 +399,7 @@ const SystemMetrics = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="admin-storage-used-pct">
+                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-test-id="admin-storage-used-pct">
                       {usedPct < 0.1 && used > 0 ? "<0.1" : usedPct.toFixed(1)}%
                     </span>
                     <span className="text-[11px] text-gray-500 dark:text-gray-400">used</span>
@@ -409,12 +409,12 @@ const SystemMetrics = () => {
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: STORAGE_COLORS[0] }} />
                     <span className="text-gray-600 dark:text-gray-400">Used</span>
-                    <span className="ml-auto font-medium text-gray-900 dark:text-gray-100" data-testid="admin-storage-used">{formatBytes(used)}</span>
+                    <span className="ml-auto font-medium text-gray-900 dark:text-gray-100" data-test-id="admin-storage-used">{formatBytes(used)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-3 w-3 rounded-sm bg-gray-200 dark:bg-gray-600" />
                     <span className="text-gray-600 dark:text-gray-400">Free</span>
-                    <span className="ml-auto font-medium text-gray-900 dark:text-gray-100" data-testid="admin-storage-free">{formatBytes(free)}</span>
+                    <span className="ml-auto font-medium text-gray-900 dark:text-gray-100" data-test-id="admin-storage-free">{formatBytes(free)}</span>
                   </div>
                   <div className="flex items-center gap-2 border-t border-gray-200 dark:border-gray-700 pt-2">
                     <span className="text-gray-600 dark:text-gray-400">Quota</span>
@@ -428,7 +428,7 @@ const SystemMetrics = () => {
       )}
 
       {/* Storage maintenance */}
-      <div className="card" data-testid="admin-storage-maintenance">
+      <div className="card" data-test-id="admin-storage-maintenance">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="flex items-start gap-3">
             <HardDrive className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
@@ -447,7 +447,7 @@ const SystemMetrics = () => {
             type="button"
             onClick={runPurge}
             disabled={purging}
-            data-testid="admin-purge-images-btn"
+            data-test-id="admin-purge-images-btn"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {purging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -457,7 +457,7 @@ const SystemMetrics = () => {
         {purgeResult && (
           <p
             className="mt-3 text-xs text-gray-600 dark:text-gray-300"
-            data-testid="admin-purge-result"
+            data-test-id="admin-purge-result"
           >
             Scanned {purgeResult.scanned} file{purgeResult.scanned === 1 ? "" : "s"} ·
             kept {purgeResult.kept} in use · removed{" "}

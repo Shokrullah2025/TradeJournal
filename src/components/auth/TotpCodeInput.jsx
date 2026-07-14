@@ -75,7 +75,7 @@ const TotpCodeInput = ({
   return (
     <div
       className="flex items-center justify-center gap-2 sm:gap-2.5"
-      data-testid={testIdPrefix}
+      data-test-id={testIdPrefix}
     >
       {digits.map((digit, i) => (
         <input
@@ -101,7 +101,7 @@ const TotpCodeInput = ({
               : "border-gray-300 dark:border-gray-600"}
             focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30
             disabled:opacity-50`}
-          data-testid={`${testIdPrefix}-digit-${i}`}
+          data-test-id={`${testIdPrefix}-digit-${i}`}
         />
       ))}
     </div>

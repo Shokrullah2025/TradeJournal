@@ -244,7 +244,7 @@ const Billing = () => {
           {subscription?.status === "trialing" && (
             <div
               className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 @lg:p-6"
-              data-testid="billing-trial-banner"
+              data-test-id="billing-trial-banner"
             >
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-start space-x-3">
@@ -265,7 +265,7 @@ const Billing = () => {
                   onClick={handleOpenPortal}
                   disabled={portalLoading}
                   className="py-2 px-4 border border-amber-300 dark:border-amber-600 rounded-md text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-70 disabled:cursor-not-allowed"
-                  data-testid="billing-trial-cancel-btn"
+                  data-test-id="billing-trial-cancel-btn"
                 >
                   {portalLoading ? "Opening…" : "Manage or cancel"}
                 </button>
@@ -301,7 +301,7 @@ const Billing = () => {
                   <button
                     key={id}
                     onClick={() => setAdminTab(id)}
-                    data-testid={`billing-admin-tab-${id}-btn`}
+                    data-test-id={`billing-admin-tab-${id}-btn`}
                     className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs transition-colors @2xl:px-3.5 @2xl:py-2 @2xl:text-[13px] ${
                       adminTab === id
                         ? "bg-[#e7f5f2] font-semibold text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
@@ -315,11 +315,11 @@ const Billing = () => {
 
               <div className="p-4 @lg:p-6">
                 {adminLoading ? (
-                  <div className="flex items-center justify-center py-16" data-testid="billing-admin-loading">
+                  <div className="flex items-center justify-center py-16" data-test-id="billing-admin-loading">
                     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600" />
                   </div>
                 ) : adminError ? (
-                  <p className="py-12 text-center text-sm text-red-600 dark:text-red-400" data-testid="billing-admin-error">
+                  <p className="py-12 text-center text-sm text-red-600 dark:text-red-400" data-test-id="billing-admin-error">
                     {adminError}
                   </p>
                 ) : adminData && (
@@ -327,7 +327,7 @@ const Billing = () => {
                     {/* Overview — compact stat tiles: tinted icon square, bold
                         number, quiet label. */}
                     {adminTab === "overview" && (
-                      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4 @2xl:gap-4" data-testid="billing-admin-overview">
+                      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4 @2xl:gap-4" data-test-id="billing-admin-overview">
                         {[
                           {
                             id: "revenue",
@@ -367,7 +367,7 @@ const Billing = () => {
                             </div>
                             <p
                               className="mt-3 text-lg font-extrabold tabular-nums text-gray-900 @2xl:text-xl dark:text-gray-300"
-                              data-testid={`billing-admin-${id}`}
+                              data-test-id={`billing-admin-${id}`}
                             >
                               {value}
                             </p>
@@ -382,11 +382,11 @@ const Billing = () => {
                     {/* Transactions — latest invoices across all users */}
                     {adminTab === "transactions" && (
                       adminData.invoices.length === 0 ? (
-                        <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-500" data-testid="billing-admin-transactions-empty">
+                        <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-500" data-test-id="billing-admin-transactions-empty">
                           No invoices yet.
                         </p>
                       ) : (
-                      <div className="overflow-x-auto" data-testid="billing-admin-transactions">
+                      <div className="overflow-x-auto" data-test-id="billing-admin-transactions">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
                           <thead className="bg-gray-50 dark:bg-white/5">
                             <tr>
@@ -451,7 +451,7 @@ const Billing = () => {
 
                     {/* Failed payments */}
                     {adminTab === "failed" && (
-                      <div className="space-y-3" data-testid="billing-admin-failed">
+                      <div className="space-y-3" data-test-id="billing-admin-failed">
                         {adminData.invoices.filter((i) => i.status === "failed").length === 0 ? (
                           <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-500">
                             No failed payments. 🎉
@@ -488,7 +488,7 @@ const Billing = () => {
 
                     {/* Plan distribution */}
                     {adminTab === "plans" && (
-                      <div className="space-y-4" data-testid="billing-admin-plans">
+                      <div className="space-y-4" data-test-id="billing-admin-plans">
                         {Object.keys(adminData.subscriptionsByPlan).length === 0 ? (
                           <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-500">
                             No active subscriptions yet.
@@ -542,7 +542,7 @@ const Billing = () => {
                   <button
                     key={id}
                     onClick={() => setActiveTab(id)}
-                    data-testid={`billing-tab-${id}-btn`}
+                    data-test-id={`billing-tab-${id}-btn`}
                     className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs transition-colors @2xl:px-3.5 @2xl:py-2 @2xl:text-[13px] ${
                       activeTab === id
                         ? "bg-[#e7f5f2] font-semibold text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
@@ -602,12 +602,12 @@ const Billing = () => {
                     </h2>
 
                     {paymentMethods.length > 0 ? (
-                      <div className="space-y-3" data-testid="billing-payment-methods-list">
+                      <div className="space-y-3" data-test-id="billing-payment-methods-list">
                         {paymentMethods.map((pm) => (
                           <div
                             key={pm.id}
                             className="flex items-center justify-between p-4 border border-gray-200 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5"
-                            data-testid={`billing-payment-method-${pm.id}`}
+                            data-test-id={`billing-payment-method-${pm.id}`}
                           >
                             <div className="flex items-center gap-4">
                               <div className="p-2 bg-white dark:bg-white/10 rounded-md shadow-sm">
@@ -631,7 +631,7 @@ const Billing = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8" data-testid="billing-no-payment-method">
+                      <div className="text-center py-8" data-test-id="billing-no-payment-method">
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center">
                           <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                         </div>
@@ -648,7 +648,7 @@ const Billing = () => {
                         onClick={handleOpenPortal}
                         disabled={portalLoading}
                         className="inline-flex w-full justify-center @md:w-auto items-center gap-2 whitespace-nowrap text-sm font-semibold bg-primary-600 text-white dark:bg-teal-700 dark:text-white px-5 py-2.5 rounded-[10px] hover:bg-primary-700 dark:hover:bg-teal-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-                        data-testid="billing-update-payment-btn"
+                        data-test-id="billing-update-payment-btn"
                       >
                         {portalLoading ? (
                           <>
@@ -779,7 +779,7 @@ const Billing = () => {
                                 ? "cursor-not-allowed bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-500"
                                 : "bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-70 dark:bg-teal-700 dark:text-white dark:hover:bg-teal-600"
                             }`}
-                            data-testid={`billing-plan-select-${plan.id}-btn`}
+                            data-test-id={`billing-plan-select-${plan.id}-btn`}
                           >
                             {checkoutLoading && selectedPlan === plan.id ? (
                               <span className="flex items-center justify-center gap-2">
@@ -819,7 +819,7 @@ const Billing = () => {
                         onClick={handleOpenPortal}
                         disabled={portalLoading}
                         className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-white/10 rounded-[10px] text-sm font-medium text-gray-700 dark:text-gray-400 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-70 disabled:cursor-not-allowed"
-                        data-testid="billing-invoices-portal-btn"
+                        data-test-id="billing-invoices-portal-btn"
                       >
                         {portalLoading ? (
                           <>
@@ -837,19 +837,19 @@ const Billing = () => {
 
                     {/* Invoice Table */}
                     {isLoading ? (
-                      <div className="text-center py-12" data-testid="invoices-loading-spinner">
+                      <div className="text-center py-12" data-test-id="invoices-loading-spinner">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
                       </div>
                     ) : userInvoices.length > 0 ? (
                       <>
                         {/* Narrow columns (phones, or the squeezed Settings tab):
                             stacked cards instead of a cramped sideways-scrolling table. */}
-                        <div className="space-y-3 @2xl:hidden" data-testid="invoices-list-mobile">
+                        <div className="space-y-3 @2xl:hidden" data-test-id="invoices-list-mobile">
                           {userInvoices.map((inv) => (
                             <div
                               key={inv.id}
                               className="border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                              data-testid={`invoice-card-${inv.id}`}
+                              data-test-id={`invoice-card-${inv.id}`}
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm font-medium text-gray-900 dark:text-gray-300 truncate">
@@ -884,7 +884,7 @@ const Billing = () => {
                         </div>
 
                         {/* Wider columns: the full table. */}
-                        <div className="hidden @2xl:block overflow-x-auto" data-testid="invoices-table">
+                        <div className="hidden @2xl:block overflow-x-auto" data-test-id="invoices-table">
                           <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
                             <thead className="bg-gray-50 dark:bg-white/5">
                               <tr>
@@ -900,10 +900,10 @@ const Billing = () => {
                                 <tr
                                   key={inv.id}
                                   className="hover:bg-gray-50 dark:hover:bg-white/5"
-                                  data-testid={`invoice-row-${inv.id}`}
+                                  data-test-id={`invoice-row-${inv.id}`}
                                 >
                                   <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-300" data-testid={`invoice-number-${inv.id}`}>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-300" data-test-id={`invoice-number-${inv.id}`}>
                                       {inv.invoice_number || inv.stripe_invoice_id || `INV-${inv.id.slice(0, 8).toUpperCase()}`}
                                     </div>
                                   </td>
@@ -913,7 +913,7 @@ const Billing = () => {
                                   <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                                     Subscription
                                   </td>
-                                  <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300" data-testid={`invoice-amount-${inv.id}`}>
+                                  <td className="px-4 @4xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300" data-test-id={`invoice-amount-${inv.id}`}>
                                     ${(parseFloat(inv.total_amount) || 0).toFixed(2)}{" "}
                                     <span className="text-xs text-gray-400 uppercase">{inv.currency}</span>
                                   </td>
@@ -926,7 +926,7 @@ const Billing = () => {
                                           ? "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200"
                                           : "bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200"
                                       }`}
-                                      data-testid={`invoice-status-${inv.id}`}
+                                      data-test-id={`invoice-status-${inv.id}`}
                                     >
                                       {inv.status === "paid" ? "Paid" : inv.status}
                                     </span>
@@ -938,7 +938,7 @@ const Billing = () => {
                         </div>
                       </>
                     ) : (
-                      <div className="text-center py-12" data-testid="invoices-empty-state">
+                      <div className="text-center py-12" data-test-id="invoices-empty-state">
                         <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center">
                           <Calendar className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                         </div>
@@ -971,7 +971,7 @@ const Billing = () => {
             {/* Centered on screen; scrolls internally on short viewports. */}
             <div
               className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-75 p-4"
-              data-testid="billing-payment-modal"
+              data-test-id="billing-payment-modal"
             >
               <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
@@ -981,7 +981,7 @@ const Billing = () => {
                   <button
                     onClick={handlePaymentCancel}
                     className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                    data-testid="billing-payment-modal-close-btn"
+                    data-test-id="billing-payment-modal-close-btn"
                   >
                     ✕
                   </button>
@@ -992,12 +992,12 @@ const Billing = () => {
                   Subscribing to the{" "}
                   <span className="font-semibold">{modalPlan?.name ?? selectedPlan}</span>{" "}
                   plan ({billingCycle}) —{" "}
-                  <span className="font-semibold text-gray-900 dark:text-gray-300" data-testid="billing-payment-modal-price">
+                  <span className="font-semibold text-gray-900 dark:text-gray-300" data-test-id="billing-payment-modal-price">
                     ${paymentMode === "setup" ? 0 : getPlanPrice(modalPlan)}/{billingCycle === "monthly" ? "month" : "year"}
                   </span>
                   .
                   {paymentMode === "setup" && (
-                    <span data-testid="billing-payment-modal-setup-note">
+                    <span data-test-id="billing-payment-modal-setup-note">
                       {" "}Your coupon covers today&apos;s payment — save a card so the
                       plan renews automatically after the discount ends.
                     </span>

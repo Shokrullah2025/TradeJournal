@@ -21,7 +21,7 @@ import {
 // A believable analytics/backtest-style dashboard teaser used as the default
 // when a call site doesn't supply its own preview.
 export const GenericLockedPreview = () => (
-  <div className="space-y-[18px]" data-testid="locked-preview-generic">
+  <div className="space-y-[18px]" data-test-id="locked-preview-generic">
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <GhostStatCard label="Net P&L" hint="Upgrade to unlock" testId="locked-preview-stat-1">
         <GhostSparkline />
@@ -69,7 +69,7 @@ export const GenericLockedPreview = () => (
 
 // Compact teaser for the Dashboard AI Insights cards (inline gate).
 export const AiInsightsLockedPreview = () => (
-  <div className="card p-5" data-testid="locked-preview-ai-insights">
+  <div className="card p-5" data-test-id="locked-preview-ai-insights">
     <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
       AI Insights
     </p>

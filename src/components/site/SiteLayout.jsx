@@ -7,7 +7,7 @@ import SiteFooter from "./SiteFooter";
 // Fallback shown while a lazily-loaded site page chunk is fetched.
 const SitePageFallback = () => (
   <div
-    data-testid="site-page-loading"
+    data-test-id="site-page-loading"
     className="flex min-h-[60vh] items-center justify-center"
   >
     <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-accent-600" />

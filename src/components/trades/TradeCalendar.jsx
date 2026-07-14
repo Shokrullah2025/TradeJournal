@@ -221,7 +221,7 @@ const TradeCalendar = ({ trades, onAddTrade, onEditTrade }) => {
                     <button
                       type="button"
                       aria-label={`Add trade on ${format(day, "MMM d, yyyy")}`}
-                      data-testid={`calendar-day-add-btn-${format(day, "yyyy-MM-dd")}`}
+                      data-test-id={`calendar-day-add-btn-${format(day, "yyyy-MM-dd")}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onAddTrade(day);

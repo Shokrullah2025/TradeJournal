@@ -15,7 +15,7 @@ const TONES = {
 };
 
 const AdminStatCard = ({ title, value, icon: Icon, tone = "primary", hint, testId }) => (
-  <div className="card hover:shadow-md transition-shadow duration-200 p-4" data-testid={testId}>
+  <div className="card hover:shadow-md transition-shadow duration-200 p-4" data-test-id={testId}>
     <div className="flex items-center space-x-3">
       <div className={`p-2 rounded-lg flex-shrink-0 ${TONES[tone] ?? TONES.primary}`}>
         <Icon className="w-4 h-4" />
@@ -26,7 +26,7 @@ const AdminStatCard = ({ title, value, icon: Icon, tone = "primary", hint, testI
         </p>
         <p
           className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate"
-          data-testid={testId ? `${testId}-value` : undefined}
+          data-test-id={testId ? `${testId}-value` : undefined}
         >
           {value}
         </p>

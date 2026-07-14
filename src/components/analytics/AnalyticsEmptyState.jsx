@@ -25,11 +25,11 @@ const AnalyticsEmptyState = () => {
   const connectBroker = () => navigate("/brokers");
 
   return (
-    <div className="space-y-[18px]" data-testid="analytics-ghost-state">
+    <div className="space-y-[18px]" data-test-id="analytics-ghost-state">
       {/* No-trades banner — the single teal CTA on the page */}
       <div
         className="card flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5"
-        data-testid="analytics-ghost-banner"
+        data-test-id="analytics-ghost-banner"
       >
         <div className="w-9 h-9 rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 flex items-center justify-center flex-shrink-0">
           <PieChart className="w-4 h-4" />
@@ -47,7 +47,7 @@ const AnalyticsEmptyState = () => {
           type="button"
           onClick={connectBroker}
           className="btn btn-primary flex items-center gap-1.5 self-start sm:self-auto"
-          data-testid="analytics-ghost-connect-broker-btn"
+          data-test-id="analytics-ghost-connect-broker-btn"
         >
           <Link2 className="w-4 h-4" />
           Connect your broker
@@ -57,7 +57,7 @@ const AnalyticsEmptyState = () => {
       {/* Ghost P&L overview hero */}
       <div
         className="card flex flex-col h-[300px]"
-        data-testid="analytics-ghost-hero-card"
+        data-test-id="analytics-ghost-hero-card"
       >
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -110,7 +110,7 @@ const AnalyticsEmptyState = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px]">
         <div
           className="card flex flex-col h-[300px]"
-          data-testid="analytics-ghost-r-distribution-card"
+          data-test-id="analytics-ghost-r-distribution-card"
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -129,7 +129,7 @@ const AnalyticsEmptyState = () => {
 
         <div
           className="card flex flex-col h-[300px]"
-          data-testid="analytics-ghost-hold-time-card"
+          data-test-id="analytics-ghost-hold-time-card"
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

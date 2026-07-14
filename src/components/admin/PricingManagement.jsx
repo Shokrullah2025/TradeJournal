@@ -327,7 +327,7 @@ const PricingManagement = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16" data-testid="admin-pricing-loading-spinner">
+      <div className="flex items-center justify-center py-16" data-test-id="admin-pricing-loading-spinner">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
       </div>
     );
@@ -340,7 +340,7 @@ const PricingManagement = () => {
   };
 
   return (
-    <div className="space-y-4" data-testid="admin-pricing">
+    <div className="space-y-4" data-test-id="admin-pricing">
       <div className="flex items-start gap-3">
         <DollarSign className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
         <div>
@@ -353,7 +353,7 @@ const PricingManagement = () => {
       </div>
 
       {loadError && (
-        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 flex items-start gap-2" data-testid="admin-pricing-load-error">
+        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 flex items-start gap-2" data-test-id="admin-pricing-load-error">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>Couldn't load plans. Confirm you have admin access and try again.</span>
         </div>
@@ -368,7 +368,7 @@ const PricingManagement = () => {
               <button
                 type="button"
                 onClick={() => switchTab(tab.id)}
-                data-testid={`admin-pricing-subtab-${tab.id}`}
+                data-test-id={`admin-pricing-subtab-${tab.id}`}
                 className={`${active ? "border-primary-500 text-primary-600 dark:text-primary-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"} whitespace-nowrap py-2.5 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
               >
                 <Icon className="h-4 w-4" />
@@ -379,7 +379,7 @@ const PricingManagement = () => {
             return (
               <div key={tab.id} className="flex items-center gap-1.5">
                 {btn}
-                <span className="relative group inline-flex items-center" data-testid="admin-prices-info">
+                <span className="relative group inline-flex items-center" data-test-id="admin-prices-info">
                   <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 cursor-help" tabIndex={0} aria-label="About prices" />
                   <span
                     role="tooltip"
@@ -462,22 +462,22 @@ const CardHeader = ({ plan, busy, menuSlug, setMenuSlug, startEdit, requestDelet
           type="button"
           onClick={(e) => { e.stopPropagation(); setMenuSlug(isMenuOpen ? null : plan.slug); }}
           disabled={busy}
-          data-testid={`admin-plan-menu-btn-${plan.slug}`}
+          data-test-id={`admin-plan-menu-btn-${plan.slug}`}
           aria-label={`${plan.name} actions`}
           className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreVertical className="w-4 h-4" />}
         </button>
         {isMenuOpen && (
-          <div onClick={(e) => e.stopPropagation()} data-testid={`admin-plan-menu-${plan.slug}`} className="absolute right-0 mt-1 w-36 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-10 py-1">
-            <button type="button" onClick={() => startEdit(plan.slug)} data-testid={`admin-plan-edit-btn-${plan.slug}`} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <div onClick={(e) => e.stopPropagation()} data-test-id={`admin-plan-menu-${plan.slug}`} className="absolute right-0 mt-1 w-36 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-10 py-1">
+            <button type="button" onClick={() => startEdit(plan.slug)} data-test-id={`admin-plan-edit-btn-${plan.slug}`} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
               <Pencil className="w-3.5 h-3.5" /> Edit
             </button>
-            <button type="button" onClick={() => togglePublish(plan)} data-testid={`admin-plan-visibility-btn-${plan.slug}`} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <button type="button" onClick={() => togglePublish(plan)} data-test-id={`admin-plan-visibility-btn-${plan.slug}`} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
               {plan.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               {plan.is_active ? "Hide" : "Publish"}
             </button>
-            <button type="button" onClick={() => requestDelete(plan.slug)} data-testid={`admin-plan-delete-btn-${plan.slug}`} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+            <button type="button" onClick={() => requestDelete(plan.slug)} data-test-id={`admin-plan-delete-btn-${plan.slug}`} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
               <Trash2 className="w-3.5 h-3.5" /> Delete
             </button>
           </div>
@@ -497,13 +497,13 @@ CardHeader.propTypes = {
 };
 
 const DeleteConfirm = ({ plan, busy, onConfirm, onCancel }) => (
-  <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-sm flex-1" data-testid={`admin-plan-delete-confirm-${plan.slug}`}>
+  <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-sm flex-1" data-test-id={`admin-plan-delete-confirm-${plan.slug}`}>
     <p className="text-red-700 dark:text-red-300">
       Delete the <strong>{plan.name}</strong> plan? It disappears from the app and
       pricing page. If it has active subscriptions it's hidden instead.
     </p>
     <div className="mt-3 flex gap-2">
-      <button type="button" disabled={busy} onClick={() => onConfirm(plan)} data-testid={`admin-plan-delete-yes-${plan.slug}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed">
+      <button type="button" disabled={busy} onClick={() => onConfirm(plan)} data-test-id={`admin-plan-delete-yes-${plan.slug}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed">
         {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} Yes, delete
       </button>
       <button type="button" disabled={busy} onClick={onCancel} className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Cancel</button>
@@ -525,7 +525,7 @@ const PriceCard = ({ plan, draft, setPriceDraft, savePrice, editingSlug, pending
   const busy = savingSlug === plan.slug;
 
   return (
-    <div className={CARD} data-testid={`admin-price-card-${plan.slug}`}>
+    <div className={CARD} data-test-id={`admin-price-card-${plan.slug}`}>
       {!isEditing && !isConfirmingDelete && (
         <CardHeader plan={plan} busy={busy} startEdit={actions.startEdit} requestDelete={actions.requestDelete} togglePublish={actions.togglePublish} menuSlug={actions.menuSlug} setMenuSlug={actions.setMenuSlug} />
       )}
@@ -537,30 +537,30 @@ const PriceCard = ({ plan, draft, setPriceDraft, savePrice, editingSlug, pending
           <h4 className="text-base font-bold text-gray-900 dark:text-gray-100">{plan.name}</h4>
           <label className="block">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Monthly ($)</span>
-            <input type="number" min="0" step="0.01" inputMode="decimal" value={draft.monthly} onChange={(e) => setPriceDraft(plan.slug, "monthly", e.target.value)} placeholder="—" data-testid={`admin-pricing-monthly-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input type="number" min="0" step="0.01" inputMode="decimal" value={draft.monthly} onChange={(e) => setPriceDraft(plan.slug, "monthly", e.target.value)} placeholder="—" data-test-id={`admin-pricing-monthly-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Annual ($)</span>
-            <input type="number" min="0" step="0.01" inputMode="decimal" value={draft.annual} onChange={(e) => setPriceDraft(plan.slug, "annual", e.target.value)} placeholder="—" data-testid={`admin-pricing-annual-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input type="number" min="0" step="0.01" inputMode="decimal" value={draft.annual} onChange={(e) => setPriceDraft(plan.slug, "annual", e.target.value)} placeholder="—" data-test-id={`admin-pricing-annual-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </label>
           <div className="flex gap-2">
-            <button type="button" disabled={busy} onClick={() => savePrice(plan)} data-testid={`admin-pricing-save-${plan.slug}`} className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed">
+            <button type="button" disabled={busy} onClick={() => savePrice(plan)} data-test-id={`admin-pricing-save-${plan.slug}`} className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed">
               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Save
             </button>
-            <button type="button" disabled={busy} onClick={() => actions.cancelEdit(plan.slug)} data-testid={`admin-pricing-cancel-${plan.slug}`} className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Cancel</button>
+            <button type="button" disabled={busy} onClick={() => actions.cancelEdit(plan.slug)} data-test-id={`admin-pricing-cancel-${plan.slug}`} className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Cancel</button>
           </div>
         </div>
       ) : (
         <div className="flex flex-col gap-3 flex-1">
-          <h4 className="text-base font-bold text-gray-900 dark:text-gray-100" data-testid={`admin-price-name-${plan.slug}`}>{plan.name}</h4>
+          <h4 className="text-base font-bold text-gray-900 dark:text-gray-100" data-test-id={`admin-price-name-${plan.slug}`}>{plan.name}</h4>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-gray-900 dark:text-gray-100" data-testid={`admin-price-monthly-${plan.slug}`}>{priceLabel(plan.price, "")}</span>
+            <span className="text-3xl font-bold text-gray-900 dark:text-gray-100" data-test-id={`admin-price-monthly-${plan.slug}`}>{priceLabel(plan.price, "")}</span>
             <span className="text-sm text-gray-500 dark:text-gray-400">/mo</span>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Annual: <span className="font-medium text-gray-700 dark:text-gray-300">{priceLabel(plan.price_annually, "")}</span>{plan.price_annually != null ? "/yr" : ""}
           </p>
-          <div className="flex flex-wrap gap-1.5 mt-1" data-testid={`admin-price-status-${plan.slug}`}>
+          <div className="flex flex-wrap gap-1.5 mt-1" data-test-id={`admin-price-status-${plan.slug}`}>
             <StatusPill ok={isPriceConfigured(plan.stripe_price_id_monthly)} label="Monthly" />
             <StatusPill ok={isPriceConfigured(plan.stripe_price_id_annually)} label="Annual" />
           </div>
@@ -587,7 +587,7 @@ const DetailCard = ({ plan, draft, setDetailDraft, saveDetails, editingSlug, pen
   const features = Array.isArray(plan.features) ? plan.features : [];
 
   return (
-    <div className={CARD} data-testid={`admin-plan-details-${plan.slug}`}>
+    <div className={CARD} data-test-id={`admin-plan-details-${plan.slug}`}>
       {!isEditing && !isConfirmingDelete && (
         <CardHeader plan={plan} busy={busy} startEdit={actions.startEdit} requestDelete={actions.requestDelete} togglePublish={actions.togglePublish} menuSlug={actions.menuSlug} setMenuSlug={actions.setMenuSlug} />
       )}
@@ -598,28 +598,28 @@ const DetailCard = ({ plan, draft, setDetailDraft, saveDetails, editingSlug, pen
         <>
           <label className="block">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Plan name</span>
-            <input type="text" value={draft.name} onChange={(e) => setDetailDraft(plan.slug, "name", e.target.value)} data-testid={`admin-plan-name-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input type="text" value={draft.name} onChange={(e) => setDetailDraft(plan.slug, "name", e.target.value)} data-test-id={`admin-plan-name-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Description</span>
-            <input type="text" value={draft.description} onChange={(e) => setDetailDraft(plan.slug, "description", e.target.value)} data-testid={`admin-plan-description-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input type="text" value={draft.description} onChange={(e) => setDetailDraft(plan.slug, "description", e.target.value)} data-test-id={`admin-plan-description-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </label>
           <label className="block flex-1">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Features — one per line</span>
-            <textarea rows={7} value={draft.features} onChange={(e) => setDetailDraft(plan.slug, "features", e.target.value)} placeholder={"Unlimited trades\nAdvanced analytics\nPriority support"} data-testid={`admin-plan-features-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y" />
+            <textarea rows={7} value={draft.features} onChange={(e) => setDetailDraft(plan.slug, "features", e.target.value)} placeholder={"Unlimited trades\nAdvanced analytics\nPriority support"} data-test-id={`admin-plan-features-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y" />
           </label>
           <div className="flex gap-2">
-            <button type="button" disabled={busy} onClick={() => saveDetails(plan)} data-testid={`admin-plan-details-save-${plan.slug}`} className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed">
+            <button type="button" disabled={busy} onClick={() => saveDetails(plan)} data-test-id={`admin-plan-details-save-${plan.slug}`} className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed">
               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Save details
             </button>
-            <button type="button" disabled={busy} onClick={() => actions.cancelEdit(plan.slug)} data-testid={`admin-plan-details-cancel-${plan.slug}`} className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Cancel</button>
+            <button type="button" disabled={busy} onClick={() => actions.cancelEdit(plan.slug)} data-test-id={`admin-plan-details-cancel-${plan.slug}`} className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Cancel</button>
           </div>
         </>
       ) : (
         <div className="flex flex-col gap-3 flex-1">
-          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100" data-testid={`admin-plan-name-${plan.slug}`}>{plan.name}</h4>
+          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100" data-test-id={`admin-plan-name-${plan.slug}`}>{plan.name}</h4>
           {plan.description && <p className="text-sm text-gray-500 dark:text-gray-400">{plan.description}</p>}
-          <ul className="space-y-1.5 mt-1" data-testid={`admin-plan-features-${plan.slug}`}>
+          <ul className="space-y-1.5 mt-1" data-test-id={`admin-plan-features-${plan.slug}`}>
             {features.length ? features.map((f) => (
               <li key={f} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <Check className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary-600 dark:text-primary-400" />{f}
@@ -648,7 +648,7 @@ const AddCard = ({ adding, newName, setNewName, onStart, onCancel, onCreate, cre
       <button
         type="button"
         onClick={onStart}
-        data-testid="admin-plan-add-btn"
+        data-test-id="admin-plan-add-btn"
         className="w-full min-h-[180px] rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
       >
         <Plus className="w-6 h-6" />
@@ -657,7 +657,7 @@ const AddCard = ({ adding, newName, setNewName, onStart, onCancel, onCreate, cre
     );
   }
   return (
-    <div className={CARD} data-testid="admin-plan-add-form">
+    <div className={CARD} data-test-id="admin-plan-add-form">
       <span className="text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">New plan</span>
       <label className="block">
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Plan name</span>
@@ -668,13 +668,13 @@ const AddCard = ({ adding, newName, setNewName, onStart, onCancel, onCreate, cre
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onCreate(); }}
           placeholder="e.g. Team"
-          data-testid="admin-plan-add-name-input"
+          data-test-id="admin-plan-add-name-input"
           className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </label>
       <p className="text-xs text-gray-400 dark:text-gray-500">Starts hidden — set a price and details, then publish.</p>
       <div className="flex gap-2 mt-auto">
-        <button type="button" disabled={creating} onClick={onCreate} data-testid="admin-plan-add-create-btn" className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed">
+        <button type="button" disabled={creating} onClick={onCreate} data-test-id="admin-plan-add-create-btn" className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed">
           {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Create
         </button>
         <button type="button" disabled={creating} onClick={onCancel} className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Cancel</button>

@@ -41,7 +41,7 @@ const InfoTip = ({ text, testId }) => (
   <span className="relative inline-flex group">
     <button
       type="button"
-      data-testid={testId}
+      data-test-id={testId}
       aria-label="Chart explanation"
       className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
     >
@@ -168,7 +168,7 @@ const DrawdownChart = ({ trades = [] }) => {
 
   if (drawdownData.length === 0) {
     return (
-      <div className="card text-center py-12" data-testid="drawdown-empty-state">
+      <div className="card text-center py-12" data-test-id="drawdown-empty-state">
         <TrendingDown className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           No drawdown data available
@@ -184,8 +184,8 @@ const DrawdownChart = ({ trades = [] }) => {
   const maxDrawdownPct = peak !== 0 ? (maxDrawdown / peak) * 100 : 0;
 
   return (
-    <div className="space-y-4" data-testid="drawdown-analysis">
-      <section className="card" data-testid="drawdown-chart">
+    <div className="space-y-4" data-test-id="drawdown-analysis">
+      <section className="card" data-test-id="drawdown-chart">
         <SectionHeader
           icon={TrendingDown}
           tone="neg"
@@ -260,7 +260,7 @@ const DrawdownChart = ({ trades = [] }) => {
         </div>
       </section>
 
-      <section className="card" data-testid="drawdown-metrics">
+      <section className="card" data-test-id="drawdown-metrics">
         <SectionHeader
           icon={BarChart3}
           tone="neutral"
@@ -269,7 +269,7 @@ const DrawdownChart = ({ trades = [] }) => {
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           <div
-            data-testid="drawdown-current-value"
+            data-test-id="drawdown-current-value"
             className="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700"
           >
             <div className="text-xl font-mono font-bold text-gray-900 dark:text-gray-100">
@@ -280,7 +280,7 @@ const DrawdownChart = ({ trades = [] }) => {
             </div>
           </div>
           <div
-            data-testid="drawdown-all-time-high"
+            data-test-id="drawdown-all-time-high"
             className="text-center p-4 bg-success-50 dark:bg-success-900/20 rounded-lg border border-success-200 dark:border-success-800"
           >
             <div className="text-xl font-mono font-bold text-success-600 dark:text-success-400">
@@ -291,7 +291,7 @@ const DrawdownChart = ({ trades = [] }) => {
             </div>
           </div>
           <div
-            data-testid="drawdown-max-drawdown"
+            data-test-id="drawdown-max-drawdown"
             className="text-center p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-800"
           >
             <div className="text-xl font-mono font-bold text-danger-600 dark:text-danger-400">

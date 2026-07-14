@@ -22,7 +22,7 @@ const ComingSoonGate = ({ feature, title, description, children }) => {
     return (
       <div className="space-y-4">
         <div
-          data-testid={`coming-soon-admin-banner-${feature}`}
+          data-test-id={`coming-soon-admin-banner-${feature}`}
           className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
         >
           <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0" />
@@ -38,7 +38,7 @@ const ComingSoonGate = ({ feature, title, description, children }) => {
   }
 
   return (
-    <div className="relative" data-testid={`coming-soon-gate-${feature}`}>
+    <div className="relative" data-test-id={`coming-soon-gate-${feature}`}>
       <div
         className="pointer-events-none select-none opacity-70 blur-[6px]"
         aria-hidden="true"
@@ -49,7 +49,7 @@ const ComingSoonGate = ({ feature, title, description, children }) => {
 
       <div className="absolute inset-0 z-10 flex justify-center px-4 pt-16 sm:pt-24">
         <div
-          data-testid={`coming-soon-overlay-${feature}`}
+          data-test-id={`coming-soon-overlay-${feature}`}
           className="card h-fit w-full max-w-md text-center py-10"
         >
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-300">

@@ -43,7 +43,7 @@ const FeatureGate = ({ feature, children, title, variant, preview }) => {
     return (
       <div
         className="card text-center py-16"
-        data-testid={`feature-gate-locked-${feature}`}
+        data-test-id={`feature-gate-locked-${feature}`}
       >
         <div className="max-w-md mx-auto">
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
@@ -75,7 +75,7 @@ const FeatureGate = ({ feature, children, title, variant, preview }) => {
     return (
       <div className="space-y-4">
         <div
-          data-testid={`feature-gate-admin-banner-${feature}`}
+          data-test-id={`feature-gate-admin-banner-${feature}`}
           className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
         >
           <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0" />
@@ -102,7 +102,7 @@ const FeatureGate = ({ feature, children, title, variant, preview }) => {
     preview ?? (variant === "inline" ? null : <GenericLockedPreview />);
 
   return (
-    <div className="relative" data-testid={`feature-gate-locked-${feature}`}>
+    <div className="relative" data-test-id={`feature-gate-locked-${feature}`}>
       <div
         className={`pointer-events-none select-none opacity-80 blur-[3px] ${
           variant === "inline" ? "min-h-[8rem]" : "min-h-[16rem]"
@@ -115,7 +115,7 @@ const FeatureGate = ({ feature, children, title, variant, preview }) => {
 
       <div className={overlayPosition}>
         <div
-          data-testid={`feature-gate-overlay-${feature}`}
+          data-test-id={`feature-gate-overlay-${feature}`}
           className={`card h-fit w-full text-center ${
             variant === "inline" ? "max-w-sm py-6" : "max-w-md py-10"
           }`}
@@ -135,7 +135,7 @@ const FeatureGate = ({ feature, children, title, variant, preview }) => {
           </p>
           <Link
             to="/billing"
-            data-testid={`feature-gate-upgrade-btn-${feature}`}
+            data-test-id={`feature-gate-upgrade-btn-${feature}`}
             className="btn-primary mt-6 inline-flex items-center gap-2"
           >
             <Lock className="h-4 w-4" />

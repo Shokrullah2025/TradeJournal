@@ -111,7 +111,7 @@ const Analytics = () => {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            data-testid="analytics-timerange-select"
+            data-test-id="analytics-timerange-select"
             className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm font-semibold pl-10 pr-9 py-2.5 rounded-lg cursor-pointer outline-none focus:border-primary-500"
           >
             {TIME_OPTIONS.map((o) => (
@@ -133,7 +133,7 @@ const Analytics = () => {
           <select
             value={analysisType}
             onChange={(e) => setAnalysisType(e.target.value)}
-            data-testid="analytics-view-select"
+            data-test-id="analytics-view-select"
             className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm font-semibold pl-10 pr-9 py-2.5 rounded-lg cursor-pointer outline-none focus:border-primary-500"
           >
             {VIEW_OPTIONS.map((o) => (
@@ -164,7 +164,7 @@ const Analytics = () => {
         <button
           onClick={handleExportReport}
           title="Export report"
-          data-testid="analytics-export-btn"
+          data-test-id="analytics-export-btn"
           className="w-[38px] h-[38px] rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 grid place-items-center cursor-pointer hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
         >
           <Download className="w-[15px] h-[15px]" />
@@ -174,7 +174,7 @@ const Analytics = () => {
         <button
           onClick={handleRefresh}
           title="Refresh"
-          data-testid="analytics-refresh-btn"
+          data-test-id="analytics-refresh-btn"
           className="w-[38px] h-[38px] rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 grid place-items-center cursor-pointer hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
         >
           <RefreshCw className="w-[15px] h-[15px]" />
@@ -207,7 +207,7 @@ const Analytics = () => {
       )}
 
       {timeFilteredTrades.length === 0 && analysisType !== "overview" && (
-        <div className="card text-center py-16" data-testid="analytics-empty-state">
+        <div className="card text-center py-16" data-test-id="analytics-empty-state">
           <div className="max-w-md mx-auto">
             <BarChart3 className="w-24 h-24 text-gray-300 dark:text-gray-600 mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">

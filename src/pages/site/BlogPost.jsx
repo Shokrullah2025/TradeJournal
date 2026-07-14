@@ -57,7 +57,7 @@ const BlogPost = () => {
     return (
       <div
         className="flex items-center justify-center py-32"
-        data-testid="blog-post-loading-spinner"
+        data-test-id="blog-post-loading-spinner"
       >
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent-600" />
       </div>
@@ -110,7 +110,7 @@ const BlogPost = () => {
   ];
 
   return (
-    <div data-testid={`blog-post-${post.slug}`}>
+    <div data-test-id={`blog-post-${post.slug}`}>
       <Seo
         title={post.seo.title}
         description={post.seo.description}
@@ -123,7 +123,7 @@ const BlogPost = () => {
       <header className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16">
         <Link
           to="/blog"
-          data-testid={`blog-post-${post.slug}-back-link`}
+          data-test-id={`blog-post-${post.slug}-back-link`}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-600 dark:text-accent-400 hover:underline"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -153,13 +153,13 @@ const BlogPost = () => {
           <img
             src={post.coverImage}
             alt={post.title}
-            data-testid={`blog-post-${post.slug}-cover-img`}
+            data-test-id={`blog-post-${post.slug}-cover-img`}
             className="mt-8 aspect-[2/1] w-full rounded-2xl border border-gray-200 dark:border-gray-700 object-cover"
           />
         )}
         {containsHtml(post.intro) ? (
           <div
-            data-testid={`blog-post-${post.slug}-intro`}
+            data-test-id={`blog-post-${post.slug}-intro`}
             className="rich-text-content mt-8 text-lg leading-relaxed text-gray-700 dark:text-gray-300"
             dangerouslySetInnerHTML={{ __html: sanitizeNoteHtml(post.intro) }}
           />
@@ -221,7 +221,7 @@ const BlogPost = () => {
                 <Link
                   key={relatedSlug}
                   to={`/blog/${relatedSlug}`}
-                  data-testid={`blog-post-${post.slug}-related-${relatedSlug}`}
+                  data-test-id={`blog-post-${post.slug}-related-${relatedSlug}`}
                   className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-6 transition-colors hover:border-accent-300 dark:hover:border-accent-700"
                 >
                   <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-accent-600 dark:group-hover:text-accent-400">

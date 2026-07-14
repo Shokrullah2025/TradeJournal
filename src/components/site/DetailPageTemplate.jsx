@@ -16,7 +16,7 @@ import { absoluteUrl, SITE_NAME } from "../../utils/seo";
  * from detailPages.js: hero, capability bullets, long-form sections, optional
  * steps, FAQs (also emitted as FAQPage JSON-LD), and related-page cards for
  * internal linking. One template guarantees consistent structure, SEO markup,
- * and data-testids across all detail pages.
+ * and data-test-ids across all detail pages.
  */
 const DetailPageTemplate = ({ page, basePath }) => {
   const path = `${basePath}/${page.slug}`;
@@ -49,7 +49,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
   ];
 
   return (
-    <div data-testid={`detail-page-${page.slug}`}>
+    <div data-test-id={`detail-page-${page.slug}`}>
       <Seo
         title={page.seo.title}
         description={page.seo.description}
@@ -69,7 +69,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
               {page.group}
               {page.comingSoon && (
                 <span
-                  data-testid={`detail-${page.slug}-coming-soon-badge`}
+                  data-test-id={`detail-${page.slug}-coming-soon-badge`}
                   className="rounded-full bg-accent-600 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-white"
                 >
                   Coming soon
@@ -85,7 +85,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/register"
-                data-testid={`detail-${page.slug}-getstarted-btn`}
+                data-test-id={`detail-${page.slug}-getstarted-btn`}
                 className="btn btn-site inline-flex items-center gap-2 px-6 py-3 text-base font-semibold"
               >
                 Start free trial
@@ -93,7 +93,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
               </Link>
               <Link
                 to="/pricing"
-                data-testid={`detail-${page.slug}-pricing-btn`}
+                data-test-id={`detail-${page.slug}-pricing-btn`}
                 className="btn inline-flex items-center gap-2 border border-accent-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 hover:bg-accent-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
               >
                 See pricing
@@ -117,7 +117,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
       {/* Capability bullets */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24">
         <div
-          data-testid={`detail-${page.slug}-bullets`}
+          data-test-id={`detail-${page.slug}-bullets`}
           className="mx-auto grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2"
         >
           {page.bullets.map((bullet) => (
@@ -210,7 +210,7 @@ const DetailPageTemplate = ({ page, basePath }) => {
                 <Link
                   key={slug}
                   to={related.to}
-                  data-testid={`detail-${page.slug}-related-${slug}`}
+                  data-test-id={`detail-${page.slug}-related-${slug}`}
                   className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-6 transition-colors hover:border-accent-300 dark:hover:border-accent-700"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-900/40 text-accent-600 dark:text-accent-400">

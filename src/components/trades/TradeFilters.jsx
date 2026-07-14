@@ -42,12 +42,12 @@ const TradeFilters = () => {
   return (
     <div
       className="flex flex-wrap items-center gap-2"
-      data-testid="trade-filters"
+      data-test-id="trade-filters"
     >
       <select
         value={filters.outcome}
         onChange={(e) => handleFilterChange("outcome", e.target.value)}
-        data-testid="trade-filter-outcome-select"
+        data-test-id="trade-filter-outcome-select"
         className={SELECT_CLASS}
       >
         <option value="all">All trades</option>
@@ -58,7 +58,7 @@ const TradeFilters = () => {
       <select
         value={filters.instrument}
         onChange={(e) => handleFilterChange("instrument", e.target.value)}
-        data-testid="trade-filter-instrument-select"
+        data-test-id="trade-filter-instrument-select"
         className={SELECT_CLASS}
       >
         <option value="all">All instruments</option>
@@ -73,7 +73,7 @@ const TradeFilters = () => {
         <select
           value={filters.strategy}
           onChange={(e) => handleFilterChange("strategy", e.target.value)}
-          data-testid="trade-filter-strategy-select"
+          data-test-id="trade-filter-strategy-select"
           className={SELECT_CLASS}
         >
           <option value="all">All strategies</option>
@@ -88,7 +88,7 @@ const TradeFilters = () => {
       <select
         value={filters.dateRange}
         onChange={(e) => handleFilterChange("dateRange", e.target.value)}
-        data-testid="trade-filter-date-select"
+        data-test-id="trade-filter-date-select"
         className={SELECT_CLASS}
       >
         <option value="all">All time</option>
@@ -101,7 +101,7 @@ const TradeFilters = () => {
         <button
           type="button"
           onClick={() => setFilters(DEFAULT_FILTERS)}
-          data-testid="trade-filter-clear-btn"
+          data-test-id="trade-filter-clear-btn"
           className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
         >
           <X className="w-3.5 h-3.5" />

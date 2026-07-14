@@ -163,7 +163,7 @@ const TerminalInput = ({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder={placeholder}
-        data-testid={testId}
+        data-test-id={testId}
         className="bg-transparent outline-none w-full"
         style={{ fontFamily: MONO, fontSize: 15, color: c.text, fontWeight: 500 }}
       />
@@ -215,7 +215,7 @@ const StatTile = ({ c, label, value, sub, valueColor, accent, testId }) => (
     <div style={{ position: "relative" }}>
       <FieldLabel c={c}>{label}</FieldLabel>
       <div
-        data-testid={testId}
+        data-test-id={testId}
         style={{
           fontFamily: MONO,
           fontSize: 26,
@@ -661,7 +661,7 @@ const RiskCalculator = () => {
 
       {/* ===== Panel ===== */}
       <div
-        data-testid="risk-calculator-panel"
+        data-test-id="risk-calculator-panel"
         style={{
           background: c.panel,
           borderRadius: 18,
@@ -734,7 +734,7 @@ const RiskCalculator = () => {
             </div>
             <button
               onClick={resetCalculator}
-              data-testid="risk-calculator-reset-btn"
+              data-test-id="risk-calculator-reset-btn"
               style={{
                 background: "transparent",
                 border: `1px solid ${c.inputBorder}`,
@@ -783,7 +783,7 @@ const RiskCalculator = () => {
                   <button
                     key={s.value}
                     onClick={() => selectType(s.value)}
-                    data-testid={`risk-calculator-type-${s.value}`}
+                    data-test-id={`risk-calculator-type-${s.value}`}
                     className="flex-1 text-center"
                     style={{
                       fontSize: 13,
@@ -811,7 +811,7 @@ const RiskCalculator = () => {
               <select
                 value={instrument}
                 onChange={(e) => handleInstrumentChange(e.target.value)}
-                data-testid="risk-calculator-instrument-select"
+                data-test-id="risk-calculator-instrument-select"
                 aria-label="Select instrument"
                 className="w-full appearance-none outline-none"
                 style={{
@@ -1074,7 +1074,7 @@ const RiskCalculator = () => {
 
             <button
               onClick={handleCalculate}
-              data-testid="risk-calculator-calculate-btn"
+              data-test-id="risk-calculator-calculate-btn"
               className="w-full"
               style={{
                 marginTop: 22,
@@ -1123,7 +1123,7 @@ const RiskCalculator = () => {
             {isMobile && (
               <button
                 onClick={() => setMobileShowResults(false)}
-                data-testid="risk-calculator-mobile-back-btn"
+                data-test-id="risk-calculator-mobile-back-btn"
                 className="flex items-center gap-1"
                 style={{
                   background: "transparent",
@@ -1156,7 +1156,7 @@ const RiskCalculator = () => {
               </div>
               <div
                 className="flex items-center gap-1.5"
-                data-testid="risk-calculator-direction-badge"
+                data-test-id="risk-calculator-direction-badge"
                 style={{
                   padding: "5px 11px",
                   borderRadius: 999,
@@ -1268,7 +1268,7 @@ const RiskCalculator = () => {
                     Account at Risk
                   </span>
                   <span
-                    data-testid="risk-calculator-account-risk-value"
+                    data-test-id="risk-calculator-account-risk-value"
                     style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, color: c.text }}
                   >
                     {view.accountAtRisk.toFixed(1)}%
@@ -1363,13 +1363,13 @@ const RiskCalculator = () => {
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{ background: "rgba(8,11,16,0.62)", backdropFilter: "blur(2px)" }}
           onClick={() => setShowRiskWarning(false)}
-          data-testid="risk-calculator-risk-warning-overlay"
+          data-test-id="risk-calculator-risk-warning-overlay"
         >
           <div
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="risk-warning-title"
-            data-testid="risk-calculator-risk-warning-modal"
+            data-test-id="risk-calculator-risk-warning-modal"
             onClick={(e) => e.stopPropagation()}
             style={{
               background: c.panel,
@@ -1413,7 +1413,7 @@ const RiskCalculator = () => {
               </div>
               <button
                 onClick={() => setShowRiskWarning(false)}
-                data-testid="risk-calculator-risk-warning-close-btn"
+                data-test-id="risk-calculator-risk-warning-close-btn"
                 aria-label="Close"
                 style={{
                   background: "transparent",
@@ -1481,7 +1481,7 @@ const RiskCalculator = () => {
             >
               <button
                 onClick={() => setShowRiskWarning(false)}
-                data-testid="risk-calculator-risk-warning-dismiss-btn"
+                data-test-id="risk-calculator-risk-warning-dismiss-btn"
                 style={{
                   background: "linear-gradient(145deg,#2a9d8f,#147065)",
                   color: "#ffffff",
@@ -1511,7 +1511,7 @@ const PayoffDiagram = ({ c, results }) => {
 
   return (
     <div
-      data-testid="risk-calculator-payoff-chart"
+      data-test-id="risk-calculator-payoff-chart"
       style={{
         background: c.left,
         border: `1px solid ${c.border}`,
@@ -1526,7 +1526,7 @@ const PayoffDiagram = ({ c, results }) => {
             Trade Payoff
           </div>
           <span
-            data-testid="risk-calculator-payoff-info"
+            data-test-id="risk-calculator-payoff-info"
             title="Projected profit or loss across possible exit prices for your full position. Left of entry is loss (red), right is gain (green). The line crosses $0 at your entry price."
             style={{ display: "inline-flex", cursor: "help", color: c.muted }}
           >

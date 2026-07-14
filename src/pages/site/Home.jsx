@@ -331,7 +331,7 @@ const BentoCard = ({ card }) => {
   return (
     <Link
       to={card.to}
-      data-testid={`home-bento-${card.to.split("/").pop()}-link`}
+      data-test-id={`home-bento-${card.to.split("/").pop()}-link`}
       className="group rounded-2xl border border-accent-100 bg-white p-5 transition-colors hover:border-accent-400 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-accent-500"
     >
       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-100 text-accent-600 dark:bg-accent-900/50 dark:text-accent-300">
@@ -425,7 +425,7 @@ const Home = () => {
   }));
 
   return (
-  <div data-testid="site-home-page">
+  <div data-test-id="site-home-page">
     <Seo
       title="Trading Journal & Performance Analytics"
       path="/"
@@ -463,14 +463,14 @@ const Home = () => {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to="/register"
-              data-testid="home-hero-getstarted-btn"
+              data-test-id="home-hero-getstarted-btn"
               className="btn btn-site inline-flex items-center gap-2 px-6 py-3.5 text-base font-semibold"
             >
               Start free trial
             </Link>
             <Link
               to="/features"
-              data-testid="home-hero-features-btn"
+              data-test-id="home-hero-features-btn"
               className="btn inline-flex items-center gap-2 border border-accent-200 bg-white px-6 py-3.5 text-base font-semibold text-gray-900 hover:bg-accent-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
             >
               Explore the features
@@ -504,7 +504,7 @@ const Home = () => {
         launching with
       </p>
       <div
-        data-testid="home-broker-strip"
+        data-test-id="home-broker-strip"
         className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-3 opacity-70"
       >
         {BROKERS.map((broker) => (
@@ -524,7 +524,7 @@ const Home = () => {
     {/* METRICS BAND */}
     <section className="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
       <div
-        data-testid="home-stats-band"
+        data-test-id="home-stats-band"
         className={`grid grid-cols-2 gap-6 rounded-3xl p-8 shadow-2xl shadow-accent-600/30 sm:p-9 lg:grid-cols-4 ${GRADIENT}`}
       >
         {STATS_BAND.map((stat) => (
@@ -554,7 +554,7 @@ const Home = () => {
 
       {/* AI banner */}
       <div
-        data-testid="home-ai-banner"
+        data-test-id="home-ai-banner"
         className={`mb-5 grid items-center gap-7 rounded-3xl p-8 text-white shadow-2xl shadow-accent-600/30 sm:p-9 lg:grid-cols-[1.2fr,0.9fr] ${GRADIENT}`}
       >
         <div>
@@ -571,7 +571,7 @@ const Home = () => {
           </p>
           <Link
             to="/features/ai-insights"
-            data-testid="home-ai-insights-link"
+            data-test-id="home-ai-insights-link"
             className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-accent-700 transition-transform hover:-translate-y-px"
           >
             Generate my insights
@@ -635,7 +635,7 @@ const Home = () => {
         </div>
         <Link
           to="/features/trade-journal"
-          data-testid="home-journal-link"
+          data-test-id="home-journal-link"
           className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-accent-600 hover:text-accent-700 dark:text-accent-400"
         >
           More about the journal
@@ -701,7 +701,7 @@ const Home = () => {
         {TESTIMONIALS.map((quote) => (
           <div
             key={quote.name}
-            data-testid={`home-testimonial-${initials(quote.name).toLowerCase()}`}
+            data-test-id={`home-testimonial-${initials(quote.name).toLowerCase()}`}
             className="flex flex-col rounded-2xl border border-accent-100 bg-white p-6 dark:border-gray-700 dark:bg-gray-900"
           >
             <span className="tracking-[2px] text-accent-500 dark:text-accent-400">
@@ -742,7 +742,7 @@ const Home = () => {
         {tiers.map((tier) => (
           <div
             key={tier.id}
-            data-testid={`home-pricing-${tier.id}-card`}
+            data-test-id={`home-pricing-${tier.id}-card`}
             className={`relative flex flex-col rounded-2xl border p-6 sm:min-h-[34rem] ${
               tier.popular
                 ? "border-accent-500 bg-white shadow-xl dark:border-accent-500 dark:bg-gray-900"
@@ -790,7 +790,7 @@ const Home = () => {
             </ul>
             <Link
               to="/register"
-              data-testid={`home-pricing-${tier.id}-btn`}
+              data-test-id={`home-pricing-${tier.id}-btn`}
               className={`mt-6 block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                 tier.popular
                   ? "btn-site"
@@ -805,7 +805,7 @@ const Home = () => {
       <p className="mt-8 text-center">
         <Link
           to="/pricing"
-          data-testid="home-pricing-full-link"
+          data-test-id="home-pricing-full-link"
           className="inline-flex items-center gap-2 text-sm font-semibold text-accent-600 hover:text-accent-700 dark:text-accent-400"
         >
           See full pricing, annual billing &amp; FAQ
