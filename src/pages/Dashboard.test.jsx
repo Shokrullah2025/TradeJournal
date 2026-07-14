@@ -23,6 +23,20 @@ vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({ user: ctx.user }),
 }));
 
+// The AI Insights cards are wrapped in a FeatureGate, which reads the user's
+// entitlement from FeatureFlagContext. These tests cover the dashboard's own
+// rendering, not the plan gating (that lives in FeatureGate.test.jsx), so the
+// feature resolves as unlocked here.
+vi.mock("../context/FeatureFlagContext", () => ({
+  useFeatureFlags: () => ({
+    getFeatureState: () => "on",
+    isFeatureEnabled: () => true,
+    requiredPlan: () => null,
+    audience: "premium",
+    loading: false,
+  }),
+}));
+
 // Spy on navigation so the empty-state CTA can be asserted without real routes.
 const navSpy = vi.hoisted(() => vi.fn());
 vi.mock("react-router-dom", async (importOriginal) => ({

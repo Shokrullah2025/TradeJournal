@@ -351,6 +351,28 @@ export const TradeProvider = ({ children }) => {
 
   // ── CRUD ─────────────────────────────────────────────────────────────────
 
+  // Count trades CREATED in the current calendar month, for the manual-entry
+  // plan cap (see usePlanLimits / PlanLimitModal). Counts by created_at, not
+  // entry_date — the cap is a usage quota on logging activity, so back-dated
+  // trades still count against the month they were entered. Uses a head+exact
+  // count so no rows travel over the wire. Returns null on error → callers fail
+  // open (never block a save because the count read hiccuped).
+  const countTradesThisMonth = useCallback(async () => {
+    if (!user) return 0;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count, error } = await supabase
+      .from("trades")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", monthStart);
+    if (error) {
+      console.error("[Trades] month count error:", error.message);
+      return null;
+    }
+    return count ?? 0;
+  }, [user]);
+
   const addTrade = useCallback(async (formData) => {
     if (!user) throw new Error("Not authenticated");
     const accountId = state.defaultAccountId;
@@ -619,6 +641,7 @@ export const TradeProvider = ({ children }) => {
     addTrade,
     updateTrade,
     deleteTrade,
+    countTradesThisMonth,
     setFilters,
     importTrades,
     saveTradeImage,

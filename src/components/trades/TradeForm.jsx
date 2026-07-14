@@ -22,6 +22,9 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { useTrades } from "../../context/TradeContext";
+import { usePlanLimits } from "../../hooks/usePlanLimits";
+import { limitReached } from "../../utils/planLimits";
+import PlanLimitModal from "../common/PlanLimitModal";
 import toast from "react-hot-toast";
 
 // Returns "YYYY-MM-DD" using LOCAL date, not UTC — prevents timezone off-by-one
@@ -64,8 +67,12 @@ const saveUserOption = (type, value) => {
 };
 
 const TradeForm = ({ trade, onClose, selectedDate }) => {
-  const { addTrade, updateTrade, saveTradeImage, deleteTradeImage, updateTradeImageOrder, refreshTrades } = useTrades();
+  const { addTrade, updateTrade, saveTradeImage, deleteTradeImage, updateTradeImageOrder, refreshTrades, countTradesThisMonth } = useTrades();
+  const { maxTradesPerMonth, upgradeLabel } = usePlanLimits();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Populated (with the current usage) when a manual create is blocked by the
+  // monthly trade cap, which opens the upgrade modal instead of saving.
+  const [limitInfo, setLimitInfo] = useState(null);
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
   const [activeTab, setActiveTab] = useState("quick");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -1032,6 +1039,18 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
     try {
       setIsSubmitting(true);
 
+      // Enforce the manual-entry monthly cap on new trades only (edits are
+      // never blocked). A null count means the read failed — fail open and let
+      // the save proceed rather than trapping the user behind a hiccup.
+      if (!isEditing && maxTradesPerMonth > 0) {
+        const used = await countTradesThisMonth();
+        if (used != null && limitReached(used, maxTradesPerMonth)) {
+          setLimitInfo({ used, max: maxTradesPerMonth });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       saveUserOption("strategies", data.strategy);
       saveUserOption("setups", data.setup);
       saveUserOption("marketConditions", data.marketCondition);
@@ -1106,7 +1125,13 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
       onClose();
     } catch (error) {
       console.error("Error saving trade:", error);
-      toast.error("Failed to save trade. Please try again.");
+      // The DB trigger is the backstop if the client pre-check was raced or
+      // bypassed — turn its error into the same friendly upgrade modal.
+      if (typeof error?.message === "string" && error.message.includes("PLAN_LIMIT_TRADES")) {
+        setLimitInfo({ used: maxTradesPerMonth, max: maxTradesPerMonth });
+      } else {
+        toast.error("Failed to save trade. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -2342,6 +2367,17 @@ const TradeForm = ({ trade, onClose, selectedDate }) => {
         </div>
       )}
     </div>
+
+    <PlanLimitModal
+      open={!!limitInfo}
+      onClose={() => setLimitInfo(null)}
+      title="Monthly trade limit reached"
+      message={`Your plan includes ${maxTradesPerMonth} manually logged trades per month. Upgrade for a higher limit and keep journaling.`}
+      used={limitInfo?.used ?? 0}
+      max={limitInfo?.max ?? maxTradesPerMonth}
+      upgradeLabel={upgradeLabel}
+      testId="trade-limit-modal"
+    />
     </ModalPortal>
   );
 };

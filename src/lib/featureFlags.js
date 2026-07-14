@@ -100,3 +100,34 @@ export function evaluateFlag(flag, audience) {
   if (audience in audiences) return audiences[audience] !== false;
   return true;
 }
+
+// ── Plan hierarchy ─────────────────────────────────────────────────────────
+// The flag grid is a flat per-audience allow/deny map; nothing in it knows that
+// Elite > Pro > Starter. To render an "Upgrade to Pro" call-to-action on a
+// locked feature we have to derive the cheapest plan that would unlock it.
+//
+// PLAN_ORDER is cheapest → most expensive; the labels are the marketing names
+// (the slugs are frozen because Stripe and every subscriber row key off them —
+// see the AUDIENCES note above).
+export const PLAN_ORDER = ["basic", "premium", "enterprise"];
+export const PLAN_LABELS = { basic: "Starter", premium: "Pro", enterprise: "Elite" };
+
+// The upsell target for a locked feature: the cheapest plan whose audience is
+// not explicitly denied. Returns null when the feature is off for everyone
+// (master kill-switch) or has no flag record — in both cases there is nothing
+// to upsell.
+export function requiredPlanFor(flag) {
+  if (!flag || flag.enabled === false) return null;
+  const audiences = flag.audiences || {};
+  return PLAN_ORDER.find((plan) => audiences[plan] !== false) ?? null;
+}
+
+// Three-state view of a feature for a given audience, driving the UI:
+//   "hidden" — master kill-switch is off; the feature does not exist for anyone
+//              yet, so never advertise an upgrade for it (drop the nav item).
+//   "on"     — the audience has access; render the real thing.
+//   "locked" — the audience is denied; render blurred behind an upgrade gate.
+export function getFeatureState(flag, audience) {
+  if (flag && flag.enabled === false) return "hidden";
+  return evaluateFlag(flag, audience) ? "on" : "locked";
+}

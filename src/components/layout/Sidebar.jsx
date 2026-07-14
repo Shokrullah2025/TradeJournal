@@ -10,27 +10,29 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   Inbox,
+  Lock,
   X,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatureFlags } from "../../context/FeatureFlagContext";
-import { isComingSoon } from "../../lib/featureFlags";
+import { isComingSoon, PLAN_LABELS } from "../../lib/featureFlags";
 import { useContactInboxCount } from "../../hooks/useContactInboxCount";
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const { user } = useAuth();
-  const { isFeatureEnabled } = useFeatureFlags();
+  const { getFeatureState, requiredPlan } = useFeatureFlags();
   // Unread contact submissions — badge on the Contact Inbox item. The hook
   // no-ops (returns 0) for non-admins.
   const { newCount: contactNewCount } = useContactInboxCount();
 
-  // `feature` ties a nav item to a feature flag — when an admin disables that
-  // feature for the current user's audience (plan/role/trial), the item is
-  // hidden. Items with no `feature` are always available. Features in
-  // COMING_SOON_FEATURES stay listed but carry a "Soon" pill; their page
-  // renders behind the ComingSoonGate blur.
+  // `feature` ties a nav item to a feature flag. State drives what the user
+  // sees: "hidden" (master kill-switch off) drops the item; "locked" (denied
+  // for the user's plan) keeps it visible with a plan pill and blurs its page
+  // behind the FeatureGate upgrade overlay; "on" is a normal item. Items with
+  // no `feature` are always available. Features in COMING_SOON_FEATURES also
+  // carry a "Soon" pill — but a plan lock takes precedence over it.
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: Gauge },
     { name: "Trades", href: "/trades", icon: CandlestickChart },
@@ -40,8 +42,17 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Risk Calculator", href: "/risk-calculator", icon: Scale, feature: "risk_calculator" },
     { name: "Settings", href: "/settings", icon: SlidersHorizontal },
   ]
-    .filter((item) => !item.feature || isFeatureEnabled(item.feature))
-    .map((item) => ({ ...item, soon: item.feature ? isComingSoon(item.feature) : false }));
+    .map((item) => {
+      const state = item.feature ? getFeatureState(item.feature) : "on";
+      return {
+        ...item,
+        locked: state === "locked",
+        hidden: state === "hidden",
+        plan: item.feature ? requiredPlan(item.feature) : null,
+        soon: item.feature ? isComingSoon(item.feature) : false,
+      };
+    })
+    .filter((item) => !item.hidden);
 
   const adminNavigation = [
     // `end` keeps "/admin" from matching its nested routes (e.g. the Contact
@@ -171,7 +182,17 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`
                   }
-                  title={isCollapsed ? `${item.name}${item.soon ? " (Coming soon)" : ""}` : ""}
+                  title={
+                    isCollapsed
+                      ? `${item.name}${
+                          item.locked
+                            ? ` (Upgrade to ${PLAN_LABELS[item.plan] || "Pro"})`
+                            : item.soon
+                            ? " (Coming soon)"
+                            : ""
+                        }`
+                      : ""
+                  }
                 >
                   {({ isActive }) => (
                     <>
@@ -183,7 +204,18 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                           {item.name}
                         </span>
                       )}
-                      {!isCollapsed && item.soon && (
+                      {/* A plan lock takes precedence over the "Soon" pill —
+                          the paywall is the barrier that matters. */}
+                      {!isCollapsed && item.locked && (
+                        <span
+                          data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-lock-pill`}
+                          className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-600 dark:bg-primary-900/30 dark:text-primary-300"
+                        >
+                          <Lock className="h-2.5 w-2.5" />
+                          {PLAN_LABELS[item.plan] || "Pro"}
+                        </span>
+                      )}
+                      {!isCollapsed && !item.locked && item.soon && (
                         <span
                           data-test-id={`sidebar-${item.name.toLowerCase().replace(/\s+/g, "-")}-soon-pill`}
                           className="ml-2 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-600 dark:bg-primary-900/30 dark:text-primary-300"
