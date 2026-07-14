@@ -199,4 +199,73 @@ describe("Billing Page Integration", () => {
       );
     });
   });
+
+  // ── Trial banner ───────────────────────────────────────────────────────────
+  // The banner is the only place a trialing user is told when the card gets
+  // charged, so getting its states wrong is a trust problem, not a cosmetic one.
+  describe("free trial banner", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    // `days` from now; a trial that started 2 days ago.
+    const trialingFor = (days, overrides = {}) => {
+      billingState.subscription = {
+        status: "trialing",
+        trial_start: new Date(Date.now() - 2 * DAY).toISOString(),
+        trial_end: new Date(Date.now() + days * DAY).toISOString(),
+        cancel_at_period_end: false,
+        subscription_plans: { name: "Pro", slug: "premium", price: 18 },
+        ...overrides,
+      };
+    };
+
+    it("counts down the days left and says when the plan starts", () => {
+      trialingFor(5);
+      renderBilling();
+
+      expect(screen.getByTestId("billing-trial-days-left")).toHaveTextContent("5 days left");
+      expect(screen.getByTestId("billing-trial-banner")).toHaveTextContent("Free trial of Pro");
+      // The charge is the thing they must not be surprised by.
+      expect(screen.getByTestId("billing-trial-message")).toHaveTextContent(
+        /card on file is charged then/i
+      );
+      expect(screen.getByTestId("billing-trial-progress")).toBeInTheDocument();
+    });
+
+    it("says a single day in the singular on the last day", () => {
+      trialingFor(1);
+      renderBilling();
+
+      expect(screen.getByTestId("billing-trial-days-left")).toHaveTextContent("1 day left");
+    });
+
+    // Regression guard: a user who has already cancelled is NOT going to be
+    // charged. Telling them otherwise is the worst thing this banner could do.
+    it("promises no charge once the trial is set to cancel", () => {
+      trialingFor(5, { cancel_at_period_end: true });
+      renderBilling();
+
+      const message = screen.getByTestId("billing-trial-message");
+      expect(message).toHaveTextContent(/nothing will be charged/i);
+      expect(message).not.toHaveTextContent(/is charged then/i);
+    });
+
+    // Edge — Stripe gave us no trial_end (shouldn't happen, but the row allows
+    // null): fall back to copy that needs no date, and drop the progress bar
+    // rather than rendering a bar with a made-up length.
+    it("degrades gracefully when there is no trial end date", () => {
+      trialingFor(5, { trial_end: null, trial_start: null });
+      renderBilling();
+
+      expect(screen.getByTestId("billing-trial-banner")).toBeInTheDocument();
+      expect(screen.queryByTestId("billing-trial-days-left")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("billing-trial-progress")).not.toBeInTheDocument();
+    });
+
+    it("shows no banner at all when the user is not on a trial", () => {
+      billingState.subscription = { status: "active", subscription_plans: { slug: "premium" } };
+      renderBilling();
+
+      expect(screen.queryByTestId("billing-trial-banner")).not.toBeInTheDocument();
+    });
+  });
 });

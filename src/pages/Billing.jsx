@@ -12,6 +12,8 @@ import {
   TrendingUp,
   AlertCircle,
   User,
+  Sparkles,
+  Clock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
@@ -26,6 +28,8 @@ import { annualPriceFor } from "../utils/pricing";
 // the upgrade CTAs (FeatureGate, PlanLimitModal) to land the user straight on
 // the plan cards instead of the default Payment Information tab.
 const BILLING_SECTIONS = ["payment", "plans", "invoices"];
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const Billing = () => {
   const { user } = useAuth();
@@ -51,6 +55,51 @@ const Billing = () => {
     subscription?.status === "active" || subscription?.status === "trialing"
       ? (subscription?.subscription_plans?.slug ?? "basic")
       : "basic";
+
+  // ── Trial banner state ─────────────────────────────────────────────────────
+  // A trialing user is asking three things: how much time do I have left, what
+  // happens when it runs out, and how do I stop it. Derived here so the banner
+  // markup below stays declarative.
+  const isTrialing = subscription?.status === "trialing";
+  const trialStart = subscription?.trial_start ? new Date(subscription.trial_start) : null;
+  const trialEnd = subscription?.trial_end ? new Date(subscription.trial_end) : null;
+  const trialPlanName =
+    subscription?.subscription_plans?.name ??
+    livePlans[currentPlanSlug]?.name ??
+    "your plan";
+  // Already cancelled during the trial: it runs to the end date and then stops.
+  // No card is charged, so the banner must not threaten one.
+  const trialWillCancel = Boolean(subscription?.cancel_at_period_end);
+
+  // Rounded UP: with 4 hours left the user has "1 day left", not "0 days left".
+  const trialDaysLeft = trialEnd
+    ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / MS_PER_DAY))
+    : null;
+  // How far through the trial they are. Uses the real start/end from Stripe
+  // rather than assuming 7 days, so a promotional trial of any length is right.
+  const trialElapsedPct =
+    trialStart && trialEnd && trialEnd > trialStart
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            ((Date.now() - trialStart.getTime()) /
+              (trialEnd.getTime() - trialStart.getTime())) *
+              100
+          )
+        )
+      : null;
+  // Amber is for when the urgency is real — the last two days. For the rest of
+  // the trial this is good news, so it wears the brand teal.
+  const trialUrgent =
+    !trialWillCancel && trialDaysLeft !== null && trialDaysLeft <= 2;
+
+  const trialDaysLabel =
+    trialDaysLeft === null
+      ? null
+      : trialDaysLeft === 0
+        ? "Ends today"
+        : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left`;
 
   const [selectedPlan, setSelectedPlan] = useState("premium");
   const [billingCycle, setBillingCycle] = useState("monthly");
@@ -277,36 +326,116 @@ const Billing = () => {
             full desktop the column hits its 896px cap, so @4xl matches the old
             xl look exactly. */}
         <div className="@container max-w-4xl space-y-6">
-          {/* Trial banner — shown while the subscription is in its free trial. */}
-          {subscription?.status === "trialing" && (
+          {/* Trial banner. A live trial is good news for all but its last two
+              days, so it wears the brand teal and leads with the time left and a
+              progress bar; it turns amber only when the charge is imminent (or
+              stays teal-calm when the user has already cancelled and nothing
+              will be charged at all). The old version was a permanent amber
+              warning block that read like a payment problem. */}
+          {isTrialing && (
             <div
-              className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 @lg:p-6"
+              className={`rounded-2xl border p-4 @lg:p-5 ${
+                trialUrgent
+                  ? "border-amber-200 bg-amber-50 dark:border-amber-700/60 dark:bg-amber-900/20"
+                  : "border-primary-100 bg-[#e7f5f2] dark:border-[#2dd4bf]/20 dark:bg-[#2dd4bf]/10"
+              }`}
               data-test-id="billing-trial-banner"
             >
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-start space-x-3">
-                  <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
+                      trialUrgent
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300"
+                        : "bg-white text-primary-600 dark:bg-[#2dd4bf]/15 dark:text-[#2dd4bf]"
+                    }`}
+                  >
+                    {trialUrgent ? (
+                      <Clock className="h-5 w-5" />
+                    ) : (
+                      <Sparkles className="h-5 w-5" />
+                    )}
+                  </span>
+
                   <div>
-                    <h3 className="text-lg font-medium text-amber-900 dark:text-amber-200">
-                      Free trial active
-                    </h3>
-                    <p className="text-sm text-amber-700 dark:text-amber-300">
-                      {subscription?.trial_end
-                        ? `Your card will be charged on ${format(new Date(subscription.trial_end), "MMM d, yyyy")} unless you cancel before then.`
-                        : "Cancel before your trial ends to avoid being charged."}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3
+                        className={`text-sm font-bold @2xl:text-base ${
+                          trialUrgent
+                            ? "text-amber-900 dark:text-amber-200"
+                            : "text-gray-900 dark:text-gray-200"
+                        }`}
+                      >
+                        Free trial of {trialPlanName}
+                      </h3>
+                      {trialDaysLabel && (
+                        <span
+                          data-test-id="billing-trial-days-left"
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                            trialUrgent
+                              ? "bg-amber-200/70 text-amber-900 dark:bg-amber-800/50 dark:text-amber-200"
+                              : "bg-white text-primary-600 dark:bg-[#2dd4bf]/15 dark:text-[#2dd4bf]"
+                          }`}
+                        >
+                          {trialDaysLabel}
+                        </span>
+                      )}
+                    </div>
+
+                    <p
+                      data-test-id="billing-trial-message"
+                      className={`mt-1 text-xs @2xl:text-sm ${
+                        trialUrgent
+                          ? "text-amber-800 dark:text-amber-300"
+                          : "text-gray-600 dark:text-gray-400"
+                      }`}
+                    >
+                      {!trialEnd
+                        ? "You have full access to every feature in your plan. Cancel before the trial ends to avoid being charged."
+                        : trialWillCancel
+                          ? `You've cancelled, so nothing will be charged. You keep full access until ${format(trialEnd, "MMM d, yyyy")}.`
+                          : `Full access to every feature. Your ${trialPlanName} plan starts on ${format(trialEnd, "MMM d, yyyy")} and the card on file is charged then — cancel any time before.`}
                     </p>
                   </div>
                 </div>
+
                 <button
                   type="button"
                   onClick={handleOpenPortal}
                   disabled={portalLoading}
-                  className="py-2 px-4 border border-amber-300 dark:border-amber-600 rounded-md text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${
+                    trialUrgent
+                      ? "border-amber-300 bg-white text-amber-800 hover:bg-amber-100 dark:border-amber-600 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/40"
+                      : "border-primary-200 bg-white text-primary-700 hover:bg-primary-50 dark:border-[#2dd4bf]/30 dark:bg-transparent dark:text-[#2dd4bf] dark:hover:bg-[#2dd4bf]/10"
+                  }`}
                   data-test-id="billing-trial-cancel-btn"
                 >
                   {portalLoading ? "Opening…" : "Manage or cancel"}
                 </button>
               </div>
+
+              {/* How far through the trial they are — the "how long have I got"
+                  answer at a glance, without reading a date. */}
+              {trialElapsedPct !== null && (
+                <div
+                  className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/80 dark:bg-white/10"
+                  role="progressbar"
+                  aria-valuenow={Math.round(trialElapsedPct)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Free trial progress"
+                  data-test-id="billing-trial-progress"
+                >
+                  <div
+                    className={`h-full rounded-full ${
+                      trialUrgent
+                        ? "bg-amber-500"
+                        : "bg-primary-600 dark:bg-[#2dd4bf]"
+                    }`}
+                    style={{ width: `${trialElapsedPct}%` }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
