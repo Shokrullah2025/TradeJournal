@@ -127,6 +127,16 @@ export const FeatureFlagProvider = ({ children }) => {
     [flags, audience]
   );
 
+  // Re-resolve entitlement in place, without reloading the app. Used right after
+  // a subscription starts (TrialActivation): stripe-start-trial inserts the
+  // 'trialing' user_subscriptions row before it responds, so awaiting this is
+  // enough for `audience` to leave "free" — RequireSubscription then drops the
+  // TrialGate and lets the user straight into the app.
+  const refreshEntitlement = useCallback(
+    () => Promise.all([refreshFlags(), resolveUserAudience()]),
+    [refreshFlags, resolveUserAudience]
+  );
+
   // "on" | "locked" | "hidden" for the current audience — lets the UI keep a
   // locked feature visible (blurred, behind an upgrade gate) instead of the
   // binary hide that isFeatureEnabled implies.
@@ -147,6 +157,7 @@ export const FeatureFlagProvider = ({ children }) => {
       getFeatureState: featureState,
       requiredPlan,
       refreshFlags,
+      refreshEntitlement,
       catalog: FEATURE_CATALOG,
     }),
     [
@@ -157,6 +168,7 @@ export const FeatureFlagProvider = ({ children }) => {
       featureState,
       requiredPlan,
       refreshFlags,
+      refreshEntitlement,
     ]
   );
 
