@@ -210,7 +210,7 @@ Deno.serve(async (req: Request) => {
           // would start with a "we charged you $0.00" notification.
           const amountPaid = (inv.amount_paid ?? 0) / 100;
           if (amountPaid > 0) {
-            await createServerNotification(supabase, {
+            const notified = await createServerNotification(supabase, {
               userId,
               category: "billing",
               event_type: "payment_succeeded",
@@ -225,6 +225,9 @@ Deno.serve(async (req: Request) => {
               link_to: "/billing",
               metadata: { invoice: inv.id, amount: amountPaid, currency: inv.currency },
             });
+            if (!notified.ok) {
+              console.error("[stripe-webhook] payment_succeeded notification failed:", notified.error);
+            }
           }
 
           break;
@@ -264,7 +267,7 @@ Deno.serve(async (req: Request) => {
               .eq("user_id", userId);
           }
 
-          await createServerNotification(supabase, {
+          const notified = await createServerNotification(supabase, {
             userId,
             category: "billing",
             event_type: "payment_failed",
@@ -275,6 +278,9 @@ Deno.serve(async (req: Request) => {
             link_to: "/billing",
             metadata: { invoice: inv.id },
           });
+          if (!notified.ok) {
+            console.error("[stripe-webhook] payment_failed notification failed:", notified.error);
+          }
 
           break;
         }
@@ -288,7 +294,7 @@ Deno.serve(async (req: Request) => {
             ? new Date(sub.trial_end * 1000).toLocaleDateString()
             : "soon";
 
-          await createServerNotification(supabase, {
+          const notified = await createServerNotification(supabase, {
             userId,
             category: "billing",
             event_type: "trial_ending",
@@ -298,6 +304,9 @@ Deno.serve(async (req: Request) => {
             link_to: "/billing",
             metadata: { subscription: sub.id },
           });
+          if (!notified.ok) {
+            console.error("[stripe-webhook] trial_ending notification failed:", notified.error);
+          }
 
           break;
         }

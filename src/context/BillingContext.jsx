@@ -92,11 +92,17 @@ export const BillingProvider = ({ children }) => {
 
     fetchData();
 
-    // Live-refresh on any change to this user's subscription OR invoices, so a
-    // plan change and the proration invoice the webhook writes both show up
-    // without a manual reload. (Both tables are in the supabase_realtime
-    // publication as of migration 20260712050000; RLS scopes events to this
-    // user.)
+    // Live-refresh on any change to this user's subscription, invoices OR saved
+    // cards, so a plan change, the proration invoice, and the card the webhook
+    // saves all show up without a manual reload.
+    //
+    // payment_methods matters most at signup: the card is written server-side by
+    // stripe-webhook on `payment_method.attached`, a moment AFTER the browser's
+    // confirmation resolves. Without this the user who just typed their card in
+    // was shown "No payment method on file" until they reloaded.
+    //
+    // (All three tables are in the supabase_realtime publication — migrations
+    // 20260712050000 and 20260714140000; RLS scopes events to this user.)
     realtimeChannel = supabase
       .channel(`billing-sub-${userId}`)
       .on("postgres_changes", {
@@ -111,6 +117,14 @@ export const BillingProvider = ({ children }) => {
         event: "*",
         schema: "public",
         table: "invoices",
+        filter: `user_id=eq.${userId}`,
+      }, () => {
+        if (!cancelled) fetchData();
+      })
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "payment_methods",
         filter: `user_id=eq.${userId}`,
       }, () => {
         if (!cancelled) fetchData();

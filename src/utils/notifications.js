@@ -17,6 +17,20 @@ const EMAIL_EVENTS = new Set([
   "new_login",
 ]);
 
+// ── Global email kill-switch ───────────────────────────────────────────────
+// Notification emails are off app-wide. The Resend free tier is small enough
+// that sign-in alerts alone would exhaust it, and every send was failing
+// regardless (every notification row was landing on email_status='failed').
+// In-app notifications are unaffected — they are the primary channel, and the
+// bell still shows everything.
+//
+// To turn emails back on, flip this to true AND set NOTIFY_EMAIL_ENABLED=true
+// in the Supabase Edge Function environment (the server has its own switch —
+// see supabase/functions/_shared/notify.ts). Both must agree; the UI's email
+// toggles are hidden while this is false, so users aren't offered a dead
+// channel.
+export const EMAIL_NOTIFICATIONS_ENABLED = false;
+
 /**
  * Create a notification for a user. Validates the record, honors the user's
  * per-category in-app preference (the in-app toggle is the master switch — email
@@ -46,7 +60,10 @@ export async function emitNotification({ userId, record, prefs }) {
   // In-app off → suppress the notification entirely (no row, no email).
   if (!channelPrefs.inApp) return { data: null, error: null };
 
-  const wantsEmail = channelPrefs.email && EMAIL_EVENTS.has(payload.event_type);
+  const wantsEmail =
+    EMAIL_NOTIFICATIONS_ENABLED &&
+    channelPrefs.email &&
+    EMAIL_EVENTS.has(payload.event_type);
 
   try {
     // The insert runs with whatever token the client currently holds. Emits
