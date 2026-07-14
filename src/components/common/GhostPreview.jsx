@@ -245,6 +245,107 @@ export const GhostInsightLines = () => (
   </svg>
 );
 
+// --- ghost form / layout primitives (for non-chart features) ---
+
+// A labelled input placeholder. `value` fakes a filled field; omit it for an
+// empty one. Never a real <input> — the preview is inert scenery.
+export const GhostField = ({ label, wide }) => (
+  <div className={wide ? "col-span-2" : ""}>
+    <div className="mb-1.5 h-2.5 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />
+    <div className="flex h-9 items-center rounded-lg border border-gray-200 px-3 dark:border-gray-700">
+      <div className="h-2.5 w-14 rounded-full bg-gray-200 dark:bg-gray-700" />
+    </div>
+    <span className="sr-only">{label}</span>
+  </div>
+);
+
+GhostField.propTypes = {
+  label: PropTypes.string.isRequired,
+  wide: PropTypes.bool,
+};
+
+// A disabled-looking primary action bar (e.g. "Run backtest").
+export const GhostButton = ({ className = "" }) => (
+  <div
+    className={`flex h-9 items-center justify-center rounded-lg bg-gray-300 px-4 dark:bg-gray-600 ${className}`}
+  >
+    <div className="h-2.5 w-20 rounded-full bg-gray-100/80 dark:bg-gray-500" />
+  </div>
+);
+
+GhostButton.propTypes = { className: PropTypes.string };
+
+// Fake table rows — a trade log / results list. `cols` sets the column count.
+export const GhostTableRows = ({ rows = 5, cols = 5 }) => (
+  <div className="space-y-2.5">
+    {Array.from({ length: rows }).map((_, r) => (
+      <div
+        key={r}
+        className="grid items-center gap-3 border-b border-gray-100 pb-2.5 last:border-0 dark:border-gray-700/60"
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length: cols }).map((_, c) => (
+          <div
+            key={c}
+            className={`h-2.5 rounded-full ${
+              c === 0
+                ? "w-16 bg-gray-300 dark:bg-gray-600"
+                : "w-10 bg-gray-200 dark:bg-gray-700"
+            }`}
+          />
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+GhostTableRows.propTypes = {
+  rows: PropTypes.number,
+  cols: PropTypes.number,
+};
+
+// A broker card: logo square, name, and a "Connect" pill.
+export const GhostBrokerTile = () => (
+  <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3.5 dark:border-gray-700">
+    <div className="h-10 w-10 flex-shrink-0 rounded-lg bg-gray-200 dark:bg-gray-700" />
+    <div className="min-w-0 flex-1 space-y-1.5">
+      <div className="h-2.5 w-2/3 rounded-full bg-gray-300 dark:bg-gray-600" />
+      <div className="h-2 w-1/2 rounded-full bg-gray-200 dark:bg-gray-700" />
+    </div>
+    <div className="h-6 w-16 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700" />
+  </div>
+);
+
+// Semicircular risk gauge — the Risk Calculator's headline result.
+export const GhostGauge = () => (
+  <svg viewBox="0 0 120 66" className="mx-auto block h-full w-full max-w-[180px]">
+    <path
+      d="M10,60 A50,50 0 0,1 110,60"
+      fill="none"
+      strokeWidth="10"
+      strokeLinecap="round"
+      className={GHOST_GRID}
+    />
+    <path
+      d="M10,60 A50,50 0 0,1 85,18"
+      fill="none"
+      strokeWidth="10"
+      strokeLinecap="round"
+      className={GHOST_LINE}
+    />
+    <circle cx="60" cy="60" r="4" className={GHOST_STRONG} />
+    <line
+      x1="60"
+      y1="60"
+      x2="85"
+      y2="26"
+      strokeWidth="3"
+      strokeLinecap="round"
+      className={GHOST_LINE}
+    />
+  </svg>
+);
+
 // Small stat/metric card: label, em-dash value, half-faded sketch, hint.
 export const GhostStatCard = ({ label, hint, testId, children }) => (
   <div className="card p-4" data-test-id={testId}>

@@ -136,7 +136,7 @@ const FeatureGate = ({ feature, children, title, variant, preview }) => {
           <Link
             to="/billing"
             data-test-id={`feature-gate-upgrade-btn-${feature}`}
-            className="btn-primary mt-6 inline-flex items-center gap-2"
+            className="btn btn-primary mt-6 inline-flex items-center justify-center gap-2 whitespace-nowrap"
           >
             <Lock className="h-4 w-4" />
             Upgrade to {planLabel}

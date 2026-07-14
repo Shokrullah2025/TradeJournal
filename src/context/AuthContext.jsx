@@ -39,6 +39,29 @@ const notifyNewLogin = (userId) => {
     });
 };
 
+// One-time welcome notification, fired on a user's FIRST successful sign-in.
+// Keyed off auth user_metadata (not localStorage) so it fires exactly once per
+// account, across devices. Fire-and-forget: a failed notification must never
+// block a sign-in. The metadata flag is set first, so a slow/failed insert
+// can't cause a duplicate welcome on the next login.
+const welcomeOnFirstLogin = (authUser) => {
+  if (!authUser || authUser.user_metadata?.welcomed === true) return;
+  supabase.auth.updateUser({ data: { welcomed: true } }).catch(() => {});
+  emitNotification({
+    userId: authUser.id,
+    record: {
+      category: "account",
+      event_type: "welcome",
+      title: "Welcome to ZalorTrade 🎉",
+      body:
+        "Your account is ready. Log your first trade to start building your " +
+        "journal — your stats, calendar and analytics fill in as you go.",
+      severity: "success",
+      link_to: "/trades",
+    },
+  });
+};
+
 // ── State ──────────────────────────────────────────────────────────────────
 const initialState = {
   user: null,
@@ -362,6 +385,7 @@ export const AuthProvider = ({ children }) => {
     if (data.user) {
       logActivity(data.user.id, "login", {});
       notifyNewLogin(data.user.id);
+      welcomeOnFirstLogin(data.user);
     }
     // Note: signing in never pushes the user into the 2FA wizard. Enrolling an
     // authenticator is opt-in from Settings → Security (which links to

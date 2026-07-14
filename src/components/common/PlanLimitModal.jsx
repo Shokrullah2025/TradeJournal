@@ -75,7 +75,7 @@ const PlanLimitModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary"
+              className="btn btn-secondary"
               data-test-id={`${testId}-dismiss-btn`}
             >
               Not now
@@ -83,7 +83,7 @@ const PlanLimitModal = ({
             <Link
               to="/billing"
               onClick={onClose}
-              className="btn-primary inline-flex items-center gap-2"
+              className="btn btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap"
               data-test-id={`${testId}-upgrade-btn`}
             >
               <Lock className="h-4 w-4" />

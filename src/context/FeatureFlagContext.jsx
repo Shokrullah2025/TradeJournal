@@ -81,8 +81,10 @@ export const FeatureFlagProvider = ({ children }) => {
       // never lands — an expired trial or lapsed active row must resolve to
       // "free". The pure logic (and its edge cases) lives in
       // src/lib/featureFlags.js and is unit-tested in featureFlags.test.js.
-      const { isTrial, planSlug } = deriveEntitlement(data);
-      setAudience(resolveAudience({ role: user.role, planSlug, isTrial }));
+      // A live trial resolves to the plan it is a trial OF, so trialing users
+      // are gated exactly like paying users on that plan.
+      const { planSlug } = deriveEntitlement(data);
+      setAudience(resolveAudience({ role: user.role, planSlug }));
     } catch (err) {
       console.error("[FeatureFlags] audience resolve failed:", err.message);
       setAudience(resolveAudience({ role: user?.role }));

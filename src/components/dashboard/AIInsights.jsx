@@ -171,7 +171,7 @@ const AIInsights = ({ trades, stats }) => {
             type="button"
             onClick={generate}
             data-test-id="ai-insights-generate-btn"
-            className="btn-primary inline-flex items-center space-x-2 text-sm"
+            className="btn btn-primary inline-flex items-center space-x-2 text-sm"
           >
             <Sparkles className="w-4 h-4" />
             <span>Generate insights</span>

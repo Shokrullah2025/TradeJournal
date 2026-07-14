@@ -791,12 +791,16 @@ const Billing = () => {
                             ) : plan.id === "basic" ? (
                               <>
                                 <span className="@lg:hidden">Downgrade</span>
-                                <span className="hidden @lg:inline">Downgrade to Basic</span>
+                                <span className="hidden whitespace-nowrap @lg:inline">
+                                  {`Downgrade to ${plan.name}`}
+                                </span>
                               </>
                             ) : (
                               <>
                                 <span className="@lg:hidden">Upgrade</span>
-                                <span className="hidden @lg:inline">{"Upgrade to " + plan.name}</span>
+                                <span className="hidden whitespace-nowrap @lg:inline">
+                                  {`Upgrade to ${plan.name}`}
+                                </span>
                               </>
                             )}
                           </button>

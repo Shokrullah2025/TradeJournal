@@ -11,8 +11,9 @@ import { PLAN_LABELS } from "../lib/featureFlags";
 //
 // Audience → which plan's caps apply:
 //   admin      → unlimited (0/0); admins are never usage-capped.
-//   trial      → Pro-level (premium) — trials get the same entitlements as Pro.
-//   basic/premium/enterprise → that plan's own row.
+//   basic/premium/enterprise → that plan's own row. A trialing user already
+//                resolves to the plan they're trialing (see resolveAudience),
+//                so a Starter trial gets Starter caps — no special trial case.
 //   free       → most restrictive (basic); free users sit behind the TrialGate
 //                and never reach these flows, but fail safe to the tightest cap.
 //
@@ -20,7 +21,6 @@ import { PLAN_LABELS } from "../lib/featureFlags";
 // to 0 (unlimited) so a load hiccup never blocks a paying user from saving.
 
 const AUDIENCE_TO_LIMIT_SLUG = {
-  trial: "premium",
   basic: "basic",
   premium: "premium",
   enterprise: "enterprise",

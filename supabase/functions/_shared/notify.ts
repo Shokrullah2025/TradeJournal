@@ -24,6 +24,9 @@ const DEFAULT_PREFS: Record<string, { inApp: boolean; email: boolean }> = {
   billing: { inApp: true, email: true },
   performance: { inApp: true, email: false },
   security: { inApp: true, email: true },
+  // Account lifecycle (welcome, trial started). In-app only by default — the
+  // user has just been emailed a confirmation link, so another email is noise.
+  account: { inApp: true, email: false },
 };
 
 async function getChannelPrefs(
@@ -44,7 +47,7 @@ async function getChannelPrefs(
 
 interface NotificationInput {
   userId: string;
-  category: "broker_sync" | "billing" | "performance" | "security";
+  category: "broker_sync" | "billing" | "performance" | "security" | "account";
   event_type: string;
   title: string;
   body?: string;

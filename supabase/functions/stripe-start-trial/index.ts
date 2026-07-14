@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14?target=deno&no-check";
+import { createServerNotification } from "../_shared/notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -180,6 +181,26 @@ Deno.serve(async (req: Request) => {
         console.error("Failed to log trial_started event:", eventError);
       }
     }
+
+    // Tell the user their trial is live and, crucially, WHEN it converts — the
+    // card is already on file, so the first charge must never be a surprise.
+    // Never throws; a failed notification must not fail an activated trial.
+    await createServerNotification(supabase, {
+      userId: user.id,
+      category: "billing",
+      event_type: "trial_started",
+      title: "Your 7-day free trial has started",
+      body: trialEnd
+        ? `You have full access until ${new Date(trialEnd).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}. We'll charge your card then unless you cancel before.`
+        : "You have full access for the next 7 days. Cancel any time before it ends.",
+      severity: "success",
+      link_to: "/billing",
+      metadata: { stripe_subscription_id: subscription.id, plan: planSlug },
+    });
 
     return successResponse({
       subscriptionId: subscription.id,
