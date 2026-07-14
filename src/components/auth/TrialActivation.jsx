@@ -6,6 +6,8 @@ import { supabase } from "../../lib/supabase";
 import { useBilling } from "../../context/BillingContext";
 import { hardNavigate } from "../../utils/navigation";
 import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
+import { annualPriceFor } from "../../utils/pricing";
+import { PLAN_LABELS } from "../../lib/featureFlags";
 import StripePaymentForm from "../billing/StripePaymentForm";
 import CouponField from "../billing/CouponField";
 
@@ -36,9 +38,18 @@ const TrialActivation = ({
   // trial. Null until the user applies a valid one.
   const [couponCode, setCouponCode] = useState(null);
   const { startTrial } = useBilling();
-  // Live monthly price for this plan (admin Pricing tab); fall back until loaded.
+  // Live price for the plan and cycle the user actually chose (admin Pricing
+  // tab); falls back to the derived annual amount when none is configured. The
+  // copy below must quote what Stripe will really charge when the trial ends.
   const { plans } = useSubscriptionPlans();
-  const monthlyPrice = plans[planSlug]?.price ?? 29.99;
+  const plan = plans[planSlug];
+  const monthlyPrice = plan?.price ?? 29.99;
+  const isAnnual = billingCycle === "annually";
+  const renewalPrice = isAnnual
+    ? annualPriceFor(monthlyPrice, plan?.priceAnnually)
+    : monthlyPrice;
+  const renewalPeriod = isAnnual ? "year" : "month";
+  const planName = plan?.name ?? PLAN_LABELS[planSlug] ?? "Pro";
 
   // After the trial is activated the user's subscription becomes "trialing", but
   // the in-memory FeatureFlag audience is still "free" until the app re-resolves
@@ -169,8 +180,11 @@ const TrialActivation = ({
             Ready to Start Your Trial?
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            You're all set! Activate your 7-day free trial and start tracking
-            your trades like a pro.
+            Add a card to activate your 7-day free trial of{" "}
+            <span className="font-semibold" data-test-id="trial-plan-name">
+              {planName}
+            </span>
+            . You won’t be charged today.
           </p>
         </div>
 
@@ -181,9 +195,9 @@ const TrialActivation = ({
             </h3>
             <span className="text-2xl font-bold text-blue-600">$0</span>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
-            No commitment, cancel anytime. After your 7 days, your plan continues
-            automatically at ${monthlyPrice}/month unless you cancel.
+          <p className="text-sm text-gray-600 mb-4" data-test-id="trial-renewal-copy">
+            No commitment, cancel anytime. After your 7 days, {planName} continues
+            automatically at ${renewalPrice}/{renewalPeriod} unless you cancel.
           </p>
           <p className="text-xs text-gray-500 mb-4">
             Prices are in USD. Your bank may convert to your local currency at

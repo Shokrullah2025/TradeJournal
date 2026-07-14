@@ -105,6 +105,12 @@ const emptyProfile = (authUser) => ({
   role:              "user",
   status:            "active",
   createdAt:         null,
+  // Plan the user picked on the marketing pricing page before signing up. It
+  // lives in auth metadata (not localStorage) so it survives the email
+  // confirmation round-trip even when they verify on a different device. When
+  // set, TrialGate skips the plan chooser and goes straight to activation.
+  selectedPlan:      authUser.user_metadata?.selected_plan ?? null,
+  selectedCycle:     authUser.user_metadata?.billing_cycle ?? "monthly",
   firstName:         "",
   lastName:          "",
   displayName:       "",
@@ -357,21 +363,13 @@ export const AuthProvider = ({ children }) => {
       logActivity(data.user.id, "login", {});
       notifyNewLogin(data.user.id);
     }
-    // No authenticator on the account (the aal2 branch above didn't fire) and
-    // the setup offer hasn't been shown yet → tell the caller to route into
-    // the 2FA wizard. The flag lives in auth user_metadata so the offer is
-    // one-time per account, across devices; "Skip for now" in the wizard
-    // continues to the dashboard.
-    let offerMfaSetup = false;
-    if (data.user && data.user.user_metadata?.mfa_setup_offered !== true) {
-      offerMfaSetup = true;
-      supabase.auth
-        .updateUser({ data: { mfa_setup_offered: true } })
-        .catch(() => {});
-    }
+    // Note: signing in never pushes the user into the 2FA wizard. Enrolling an
+    // authenticator is opt-in from Settings → Security (which links to
+    // /security/2fa); interrupting a first-time user with it stood between them
+    // and picking a plan, which is the only thing that first login is for.
     // onAuthStateChange fires and sets the user — no manual dispatch needed
     toast.success("Welcome back!");
-    return { status: "ok", offerMfaSetup };
+    return { status: "ok" };
   }, []);
 
   // ── Register ─────────────────────────────────────────────────────────────
@@ -379,7 +377,11 @@ export const AuthProvider = ({ children }) => {
   // names and the registration form contract — and read result.user_id to drive
   // the multi-step flow. Destructure the same keys and surface user_id in the
   // return so the names actually persist and the next step receives the id.
-  const register = useCallback(async ({ first_name, last_name, email, password }) => {
+  // `selected_plan` / `billing_cycle` are set when the user arrived from a
+  // pricing-page CTA (/register?plan=…&cycle=…). Stored in auth metadata so the
+  // choice survives email confirmation and the subsequent sign-in — see
+  // emptyProfile, which surfaces them as user.selectedPlan / user.selectedCycle.
+  const register = useCallback(async ({ first_name, last_name, email, password, selected_plan, billing_cycle }) => {
     // Intentionally does NOT toggle the global auth `loading` flag. That flag
     // gates the route shell (PublicRoute), so flipping it here would unmount the
     // registration form and show the full-screen LoadingScreen — a white screen
@@ -390,7 +392,12 @@ export const AuthProvider = ({ children }) => {
       email,
       password,
       options: {
-        data: { first_name, last_name },
+        data: {
+          first_name,
+          last_name,
+          ...(selected_plan ? { selected_plan } : {}),
+          ...(billing_cycle ? { billing_cycle } : {}),
+        },
         emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     });

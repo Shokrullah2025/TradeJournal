@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { useAuth } from "../context/AuthContext";
 import EmailVerification from "../components/auth/EmailVerification";
+import { PLAN_ORDER } from "../lib/featureFlags";
 
 // Schema for user registration
 const registrationSchema = z
@@ -43,6 +44,15 @@ const MultiStepRegistration = () => {
   const [alreadyExists, setAlreadyExists] = useState(false);
   const navigate = useNavigate();
   const { register: registerUser, discardSession } = useAuth();
+
+  // A plan pre-chosen on the marketing pricing page (/register?plan=…&cycle=…).
+  // Validated against the real slugs so a hand-edited URL can't write junk into
+  // the user's auth metadata. Null when the user signed up without picking one —
+  // they get the plan chooser at first login instead.
+  const planParam = searchParams.get("plan");
+  const selectedPlan = PLAN_ORDER.includes(planParam) ? planParam : null;
+  const selectedCycle =
+    searchParams.get("cycle") === "annually" ? "annually" : "monthly";
 
   const {
     register,
@@ -95,6 +105,11 @@ const MultiStepRegistration = () => {
         last_name: data.lastName,
         email: data.email,
         password: data.password,
+        // Only sent when they came from a pricing CTA; persisted to auth
+        // metadata so the choice survives email confirmation.
+        ...(selectedPlan
+          ? { selected_plan: selectedPlan, billing_cycle: selectedCycle }
+          : {}),
       });
 
       // signUp() already sent the confirmation email and (with email
