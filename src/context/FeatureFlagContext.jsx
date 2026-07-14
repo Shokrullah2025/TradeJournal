@@ -15,6 +15,8 @@ import {
   resolveAudience,
   deriveEntitlement,
   evaluateFlag,
+  getFeatureState,
+  requiredPlanFor,
 } from "../lib/featureFlags";
 
 // ── Feature flag context ──────────────────────────────────────────────────
@@ -125,16 +127,37 @@ export const FeatureFlagProvider = ({ children }) => {
     [flags, audience]
   );
 
+  // "on" | "locked" | "hidden" for the current audience — lets the UI keep a
+  // locked feature visible (blurred, behind an upgrade gate) instead of the
+  // binary hide that isFeatureEnabled implies.
+  const featureState = useCallback(
+    (key) => getFeatureState(flags[key], audience),
+    [flags, audience]
+  );
+
+  // The cheapest plan that would unlock a feature — the "Upgrade to Pro" target.
+  const requiredPlan = useCallback((key) => requiredPlanFor(flags[key]), [flags]);
+
   const value = useMemo(
     () => ({
       flags,
       audience,
       loading,
       isFeatureEnabled,
+      getFeatureState: featureState,
+      requiredPlan,
       refreshFlags,
       catalog: FEATURE_CATALOG,
     }),
-    [flags, audience, loading, isFeatureEnabled, refreshFlags]
+    [
+      flags,
+      audience,
+      loading,
+      isFeatureEnabled,
+      featureState,
+      requiredPlan,
+      refreshFlags,
+    ]
   );
 
   return (

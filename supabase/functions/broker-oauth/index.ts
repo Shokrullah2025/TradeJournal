@@ -42,6 +42,17 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Invalid or expired session", 401);
     }
 
+    // Server-side entitlement gate — Broker Sync is an Elite feature. This
+    // client uses the service-role key (bypasses RLS), so we check explicitly
+    // with the resolved user id before touching any broker OAuth flow.
+    const { data: allowed, error: gateError } = await supabase.rpc("feature_enabled_for", {
+      p_user_id: user.id,
+      p_flag_key: "broker_sync",
+    });
+    if (gateError || allowed !== true) {
+      return errorResponse("Broker Sync isn’t included in your current plan.", 403);
+    }
+
     const body = await req.json();
     const { broker, code, accountType, redirectUri, propFirm } = body;
 

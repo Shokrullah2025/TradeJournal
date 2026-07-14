@@ -103,6 +103,16 @@ Deno.serve(async (req: Request) => {
       return errorResponse("You must be signed in to generate insights.", 401);
     }
 
+    // Server-side entitlement gate — AI Insights is a Pro feature. The client
+    // hides it behind FeatureGate, but this endpoint must refuse a crafted
+    // request too. has_feature() resolves the caller's own plan from the JWT.
+    const { data: allowed, error: gateError } = await supabase.rpc("has_feature", {
+      p_flag_key: "ai_insights",
+    });
+    if (gateError || allowed !== true) {
+      return errorResponse("AI Insights isn’t included in your current plan.", 403);
+    }
+
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
       // Feature not configured — tell the UI to degrade gracefully, not crash.

@@ -29,6 +29,18 @@ vi.mock("../../context/TradeContext", () => ({
     refreshTrades: vi.fn(),
   }),
 }));
+// TradeForm reads the monthly trade cap via usePlanLimits, which resolves the
+// audience from FeatureFlagContext. Screenshot-panel visibility is driven by
+// templates, not by the plan, so a Pro audience keeps the cap out of the way.
+vi.mock("../../context/FeatureFlagContext", () => ({
+  useFeatureFlags: () => ({
+    getFeatureState: () => "on",
+    isFeatureEnabled: () => true,
+    requiredPlan: () => null,
+    audience: "premium",
+    loading: false,
+  }),
+}));
 
 /**
  * Screenshots follow the same per-template field-visibility system as every
