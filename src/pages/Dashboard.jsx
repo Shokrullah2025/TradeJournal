@@ -153,7 +153,7 @@ const Dashboard = () => {
   ];
 
   const header = (
-    <div className="dashboard__header flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="dashboard__header flex flex-col sm:flex-row sm:items-center sm:justify-between 2xl:max-w-[90%] 2xl:mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Dashboard
@@ -186,13 +186,18 @@ const Dashboard = () => {
       {header}
 
       {/* Pre-Market Briefing — daily personalized edge summary, dismissible.
-          AI Insights is a Pro feature: gate it in place with the upgrade blur. */}
-      <FeatureGate feature="ai_insights" variant="inline" preview={<AiInsightsLockedPreview />}>
-        <PreMarketBriefing trades={trades} user={user} />
-      </FeatureGate>
+          AI Insights is a Pro feature: gate it in place with the upgrade blur.
+          Wrapped so it matches the stats/charts narrowing on 2xl+ desktops. */}
+      <div className="2xl:max-w-[90%] 2xl:mx-auto">
+        <FeatureGate feature="ai_insights" variant="inline" preview={<AiInsightsLockedPreview />}>
+          <PreMarketBriefing trades={trades} user={user} />
+        </FeatureGate>
+      </div>
 
-      {/* Stats Cards with Mini Charts */}
-      <div className="dashboard__stats grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Cards with Mini Charts.
+          On large desktop screens (2xl+) the row is capped slightly narrower and
+          centered so the cards don't stretch — laptop/tablet/mobile are untouched. */}
+      <div className="dashboard__stats grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 2xl:max-w-[90%] 2xl:mx-auto">
         {statsCards.map((card, index) => {
           // Generate meaningful data for mini charts based on real trades
           let miniChart = null;
@@ -261,8 +266,9 @@ const Dashboard = () => {
         })}
       </div>
 
-      {/* Charts Section - 3 columns, each 1/3 width */}
-      <div className="dashboard__charts grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Charts Section - 3 columns, each 1/3 width.
+          Narrowed + centered on 2xl+ to match the stats cards above. */}
+      <div className="dashboard__charts grid grid-cols-1 lg:grid-cols-3 gap-6 2xl:max-w-[90%] 2xl:mx-auto">
         {/* P&L Distribution Chart */}
         <div className="card !pt-3 !pr-2.5 !pb-2 !pl-2 flex flex-col h-[340px]">
           <div className="flex items-center justify-between mb-3 px-1">
@@ -378,8 +384,9 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recent Activity and Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Recent Activity and Insights.
+          Narrowed + centered on 2xl+ to match the stats cards above. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 2xl:max-w-[90%] 2xl:mx-auto">
         <div className="lg:col-span-2 flex">
           <RecentTrades trades={recentTrades} />
         </div>
