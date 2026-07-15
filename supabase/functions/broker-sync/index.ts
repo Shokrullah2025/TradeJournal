@@ -1,4 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  projectxLogin,
+  projectxSearchTrades,
+  normalizeProjectxTrades,
+} from "../_shared/projectxAdapter.ts";
+
+// ProjectX session JWTs are valid for 24h.
+const PROJECTX_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,6 +68,10 @@ Deno.serve(async (req: Request) => {
 
     if (broker === "tradovate") {
       return await syncTradovateTrades(supabase, user.id, accountId, fromDate ?? null);
+    }
+
+    if (broker === "projectx") {
+      return await syncProjectxTrades(supabase, user.id, accountId, fromDate ?? null);
     }
 
     return errorResponse(`Broker '${broker}' is not yet supported`, 400);
@@ -309,6 +321,126 @@ async function refreshTradovateToken(
   } catch {
     return null;
   }
+}
+
+async function syncProjectxTrades(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  accountId: string,
+  fromDate: string | null,
+) {
+  // Rollout kill-switch — same gate as connect (admins bypass).
+  const { data: rollout } = await supabase.rpc("feature_enabled_for", {
+    p_user_id: userId,
+    p_flag_key: "projectx_broker",
+  });
+  if (rollout !== true) {
+    return errorResponse("ProjectX connections aren’t available yet.", 403);
+  }
+
+  const { data: tokenRow, error: tokenError } = await supabase
+    .from("broker_tokens")
+    .select("access_token, expires_at, api_username, api_key, base_url, external_account_id")
+    .eq("user_id", userId)
+    .eq("broker", "projectx")
+    .single();
+
+  if (tokenError || !tokenRow) {
+    return errorResponse("No ProjectX connection found. Please connect your account first.", 404);
+  }
+
+  if (!tokenRow.base_url || !tokenRow.external_account_id) {
+    return errorResponse("ProjectX connection is incomplete. Please reconnect your account.", 409);
+  }
+
+  // ProjectX session JWTs last 24h. Re-login with the stored apiKey when expired.
+  let token: string = tokenRow.access_token;
+  const expired = !tokenRow.expires_at || new Date(tokenRow.expires_at) <= new Date();
+  if (expired) {
+    if (!tokenRow.api_username || !tokenRow.api_key) {
+      return errorResponse("Session expired. Please reconnect your ProjectX account.", 401);
+    }
+    try {
+      token = await projectxLogin(tokenRow.base_url, tokenRow.api_username, tokenRow.api_key);
+    } catch {
+      return errorResponse("Session expired. Please reconnect your ProjectX account.", 401);
+    }
+    await supabase
+      .from("broker_tokens")
+      .update({
+        access_token: token,
+        expires_at: new Date(Date.now() + PROJECTX_TOKEN_TTL_MS).toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("broker", "projectx");
+  }
+
+  // Fetch + pair fills.
+  let rawTrades;
+  try {
+    rawTrades = await projectxSearchTrades(
+      tokenRow.base_url,
+      token,
+      String(tokenRow.external_account_id),
+      fromDate,
+    );
+  } catch (err) {
+    const status = (err as { status?: number })?.status;
+    if (status === 401) {
+      return errorResponse("ProjectX session expired. Please reconnect your account.", 401);
+    }
+    return errorResponse("Failed to fetch trades from ProjectX", 502);
+  }
+
+  const trades = normalizeProjectxTrades(rawTrades);
+  if (trades.length === 0) {
+    return successResponse({ imported: 0, skipped: 0, message: "No trades found" });
+  }
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const trade of trades) {
+    const { data: existing } = await supabase
+      .from("trades")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("external_trade_id", trade.external_trade_id)
+      .maybeSingle();
+
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("trades").insert({
+      user_id: userId,
+      account_id: accountId,
+      external_trade_id: trade.external_trade_id,
+      instrument: trade.instrument,
+      instrument_type: "future",
+      direction: trade.direction,
+      quantity: trade.quantity,
+      entry_price: trade.entry_price,
+      exit_price: trade.exit_price,
+      entry_date: trade.entry_date,
+      exit_date: trade.exit_date,
+      status: "closed",
+      pnl: trade.pnl,
+      commission: trade.commission,
+      swap: 0,
+      notes: "Imported from ProjectX",
+      tags: ["projectx", "imported", "futures"],
+    });
+
+    if (insertError) {
+      console.error("Failed to insert trade:", insertError, trade.external_trade_id);
+    } else {
+      imported++;
+    }
+  }
+
+  return successResponse({ imported, skipped });
 }
 
 function successResponse(data: unknown) {

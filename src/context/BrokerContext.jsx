@@ -39,6 +39,13 @@ const BROKERS = {
       },
     },
   },
+  projectx: {
+    name: "ProjectX",
+    type: "live",
+    authType: "apiKey",
+    description: "Futures prop-firm gateway (Topstep, Apex, MyFundedFutures, and more)",
+    logo: "🎯",
+  },
   alpaca: {
     name: "Alpaca Trading",
     type: "live",
@@ -401,6 +408,44 @@ class BrokerService {
     return this.startOAuthFlow(brokerKey, accountType);
   }
 
+  // API-key connect (ProjectX). No OAuth popup — the credentials go straight to the
+  // Edge Function, which logs in server-side. The apiKey NEVER touches localStorage.
+  async connectApiKey(brokerKey, config = {}) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error("You must be logged in to connect a broker.");
+    }
+
+    const accountType = config.accountType || "demo";
+    const { data, error } = await supabase.functions.invoke("broker-oauth", {
+      body: {
+        broker: brokerKey,
+        accountType,
+        firmId: config.firmId ?? null,
+        baseUrl: config.baseUrl,
+        userName: config.userName,
+        apiKey: config.apiKey,
+        propFirm: config.propFirm ?? null,
+      },
+    });
+
+    if (error) throw new Error(error.message || "Failed to connect");
+    if (!data?.success) throw new Error(data?.error || "Failed to connect");
+
+    return {
+      success: true,
+      accounts: [
+        {
+          id: data.data.accountId,
+          name: data.data.accountName,
+          balance: data.data.balance ?? 0,
+          type: accountType,
+        },
+      ],
+      accountType,
+    };
+  }
+
   // Demo trade fetch (no real API call — purely client-side simulation)
   async fetchDemoTrades() {
     const demoOrders = [
@@ -556,6 +601,59 @@ export const BrokerProvider = ({ children }) => {
     }
   };
 
+  // Connect an API-key broker (ProjectX). Secrets (userName/apiKey) are sent to the
+  // Edge Function but NEVER stored in state/localStorage — only safe fields persist.
+  const connectApiKeyBroker = async (brokerKey, config) => {
+    setState((prev) => ({ ...prev, isConnecting: true, connectionError: null }));
+
+    try {
+      const result = await brokerService.connectApiKey(brokerKey, config);
+
+      if (result.success) {
+        const firmLabel = config.propFirm || null;
+        // Persist only non-sensitive fields — drop userName/apiKey.
+        const safeConfig = {
+          accountType: config.accountType ?? null,
+          propFirm: firmLabel,
+          firmId: config.firmId ?? null,
+          baseUrl: config.baseUrl ?? null,
+        };
+        const newState = {
+          selectedBroker: brokerKey,
+          brokerConfig: safeConfig,
+          propFirm: firmLabel,
+          isConnected: true,
+          isConnecting: false,
+          connectionError: null,
+          accounts: result.accounts,
+          selectedAccount: result.accounts[0]?.id ?? null,
+        };
+
+        setState((prev) => ({ ...prev, ...newState }));
+        saveBrokerConfig(newState);
+        const displayName = firmLabel || BROKERS[brokerKey]?.name || "broker";
+        toast.success(`Connected to ${displayName}`);
+        return true;
+      }
+
+      setState((prev) => ({
+        ...prev,
+        isConnecting: false,
+        connectionError: result.error,
+      }));
+      toast.error(result.error || "Connection failed");
+      return false;
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        isConnecting: false,
+        connectionError: error.message,
+      }));
+      toast.error(error.message);
+      return false;
+    }
+  };
+
   const disconnectBroker = () => {
     brokerService.stopAutoSync();
     setState((prev) => ({
@@ -681,6 +779,7 @@ export const BrokerProvider = ({ children }) => {
     ...state,
     brokers: BROKERS,
     connectBroker,
+    connectApiKeyBroker,
     disconnectBroker,
     syncTrades,
     toggleAutoSync,
