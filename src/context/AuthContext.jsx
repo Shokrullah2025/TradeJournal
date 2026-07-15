@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
-import { logActivity } from "../utils/logActivity";
+import { logActivity, recordLogin } from "../utils/logActivity";
 import { emitNotification } from "../utils/notifications";
 import { validateAdminUserUpdate } from "../lib/schemas/adminUser";
 import { getAal, listFactors, challengeAndVerify } from "../utils/mfa";
@@ -383,7 +383,7 @@ export const AuthProvider = ({ children }) => {
       return { status: "mfa_required", factorId: totp?.id ?? null };
     }
     if (data.user) {
-      logActivity(data.user.id, "login", {});
+      recordLogin(data.user.id);
       notifyNewLogin(data.user.id);
       welcomeOnFirstLogin(data.user);
     }
@@ -653,7 +653,7 @@ export const AuthProvider = ({ children }) => {
       toast.error(msg);
       throw new Error(msg);
     }
-    logActivity(user.id, "login", {});
+    recordLogin(user.id);
     notifyNewLogin(user.id);
     toast.success("Welcome back!");
   }, []);
