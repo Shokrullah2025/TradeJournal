@@ -39,16 +39,20 @@ Deno.serve(async (req: Request) => {
       return successResponse({ customerId: existingSub.stripe_customer_id });
     }
 
-    // Fetch user profile for the customer name
+    // Resolve the customer name: prefer the profile, then fall back to the
+    // name captured in auth metadata at signup. The trigger now seeds the
+    // profile from that same metadata, but the fallback keeps the Stripe
+    // customer named even if the profile row is ever missing or blank.
     const { data: profile } = await supabase
       .from("user_profiles")
       .select("first_name, last_name")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const name = profile
-      ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
-      : "";
+    const meta = (user.user_metadata ?? {}) as Record<string, string>;
+    const firstName = (profile?.first_name || meta.first_name || "").trim();
+    const lastName = (profile?.last_name || meta.last_name || "").trim();
+    const name = `${firstName} ${lastName}`.trim();
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2024-04-10",
