@@ -124,7 +124,10 @@ const Header = ({ onMenuClick }) => {
   }, []);
 
   const profileMenuItems = [
-    { name: "Profile", href: "/profile", icon: UserCircle },
+    // Open Profile as a Settings tab (rendered beside the settings subnav),
+    // not the standalone /profile page — so it behaves like every other
+    // settings section instead of a lone full-screen page.
+    { name: "Profile", href: "/settings?tab=profile", icon: UserCircle },
     { name: "Billing", href: "/billing", icon: CreditCard },
     { name: "Sign Out", action: "logout", icon: LogOut },
   ];
