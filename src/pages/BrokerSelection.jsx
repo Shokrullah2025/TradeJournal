@@ -148,12 +148,19 @@ const BrokerSelection = () => {
   } = useBroker();
 
   const { trades, stats } = useTrades();
-  const { getFeatureState, flags } = useFeatureFlags();
+  const { getFeatureState, flags, audience } = useFeatureFlags();
   // ProjectX rollout gate: show the connect form only when the flag exists AND is
   // on for this user (admins pass). Requiring the flag object present avoids the
   // "missing flag → fail open" default un-darkening it in production.
+  //
+  // Admins are checked separately because getFeatureState() returns "hidden" as
+  // soon as the master kill-switch is off, without ever consulting the audience.
+  // feature_enabled_for() in the DB *does* let admins through before reading the
+  // switch, so without this the backend would authorize a flow the UI never shows
+  // — leaving the dark launch untestable until it is turned on for everyone.
   const projectxEnabled =
-    Boolean(flags?.projectx_broker) && getFeatureState("projectx_broker") === "on";
+    Boolean(flags?.projectx_broker) &&
+    (audience === "admin" || getFeatureState("projectx_broker") === "on");
 
   const navigate = useNavigate();
   const [view, setView] = useState("accounts"); // "accounts" | "connect"
