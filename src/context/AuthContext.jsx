@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { supabase } from "../lib/supabase";
-import { logActivity } from "../utils/logActivity";
+import { logActivity, recordLogin } from "../utils/logActivity";
 import { emitNotification } from "../utils/notifications";
 import { validateAdminUserUpdate } from "../lib/schemas/adminUser";
 import { getAal, listFactors, challengeAndVerify } from "../utils/mfa";
@@ -12,10 +12,42 @@ import { withTimeout } from "../utils/withTimeout";
 // a stalled request must never leave the app spinning forever.
 const AUTH_CALL_TIMEOUT_MS = 8000;
 
-// Fire-and-forget security notification on sign-in. Fetches the user's channel
+// Small, stable, non-reversible hash (FNV-1a 32-bit) used to key per-user local
+// flags without writing the raw user id (PII) to localStorage — CLAUDE.md §1.
+const hashId = (s) => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+};
+
+// Marks this browser as a device we've already seen for a user. A missing mark
+// means "new/unrecognized device". Wrapped in try/catch because localStorage can
+// throw in locked-down private modes.
+const KNOWN_DEVICE_PREFIX = "zt_kd_";
+const isNewDeviceForUser = (userId) => {
+  try {
+    const key = KNOWN_DEVICE_PREFIX + hashId(userId);
+    if (localStorage.getItem(key)) return false; // seen before → known device
+    localStorage.setItem(key, "1");
+    return true;
+  } catch {
+    // No durable storage — treat as new so a genuine new-device sign-in is
+    // never silently dropped. Worst case is a repeat alert in private mode.
+    return true;
+  }
+};
+
+// Fire-and-forget security notification on sign-in — but ONLY from a device this
+// browser hasn't logged this user in from before. Alerting on EVERY login (the
+// old behavior) buried the signal in noise; every major app (Google, Apple,
+// GitHub) alerts on new/unrecognized devices only. Fetches the user's channel
 // prefs so the email decision is honored, then emits. Never blocks login.
 const notifyNewLogin = (userId) => {
   if (!userId) return;
+  if (!isNewDeviceForUser(userId)) return; // familiar device — stay quiet
   supabase
     .from("user_profiles")
     .select("preferences")
@@ -29,7 +61,7 @@ const notifyNewLogin = (userId) => {
           category: "security",
           event_type: "new_login",
           title: "New sign-in to your account",
-          body: `A new sign-in was detected on ${new Date().toLocaleString()}.`,
+          body: `A sign-in from a new device or browser was detected on ${new Date().toLocaleString()}.`,
           severity: "info",
           // Informational only — no actionable destination, so it must not
           // navigate (clicking just marks it read). Only "proper" actionable
@@ -383,7 +415,7 @@ export const AuthProvider = ({ children }) => {
       return { status: "mfa_required", factorId: totp?.id ?? null };
     }
     if (data.user) {
-      logActivity(data.user.id, "login", {});
+      recordLogin(data.user.id);
       notifyNewLogin(data.user.id);
       welcomeOnFirstLogin(data.user);
     }
@@ -653,7 +685,7 @@ export const AuthProvider = ({ children }) => {
       toast.error(msg);
       throw new Error(msg);
     }
-    logActivity(user.id, "login", {});
+    recordLogin(user.id);
     notifyNewLogin(user.id);
     toast.success("Welcome back!");
   }, []);
