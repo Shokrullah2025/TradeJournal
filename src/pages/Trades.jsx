@@ -200,7 +200,11 @@ const Trades = () => {
   );
 
   return (
-    <div className="space-y-6">
+    // On large desktop screens (2xl+) the whole content column is capped
+    // slightly narrower and centered so cards don't stretch — this keeps the
+    // title, toolbar, and cards aligned to the same start/end edges.
+    // Laptop/tablet/mobile are untouched.
+    <div className="space-y-6 2xl:max-w-[90%] 2xl:mx-auto">
       {/* Page title */}
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
         ZalorTrade
