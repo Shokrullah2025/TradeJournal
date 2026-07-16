@@ -691,7 +691,10 @@ const ContactMessages = () => {
     : conversation.length;
 
   return (
-    <div className="space-y-6" data-test-id="admin-contact-page">
+    // 2xl:max-w-[90%] 2xl:mx-auto matches Dashboard, Trades, Backtest and
+    // Analytics so the page caps at the same width and centers on very wide
+    // screens instead of stretching edge to edge.
+    <div className="space-y-6 2xl:max-w-[90%] 2xl:mx-auto" data-test-id="admin-contact-page">
       <div className="flex items-center gap-3">
         <Mail className="h-6 w-6 text-primary-600 dark:text-primary-400" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
