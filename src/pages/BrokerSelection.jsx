@@ -704,19 +704,29 @@ const BrokerSelection = () => {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                      Gateway URL
-                    </label>
-                    <input
-                      type="url"
-                      value={pxBaseUrl}
-                      onChange={(e) => setPxBaseUrl(e.target.value)}
-                      placeholder="https://api.yourfirm.projectx.com"
-                      data-test-id="projectx-baseurl-input"
-                      className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                  </div>
+                  {/* Gateway URL is infrastructure, not something a trader knows or
+                      should have to care about: for a firm we ship it is derived from
+                      the picker above, so showing it only adds a field they can break.
+                      It appears for "Other" because that host is the one thing we
+                      genuinely cannot infer. */}
+                  {pxFirmId === "other" && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                        Gateway URL
+                      </label>
+                      <input
+                        type="url"
+                        value={pxBaseUrl}
+                        onChange={(e) => setPxBaseUrl(e.target.value)}
+                        placeholder="https://api.yourfirm.projectx.com"
+                        data-test-id="projectx-baseurl-input"
+                        className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Your firm’s ProjectX API host — check their docs or support.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
