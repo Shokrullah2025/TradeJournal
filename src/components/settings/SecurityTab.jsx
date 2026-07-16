@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  MapPin,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
@@ -326,7 +327,7 @@ const LoginActivitySection = () => {
         ).toISOString();
         const { data, error: queryError } = await supabase
           .from("user_activity_log")
-          .select("id, action, user_agent, created_at")
+          .select("id, action, user_agent, details, created_at")
           .eq("user_id", user.id) // defense in depth alongside RLS
           .in("action", ["login", "logout", "signout_all_devices"])
           .gte("created_at", cutoff)
@@ -377,7 +378,8 @@ const LoginActivitySection = () => {
           <h3 className="text-sm font-bold text-gray-900 dark:text-gray-300">Login activity</h3>
         </div>
         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-500">
-          Sign-ins on your account over the last {ACTIVITY_RETENTION_DAYS} days.
+          Sign-ins on your account — device and location — over the last{" "}
+          {ACTIVITY_RETENTION_DAYS} days.
         </p>
       </header>
 
@@ -406,8 +408,16 @@ const LoginActivitySection = () => {
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-300">
                     {ACTION_LABEL[row.action] || row.action}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500 truncate">
-                    {describeDevice(row.user_agent)}
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-gray-500">
+                    <span className="truncate">{describeDevice(row.user_agent)}</span>
+                    {/* Location is captured from the sign-in going forward, so
+                        older rows simply omit it. */}
+                    {row.details?.location && (
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        {row.details.location}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <time className="text-xs text-gray-400 flex-shrink-0">
