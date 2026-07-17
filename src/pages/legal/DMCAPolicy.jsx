@@ -6,11 +6,11 @@ const DMCAPolicy = () => (
   <LegalPageWrapper
     title="DMCA & Copyright Policy"
     effectiveDate="June 18, 2026"
-    lastUpdated="June 18, 2026"
+    lastUpdated="July 16, 2026"
     slug="dmca"
   >
     <p>
-      This DMCA & Copyright Policy describes how <strong>ZalorTrade</strong> ("Company," "we," "us," or "our"), handles claims of copyright infringement in connection with ZalorTrade (the "Service"), and explains your rights and obligations under the Digital Millennium Copyright Act, 17 U.S.C. § 512 (the "DMCA").
+      This DMCA & Copyright Policy describes how <strong>ZalorTrade LLC</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), handles claims of copyright infringement in connection with ZalorTrade (the "Service"), and explains your rights and obligations under the Digital Millennium Copyright Act, 17 U.S.C. § 512 (the "DMCA").
     </p>
     <p>
       We respect intellectual property rights and expect our users to do the same. This policy is incorporated into our <Link to="/terms">Terms of Service</Link>.
@@ -22,7 +22,7 @@ const DMCAPolicy = () => (
     </p>
     <div className="bg-gray-100 dark:bg-gray-800 rounded-md px-5 py-4 my-4">
       <p><strong>Copyright Agent</strong></p>
-      <p>ZalorTrade</p>
+      <p>ZalorTrade LLC</p>
       <p>Attn: DMCA Copyright Agent</p>
       <p>Email: noreply@zalortrade.com (subject line: DMCA Takedown Notice)</p>
     </div>
@@ -103,7 +103,7 @@ const DMCAPolicy = () => (
 
     <h2>7. Our Own Copyright and Intellectual Property</h2>
     <p>
-      All software code, user interface designs, icons, logos, trademarks, and other proprietary content of ZalorTrade are owned by ZalorTrade and are protected by U.S. copyright law (17 U.S.C. § 102 et seq.), trademark law, and other applicable intellectual property laws.
+      All software code, user interface designs, icons, logos, trademarks, and other proprietary content of ZalorTrade are owned by ZalorTrade LLC and are protected by U.S. copyright law (17 U.S.C. § 102 et seq.), trademark law, and other applicable intellectual property laws.
     </p>
     <p>
       You may not copy, reproduce, distribute, create derivative works from, or publicly display any portion of the Service's codebase, design, or brand elements without our prior written consent. Unauthorized use of our copyrighted material may result in civil and criminal liability under applicable law.
@@ -111,7 +111,7 @@ const DMCAPolicy = () => (
 
     <h2>8. Trademarks</h2>
     <p>
-      "ZalorTrade" and any associated logos are trademarks or service marks of ZalorTrade. Nothing in these terms or this policy grants you any right to use our trademarks, trade names, or service marks without our prior written approval. All other trademarks mentioned on the Service are the property of their respective owners.
+      "ZalorTrade" and any associated logos are trademarks or service marks of ZalorTrade LLC. Nothing in these terms or this policy grants you any right to use our trademarks, trade names, or service marks without our prior written approval. All other trademarks mentioned on the Service are the property of their respective owners.
     </p>
 
     <h2>9. Contact</h2>

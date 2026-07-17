@@ -6,11 +6,11 @@ const PrivacyPolicy = () => (
   <LegalPageWrapper
     title="Privacy Policy"
     effectiveDate="June 18, 2026"
-    lastUpdated="June 18, 2026"
+    lastUpdated="July 16, 2026"
     slug="privacy"
   >
     <p>
-      This Privacy Policy describes how <strong>ZalorTrade</strong> ("Company," "we," "us," or "our") collects, uses, stores, and shares personal information when you use ZalorTrade (the "Service").
+      This Privacy Policy describes how <strong>ZalorTrade LLC</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), collects, uses, stores, and shares personal information when you use ZalorTrade (the "Service").
     </p>
     <p>
       This policy is aligned with the <strong>Colorado Privacy Act (CPA)</strong> (C.R.S. § 24-73-101 et seq., effective July 1, 2023), the <strong>California Consumer Privacy Act (CCPA)</strong> and <strong>California Privacy Rights Act (CPRA)</strong> (Cal. Civ. Code § 1798.100 et seq.), and includes <strong>GDPR-readiness provisions</strong> for users in the European Economic Area (EEA) and United Kingdom. By using the Service, you acknowledge the collection and use of information as described in this policy.
@@ -18,7 +18,7 @@ const PrivacyPolicy = () => (
 
     <h2>1. Data Controller Identity</h2>
     <p>
-      For users in the EEA/UK: ZalorTrade is the data controller of your personal data. Our Data Protection contact is <strong>noreply@zalortrade.com</strong>. We do not have a designated EU/UK representative at this time; for GDPR matters, please contact us directly.
+      The data controller of your personal data is <strong>ZalorTrade LLC</strong>, a limited liability company organized under the laws of the State of Colorado, United States. Our Data Protection contact is <strong>noreply@zalortrade.com</strong>. We do not have a designated EU/UK representative at this time; for GDPR matters, please contact us directly.
     </p>
 
     <h2>2. Categories of Personal Data We Collect</h2>
@@ -290,7 +290,7 @@ const PrivacyPolicy = () => (
     <p>For any privacy questions, access requests, or data deletion requests:</p>
     <ul>
       <li><strong>Email:</strong> noreply@zalortrade.com</li>
-      <li><strong>Company:</strong> ZalorTrade</li>
+      <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
     <p>
       We will acknowledge your request within 5 business days and respond substantively within the timeframes required by applicable law.

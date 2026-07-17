@@ -6,11 +6,11 @@ const RefundPolicy = () => (
   <LegalPageWrapper
     title="Refund & Billing Policy"
     effectiveDate="June 18, 2026"
-    lastUpdated="June 18, 2026"
+    lastUpdated="July 16, 2026"
     slug="refund"
   >
     <p>
-      This Refund & Billing Policy governs all payment, subscription, and billing matters for ZalorTrade, operated by <strong>ZalorTrade</strong>. This policy is incorporated by reference into our <Link to="/terms">Terms of Service</Link>.
+      This Refund & Billing Policy governs all payment, subscription, and billing matters for ZalorTrade, operated by <strong>ZalorTrade LLC</strong>, a Colorado limited liability company. This policy is incorporated by reference into our <Link to="/terms">Terms of Service</Link>.
     </p>
     <p>
       This policy complies with the FTC's Negative Option Rule (16 C.F.R. Part 425) and applicable state automatic-renewal laws, including California automatic renewal law (Cal. Bus. & Prof. Code § 17600 et seq.) for California subscribers.
@@ -139,7 +139,7 @@ const RefundPolicy = () => (
     </p>
     <ul>
       <li><strong>Email:</strong> noreply@zalortrade.com</li>
-      <li><strong>Company:</strong> ZalorTrade</li>
+      <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
     <p>We aim to respond to billing inquiries within 2 business days.</p>
   </LegalPageWrapper>
