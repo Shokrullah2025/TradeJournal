@@ -6,11 +6,11 @@ const CookiePolicy = () => (
   <LegalPageWrapper
     title="Cookie Policy"
     effectiveDate="June 18, 2026"
-    lastUpdated="June 18, 2026"
+    lastUpdated="July 16, 2026"
     slug="cookies"
   >
     <p>
-      This Cookie Policy explains how <strong>ZalorTrade</strong> ("Company," "we," "us," or "our") uses cookies and similar browser storage technologies on ZalorTrade (the "Service"). It should be read alongside our <Link to="/privacy">Privacy Policy</Link>.
+      This Cookie Policy explains how <strong>ZalorTrade LLC</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), uses cookies and similar browser storage technologies on ZalorTrade (the "Service"). It should be read alongside our <Link to="/privacy">Privacy Policy</Link>.
     </p>
 
     <h2>1. What Are Cookies?</h2>
@@ -131,8 +131,8 @@ const CookiePolicy = () => (
     <h2>7. Contact</h2>
     <p>Questions about our use of cookies? Contact us:</p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
-      <li><strong>Company:</strong> ZalorTrade</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
+      <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
   </LegalPageWrapper>
 );

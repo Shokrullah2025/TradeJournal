@@ -6,11 +6,11 @@ const AcceptableUsePolicy = () => (
   <LegalPageWrapper
     title="Acceptable Use Policy"
     effectiveDate="June 18, 2026"
-    lastUpdated="June 18, 2026"
+    lastUpdated="July 16, 2026"
     slug="aup"
   >
     <p>
-      This Acceptable Use Policy ("AUP") governs your use of ZalorTrade (the "Service") operated by <strong>ZalorTrade</strong>. This AUP is incorporated by reference into our <Link to="/terms">Terms of Service</Link> and is part of the binding agreement between you and the Company.
+      This Acceptable Use Policy ("AUP") governs your use of ZalorTrade (the "Service") operated by <strong>ZalorTrade LLC</strong>, a Colorado limited liability company. This AUP is incorporated by reference into our <Link to="/terms">Terms of Service</Link> and is part of the binding agreement between you and the Company.
     </p>
     <p>
       The purpose of this AUP is to protect the security, integrity, and availability of the Service for all users, and to ensure the Service is not used for unlawful or harmful purposes.
@@ -83,7 +83,7 @@ const AcceptableUsePolicy = () => (
     <ul>
       <li>Use a strong, unique password for your ZalorTrade account;</li>
       <li>Not share your password or authentication tokens with any third party;</li>
-      <li>Promptly notify us at <strong>noreply@zalortrade.com</strong> if you discover or suspect any unauthorized access to or use of your account;</li>
+      <li>Promptly notify us at <strong>support@zalortrade.com</strong> if you discover or suspect any unauthorized access to or use of your account;</li>
       <li>Log out of your account when using shared or public devices.</li>
     </ul>
 
@@ -126,7 +126,7 @@ const AcceptableUsePolicy = () => (
       If you become aware of any use of the Service that violates this AUP, please report it to us at:
     </p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
       <li><strong>Subject line:</strong> AUP Violation Report</li>
     </ul>
     <p>We take all reports seriously and will investigate promptly.</p>
@@ -138,8 +138,8 @@ const AcceptableUsePolicy = () => (
 
     <h2>9. Contact</h2>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
-      <li><strong>Company:</strong> ZalorTrade</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
+      <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
   </LegalPageWrapper>
 );

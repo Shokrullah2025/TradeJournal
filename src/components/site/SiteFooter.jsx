@@ -66,8 +66,8 @@ const SiteFooter = () => {
 
         <div className="mt-12 flex flex-col gap-3 border-t border-accent-100 pt-6 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[13px] text-gray-500 dark:text-gray-400">
-            © {year} ZalorTrade. Trading involves risk. Past performance is not
-            indicative of future results.
+            © {year} ZalorTrade LLC. All rights reserved. Trading involves
+            risk. Past performance is not indicative of future results.
           </p>
           <div
             data-test-id="site-footer-legal-links"
