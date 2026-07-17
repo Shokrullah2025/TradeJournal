@@ -1024,7 +1024,12 @@ const Settings = () => {
   return (
     // Redesigned shell: page heading, then a 272px card subnav beside the
     // content on desktop; on mobile the subnav becomes a horizontal chip row.
-    <div className="p-4 lg:pl-7 lg:pr-8 lg:pt-3 lg:pb-10">
+    //
+    // No padding here: the route shell in App.jsx already wraps every page in
+    // p-4 sm:p-6. Padding this root too stacked a second layer on top, which is
+    // why Settings alone sat further from the top and left than every other
+    // page. Every other page root is bare for the same reason.
+    <div>
       <div>
         <h1 className="text-[22px] font-bold tracking-tight text-gray-900 lg:text-[28px] dark:text-gray-300">
           Settings
