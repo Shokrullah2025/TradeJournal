@@ -1029,7 +1029,13 @@ const Settings = () => {
     // p-4 sm:p-6. Padding this root too stacked a second layer on top, which is
     // why Settings alone sat further from the top and left than every other
     // page. Every other page root is bare for the same reason.
-    <div>
+    //
+    // 2xl:max-w-[90%] 2xl:mx-auto is what every other page uses to pull its
+    // left edge in by 5% on very wide screens. Settings needs it purely to line
+    // its left edge up with theirs — it does NOT widen anything here, because
+    // the subnav is a fixed 272px and the panels are capped at max-w-3xl, so
+    // the extra room can only move the content, never stretch it.
+    <div className="2xl:max-w-[90%] 2xl:mx-auto">
       <div>
         <h1 className="text-[22px] font-bold tracking-tight text-gray-900 lg:text-[28px] dark:text-gray-300">
           Settings
