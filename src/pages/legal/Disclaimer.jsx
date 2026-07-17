@@ -6,7 +6,7 @@ const Disclaimer = () => (
   <LegalPageWrapper
     title="Financial & Risk Disclaimer"
     effectiveDate="June 18, 2026"
-    lastUpdated="June 18, 2026"
+    lastUpdated="July 16, 2026"
     slug="disclaimer"
   >
     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg px-5 py-4 mb-6">
@@ -112,7 +112,7 @@ const Disclaimer = () => (
 
     <h2>10. Regulatory Information</h2>
     <p>
-      ZalorTrade operates as a software-as-a-service (SaaS) application providing recordkeeping and analytics functionality. It is <strong>not</strong> a broker-dealer, exchange, alternative trading system (ATS), or financial data vendor as defined by the SEC. No securities transactions occur on this platform.
+      ZalorTrade is owned and operated by <strong>ZalorTrade LLC</strong>, a Colorado limited liability company, and operates as a software-as-a-service (SaaS) application providing recordkeeping and analytics functionality. It is <strong>not</strong> a broker-dealer, exchange, alternative trading system (ATS), or financial data vendor as defined by the SEC. No securities transactions occur on this platform.
     </p>
 
     <h2>11. Limitation of Liability</h2>
@@ -122,7 +122,7 @@ const Disclaimer = () => (
 
     <h2>12. Questions</h2>
     <p>
-      If you have questions about this disclaimer, contact us at <strong>noreply@zalortrade.com</strong>.
+      If you have questions about this disclaimer, contact us at <strong>support@zalortrade.com</strong>. This disclaimer is provided by ZalorTrade LLC, a Colorado limited liability company (United States).
     </p>
   </LegalPageWrapper>
 );

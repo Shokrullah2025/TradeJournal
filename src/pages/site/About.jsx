@@ -1,5 +1,6 @@
 import React from "react";
-import { Target, Eye, HeartHandshake, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Target, Eye, HeartHandshake, ShieldCheck, Building2 } from "lucide-react";
 import Seo from "../../components/seo/Seo";
 import SectionHeading from "../../components/site/SectionHeading";
 import CTASection from "../../components/site/CTASection";
@@ -39,7 +40,7 @@ const About = () => (
   <div data-test-id="site-about-page">
     <Seo
       title="About"
-      description="ZalorTrade is built by traders, for traders — to make keeping a disciplined trading journal effortless and turn your record into a measurable edge."
+      description="ZalorTrade is built by traders, for traders — operated by ZalorTrade LLC (Colorado, USA) to turn your trading record into a measurable edge."
       path="/about"
     />
     {/* Header */}
@@ -127,6 +128,73 @@ const About = () => (
               </p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+
+    {/* Company / legal entity */}
+    <section
+      data-test-id="about-company-section"
+      className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24"
+    >
+      <div className="grid items-center gap-12 lg:grid-cols-2">
+        <div>
+          <SectionHeading
+            align="left"
+            eyebrow="The company"
+            title="Independent and built to last"
+            subtitle="ZalorTrade is a real, registered business — not a side project that disappears next year."
+          />
+          <p className="mt-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            ZalorTrade is owned and operated by{" "}
+            <strong className="font-semibold text-gray-900 dark:text-gray-100">
+              ZalorTrade LLC
+            </strong>
+            , a limited liability company registered in the State of Colorado,
+            United States. We are independent and self-funded, which means our
+            only customer is you — we don't sell your data, run ads, or answer
+            to anyone whose interests conflict with yours.
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            Questions about the company, partnerships, or press? Reach out
+            through our <Link to="/contact" className="font-medium text-accent-600 hover:text-accent-700 dark:text-accent-400">contact page</Link>{" "}
+            — a real person reads every message.
+          </p>
+        </div>
+
+        <div
+          data-test-id="about-company-card"
+          className="rounded-2xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800"
+        >
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-accent-100 text-accent-600 dark:bg-accent-900/30 dark:text-accent-400">
+            <Building2 className="h-6 w-6" />
+          </span>
+          <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Company details
+          </h3>
+          <dl className="mt-4 space-y-3 text-sm">
+            {[
+              ["Legal name", "ZalorTrade LLC"],
+              ["Entity type", "Limited liability company"],
+              ["Registered in", "Colorado, United States"],
+              ["Product", "ZalorTrade — trading journal & analytics"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4">
+                <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
+                <dd className="font-medium text-gray-900 dark:text-gray-100 sm:text-right">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-6 border-t border-gray-100 pt-4 text-xs leading-relaxed text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            ZalorTrade LLC is not a broker-dealer or registered investment
+            adviser and does not provide financial advice. See our{" "}
+            <Link to="/disclaimer" className="underline hover:text-accent-600 dark:hover:text-accent-400">
+              full disclaimer
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </section>
