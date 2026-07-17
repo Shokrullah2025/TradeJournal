@@ -21,21 +21,6 @@ import CsvImportModal from "../components/trades/CsvImportModal";
 import TradovateSetupStatus from "../components/trades/TradovateSetupStatus";
 import { BROKER_PROVIDERS } from "../lib/brokers/providers";
 
-const COMING_SOON_BROKERS = [
-  "Rithmic",
-  "NinjaTrader",
-  "Interactive Brokers",
-  "MT5",
-  "TradeLocker",
-  "DXTrade",
-  "Oanda",
-  "Binance",
-  "ThinkorSwim",
-  "Schwab",
-  "AMP",
-  "EdgeClear",
-];
-
 const BROKER_LABELS = { projectx: "ProjectX", tradovate: "Tradovate" };
 
 // Short relative time label, e.g. "2m ago", "1h ago", "3d ago".
@@ -101,8 +86,10 @@ const BrokerHub = () => {
   const [brokerSearch, setBrokerSearch] = useState("");
   const availableRef = useRef(null);
 
+  // Coming-soon platforms always show (their button is disabled); connectable
+  // ones stay behind their rollout flag.
   const connectable = useMemo(
-    () => BROKER_PROVIDERS.filter((b) => !b.requiresFlag || projectxEnabled),
+    () => BROKER_PROVIDERS.filter((b) => b.comingSoon || !b.requiresFlag || projectxEnabled),
     [projectxEnabled],
   );
 
@@ -327,9 +314,19 @@ const BrokerHub = () => {
             {visibleBrokers.map((broker) => (
               <div
                 key={broker.key}
-                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col hover:border-gray-300 dark:hover:border-gray-700 hover:-translate-y-0.5 transition-all"
+                className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col transition-all ${
+                  broker.comingSoon
+                    ? ""
+                    : "hover:border-gray-300 dark:hover:border-gray-700 hover:-translate-y-0.5"
+                }`}
                 data-test-id={`broker-card-${broker.key}`}
               >
+                {broker.comingSoon && (
+                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide border bg-amber-500/10 text-amber-500 border-amber-500/30">
+                    COMING SOON
+                  </span>
+                )}
+
                 <div className="flex items-center gap-3 mb-4">
                   <div
                     className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-base border shrink-0 ${broker.badge}`}
@@ -354,12 +351,17 @@ const BrokerHub = () => {
                 </div>
 
                 <button
-                  onClick={() => openWizard(broker)}
-                  className="mt-auto w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold rounded-xl btn-gradient"
+                  onClick={() => !broker.comingSoon && openWizard(broker)}
+                  disabled={broker.comingSoon}
+                  className={`mt-auto w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold rounded-xl transition-colors ${
+                    broker.comingSoon
+                      ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                      : "btn-gradient"
+                  }`}
                   data-test-id={`broker-connect-${broker.key}-btn`}
                 >
-                  Connect
-                  <ChevronRight className="w-4 h-4" />
+                  {broker.comingSoon ? "Coming soon" : "Connect"}
+                  {!broker.comingSoon && <ChevronRight className="w-4 h-4" />}
                 </button>
               </div>
             ))}
@@ -400,29 +402,6 @@ const BrokerHub = () => {
             Import CSV
           </button>
         </div>
-
-        {/* Coming soon */}
-        <section className="space-y-4">
-          <div className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-            Coming soon
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {COMING_SOON_BROKERS.map((name) => (
-              <div
-                key={name}
-                className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-4 py-3.5 text-center"
-                data-test-id={`coming-soon-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-              >
-                <div className="text-sm font-bold text-gray-400 dark:text-gray-500 truncate">
-                  {name}
-                </div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-300 dark:text-gray-600 mt-0.5">
-                  Coming soon
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* Developer setup — collapsible */}
         <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">

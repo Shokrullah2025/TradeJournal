@@ -271,16 +271,29 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
       ? selectedFirm.name
       : null;
 
-  const visibleFirms = useMemo(() => {
-    if (!hasFirms) return [];
+  // Default view: the top firms only (popular first, capped), like a bank
+  // picker — the search reaches the full catalog. A search with no hits shows
+  // an explicit "no results" state instead of a silently shorter list; the
+  // custom "My firm isn't listed" escape hatch always stays available last.
+  const DEFAULT_FIRM_COUNT = 8;
+  const { visibleFirms, noFirmMatches } = useMemo(() => {
+    if (!hasFirms) return { visibleFirms: [], noFirmMatches: false };
+    const custom = broker.firms.filter((f) => f.custom);
+    const real = broker.firms.filter((f) => !f.custom);
     const q = firmSearch.trim().toLowerCase();
-    const firms = q
-      ? broker.firms.filter((f) => f.name.toLowerCase().includes(q) || f.custom)
-      : broker.firms;
-    // Popular firms float to the top; the custom escape hatch stays last.
-    return [...firms].sort(
-      (a, b) => (a.custom ? 1 : b.custom ? -1 : (b.popular ? 1 : 0) - (a.popular ? 1 : 0)),
-    );
+
+    if (!q) {
+      const sorted = [...real].sort(
+        (a, b) => (b.popular ? 1 : 0) - (a.popular ? 1 : 0),
+      );
+      return {
+        visibleFirms: [...sorted.slice(0, DEFAULT_FIRM_COUNT), ...custom],
+        noFirmMatches: false,
+      };
+    }
+
+    const matches = real.filter((f) => f.name.toLowerCase().includes(q));
+    return { visibleFirms: [...matches, ...custom], noFirmMatches: matches.length === 0 };
   }, [broker.firms, hasFirms, firmSearch]);
 
   const chooseFirm = (firm) => {
@@ -525,6 +538,17 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
                   data-test-id="wizard-firm-search-input"
                 />
               </div>
+
+              {noFirmMatches && (
+                <p
+                  className="mb-3 text-sm font-medium text-gray-500 dark:text-gray-400"
+                  data-test-id="wizard-firm-search-empty"
+                >
+                  No prop firms named “{firmSearch.trim()}” run on {broker.name}.
+                  If you're sure yours does, connect it below with the gateway
+                  address from its documentation.
+                </p>
+              )}
 
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1" data-test-id="wizard-firm-list">
                 {visibleFirms.map((firm) => (
