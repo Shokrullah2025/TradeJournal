@@ -19,62 +19,7 @@ import ConnectWizard from "../components/brokers/ConnectWizard";
 import ManageAccountPanel from "../components/brokers/ManageAccountPanel";
 import CsvImportModal from "../components/trades/CsvImportModal";
 import TradovateSetupStatus from "../components/trades/TradovateSetupStatus";
-
-// ── Broker catalog ───────────────────────────────────────────────────────────
-// Connectable brokers. ProjectX firms carry their gateway host; "other" firms let
-// the user paste the host their firm documents. Class strings are written out in
-// full so Tailwind's JIT detects them.
-
-const AVAILABLE_BROKERS = [
-  {
-    id: "topstep",
-    key: "projectx",
-    name: "Topstep",
-    firmName: "Topstep",
-    baseUrl: "https://api.topstepx.com",
-    subtitle: "Futures prop firm · via ProjectX",
-    initials: "TS",
-    badge: "bg-violet-500/10 text-violet-500 border-violet-500/30",
-    rating: 5,
-    requiresFlag: true,
-  },
-  {
-    id: "thefuturesdesk",
-    key: "projectx",
-    name: "The Futures Desk",
-    firmName: "The Futures Desk",
-    baseUrl: "https://api.thefuturesdesk.projectx.com",
-    subtitle: "Futures prop firm · via ProjectX",
-    initials: "FD",
-    badge: "bg-cyan-500/10 text-cyan-500 border-cyan-500/30",
-    rating: 5,
-    requiresFlag: true,
-  },
-  {
-    id: "projectx-other",
-    key: "projectx",
-    name: "Other ProjectX firm",
-    firmName: null,
-    baseUrl: "",
-    needsBaseUrl: true,
-    subtitle: "Apex, MyFundedFutures & 19+ firms",
-    initials: "PX",
-    badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
-    rating: 5,
-    requiresFlag: true,
-  },
-  {
-    id: "tradovate",
-    key: "tradovate",
-    name: "Tradovate",
-    firmName: null,
-    subtitle: "Personal funded accounts · OAuth",
-    initials: "T",
-    badge: "bg-amber-500/10 text-amber-500 border-amber-500/30",
-    rating: 4,
-    requiresFlag: false,
-  },
-];
+import { BROKER_PROVIDERS } from "../lib/brokers/providers";
 
 const COMING_SOON_BROKERS = [
   "Rithmic",
@@ -157,15 +102,20 @@ const BrokerHub = () => {
   const availableRef = useRef(null);
 
   const connectable = useMemo(
-    () => AVAILABLE_BROKERS.filter((b) => !b.requiresFlag || projectxEnabled),
+    () => BROKER_PROVIDERS.filter((b) => !b.requiresFlag || projectxEnabled),
     [projectxEnabled],
   );
 
+  // Search matches the platform itself OR any prop firm it hosts, so typing
+  // "apex" surfaces Tradovate and "topstep" surfaces ProjectX.
   const visibleBrokers = useMemo(() => {
     const q = brokerSearch.trim().toLowerCase();
     if (!q) return connectable;
     return connectable.filter(
-      (b) => b.name.toLowerCase().includes(q) || b.subtitle.toLowerCase().includes(q),
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        b.subtitle.toLowerCase().includes(q) ||
+        (b.firms ?? []).some((f) => f.name.toLowerCase().includes(q)),
     );
   }, [connectable, brokerSearch]);
 
@@ -376,9 +326,9 @@ const BrokerHub = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {visibleBrokers.map((broker) => (
               <div
-                key={broker.id}
+                key={broker.key}
                 className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 flex flex-col hover:border-gray-300 dark:hover:border-gray-700 hover:-translate-y-0.5 transition-all"
-                data-test-id={`broker-card-${broker.id}`}
+                data-test-id={`broker-card-${broker.key}`}
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div
@@ -406,7 +356,7 @@ const BrokerHub = () => {
                 <button
                   onClick={() => openWizard(broker)}
                   className="mt-auto w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold rounded-xl btn-gradient"
-                  data-test-id={`broker-connect-${broker.id}-btn`}
+                  data-test-id={`broker-connect-${broker.key}-btn`}
                 >
                   Connect
                   <ChevronRight className="w-4 h-4" />
@@ -516,11 +466,7 @@ const BrokerHub = () => {
           account={manageAccount}
           onClose={() => setManageAccountId(null)}
           onReconnect={() => {
-            const broker = AVAILABLE_BROKERS.find(
-              (b) =>
-                b.key === manageAccount.broker &&
-                (b.firmName == null || b.firmName === manageAccount.propFirm),
-            ) ?? AVAILABLE_BROKERS.find((b) => b.key === manageAccount.broker);
+            const broker = BROKER_PROVIDERS.find((b) => b.key === manageAccount.broker);
             setManageAccountId(null);
             if (broker) setWizardBroker(broker);
           }}

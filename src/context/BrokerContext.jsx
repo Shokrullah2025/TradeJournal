@@ -666,6 +666,26 @@ export const BrokerProvider = ({ children }) => {
 
   // ── Broker Hub wizard (two-phase connect + per-account sync) ─────────────────
 
+  // supabase-js reports ANY non-2xx Edge Function response as a generic
+  // FunctionsHttpError ("Edge Function returned a non-2xx status code") and
+  // tucks the actual response away in error.context. Our functions always return
+  // { success: false, error: "<human reason>" } — read that back so the user
+  // sees WHY it failed, not the transport error.
+  const functionErrorMessage = async (error, fallback) => {
+    try {
+      if (error?.context && typeof error.context.json === "function") {
+        const body = await error.context.json();
+        if (body?.error) return body.error;
+      }
+    } catch {
+      // Response body wasn't JSON — fall through to the generic message.
+    }
+    if (error?.message && !/non-2xx status code/i.test(error.message)) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   // Map a trading_accounts row to the account shape used across the hub UI.
   const mapAccountRow = (row) => ({
     id: row.id,
@@ -738,7 +758,7 @@ export const BrokerProvider = ({ children }) => {
       },
     });
 
-    if (error) throw new Error(error.message || "Failed to connect");
+    if (error) throw new Error(await functionErrorMessage(error, "Failed to connect"));
     if (!data?.success) throw new Error(data?.error || "Failed to connect");
     return data.data.accounts ?? [];
   };
@@ -756,7 +776,7 @@ export const BrokerProvider = ({ children }) => {
       },
     });
 
-    if (error) throw new Error(error.message || "Failed to save accounts");
+    if (error) throw new Error(await functionErrorMessage(error, "Failed to save accounts"));
     if (!data?.success) throw new Error(data?.error || "Failed to save accounts");
 
     await loadConnections();
@@ -770,7 +790,7 @@ export const BrokerProvider = ({ children }) => {
       body: { broker: brokerKey, accountId, fromDate },
     });
 
-    if (error) throw new Error(error.message || "Sync failed");
+    if (error) throw new Error(await functionErrorMessage(error, "Sync failed"));
     if (!data?.success) throw new Error(data?.error || "Sync failed");
 
     setState((prev) => ({ ...prev, syncStatus: "success", lastSync: new Date() }));

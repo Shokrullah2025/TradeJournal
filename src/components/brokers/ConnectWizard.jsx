@@ -15,6 +15,8 @@ import {
   AlertCircle,
   RefreshCw,
   ExternalLink,
+  Search,
+  ChevronRight,
 } from "lucide-react";
 import { useBroker } from "../../context/BrokerContext";
 
@@ -61,6 +63,113 @@ const rangeToFromDate = (rangeId) => {
 
 const inputClass =
   "w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent";
+
+// Translate a raw failure (server error body, network error, …) into copy a
+// non-technical trader can act on: what happened + concrete next steps.
+const describeConnectError = (raw, firmLabel) => {
+  const msg = (raw || "").toLowerCase();
+
+  if (/authentication failed|api key|username|credential|loginkey/.test(msg)) {
+    return {
+      title: `${firmLabel} didn't accept those credentials`,
+      body: "The username or API key doesn't match what your firm has on file. This is almost always a copy/paste issue — nothing is broken on your end.",
+      hints: [
+        "Open your firm's dashboard and copy the API key again — expired or regenerated keys stop working immediately.",
+        "Use your platform username, not your email address (unless your firm tells you to sign in with email).",
+        "Double-check you picked the right firm — each firm has its own login server.",
+      ],
+    };
+  }
+  if (/isn't included in your|plan/.test(msg)) {
+    return {
+      title: "Broker connections aren't in your current plan",
+      body: "Automatic broker sync is an Elite feature. Upgrade your plan from the Billing page to connect your accounts.",
+      hints: [],
+    };
+  }
+  if (/aren't available yet|not available yet/.test(msg)) {
+    return {
+      title: "This connection isn't open yet",
+      body: "We're still rolling this integration out. Your credentials weren't checked — please try again once it launches.",
+      hints: [],
+    };
+  }
+  if (/no active accounts/.test(msg)) {
+    return {
+      title: "Signed in, but no accounts were found",
+      body: `${firmLabel} accepted your credentials but returned no active accounts to import.`,
+      hints: [
+        "Make sure your evaluation or funded account is active (not expired or breached).",
+        "If you selected Funded, try Evaluation — or the other way round.",
+      ],
+    };
+  }
+  if (/gateway url|must be https|invalid.*url/.test(msg)) {
+    return {
+      title: "That gateway address doesn't look right",
+      body: "The gateway URL must start with https:// and match the API host from your firm's documentation.",
+      hints: ["Search your firm's help center for “API” or “ProjectX gateway” to find the exact address."],
+    };
+  }
+  if (/must be logged in|invalid or expired session/.test(msg)) {
+    return {
+      title: "Your ZalorTrade session expired",
+      body: "You've been signed out. Refresh the page, sign back in, and try connecting again.",
+      hints: [],
+    };
+  }
+  if (/couldn't load your accounts|failed to fetch|network|502|unavailable/.test(msg)) {
+    return {
+      title: `We couldn't reach ${firmLabel}`,
+      body: "Their servers didn't respond. This is usually temporary — your credentials weren't rejected.",
+      hints: ["Wait a minute and try again.", "If it keeps happening, check your firm's status page."],
+    };
+  }
+  return {
+    title: "We couldn't complete the connection",
+    body:
+      raw && !/non-2xx/i.test(raw)
+        ? raw
+        : "Something unexpected went wrong on our side. Please try again in a moment.",
+    hints: [],
+  };
+};
+
+// Shared error panel: headline, plain-English explanation, and action hints.
+const ErrorPanel = ({ raw, firmLabel, testId }) => {
+  const { title, body, hints } = describeConnectError(raw, firmLabel);
+  return (
+    <div
+      className="p-4 mb-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+      data-test-id={testId}
+    >
+      <div className="flex items-center gap-2 text-sm font-bold text-red-700 dark:text-red-300 mb-1">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        {title}
+      </div>
+      <p className="text-sm text-red-700/90 dark:text-red-400 leading-relaxed">{body}</p>
+      {hints.length > 0 && (
+        <ul className="mt-2.5 space-y-1.5">
+          {hints.map((hint) => (
+            <li
+              key={hint}
+              className="flex items-start gap-2 text-xs font-medium text-red-600/90 dark:text-red-400/90"
+            >
+              <span className="mt-1 w-1 h-1 rounded-full bg-red-400 shrink-0" />
+              {hint}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+ErrorPanel.propTypes = {
+  raw: PropTypes.string,
+  firmLabel: PropTypes.string.isRequired,
+  testId: PropTypes.string,
+};
 
 // Reveals one checklist row at a time (Plaid-style) while `done` is false; when
 // `done` flips true every row completes at once so the wizard can advance.
@@ -122,11 +231,12 @@ StagedChecklist.propTypes = {
 
 /**
  * Full-screen Plaid-style connect flow:
- * security → login → verifying → accounts (+nicknames) → import range →
- * importing → success.
+ * firm (when the platform hosts prop firms) → security → login → verifying →
+ * accounts (+nicknames) → import range → importing → success.
  *
- * `broker` describes what was picked on the hub:
- *   { key: "projectx"|"tradovate", name, firmId, firmName, baseUrl, needsBaseUrl }
+ * `broker` is a platform descriptor from src/lib/brokers/providers.js:
+ *   { key: "projectx"|"tradovate", name, authType, firms: [{ id, name,
+ *     baseUrl?, verified?, custom?, personal?, initials, badge }] }
  */
 const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
   const {
@@ -137,14 +247,48 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
     loadConnections,
   } = useBroker();
 
-  const [step, setStep] = useState("security");
+  const hasFirms = Array.isArray(broker.firms) && broker.firms.length > 0;
+  const [step, setStep] = useState(hasFirms ? "firm" : "security");
   const [error, setError] = useState(null);
+
+  // Prop-firm choice (platforms host many firms; the user picks theirs first)
+  const [selectedFirm, setSelectedFirm] = useState(null);
+  const [firmSearch, setFirmSearch] = useState("");
 
   // Login form
   const [userName, setUserName] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState(broker.baseUrl ?? "");
+  const [baseUrl, setBaseUrl] = useState("");
   const [accountType, setAccountType] = useState("demo");
+
+  // What we call the connection in copy: the firm when one is chosen, else the
+  // platform ("My firm isn't listed" reads better as the platform name).
+  const firmLabel =
+    selectedFirm && !selectedFirm.custom ? selectedFirm.name : broker.name;
+  // The label stored on accounts — never a placeholder like "isn't listed".
+  const propFirmLabel =
+    selectedFirm && !selectedFirm.custom && !selectedFirm.personal
+      ? selectedFirm.name
+      : null;
+
+  const visibleFirms = useMemo(() => {
+    if (!hasFirms) return [];
+    const q = firmSearch.trim().toLowerCase();
+    const firms = q
+      ? broker.firms.filter((f) => f.name.toLowerCase().includes(q) || f.custom)
+      : broker.firms;
+    // Popular firms float to the top; the custom escape hatch stays last.
+    return [...firms].sort(
+      (a, b) => (a.custom ? 1 : b.custom ? -1 : (b.popular ? 1 : 0) - (a.popular ? 1 : 0)),
+    );
+  }, [broker.firms, hasFirms, firmSearch]);
+
+  const chooseFirm = (firm) => {
+    setSelectedFirm(firm);
+    setBaseUrl(firm.baseUrl ?? "");
+    setError(null);
+    setStep("security");
+  };
 
   // Discovered accounts: [{ id, name, balance, propFirm, selected, nickname }]
   const [found, setFound] = useState([]);
@@ -191,7 +335,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
         // OAuth popup — Tradovate returns a single account via the legacy path.
         const ok = await connectBroker("tradovate", {
           accountType,
-          propFirm: broker.firmName ?? null,
+          propFirm: propFirmLabel,
         });
         if (!ok) throw new Error("Tradovate sign-in was cancelled or failed.");
         if (!mountedRef.current) return;
@@ -202,7 +346,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
       }
 
       const accounts = await discoverBrokerAccounts("projectx", {
-        firmId: broker.firmId ?? null,
+        firmId: selectedFirm?.id ?? null,
         baseUrl: baseUrl.trim(),
         userName: userName.trim(),
         apiKey: apiKey.trim(),
@@ -258,7 +402,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
       // Create only the selected accounts, with their nicknames.
       const created = await activateBrokerAccounts("projectx", {
         accountType,
-        propFirm: broker.firmName ?? null,
+        propFirm: propFirmLabel,
         accounts: selectedAccounts.map((a) => ({
           externalId: a.id,
           name: a.name,
@@ -302,10 +446,18 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
   // ── Shared chrome ───────────────────────────────────────────────────────────
 
   const busy = step === "verifying" || step === "importing";
-  const stepOrder = ["security", "login", "verifying", "accounts", "import", "importing", "success"];
+  const stepOrder = [
+    ...(hasFirms ? ["firm"] : []),
+    "security", "login", "verifying", "accounts", "import", "importing", "success",
+  ];
   const progressPct = ((stepOrder.indexOf(step) + 1) / stepOrder.length) * 100;
 
-  const backTargets = { login: "security", accounts: "login", import: "accounts" };
+  const backTargets = {
+    security: hasFirms ? "firm" : undefined,
+    login: "security",
+    accounts: "login",
+    import: "accounts",
+  };
 
   return (
     <div
@@ -326,7 +478,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
             </button>
           ) : (
             <span className="text-sm font-bold text-gray-900 dark:text-gray-50">
-              {broker.firmName || broker.name}
+              {firmLabel}
             </span>
           )}
           {!busy && (
@@ -350,6 +502,67 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
         </div>
 
         <div className="px-5 sm:px-6 py-6">
+          {/* ── STEP: Choose prop firm ─────────────────────────────────── */}
+          {step === "firm" && (
+            <div data-test-id="wizard-step-firm">
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50 mb-1.5">
+                Who is your prop firm?
+              </h2>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-5">
+                {broker.name} powers many firms — pick yours so we connect to the
+                right servers.
+              </p>
+
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  value={firmSearch}
+                  onChange={(e) => setFirmSearch(e.target.value)}
+                  placeholder="Search firms…"
+                  autoFocus
+                  className={`${inputClass} pl-10`}
+                  data-test-id="wizard-firm-search-input"
+                />
+              </div>
+
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1" data-test-id="wizard-firm-list">
+                {visibleFirms.map((firm) => (
+                  <button
+                    key={firm.id}
+                    onClick={() => chooseFirm(firm)}
+                    className="w-full flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 text-left hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-colors"
+                    data-test-id={`wizard-firm-${firm.id}-btn`}
+                  >
+                    <span
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm border shrink-0 ${firm.badge}`}
+                    >
+                      {firm.initials}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-gray-900 dark:text-gray-50 truncate">
+                          {firm.name}
+                        </span>
+                        {firm.popular && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
+                            POPULAR
+                          </span>
+                        )}
+                      </span>
+                      {firm.custom && (
+                        <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+                          Connect with your firm's gateway address
+                        </span>
+                      )}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── STEP: Security ─────────────────────────────────────────── */}
           {step === "security" && (
             <div data-test-id="wizard-step-security">
@@ -390,7 +603,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
           {step === "login" && (
             <div data-test-id="wizard-step-login">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50 mb-1.5">
-                Sign in to {broker.firmName || broker.name}
+                Sign in to {firmLabel}
               </h2>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
                 {broker.key === "tradovate"
@@ -399,19 +612,17 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
               </p>
 
               {error && (
-                <div
-                  className="flex items-start gap-2 p-3.5 mb-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400"
-                  data-test-id="wizard-login-error"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
-                </div>
+                <ErrorPanel raw={error} firmLabel={firmLabel} testId="wizard-login-error" />
               )}
 
               <form onSubmit={startVerification} className="space-y-4" data-test-id="wizard-login-form">
                 {broker.key === "projectx" && (
                   <>
-                    {broker.needsBaseUrl && (
+                    {/* The gateway host is infrastructure the trader shouldn't have
+                        to know. It's hidden for verified firms, prefilled-but-
+                        editable for firms whose host we've derived from the naming
+                        pattern, and required for "My firm isn't listed". */}
+                    {(selectedFirm?.custom || !selectedFirm?.verified) && (
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
                           Gateway URL
@@ -425,7 +636,9 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
                           data-test-id="wizard-baseurl-input"
                         />
                         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          Your firm's ProjectX API host — check their docs or support.
+                          {selectedFirm?.custom
+                            ? "Your firm's ProjectX API host — search their help center for “API” or ask support."
+                            : "We've prefilled the usual address for this firm — confirm it against their API docs if the connection fails."}
                         </p>
                       </div>
                     )}
@@ -509,7 +722,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
                 Connecting…
               </h2>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
-                Establishing a secure link to {broker.firmName || broker.name}.
+                Establishing a secure link to {firmLabel}.
               </p>
               <StagedChecklist stages={VERIFY_STAGES} done={verifyDone} testId="wizard-verify-checklist" />
             </div>
@@ -602,13 +815,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
               </p>
 
               {error && (
-                <div
-                  className="flex items-start gap-2 p-3.5 mb-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400"
-                  data-test-id="wizard-import-error"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
-                </div>
+                <ErrorPanel raw={error} firmLabel={firmLabel} testId="wizard-import-error" />
               )}
 
               <div className="space-y-3 mb-8">
@@ -688,7 +895,7 @@ const ConnectWizard = ({ broker, onClose, onFinished, onGoToJournal }) => {
                 <CheckCircle2 className="w-9 h-9 text-emerald-500" />
               </div>
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50 mb-2">
-                {broker.firmName || broker.name} connected
+                {firmLabel} connected
               </h2>
               <div className="space-y-1 text-sm font-semibold text-gray-600 dark:text-gray-300 mb-8">
                 <p data-test-id="wizard-success-trades">
@@ -727,10 +934,20 @@ ConnectWizard.propTypes = {
   broker: PropTypes.shape({
     key: PropTypes.oneOf(["projectx", "tradovate"]).isRequired,
     name: PropTypes.string.isRequired,
-    firmId: PropTypes.string,
-    firmName: PropTypes.string,
-    baseUrl: PropTypes.string,
-    needsBaseUrl: PropTypes.bool,
+    authType: PropTypes.string,
+    firms: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        baseUrl: PropTypes.string,
+        verified: PropTypes.bool,
+        custom: PropTypes.bool,
+        personal: PropTypes.bool,
+        popular: PropTypes.bool,
+        initials: PropTypes.string,
+        badge: PropTypes.string,
+      }),
+    ),
   }).isRequired,
   onClose: PropTypes.func.isRequired,
   onFinished: PropTypes.func,
