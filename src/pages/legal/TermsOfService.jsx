@@ -1,6 +1,76 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import LegalPageWrapper from "../../components/legal/LegalPageWrapper";
+import useSubscriptionPlans from "../../hooks/useSubscriptionPlans";
+import { annualPriceFor } from "../../utils/pricing";
+
+// Static fallbacks for §3, shown until the live subscription_plans rows load
+// (or if the read fails). Slugs must match subscription_plans.slug — they are
+// frozen forever even though display names changed (see plan-naming docs).
+const PLAN_FALLBACKS = [
+  {
+    slug: "basic",
+    name: "Starter",
+    monthly: 9.99,
+    yearly: 90,
+    summary:
+      "Up to 50 trades per month, 1 trading account, trade journal, core dashboard, CSV and Excel import, risk calculator, email support.",
+  },
+  {
+    slug: "premium",
+    name: "Pro",
+    monthly: 18,
+    yearly: 180,
+    summary:
+      "Everything in Starter, plus unlimited trades, up to 3 trading accounts, advanced analytics, backtesting, custom reports and data export, priority email support.",
+  },
+  {
+    slug: "enterprise",
+    name: "Elite",
+    monthly: 40,
+    yearly: 360,
+    summary:
+      "Everything in Pro, plus unlimited trading accounts, prop-firm and funded account tracking, unlimited saved backtest strategies, early access to broker auto-sync, priority chat support.",
+  },
+];
+
+const fmtUsd = (amount) =>
+  `$${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// The §3 plan list, fed by the same live subscription_plans read the Pricing
+// page uses — when an admin edits a plan in the Pricing tab, the Terms follow
+// automatically. Tightly coupled to this page, never used independently.
+const PlanFeeList = () => {
+  const { plans: livePlans } = useSubscriptionPlans();
+
+  const rows = PLAN_FALLBACKS.map((fallback) => {
+    const live = livePlans[fallback.slug];
+    const monthly = live?.price ?? fallback.monthly;
+    const features = Array.isArray(live?.features) && live.features.length > 0
+      ? `${live.features.join(", ")}.`
+      : fallback.summary;
+    return {
+      slug: fallback.slug,
+      name: live?.name ?? fallback.name,
+      monthly,
+      yearly: annualPriceFor(monthly, live?.priceAnnually ?? fallback.yearly),
+      summary: features,
+    };
+  });
+
+  return (
+    <ul data-test-id="terms-plan-list">
+      {rows.map((plan) => (
+        <li key={plan.slug} data-test-id={`terms-plan-${plan.slug}`}>
+          <strong>
+            {plan.name} — {fmtUsd(plan.monthly)}/month or {fmtUsd(plan.yearly)}/year:
+          </strong>{" "}
+          {plan.summary}
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 const TermsOfService = () => (
   <LegalPageWrapper
@@ -33,11 +103,7 @@ const TermsOfService = () => (
 
     <h2>3. Subscription Plans and Fees</h2>
     <p>ZalorTrade offers the following subscription plans (prices in USD):</p>
-    <ul>
-      <li><strong>Starter — $9.99/month or $90.00/year:</strong> Up to 50 trades per month, 1 trading account, trade journal, core dashboard, CSV and Excel import, risk calculator, email support.</li>
-      <li><strong>Pro — $18.00/month or $180.00/year:</strong> Everything in Starter, plus unlimited trades, up to 3 trading accounts, advanced analytics, backtesting, custom reports and data export, priority email support.</li>
-      <li><strong>Elite — $40.00/month or $360.00/year:</strong> Everything in Pro, plus unlimited trading accounts, prop-firm and funded account tracking, unlimited saved backtest strategies, early access to broker auto-sync, priority chat support.</li>
-    </ul>
+    <PlanFeeList />
     <p>
       We reserve the right to modify plan features, pricing, or available tiers at any time with at least 30 days' advance notice to existing subscribers. Pricing displayed on the Service at the time of purchase governs your initial subscription term.
     </p>
