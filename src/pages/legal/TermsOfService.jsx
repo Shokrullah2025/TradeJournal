@@ -25,7 +25,7 @@ const TermsOfService = () => (
 
     <h2>2. Account Registration and Security</h2>
     <p>
-      You must provide accurate, complete, and current information when creating an account. You are solely responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. You agree to notify us immediately at <strong>noreply@zalortrade.com</strong> if you suspect any unauthorized access to your account. We are not liable for any loss or damage arising from your failure to protect your credentials.
+      You must provide accurate, complete, and current information when creating an account. You are solely responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. You agree to notify us immediately at <strong>support@zalortrade.com</strong> if you suspect any unauthorized access to your account. We are not liable for any loss or damage arising from your failure to protect your credentials.
     </p>
     <p>
       We reserve the right to suspend or terminate accounts at our discretion, including if we reasonably believe an account is being used fraudulently, in violation of these Terms, or in a manner that may harm the Company or other users.
@@ -152,7 +152,7 @@ const TermsOfService = () => (
 
     <h2>18. Chargebacks and Payment Disputes</h2>
     <p>
-      Initiating a chargeback or payment dispute through your bank or card issuer without first contacting us at <strong>noreply@zalortrade.com</strong> to attempt resolution is a material breach of these Terms. You acknowledge the no-refund policy described in Section 5. In the event of a chargeback, we reserve the right to: (a) provide the payment processor with documentation of your purchase and acceptance of these Terms; (b) immediately and permanently terminate your account; and (c) pursue any remedies available to us under applicable law.
+      Initiating a chargeback or payment dispute through your bank or card issuer without first contacting us at <strong>support@zalortrade.com</strong> to attempt resolution is a material breach of these Terms. You acknowledge the no-refund policy described in Section 5. In the event of a chargeback, we reserve the right to: (a) provide the payment processor with documentation of your purchase and acceptance of these Terms; (b) immediately and permanently terminate your account; and (c) pursue any remedies available to us under applicable law.
     </p>
 
     <h2>19. Dispute Resolution — Binding Arbitration and Class Action Waiver</h2>
@@ -175,7 +175,7 @@ const TermsOfService = () => (
       <strong>Time Limit:</strong> Any claim must be filed within one (1) year of the date the cause of action accrued. Claims filed after this period are time-barred.
     </p>
     <p>
-      <strong>Opt-Out:</strong> You may opt out of this arbitration agreement by sending written notice to <strong>noreply@zalortrade.com</strong> within 30 days of first accepting these Terms. Your opt-out notice must include your name, email address, and a clear statement that you wish to opt out of arbitration.
+      <strong>Opt-Out:</strong> You may opt out of this arbitration agreement by sending written notice to <strong>support@zalortrade.com</strong> within 30 days of first accepting these Terms. Your opt-out notice must include your name, email address, and a clear statement that you wish to opt out of arbitration.
     </p>
 
     <h2>20. Governing Law and Venue</h2>
@@ -185,7 +185,7 @@ const TermsOfService = () => (
 
     <h2>21. Termination</h2>
     <p>
-      We may suspend or terminate your access to the Service at any time and for any reason, including for violation of these Terms, non-payment, or conduct we determine is harmful to other users or the Company. Upon termination for cause (such as AUP or Terms violations), you are not entitled to any refund. You may terminate your account at any time by cancelling your subscription and contacting us at <strong>noreply@zalortrade.com</strong> to request account deletion. Upon account deletion, we will delete your personal data in accordance with our <Link to="/privacy">Privacy Policy</Link>.
+      We may suspend or terminate your access to the Service at any time and for any reason, including for violation of these Terms, non-payment, or conduct we determine is harmful to other users or the Company. Upon termination for cause (such as AUP or Terms violations), you are not entitled to any refund. You may terminate your account at any time by cancelling your subscription and contacting us at <strong>support@zalortrade.com</strong> to request account deletion. Upon account deletion, we will delete your personal data in accordance with our <Link to="/privacy">Privacy Policy</Link>.
     </p>
 
     <h2>22. Changes to These Terms</h2>
@@ -206,7 +206,7 @@ const TermsOfService = () => (
     <h2>25. Contact Information</h2>
     <p>For questions about these Terms, please contact us:</p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
       <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
   </LegalPageWrapper>

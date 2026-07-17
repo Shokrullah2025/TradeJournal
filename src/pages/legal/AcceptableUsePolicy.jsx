@@ -83,7 +83,7 @@ const AcceptableUsePolicy = () => (
     <ul>
       <li>Use a strong, unique password for your ZalorTrade account;</li>
       <li>Not share your password or authentication tokens with any third party;</li>
-      <li>Promptly notify us at <strong>noreply@zalortrade.com</strong> if you discover or suspect any unauthorized access to or use of your account;</li>
+      <li>Promptly notify us at <strong>support@zalortrade.com</strong> if you discover or suspect any unauthorized access to or use of your account;</li>
       <li>Log out of your account when using shared or public devices.</li>
     </ul>
 
@@ -126,7 +126,7 @@ const AcceptableUsePolicy = () => (
       If you become aware of any use of the Service that violates this AUP, please report it to us at:
     </p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
       <li><strong>Subject line:</strong> AUP Violation Report</li>
     </ul>
     <p>We take all reports seriously and will investigate promptly.</p>
@@ -138,7 +138,7 @@ const AcceptableUsePolicy = () => (
 
     <h2>9. Contact</h2>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
       <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
   </LegalPageWrapper>

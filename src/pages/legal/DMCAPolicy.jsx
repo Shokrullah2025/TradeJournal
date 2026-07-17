@@ -24,7 +24,7 @@ const DMCAPolicy = () => (
       <p><strong>Copyright Agent</strong></p>
       <p>ZalorTrade LLC</p>
       <p>Attn: DMCA Copyright Agent</p>
-      <p>Email: noreply@zalortrade.com (subject line: DMCA Takedown Notice)</p>
+      <p>Email: support@zalortrade.com (subject line: DMCA Takedown Notice)</p>
     </div>
     <p>
       Only DMCA notices should be sent to this address. Other correspondence will not receive a response.
@@ -55,7 +55,7 @@ const DMCAPolicy = () => (
       <li><strong>Accuracy statement:</strong> A statement, made under penalty of perjury, that the information in the notification is accurate and that you are the copyright owner or are authorized to act on behalf of the copyright owner.</li>
     </ol>
     <p>
-      Send your complete takedown notice to our Copyright Agent at <strong>noreply@zalortrade.com</strong> with the subject line "DMCA Takedown Notice."
+      Send your complete takedown notice to our Copyright Agent at <strong>support@zalortrade.com</strong> with the subject line "DMCA Takedown Notice."
     </p>
     <p>
       <strong>Warning:</strong> Filing a materially false DMCA takedown notice may expose you to civil liability under 17 U.S.C. § 512(f), including liability for damages and attorneys' fees.
@@ -87,7 +87,7 @@ const DMCAPolicy = () => (
       <li><strong>Contact information:</strong> Your current email address.</li>
     </ol>
     <p>
-      Send your counter-notification to our Copyright Agent at <strong>noreply@zalortrade.com</strong> with the subject line "DMCA Counter-Notification."
+      Send your counter-notification to our Copyright Agent at <strong>support@zalortrade.com</strong> with the subject line "DMCA Counter-Notification."
     </p>
     <p>
       Upon receipt of a valid counter-notification, we will forward it to the original complainant and inform them that we may restore the removed content within <strong>10–14 business days</strong> unless the complainant notifies us that they have filed an action seeking a court order to restrain you from engaging in the infringing activity. If no such court order is received, we will restore the removed content.
@@ -117,7 +117,7 @@ const DMCAPolicy = () => (
     <h2>9. Contact</h2>
     <p>For all DMCA and copyright matters:</p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com (subject: DMCA Notice)</li>
+      <li><strong>Email:</strong> support@zalortrade.com (subject: DMCA Notice)</li>
     </ul>
   </LegalPageWrapper>
 );

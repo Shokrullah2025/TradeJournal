@@ -35,7 +35,7 @@ const RefundPolicy = () => (
       <li>You downgrade from a higher-tier plan to a lower-tier plan;</li>
       <li>Your account is suspended or terminated due to violations of the <Link to="/terms">Terms of Service</Link> or <Link to="/aup">Acceptable Use Policy</Link>;</li>
       <li>You are dissatisfied with the Service for any reason;</li>
-      <li>You experience technical difficulties (contact support at <strong>noreply@zalortrade.com</strong> for assistance — we will work to resolve issues);</li>
+      <li>You experience technical difficulties (contact support at <strong>support@zalortrade.com</strong> for assistance — we will work to resolve issues);</li>
       <li>You forget to cancel before a renewal date; or</li>
       <li>Any other reason.</li>
     </ul>
@@ -76,7 +76,7 @@ const RefundPolicy = () => (
       <li>You will not receive a refund for any portion of the current billing period, regardless of how early in the period you cancel.</li>
     </ul>
     <p>
-      If you experience any difficulty cancelling, contact us at <strong>noreply@zalortrade.com</strong> and we will assist you promptly.
+      If you experience any difficulty cancelling, contact us at <strong>support@zalortrade.com</strong> and we will assist you promptly.
     </p>
 
     <h2>5. Free Trials</h2>
@@ -113,7 +113,7 @@ const RefundPolicy = () => (
 
     <h2>8. Chargebacks and Payment Disputes</h2>
     <p>
-      By accepting these terms, you agree to contact us at <strong>noreply@zalortrade.com</strong> before initiating any chargeback or payment dispute with your bank or card issuer. Given our strict no-refund policy (which you acknowledged at the time of purchase), chargebacks are not an appropriate remedy and constitute a breach of your agreement with us.
+      By accepting these terms, you agree to contact us at <strong>support@zalortrade.com</strong> before initiating any chargeback or payment dispute with your bank or card issuer. Given our strict no-refund policy (which you acknowledged at the time of purchase), chargebacks are not an appropriate remedy and constitute a breach of your agreement with us.
     </p>
     <p>In the event of a chargeback:</p>
     <ul>
@@ -138,7 +138,7 @@ const RefundPolicy = () => (
       If you have questions about a charge, believe there is a billing error, or need to update your payment method, contact us before disputing with your bank:
     </p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
       <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
     <p>We aim to respond to billing inquiries within 2 business days.</p>

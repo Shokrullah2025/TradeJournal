@@ -131,7 +131,7 @@ const CookiePolicy = () => (
     <h2>7. Contact</h2>
     <p>Questions about our use of cookies? Contact us:</p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
       <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
   </LegalPageWrapper>

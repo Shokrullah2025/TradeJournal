@@ -122,7 +122,7 @@ const Disclaimer = () => (
 
     <h2>12. Questions</h2>
     <p>
-      If you have questions about this disclaimer, contact us at <strong>noreply@zalortrade.com</strong>. This disclaimer is provided by ZalorTrade LLC, a Colorado limited liability company (United States).
+      If you have questions about this disclaimer, contact us at <strong>support@zalortrade.com</strong>. This disclaimer is provided by ZalorTrade LLC, a Colorado limited liability company (United States).
     </p>
   </LegalPageWrapper>
 );
