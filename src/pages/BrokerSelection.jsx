@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { useBroker } from "../context/BrokerContext";
 import { useTrades } from "../context/TradeContext";
+import { useFeatureFlags } from "../context/FeatureFlagContext";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   RefreshCw,
   CheckCircle,
-  Key,
   Clock,
   AlertCircle,
   ChevronDown,
@@ -15,9 +15,7 @@ import {
   ExternalLink,
   Settings,
   Plus,
-  Shield,
-  Lock,
-  RotateCcw,
+  Search,
 } from "lucide-react";
 import TradovateSetupStatus from "../components/trades/TradovateSetupStatus";
 import CsvImportModal from "../components/trades/CsvImportModal";
@@ -31,6 +29,7 @@ const PROP_FIRMS = [
     initials: "A",
     brokerKey: "tradovate",
     badge: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+    popular: true,
   },
   {
     id: "mff",
@@ -38,6 +37,7 @@ const PROP_FIRMS = [
     initials: "MF",
     brokerKey: "tradovate",
     badge: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30",
+    popular: true,
   },
   {
     id: "bulenox",
@@ -59,6 +59,7 @@ const PROP_FIRMS = [
     initials: "TS",
     brokerKey: "tradovate",
     badge: "bg-violet-500/10 text-violet-400 border-violet-500/30",
+    popular: true,
   },
   {
     id: "other",
@@ -118,9 +119,19 @@ const formatRelative = (date) => {
   return `${Math.floor(h / 24)}d`;
 };
 
+// ProjectX prop firms and their gateway hosts. Base URLs are per‑firm; only the
+// two below are confirmed — for any other firm the user pastes the gateway URL
+// their prop firm documents (pattern: https://api.<firm>.projectx.com).
+const PROJECTX_FIRMS = [
+  { id: "topstep", name: "Topstep / TopstepX", baseUrl: "https://api.topstepx.com" },
+  { id: "thefuturesdesk", name: "The Futures Desk", baseUrl: "https://api.thefuturesdesk.projectx.com" },
+  { id: "other", name: "Other ProjectX firm", baseUrl: "" },
+];
+
 const BrokerSelection = () => {
   const {
     connectBroker,
+    connectApiKeyBroker,
     disconnectBroker,
     syncTrades,
     isConnected,
@@ -137,6 +148,19 @@ const BrokerSelection = () => {
   } = useBroker();
 
   const { trades, stats } = useTrades();
+  const { getFeatureState, flags, audience } = useFeatureFlags();
+  // ProjectX rollout gate: show the connect form only when the flag exists AND is
+  // on for this user (admins pass). Requiring the flag object present avoids the
+  // "missing flag → fail open" default un-darkening it in production.
+  //
+  // Admins are checked separately because getFeatureState() returns "hidden" as
+  // soon as the master kill-switch is off, without ever consulting the audience.
+  // feature_enabled_for() in the DB *does* let admins through before reading the
+  // switch, so without this the backend would authorize a flow the UI never shows
+  // — leaving the dark launch untestable until it is turned on for everyone.
+  const projectxEnabled =
+    Boolean(flags?.projectx_broker) &&
+    (audience === "admin" || getFeatureState("projectx_broker") === "on");
 
   const navigate = useNavigate();
   const [view, setView] = useState("accounts"); // "accounts" | "connect"
@@ -146,6 +170,52 @@ const BrokerSelection = () => {
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [tradesSynced, setTradesSynced] = useState(false);
+  // Prop-firm picker: an always-visible search filters the (static) firm list.
+  const [firmSearch, setFirmSearch] = useState("");
+
+  // ProjectX (API-key) connect form.
+  const [pxFirmId, setPxFirmId] = useState("topstep");
+  const [pxBaseUrl, setPxBaseUrl] = useState("https://api.topstepx.com");
+  const [pxUserName, setPxUserName] = useState("");
+  const [pxApiKey, setPxApiKey] = useState("");
+  const [pxAccountType, setPxAccountType] = useState("demo");
+  const [pxConnecting, setPxConnecting] = useState(false);
+
+  const onPxFirmChange = (id) => {
+    setPxFirmId(id);
+    const firm = PROJECTX_FIRMS.find((f) => f.id === id);
+    // Preset the gateway URL for known firms; leave editable for "other".
+    if (firm && firm.id !== "other") setPxBaseUrl(firm.baseUrl);
+    else setPxBaseUrl("");
+  };
+
+  const handleProjectxConnect = async (e) => {
+    e.preventDefault();
+    setPxConnecting(true);
+    try {
+      const firm = PROJECTX_FIRMS.find((f) => f.id === pxFirmId);
+      const ok = await connectApiKeyBroker("projectx", {
+        firmId: pxFirmId,
+        baseUrl: pxBaseUrl.trim(),
+        userName: pxUserName.trim(),
+        apiKey: pxApiKey.trim(),
+        accountType: pxAccountType,
+        propFirm: firm && firm.id !== "other" ? firm.name : null,
+      });
+      if (ok) {
+        setPxApiKey(""); // never keep the secret around after a successful connect
+        setView("accounts");
+      }
+    } finally {
+      setPxConnecting(false);
+    }
+  };
+
+  const visibleFirms = useMemo(() => {
+    const q = firmSearch.trim().toLowerCase();
+    if (!q) return PROP_FIRMS;
+    return PROP_FIRMS.filter((f) => f.name.toLowerCase().includes(q));
+  }, [firmSearch]);
 
   const getAccountType = (firmId) => accountTypes[firmId] ?? "demo";
 
@@ -272,7 +342,7 @@ const BrokerSelection = () => {
     // through; negative margins cancel the shell's p-4/sm:p-6 so py-10 keeps
     // the content exactly where it was.
     <div className="min-h-screen -m-4 sm:-m-6 py-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full 2xl:max-w-[90%] 2xl:mx-auto px-4 sm:px-6 lg:px-8">
 
         {view === "accounts" ? (
           /* ── ACCOUNTS DASHBOARD ─────────────────────────────────── */
@@ -596,20 +666,160 @@ const BrokerSelection = () => {
               </p>
             </div>
 
+            {/* ProjectX (API-key) connect — the path that works for prop/eval
+                accounts. Gated behind the projectx_broker rollout flag. */}
+            {projectxEnabled && (
+              <div
+                className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 max-w-xl"
+                data-test-id="projectx-connect"
+              >
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                  Connect via ProjectX
+                </span>
+                <p className="mt-1 mb-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Paste the API key from your prop firm / ProjectX dashboard. It’s
+                  sent securely to our server and never stored in your browser.
+                </p>
+
+                <form
+                  onSubmit={handleProjectxConnect}
+                  className="space-y-3"
+                  data-test-id="projectx-connect-form"
+                >
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                      Prop firm
+                    </label>
+                    <select
+                      value={pxFirmId}
+                      onChange={(e) => onPxFirmChange(e.target.value)}
+                      data-test-id="projectx-firm-select"
+                      className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    >
+                      {PROJECTX_FIRMS.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Gateway URL is infrastructure, not something a trader knows or
+                      should have to care about: for a firm we ship it is derived from
+                      the picker above, so showing it only adds a field they can break.
+                      It appears for "Other" because that host is the one thing we
+                      genuinely cannot infer. */}
+                  {pxFirmId === "other" && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                        Gateway URL
+                      </label>
+                      <input
+                        type="url"
+                        value={pxBaseUrl}
+                        onChange={(e) => setPxBaseUrl(e.target.value)}
+                        placeholder="https://api.yourfirm.projectx.com"
+                        data-test-id="projectx-baseurl-input"
+                        className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Your firm’s ProjectX API host — check their docs or support.
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                      Username
+                    </label>
+                    <input
+                      type="text"
+                      value={pxUserName}
+                      onChange={(e) => setPxUserName(e.target.value)}
+                      placeholder="Your ProjectX username"
+                      data-test-id="projectx-username-input"
+                      className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                      API key
+                    </label>
+                    <input
+                      type="password"
+                      value={pxApiKey}
+                      onChange={(e) => setPxApiKey(e.target.value)}
+                      placeholder="••••••••••••"
+                      autoComplete="off"
+                      data-test-id="projectx-apikey-input"
+                      className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                    {[
+                      { value: "demo", label: "Evaluation" },
+                      { value: "live", label: "Funded" },
+                    ].map(({ value, label }) => (
+                      <button
+                        type="button"
+                        key={value}
+                        onClick={() => setPxAccountType(value)}
+                        data-test-id={`projectx-${value}-btn`}
+                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${
+                          pxAccountType === value
+                            ? "bg-emerald-500 text-white shadow-sm"
+                            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={pxConnecting || !pxUserName.trim() || !pxApiKey.trim() || !pxBaseUrl.trim()}
+                    data-test-id="projectx-connect-btn"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-3 text-sm font-bold rounded-xl btn-gradient disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {pxConnecting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Connecting…</span>
+                      </>
+                    ) : (
+                      <span>Connect</span>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
+
             {/* Prop firm cards */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
                   Futures prop firms
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500">
-                  <Key className="w-3.5 h-3.5" />
-                  Powered by Tradovate OAuth
-                </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {PROP_FIRMS.map((firm) => {
+              {/* Always-visible search over the firm list */}
+              <div className="relative mb-4 max-w-md" data-test-id="firm-search">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  value={firmSearch}
+                  onChange={(e) => setFirmSearch(e.target.value)}
+                  placeholder="Search prop firms…"
+                  data-test-id="firm-search-input"
+                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl">
+                {visibleFirms.map((firm) => {
                   const isConnectingFirm = connectingFirm === firm.id;
                   return (
                     <div
@@ -679,6 +889,18 @@ const BrokerSelection = () => {
                   );
                 })}
               </div>
+
+              {/* Empty search result — always route the user somewhere useful */}
+              {firmSearch.trim() && visibleFirms.length === 0 && (
+                <p
+                  className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-md"
+                  data-test-id="firm-search-empty"
+                >
+                  No prop firms match “{firmSearch.trim()}”. Every firm connects
+                  through Tradovate — clear the search and pick “Other / Not
+                  listed” to continue.
+                </p>
+              )}
             </div>
 
             {/* CSV import alternative */}
@@ -704,22 +926,6 @@ const BrokerSelection = () => {
                 <Upload className="w-4 h-4" />
                 Import CSV
               </button>
-            </div>
-
-            {/* Trust strip */}
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                <Shield className="w-4 h-4 text-emerald-500" />
-                OAuth 2.0 — password never shared
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                <Lock className="w-4 h-4 text-emerald-500" />
-                Tokens encrypted at rest
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                <RotateCcw className="w-4 h-4 text-emerald-500" />
-                Revoke access anytime
-              </div>
             </div>
 
             {/* Developer setup — collapsible */}

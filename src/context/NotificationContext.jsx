@@ -148,6 +148,32 @@ export const NotificationProvider = ({ children }) => {
     };
   }, [fetchPage, fetchUnreadCount]);
 
+  // Re-sync the first page + unread count whenever the tab regains focus.
+  // Realtime keeps open tabs in step, but a backgrounded/asleep tab can miss
+  // events (the socket drops), so a notification cleared or read on another
+  // device would otherwise linger here until a full reload. Refetching on
+  // return makes "I cleared it on my phone" reflect on the computer without
+  // one. Collapses any "Load more" expansion back to the first page, which is
+  // an acceptable trade for always showing the true current state.
+  useEffect(() => {
+    const resync = async () => {
+      const userId = userIdRef.current;
+      if (!userId || document.visibilityState === "hidden") return;
+      const [{ rows, more }] = await Promise.all([
+        fetchPage(userId, 0),
+        fetchUnreadCount(userId),
+      ]);
+      setNotifications(rows);
+      setHasMore(more);
+    };
+    window.addEventListener("focus", resync);
+    document.addEventListener("visibilitychange", resync);
+    return () => {
+      window.removeEventListener("focus", resync);
+      document.removeEventListener("visibilitychange", resync);
+    };
+  }, [fetchPage, fetchUnreadCount]);
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const markAsRead = useCallback(async (id) => {

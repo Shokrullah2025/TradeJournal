@@ -100,7 +100,10 @@ const Analytics = () => {
   }
 
   return (
-    <div className="space-y-[18px]">
+    // 2xl:max-w-[90%] mx-auto matches Dashboard, Trades and Backtest so the
+    // page caps at the same width and centers on very wide screens instead of
+    // stretching edge to edge.
+    <div className="space-y-[18px] 2xl:max-w-[90%] 2xl:mx-auto">
       {/* Filter bar */}
       <div className="flex items-center gap-3 flex-wrap">
         {/* Time range */}

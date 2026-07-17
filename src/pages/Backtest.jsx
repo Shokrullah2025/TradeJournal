@@ -3193,7 +3193,7 @@ const Backtest = () => {
 
         {/* ── Top header bar ── */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
-          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+          <div className="w-full 2xl:max-w-[90%] 2xl:mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-primary-500 to-primary-700 shadow-md shadow-primary-600/30">
                 <TrendingUp className="w-5 h-5 text-white" />
@@ -3224,7 +3224,7 @@ const Backtest = () => {
           </div>
         </div>
 
-        <div className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
+        <div className="flex-1 w-full 2xl:max-w-[90%] 2xl:mx-auto px-6 py-8">
 
           {isLoadingSessions ? (
             /* ── Loading — prevent flash of empty state while DB query is in-flight ── */
@@ -3337,7 +3337,7 @@ const Backtest = () => {
                     editable: true,
                   },
                 ].map(({ label, value, sub, color, editable }) => (
-                  <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                  <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 sm:p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">{label}</p>
                     {editable && isEditingBalance ? (
                       <div className="flex items-center gap-1 mb-1">
@@ -3353,7 +3353,7 @@ const Backtest = () => {
                       </div>
                     ) : (
                       <p
-                        className={`text-xl font-bold mb-1 ${!color ? "text-gray-900 dark:text-white" : ""}`}
+                        className={`text-base sm:text-lg lg:text-xl font-bold mb-1 tabular-nums leading-tight break-words ${!color ? "text-gray-900 dark:text-white" : ""}`}
                         style={color ? { color } : {}}
                       >
                         {editable ? (
@@ -3513,6 +3513,12 @@ const Backtest = () => {
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {[s.instrumentName, s.timeframe?.toUpperCase(), s.strategy, s.setup].filter(Boolean).join(" · ")}
                         </p>
+                        {/* Date anchored with the session details so it doesn't
+                            float far right on wide desktop layouts. */}
+                        <p className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                          {new Date(s.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                          {!completed && " · In progress"}
+                        </p>
                         {s.note && (
                           <NoteView
                             html={s.note}
@@ -3543,14 +3549,6 @@ const Backtest = () => {
                             )}
                           </div>
                         )}
-                      </div>
-
-                      {/* Date */}
-                      <div className="text-right hidden sm:block flex-shrink-0">
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
-                          {new Date(s.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                        </p>
-                        {!completed && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">In progress</p>}
                       </div>
 
                       {/* P&L */}

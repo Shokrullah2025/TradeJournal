@@ -846,63 +846,59 @@ const Billing = () => {
                     </div>
                   </div>
 
-                  {/* Pricing Plans — all three side by side whenever the column
-                      allows; on phones they stack as compact summary cards
-                      (name + price on one row, dot-separated features). */}
-                  <div className="mt-6 grid grid-cols-1 gap-4 text-left @lg:grid-cols-3 @lg:gap-3 @2xl:mt-8 @2xl:gap-5">
+                  {/* Pricing Plans — full cards at every width. On phones they
+                      stack one per row as tall cards (description + full feature
+                      list + a CTA pinned to the foot), matching the desktop and
+                      /pricing look instead of the old compact summary rows. */}
+                  <div className="mt-6 grid grid-cols-1 gap-5 text-left @lg:grid-cols-3 @lg:gap-3 @2xl:mt-8 @2xl:gap-5">
                     {plans.map((plan) => {
                       const isCurrent = plan.id === currentPlanSlug;
                       return (
                         <div
                           key={plan.id}
-                          className={`relative flex flex-col gap-3 rounded-2xl p-5 @lg:min-h-[440px] @lg:gap-3.5 @lg:p-4 @2xl:min-h-[500px] @2xl:p-6 @4xl:gap-[18px] @4xl:px-6 @4xl:py-7 ${
+                          className={`relative flex min-h-[440px] flex-col gap-4 rounded-2xl p-6 @lg:gap-3.5 @lg:p-4 @2xl:min-h-[500px] @2xl:p-6 @4xl:gap-[18px] @4xl:px-6 @4xl:py-7 ${
                             plan.popular
                               ? "border-[1.5px] border-primary-600 bg-[#fbfefd] shadow-[0_12px_32px_rgba(21,132,119,.16)] dark:border-[#2dd4bf] dark:bg-gray-800 dark:shadow-[0_12px_32px_rgba(45,212,191,.15)]"
                               : "border border-gray-200 dark:border-white/10"
                           }`}
                         >
                           {plan.popular && (
-                            <span className="absolute -top-3 left-4 whitespace-nowrap rounded-full bg-primary-600 px-3 py-1 text-[10px] font-bold text-white @lg:left-1/2 @lg:-translate-x-1/2 @2xl:px-3.5 @2xl:text-[11px] dark:bg-teal-700 dark:text-white">
+                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary-600 px-3 py-1 text-[10px] font-bold text-white @2xl:px-3.5 @2xl:text-[11px] dark:bg-teal-700 dark:text-white">
                               Most Popular
                             </span>
                           )}
 
-                          {/* Name + price: one row when stacked (phones), name/
-                              description block with the price below in columns. */}
-                          <div className="flex items-baseline justify-between gap-2 @lg:block">
-                            <div>
-                              <h3 className="text-base font-bold text-gray-900 @2xl:text-lg dark:text-gray-300">
-                                {plan.name}
-                              </h3>
-                              <p className="mt-1 hidden text-xs text-gray-400 @lg:block @2xl:text-[13px] dark:text-gray-500">
-                                {plan.description}
-                              </p>
-                            </div>
-                            <div className="flex items-baseline gap-1 @lg:mt-3.5">
-                              <span className="text-xl font-extrabold text-gray-900 @lg:text-2xl @2xl:text-3xl @4xl:text-[34px] dark:text-gray-300">
-                                ${getPlanPrice(plan)}
-                              </span>
-                              <span className="text-[11px] text-gray-400 @2xl:text-[13px] dark:text-gray-500">
-                                /{billingCycle === "monthly" ? "month" : "year"}
-                              </span>
-                            </div>
+                          {/* Name + description */}
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-300">
+                              {plan.name}
+                            </h3>
+                            <p className="mt-1 text-[13px] text-gray-400 dark:text-gray-500">
+                              {plan.description}
+                            </p>
+                          </div>
+
+                          {/* Price */}
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-extrabold text-gray-900 @4xl:text-[34px] dark:text-gray-300">
+                              ${getPlanPrice(plan)}
+                            </span>
+                            <span className="text-[13px] text-gray-400 dark:text-gray-500">
+                              /{billingCycle === "monthly" ? "month" : "year"}
+                            </span>
                           </div>
 
                           {billingCycle === "yearly" && yearlySavingsAmount(plan) && (
-                            <div className="-mt-1 text-xs text-primary-600 dark:text-[#2dd4bf]">
+                            <div className="-mt-2 text-xs text-primary-600 dark:text-[#2dd4bf]">
                               Save ${yearlySavingsAmount(plan)} a year vs monthly
                             </div>
                           )}
 
-                          {/* Features: dot-separated line when stacked, check
-                              rows in columns. */}
-                          <p className="text-xs text-gray-400 @lg:hidden dark:text-gray-500">
-                            {plan.features.slice(0, 3).join(" · ")}
-                          </p>
-                          <ul className="hidden flex-1 flex-col gap-2 text-xs text-gray-700 @lg:flex @2xl:gap-2.5 @2xl:text-[13.5px] dark:text-gray-400">
+                          {/* Features — full check-row list at every width */}
+                          <ul className="flex flex-1 flex-col gap-2.5 text-[13.5px] text-gray-700 dark:text-gray-400">
                             {plan.features.map((feature, index) => (
                               <li key={index} className="flex items-start gap-2">
-                                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-600 @2xl:h-4 @2xl:w-4 dark:text-[#2dd4bf]" />
+                                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600 dark:text-[#2dd4bf]" />
                                 {feature}
                               </li>
                             ))}
@@ -912,12 +908,11 @@ const Billing = () => {
                             onClick={() => {
                               if (!isCurrent && plan.id !== "basic") {
                                 // Confirm first — see pendingPlan.
-                                // Confirm first — see pendingPlan.
                                 setPendingPlan({ plan, cycle: billingCycle });
                               }
                             }}
                             disabled={isCurrent || plan.id === "basic" || checkoutLoading}
-                            className={`w-full rounded-[10px] px-2 py-2.5 text-xs font-semibold transition-colors @lg:mt-auto @2xl:py-3 @2xl:text-[13.5px] ${
+                            className={`mt-auto w-full rounded-[10px] px-2 py-3 text-[13.5px] font-semibold transition-colors ${
                               isCurrent
                                 ? "cursor-default bg-[#e7f5f2] text-primary-600 dark:bg-[#2dd4bf]/10 dark:text-[#2dd4bf]"
                                 : plan.id === "basic"
@@ -934,19 +929,9 @@ const Billing = () => {
                             ) : isCurrent ? (
                               "Current Plan"
                             ) : plan.id === "basic" ? (
-                              <>
-                                <span className="@lg:hidden">Downgrade</span>
-                                <span className="hidden whitespace-nowrap @lg:inline">
-                                  {`Downgrade to ${plan.name}`}
-                                </span>
-                              </>
+                              `Downgrade to ${plan.name}`
                             ) : (
-                              <>
-                                <span className="@lg:hidden">Upgrade</span>
-                                <span className="hidden whitespace-nowrap @lg:inline">
-                                  {`Upgrade to ${plan.name}`}
-                                </span>
-                              </>
+                              `Upgrade to ${plan.name}`
                             )}
                           </button>
                         </div>

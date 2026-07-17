@@ -173,7 +173,7 @@ const Profile = () => {
     ) : null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6" data-test-id="profile-page">
+    <div className="max-w-4xl space-y-6" data-test-id="profile-page">
       {/* Hero / summary header */}
       <div
         className="overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_8px_24px_rgba(15,23,42,.05)] dark:border-white/10 dark:bg-gray-800 dark:shadow-[0_1px_2px_rgba(0,0,0,.3),0_20px_40px_rgba(0,0,0,.4)]"

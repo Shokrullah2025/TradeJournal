@@ -6,11 +6,11 @@ const PrivacyPolicy = () => (
   <LegalPageWrapper
     title="Privacy Policy"
     effectiveDate="June 18, 2026"
-    lastUpdated="June 18, 2026"
+    lastUpdated="July 16, 2026"
     slug="privacy"
   >
     <p>
-      This Privacy Policy describes how <strong>ZalorTrade</strong> ("Company," "we," "us," or "our") collects, uses, stores, and shares personal information when you use ZalorTrade (the "Service").
+      This Privacy Policy describes how <strong>ZalorTrade LLC</strong>, a Colorado limited liability company ("Company," "we," "us," or "our"), collects, uses, stores, and shares personal information when you use ZalorTrade (the "Service").
     </p>
     <p>
       This policy is aligned with the <strong>Colorado Privacy Act (CPA)</strong> (C.R.S. § 24-73-101 et seq., effective July 1, 2023), the <strong>California Consumer Privacy Act (CCPA)</strong> and <strong>California Privacy Rights Act (CPRA)</strong> (Cal. Civ. Code § 1798.100 et seq.), and includes <strong>GDPR-readiness provisions</strong> for users in the European Economic Area (EEA) and United Kingdom. By using the Service, you acknowledge the collection and use of information as described in this policy.
@@ -18,7 +18,7 @@ const PrivacyPolicy = () => (
 
     <h2>1. Data Controller Identity</h2>
     <p>
-      For users in the EEA/UK: ZalorTrade is the data controller of your personal data. Our Data Protection contact is <strong>noreply@zalortrade.com</strong>. We do not have a designated EU/UK representative at this time; for GDPR matters, please contact us directly.
+      The data controller of your personal data is <strong>ZalorTrade LLC</strong>, a limited liability company organized under the laws of the State of Colorado, United States. Our Data Protection contact is <strong>support@zalortrade.com</strong>. We do not have a designated EU/UK representative at this time; for GDPR matters, please contact us directly.
     </p>
 
     <h2>2. Categories of Personal Data We Collect</h2>
@@ -203,7 +203,7 @@ const PrivacyPolicy = () => (
       <li>Login attempts are rate-limited; accounts are temporarily locked after repeated failed attempts.</li>
     </ul>
     <p>
-      No security measure is 100% effective. If you believe your account has been compromised, contact us immediately at <strong>noreply@zalortrade.com</strong>.
+      No security measure is 100% effective. If you believe your account has been compromised, contact us immediately at <strong>support@zalortrade.com</strong>.
     </p>
 
     <h2>9. Cookies and Local Storage</h2>
@@ -226,7 +226,7 @@ const PrivacyPolicy = () => (
       <li><strong>Right to Opt Out of Targeted Advertising and Sale:</strong> We do not sell personal data or engage in targeted advertising, so this right is not applicable. You may still contact us to confirm this.</li>
     </ul>
     <p>
-      To exercise any of these rights, email <strong>noreply@zalortrade.com</strong> with the subject line "Colorado Privacy Request." We will respond within 45 days as required by the CPA (extendable by 45 additional days with notice).
+      To exercise any of these rights, email <strong>support@zalortrade.com</strong> with the subject line "Colorado Privacy Request." We will respond within 45 days as required by the CPA (extendable by 45 additional days with notice).
     </p>
     <p>
       If you believe we have not honored your rights under the Colorado Privacy Act, you may lodge a complaint with the Colorado Attorney General's Office.
@@ -245,7 +245,7 @@ const PrivacyPolicy = () => (
       <li><strong>Right to Non-Discrimination:</strong> We will not discriminate against you for exercising any of your CCPA/CPRA rights.</li>
     </ul>
     <p>
-      California residents may submit requests via email to <strong>noreply@zalortrade.com</strong>. We will respond within 45 days.
+      California residents may submit requests via email to <strong>support@zalortrade.com</strong>. We will respond within 45 days.
     </p>
 
     <h2>12. Your Rights — GDPR (EEA and UK Users)</h2>
@@ -265,12 +265,12 @@ const PrivacyPolicy = () => (
 
     <h3>International Data Transfers</h3>
     <p>
-      If you are in the EEA or UK, your data is transferred to and processed in the United States. We rely on the following transfer mechanisms where required: Standard Contractual Clauses (SCCs) adopted by the European Commission for transfers to Supabase, Stripe, and Resend. By using the Service, you acknowledge this transfer. If you have questions about data transfer mechanisms, contact us at <strong>noreply@zalortrade.com</strong>.
+      If you are in the EEA or UK, your data is transferred to and processed in the United States. We rely on the following transfer mechanisms where required: Standard Contractual Clauses (SCCs) adopted by the European Commission for transfers to Supabase, Stripe, and Resend. By using the Service, you acknowledge this transfer. If you have questions about data transfer mechanisms, contact us at <strong>support@zalortrade.com</strong>.
     </p>
 
     <h2>13. Children's Privacy</h2>
     <p>
-      The Service is not directed at children under 18 years of age. We do not knowingly collect personal information from persons under 18. If you are under 18, do not use the Service. If we learn that we have collected personal information from a person under 18, we will delete it promptly. If you believe we have inadvertently collected data from a minor, contact us at <strong>noreply@zalortrade.com</strong>.
+      The Service is not directed at children under 18 years of age. We do not knowingly collect personal information from persons under 18. If you are under 18, do not use the Service. If we learn that we have collected personal information from a person under 18, we will delete it promptly. If you believe we have inadvertently collected data from a minor, contact us at <strong>support@zalortrade.com</strong>.
     </p>
     <p>
       The Children's Online Privacy Protection Act (COPPA) applies to websites directed at children under 13. The Service is not directed at that age group.
@@ -289,8 +289,8 @@ const PrivacyPolicy = () => (
     <h2>16. Contact and Data Protection Inquiries</h2>
     <p>For any privacy questions, access requests, or data deletion requests:</p>
     <ul>
-      <li><strong>Email:</strong> noreply@zalortrade.com</li>
-      <li><strong>Company:</strong> ZalorTrade</li>
+      <li><strong>Email:</strong> support@zalortrade.com</li>
+      <li><strong>Company:</strong> ZalorTrade LLC, a Colorado limited liability company (United States)</li>
     </ul>
     <p>
       We will acknowledge your request within 5 business days and respond substantively within the timeframes required by applicable law.

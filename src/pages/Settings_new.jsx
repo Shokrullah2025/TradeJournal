@@ -1024,7 +1024,18 @@ const Settings = () => {
   return (
     // Redesigned shell: page heading, then a 272px card subnav beside the
     // content on desktop; on mobile the subnav becomes a horizontal chip row.
-    <div className="p-4 lg:pl-7 lg:pr-8 lg:pt-3 lg:pb-10">
+    //
+    // No padding here: the route shell in App.jsx already wraps every page in
+    // p-4 sm:p-6. Padding this root too stacked a second layer on top, which is
+    // why Settings alone sat further from the top and left than every other
+    // page. Every other page root is bare for the same reason.
+    //
+    // 2xl:max-w-[90%] 2xl:mx-auto is what every other page uses to pull its
+    // left edge in by 5% on very wide screens. Settings needs it purely to line
+    // its left edge up with theirs — it does NOT widen anything here, because
+    // the subnav is a fixed 272px and the panels are capped at max-w-3xl, so
+    // the extra room can only move the content, never stretch it.
+    <div className="2xl:max-w-[90%] 2xl:mx-auto">
       <div>
         <h1 className="text-[22px] font-bold tracking-tight text-gray-900 lg:text-[28px] dark:text-gray-300">
           Settings

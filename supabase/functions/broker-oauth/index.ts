@@ -1,4 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  projectxLogin,
+  projectxSearchAccounts,
+} from "../_shared/projectxAdapter.ts";
+
+// ProjectX session JWTs are valid for 24h.
+const PROJECTX_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,8 +63,26 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const { broker, code, accountType, redirectUri, propFirm } = body;
 
-    if (!broker || !code || !accountType || !redirectUri) {
-      return errorResponse("Missing required fields: broker, code, accountType, redirectUri", 400);
+    if (!broker) {
+      return errorResponse("Missing required field: broker", 400);
+    }
+
+    // ── ProjectX: API-key connect (no OAuth code/redirect) ──────────────────────
+    if (broker === "projectx") {
+      // Rollout kill-switch — dark in production until enabled (admins bypass).
+      const { data: rollout } = await supabase.rpc("feature_enabled_for", {
+        p_user_id: user.id,
+        p_flag_key: "projectx_broker",
+      });
+      if (rollout !== true) {
+        return errorResponse("ProjectX connections aren’t available yet.", 403);
+      }
+      return await handleProjectxConnect(supabase, user.id, body);
+    }
+
+    // ── OAuth brokers (Tradovate) ───────────────────────────────────────────────
+    if (!code || !accountType || !redirectUri) {
+      return errorResponse("Missing required fields: code, accountType, redirectUri", 400);
     }
 
     if (broker === "tradovate") {
@@ -207,6 +232,112 @@ async function handleTradovateOAuth(
     accountType,
     balance: primaryAccount.balance,
     propFirm: propFirm ?? null,
+  });
+}
+
+// Connect a ProjectX prop-firm account with an API key. We log in server-side
+// (the apiKey never touches the browser), read the account list, and persist the
+// long-lived apiKey + the 24h session JWT so broker-sync can re-login silently.
+async function handleProjectxConnect(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  body: Record<string, unknown>,
+) {
+  const firmId = typeof body.firmId === "string" ? body.firmId : null;
+  const baseUrl = typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";
+  const userName = typeof body.userName === "string" ? body.userName.trim() : "";
+  const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+  const accountType = body.accountType === "live" ? "live" : "demo";
+  const propFirm = typeof body.propFirm === "string" ? body.propFirm : null;
+
+  if (!baseUrl || !userName || !apiKey) {
+    return errorResponse("Missing required fields: baseUrl, userName, apiKey", 400);
+  }
+  if (!/^https:\/\//i.test(baseUrl)) {
+    return errorResponse("Invalid gateway URL — must be https.", 400);
+  }
+
+  // Authenticate with ProjectX (server-side only).
+  let token: string;
+  try {
+    token = await projectxLogin(baseUrl, userName, apiKey);
+  } catch (err) {
+    return errorResponse(
+      err instanceof Error ? err.message : "ProjectX authentication failed.",
+      401,
+    );
+  }
+
+  // Pull the account list; use the primary account for sync.
+  let accounts: Awaited<ReturnType<typeof projectxSearchAccounts>> = [];
+  try {
+    accounts = await projectxSearchAccounts(baseUrl, token);
+  } catch {
+    // Non-fatal: connection still succeeds; sync can resolve accounts later.
+    accounts = [];
+  }
+
+  const primary = accounts[0] ?? null;
+  const accountName = propFirm
+    ? `${propFirm} — ${accountType === "demo" ? "Evaluation" : "Funded"}`
+    : (primary?.name ?? "ProjectX Account");
+
+  // Upsert the trading_account (our internal record).
+  const { data: tradingAccount, error: accountError } = await supabase
+    .from("trading_accounts")
+    .upsert(
+      {
+        user_id: userId,
+        account_name: accountName,
+        broker: "projectx",
+        account_type: accountType,
+        current_balance: primary?.balance ?? 0,
+        is_active: true,
+      },
+      { onConflict: "user_id,account_name,broker", ignoreDuplicates: false },
+    )
+    .select("id, account_name")
+    .single();
+
+  if (accountError) {
+    console.error("Failed to upsert trading_account:", accountError);
+    return errorResponse("Failed to save account information", 500);
+  }
+
+  // Store credentials + session token server-side. Never returned to the browser.
+  const expiresAt = new Date(Date.now() + PROJECTX_TOKEN_TTL_MS).toISOString();
+  const { error: tokenError } = await supabase
+    .from("broker_tokens")
+    .upsert(
+      {
+        user_id: userId,
+        account_id: tradingAccount.id,
+        broker: "projectx",
+        account_type: accountType,
+        access_token: token,
+        token_type: "Bearer",
+        expires_at: expiresAt,
+        api_username: userName,
+        api_key: apiKey,
+        base_url: baseUrl,
+        firm_id: firmId,
+        external_account_id: primary?.id ?? null,
+      },
+      { onConflict: "user_id,broker,account_type" },
+    );
+
+  if (tokenError) {
+    console.error("Failed to store ProjectX connection:", tokenError);
+    return errorResponse("Failed to save connection", 500);
+  }
+
+  return successResponse({
+    accountId: tradingAccount.id,
+    accountName: tradingAccount.account_name,
+    broker: "projectx",
+    accountType,
+    balance: primary?.balance ?? 0,
+    propFirm,
   });
 }
 
