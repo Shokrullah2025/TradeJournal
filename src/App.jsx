@@ -15,7 +15,7 @@ import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./components/auth/EmailVerification";
 import ContactMessages from "./pages/ContactMessages";
 import Billing from "./pages/Billing";
-import BrokerSelection from "./pages/BrokerSelection";
+import BrokerHub from "./pages/BrokerHub";
 import TradeEntry from "./pages/TradeEntry";
 import OAuthCallback from "./pages/OAuthCallback";
 import AuthConfirm from "./pages/AuthConfirm";
@@ -249,7 +249,7 @@ function App() {
                                           title="Broker Sync"
                                           description="Automatic trade import from Tradovate and popular prop firms is almost ready. Until launch, log trades manually or bring history in with CSV import from the Trades page."
                                         >
-                                          <BrokerSelection />
+                                          <BrokerHub />
                                         </ComingSoonGate>
                                       </FeatureGate>
                                     }

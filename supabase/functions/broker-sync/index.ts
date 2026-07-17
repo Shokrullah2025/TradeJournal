@@ -349,7 +349,20 @@ async function syncProjectxTrades(
     return errorResponse("No ProjectX connection found. Please connect your account first.", 404);
   }
 
-  if (!tokenRow.base_url || !tokenRow.external_account_id) {
+  // Per-account sync: accountId is OUR trading_accounts id; each row carries the
+  // provider-side account id set during the wizard's activate step. Fall back to
+  // the connection-level pointer for accounts created by the legacy flow.
+  const { data: accountRow } = await supabase
+    .from("trading_accounts")
+    .select("id, external_account_id, sync_enabled")
+    .eq("user_id", userId)
+    .eq("id", accountId)
+    .maybeSingle();
+
+  const externalAccountId =
+    accountRow?.external_account_id ?? tokenRow.external_account_id;
+
+  if (!tokenRow.base_url || !externalAccountId) {
     return errorResponse("ProjectX connection is incomplete. Please reconnect your account.", 409);
   }
 
@@ -381,7 +394,7 @@ async function syncProjectxTrades(
     rawTrades = await projectxSearchTrades(
       tokenRow.base_url,
       token,
-      String(tokenRow.external_account_id),
+      String(externalAccountId),
       fromDate,
     );
   } catch (err) {
@@ -392,8 +405,18 @@ async function syncProjectxTrades(
     return errorResponse("Failed to fetch trades from ProjectX", 502);
   }
 
+  // Stamp the sync time on the account row up front — even a zero-trade sync is a
+  // successful health check, and the hub's "Last sync" indicator should reflect it.
+  const stampLastSync = () =>
+    supabase
+      .from("trading_accounts")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("id", accountId);
+
   const trades = normalizeProjectxTrades(rawTrades);
   if (trades.length === 0) {
+    await stampLastSync();
     return successResponse({ imported: 0, skipped: 0, message: "No trades found" });
   }
 
@@ -440,6 +463,7 @@ async function syncProjectxTrades(
     }
   }
 
+  await stampLastSync();
   return successResponse({ imported, skipped });
 }
 

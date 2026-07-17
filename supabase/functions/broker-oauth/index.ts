@@ -235,14 +235,47 @@ async function handleTradovateOAuth(
   });
 }
 
+// Known prop firms on the ProjectX platform, matched against account names so the
+// hub can badge each account ("Topstep", "Apex", …) without asking the user.
+const PROP_FIRM_PATTERNS: Array<[RegExp, string]> = [
+  [/topstep/i, "Topstep"],
+  [/apex/i, "Apex"],
+  [/(myfundedfutures|my funded|mffu?)/i, "MyFundedFutures"],
+  [/bulenox/i, "Bulenox"],
+  [/take ?profit/i, "Take Profit Trader"],
+  [/tradeify/i, "Tradeify"],
+  [/alpha ?futures/i, "Alpha Futures"],
+  [/futures ?desk/i, "The Futures Desk"],
+];
+
+function detectPropFirm(accountName: string, fallback: string | null): string | null {
+  for (const [pattern, firm] of PROP_FIRM_PATTERNS) {
+    if (pattern.test(accountName)) return firm;
+  }
+  return fallback;
+}
+
 // Connect a ProjectX prop-firm account with an API key. We log in server-side
 // (the apiKey never touches the browser), read the account list, and persist the
 // long-lived apiKey + the 24h session JWT so broker-sync can re-login silently.
+//
+// The Broker Hub wizard drives this in two phases:
+//   phase:"discover" — authenticate + store credentials, return ALL accounts so the
+//                       user can choose which to import (credentials never echoed).
+//   phase:"activate" — create a trading_accounts row per SELECTED account, carrying
+//                       the user's nickname and the auto-detected prop firm.
+// No phase = legacy single-account connect (kept for BrokerModal compatibility).
 async function handleProjectxConnect(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   body: Record<string, unknown>,
 ) {
+  if (body.phase === "discover") {
+    return await handleProjectxDiscover(supabase, userId, body);
+  }
+  if (body.phase === "activate") {
+    return await handleProjectxActivate(supabase, userId, body);
+  }
   const firmId = typeof body.firmId === "string" ? body.firmId : null;
   const baseUrl = typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";
   const userName = typeof body.userName === "string" ? body.userName.trim() : "";
@@ -339,6 +372,194 @@ async function handleProjectxConnect(
     balance: primary?.balance ?? 0,
     propFirm,
   });
+}
+
+// Phase 1 of the wizard: authenticate with ProjectX, persist the credentials +
+// session JWT, and return the full account list for the "Choose accounts" step.
+// No trading_accounts rows are created yet — that happens on activate, so a user
+// who abandons the wizard mid-way leaves nothing half-imported behind.
+async function handleProjectxDiscover(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  body: Record<string, unknown>,
+) {
+  const firmId = typeof body.firmId === "string" ? body.firmId : null;
+  const baseUrl = typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";
+  const userName = typeof body.userName === "string" ? body.userName.trim() : "";
+  const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+  const accountType = body.accountType === "live" ? "live" : "demo";
+
+  if (!baseUrl || !userName || !apiKey) {
+    return errorResponse("Missing required fields: baseUrl, userName, apiKey", 400);
+  }
+  if (!/^https:\/\//i.test(baseUrl)) {
+    return errorResponse("Invalid gateway URL — must be https.", 400);
+  }
+
+  let token: string;
+  try {
+    token = await projectxLogin(baseUrl, userName, apiKey);
+  } catch (err) {
+    return errorResponse(
+      err instanceof Error ? err.message : "Authentication failed. Check your username and API key.",
+      401,
+    );
+  }
+
+  let accounts: Awaited<ReturnType<typeof projectxSearchAccounts>> = [];
+  try {
+    accounts = await projectxSearchAccounts(baseUrl, token);
+  } catch {
+    return errorResponse("Signed in, but we couldn't load your accounts. Please try again.", 502);
+  }
+
+  if (accounts.length === 0) {
+    return errorResponse("No active accounts were found for this login.", 404);
+  }
+
+  // Persist credentials + session so activate/sync never need the apiKey from the
+  // browser again. external_account_id is filled in on activate.
+  const expiresAt = new Date(Date.now() + PROJECTX_TOKEN_TTL_MS).toISOString();
+  const { error: tokenError } = await supabase
+    .from("broker_tokens")
+    .upsert(
+      {
+        user_id: userId,
+        broker: "projectx",
+        account_type: accountType,
+        access_token: token,
+        token_type: "Bearer",
+        expires_at: expiresAt,
+        api_username: userName,
+        api_key: apiKey,
+        base_url: baseUrl,
+        firm_id: firmId,
+      },
+      { onConflict: "user_id,broker,account_type" },
+    );
+
+  if (tokenError) {
+    console.error("Failed to store ProjectX connection:", tokenError);
+    return errorResponse("Failed to save connection", 500);
+  }
+
+  // Account metadata only — never the token or apiKey.
+  return successResponse({
+    broker: "projectx",
+    accountType,
+    accounts: accounts.map((a) => ({
+      id: a.id,
+      name: a.name,
+      balance: a.balance,
+      canTrade: a.canTrade,
+      propFirm: detectPropFirm(a.name, null),
+    })),
+  });
+}
+
+// Phase 2 of the wizard: create one trading_accounts row per account the user
+// selected, carrying nickname + detected prop firm. Requires a prior discover
+// (the stored broker_tokens row proves the credentials were verified).
+async function handleProjectxActivate(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  body: Record<string, unknown>,
+) {
+  const accountType = body.accountType === "live" ? "live" : "demo";
+  const fallbackFirm = typeof body.propFirm === "string" ? body.propFirm : null;
+  const selections = Array.isArray(body.accounts) ? body.accounts : [];
+
+  if (selections.length === 0) {
+    return errorResponse("Select at least one account to import.", 400);
+  }
+  if (selections.length > 25) {
+    return errorResponse("Too many accounts selected.", 400);
+  }
+
+  const { data: tokenRow, error: tokenError } = await supabase
+    .from("broker_tokens")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("broker", "projectx")
+    .eq("account_type", accountType)
+    .maybeSingle();
+
+  if (tokenError || !tokenRow) {
+    return errorResponse("No verified ProjectX connection found. Please sign in again.", 404);
+  }
+
+  const created: Array<{
+    id: string;
+    externalId: string;
+    name: string;
+    nickname: string | null;
+    balance: number;
+    propFirm: string | null;
+  }> = [];
+
+  for (const raw of selections) {
+    const sel = raw as Record<string, unknown>;
+    const externalId = String(sel.externalId ?? "").trim();
+    const name = String(sel.name ?? "").trim().slice(0, 100);
+    const nickname = typeof sel.nickname === "string" && sel.nickname.trim()
+      ? sel.nickname.trim().slice(0, 60)
+      : null;
+    const balance = Number.isFinite(Number(sel.balance)) ? Number(sel.balance) : 0;
+
+    if (!externalId || !name) continue;
+
+    const propFirm = detectPropFirm(name, fallbackFirm);
+
+    const { data: account, error: accountError } = await supabase
+      .from("trading_accounts")
+      .upsert(
+        {
+          user_id: userId,
+          account_name: name,
+          broker: "projectx",
+          account_type: accountType,
+          account_number: externalId,
+          external_account_id: externalId,
+          nickname,
+          prop_firm: propFirm,
+          current_balance: balance,
+          sync_enabled: true,
+          is_active: true,
+        },
+        { onConflict: "user_id,account_name,broker", ignoreDuplicates: false },
+      )
+      .select("id, account_name, nickname, external_account_id, current_balance, prop_firm")
+      .single();
+
+    if (accountError || !account) {
+      console.error("Failed to upsert trading_account:", accountError);
+      return errorResponse("Failed to save account information", 500);
+    }
+
+    created.push({
+      id: account.id,
+      externalId: account.external_account_id,
+      name: account.account_name,
+      nickname: account.nickname,
+      balance: Number(account.current_balance ?? 0),
+      propFirm: account.prop_firm,
+    });
+  }
+
+  if (created.length === 0) {
+    return errorResponse("No valid accounts in selection.", 400);
+  }
+
+  // Legacy pointer used by the single-account sync path — keep it on the first
+  // selected account so older clients continue to work.
+  await supabase
+    .from("broker_tokens")
+    .update({ external_account_id: created[0].externalId })
+    .eq("user_id", userId)
+    .eq("broker", "projectx")
+    .eq("account_type", accountType);
+
+  return successResponse({ broker: "projectx", accountType, accounts: created });
 }
 
 function successResponse(data: unknown) {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useNotifications } from "./NotificationContext";
@@ -530,6 +530,12 @@ export const BrokerProvider = ({ children }) => {
   const { createNotification } = useNotifications();
   const [state, setState] = useState(initialState);
   const [brokerService] = useState(() => new BrokerService());
+  // Guards setState calls from async loads after unmount (CLAUDE.md §3).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Restore non-sensitive connection state from localStorage on mount
   useEffect(() => {
@@ -546,6 +552,10 @@ export const BrokerProvider = ({ children }) => {
         // Ignore malformed config
       }
     }
+    // Then reconcile against the DB — trading_accounts is the source of truth
+    // for connected accounts (localStorage is only a fast first paint).
+    loadConnections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save only non-sensitive fields to localStorage
@@ -652,6 +662,181 @@ export const BrokerProvider = ({ children }) => {
       toast.error(error.message);
       return false;
     }
+  };
+
+  // ── Broker Hub wizard (two-phase connect + per-account sync) ─────────────────
+
+  // Map a trading_accounts row to the account shape used across the hub UI.
+  const mapAccountRow = (row) => ({
+    id: row.id,
+    name: row.account_name,
+    nickname: row.nickname ?? null,
+    displayName: row.nickname || row.account_name,
+    balance: row.current_balance != null ? Number(row.current_balance) : null,
+    type: row.account_type,
+    broker: row.broker,
+    propFirm: row.prop_firm ?? null,
+    externalId: row.external_account_id ?? null,
+    syncEnabled: row.sync_enabled ?? true,
+    lastSync: row.last_synced_at ?? null,
+  });
+
+  const ACCOUNT_COLUMNS =
+    "id, account_name, nickname, broker, account_type, current_balance, external_account_id, sync_enabled, last_synced_at, prop_firm, is_active";
+
+  // Load the user's connected broker accounts from the DB (source of truth), so
+  // the hub reflects reality across devices instead of trusting localStorage.
+  const loadConnections = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return [];
+
+    const { data, error } = await supabase
+      .from("trading_accounts")
+      .select(ACCOUNT_COLUMNS)
+      .eq("user_id", session.user.id)
+      .in("broker", ["projectx", "tradovate"])
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      // Non-fatal: the hub falls back to locally cached accounts.
+      console.error("Failed to load broker connections:", error.message);
+      return null;
+    }
+
+    const mapped = (data ?? []).map(mapAccountRow);
+    if (!mountedRef.current) return mapped;
+    setState((prev) => {
+      const next = {
+        ...prev,
+        accounts: mapped,
+        isConnected: mapped.length > 0,
+        selectedBroker: mapped.length > 0 ? mapped[0].broker : prev.selectedBroker,
+        selectedAccount: mapped[0]?.id ?? null,
+      };
+      saveBrokerConfig(next);
+      return next;
+    });
+    return mapped;
+  };
+
+  // Phase 1: verify credentials server-side and get the FULL account list back.
+  // Secrets go straight to the Edge Function — never into state or storage.
+  const discoverBrokerAccounts = async (brokerKey, config) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("You must be logged in to connect a broker.");
+
+    const { data, error } = await supabase.functions.invoke("broker-oauth", {
+      body: {
+        broker: brokerKey,
+        phase: "discover",
+        firmId: config.firmId ?? null,
+        baseUrl: config.baseUrl,
+        userName: config.userName,
+        apiKey: config.apiKey,
+        accountType: config.accountType ?? "demo",
+      },
+    });
+
+    if (error) throw new Error(error.message || "Failed to connect");
+    if (!data?.success) throw new Error(data?.error || "Failed to connect");
+    return data.data.accounts ?? [];
+  };
+
+  // Phase 2: create trading_accounts rows for only the accounts the user picked
+  // (with nicknames). Returns the created accounts with our internal ids.
+  const activateBrokerAccounts = async (brokerKey, { accountType, propFirm, accounts }) => {
+    const { data, error } = await supabase.functions.invoke("broker-oauth", {
+      body: {
+        broker: brokerKey,
+        phase: "activate",
+        accountType: accountType ?? "demo",
+        propFirm: propFirm ?? null,
+        accounts,
+      },
+    });
+
+    if (error) throw new Error(error.message || "Failed to save accounts");
+    if (!data?.success) throw new Error(data?.error || "Failed to save accounts");
+
+    await loadConnections();
+    return data.data.accounts ?? [];
+  };
+
+  // Sync one account. fromDate bounds the import window (null = provider default).
+  // Returns { imported, skipped }; throws with a friendly message on failure.
+  const syncAccount = async (brokerKey, accountId, fromDate = null) => {
+    const { data, error } = await supabase.functions.invoke("broker-sync", {
+      body: { broker: brokerKey, accountId, fromDate },
+    });
+
+    if (error) throw new Error(error.message || "Sync failed");
+    if (!data?.success) throw new Error(data?.error || "Sync failed");
+
+    setState((prev) => ({ ...prev, syncStatus: "success", lastSync: new Date() }));
+    return data.data ?? { imported: 0, skipped: 0 };
+  };
+
+  // ── Per-account management (hub "Manage" panel) ──────────────────────────────
+
+  const renameAccount = async (accountId, nickname) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error("Not signed in.");
+
+    const { error } = await supabase
+      .from("trading_accounts")
+      .update({ nickname: nickname?.trim() || null })
+      .eq("user_id", session.user.id)
+      .eq("id", accountId);
+
+    if (error) throw new Error("Couldn't rename the account. Please try again.");
+    await loadConnections();
+  };
+
+  const setAccountSyncEnabled = async (accountId, enabled) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error("Not signed in.");
+
+    const { error } = await supabase
+      .from("trading_accounts")
+      .update({ sync_enabled: Boolean(enabled) })
+      .eq("user_id", session.user.id)
+      .eq("id", accountId);
+
+    if (error) throw new Error("Couldn't update sync for this account.");
+    await loadConnections();
+  };
+
+  // Soft-disconnect: deactivates the account row. Imported trades stay untouched.
+  const disconnectAccount = async (accountId) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error("Not signed in.");
+
+    const { error } = await supabase
+      .from("trading_accounts")
+      .update({ is_active: false, sync_enabled: false })
+      .eq("user_id", session.user.id)
+      .eq("id", accountId);
+
+    if (error) throw new Error("Couldn't disconnect the account.");
+    await loadConnections();
+  };
+
+  // Delete only trades that were IMPORTED for this account (external_trade_id set)
+  // — manually journaled trades on the same account are never touched.
+  const deleteImportedTrades = async (accountId) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error("Not signed in.");
+
+    const { error, count } = await supabase
+      .from("trades")
+      .delete({ count: "exact" })
+      .eq("user_id", session.user.id)
+      .eq("account_id", accountId)
+      .not("external_trade_id", "is", null);
+
+    if (error) throw new Error("Couldn't delete imported trades.");
+    return count ?? 0;
   };
 
   const disconnectBroker = () => {
@@ -785,6 +970,15 @@ export const BrokerProvider = ({ children }) => {
     toggleAutoSync,
     setSyncInterval,
     brokerService,
+    // Broker Hub wizard + per-account management
+    loadConnections,
+    discoverBrokerAccounts,
+    activateBrokerAccounts,
+    syncAccount,
+    renameAccount,
+    setAccountSyncEnabled,
+    disconnectAccount,
+    deleteImportedTrades,
   };
 
   return (
