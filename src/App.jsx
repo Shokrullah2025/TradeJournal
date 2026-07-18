@@ -67,6 +67,7 @@ import {
   RiskCalculatorLockedPreview,
 } from "./components/common/LockedPreview";
 import ComingSoonGate from "./components/common/ComingSoonGate";
+import FeedbackPrompt from "./components/feedback/FeedbackPrompt";
 import {
   ProtectedRoute,
   PublicRoute,
@@ -338,6 +339,12 @@ function App() {
                                 </div>
                               </main>
                             </div>
+
+                            {/* Renders nothing until a user has been in the app
+                                ~30 minutes; then a one-time feedback modal (portal).
+                                Gated to trial/paid users, never the trial gate or
+                                admins. */}
+                            <FeedbackPrompt />
                           </div>
                           </ErrorBoundary>
                           </RequireSubscription>
