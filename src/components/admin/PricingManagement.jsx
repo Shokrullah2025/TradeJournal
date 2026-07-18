@@ -43,13 +43,29 @@ const SUB_TABS = [
   { id: "details", name: "Plan details", icon: ListChecks },
 ];
 
-const emptyDetail = { name: "", description: "", features: "" };
+const emptyDetail = { name: "", description: "", features: "", maxTrades: "0", maxBacktest: "0" };
 
 const detailFromPlan = (p) => ({
   name: p?.name ?? "",
   description: p?.description ?? "",
   features: Array.isArray(p?.features) ? p.features.join("\n") : "",
+  // Usage caps — 0 means unlimited (matches the DB convention, see planLimits.js).
+  maxTrades: p?.max_trades_per_month != null ? String(p.max_trades_per_month) : "0",
+  maxBacktest: p?.max_backtest_sessions != null ? String(p.max_backtest_sessions) : "0",
 });
+
+// Parse a usage-cap input into a non-negative integer, or null when invalid.
+// Blank counts as 0 (unlimited) so an admin can clear the field to remove a cap.
+const parseCap = (v) => {
+  const s = (v ?? "").toString().trim();
+  if (s === "") return 0;
+  const n = Number(s);
+  if (!Number.isInteger(n) || n < 0) return null;
+  return n;
+};
+
+// "Unlimited" or "50 / mo" style read-out for a cap value.
+const capLabel = (v, suffix) => (!v || v <= 0 ? "Unlimited" : `${v}${suffix}`);
 
 // Cards share a responsive grid: equal widths that shrink to fit the admin
 // content area, so the Add card stays on the same row instead of wrapping to
@@ -87,7 +103,7 @@ const PricingManagement = () => {
       const { data, error } = await supabase
         .from("subscription_plans")
         .select(
-          "slug, name, description, features, price, price_annually, currency, is_active, stripe_price_id_monthly, stripe_price_id_annually, sort_order",
+          "slug, name, description, features, price, price_annually, currency, is_active, stripe_price_id_monthly, stripe_price_id_annually, sort_order, max_trades_per_month, max_backtest_sessions",
         )
         .order("sort_order", { ascending: true });
       if (error) throw error;
@@ -178,14 +194,27 @@ const PricingManagement = () => {
       return;
     }
     const features = (draft.features || "").split("\n").map((f) => f.trim()).filter(Boolean);
+    const maxTrades = parseCap(draft.maxTrades);
+    const maxBacktest = parseCap(draft.maxBacktest);
+    if (maxTrades === null || maxBacktest === null) {
+      toast.error("Usage limits must be whole numbers of 0 or more (0 = unlimited).");
+      return;
+    }
     setSavingSlug(plan.slug);
     try {
       const { error } = await supabase
         .from("subscription_plans")
-        .update({ name, description: (draft.description || "").trim() || null, features, updated_at: new Date().toISOString() })
+        .update({
+          name,
+          description: (draft.description || "").trim() || null,
+          features,
+          max_trades_per_month: maxTrades,
+          max_backtest_sessions: maxBacktest,
+          updated_at: new Date().toISOString(),
+        })
         .eq("slug", plan.slug);
       if (error) throw error;
-      logActivity(user?.id, "admin_plan_details_updated", { plan: plan.slug, features: features.length });
+      logActivity(user?.id, "admin_plan_details_updated", { plan: plan.slug, features: features.length, maxTrades, maxBacktest });
       toast.success(`${name} details updated`);
       setEditingSlug(null);
       await load();
@@ -300,7 +329,8 @@ const PricingManagement = () => {
         price: 0,
         currency: "usd",
         billing_cycle: "monthly",
-        max_trades_per_month: 100000,
+        max_trades_per_month: 0, // 0 = unlimited; tighten per-plan in Plan details
+        max_backtest_sessions: 0,
         max_accounts: 10,
         is_active: false, // created hidden — configure, then publish
         sort_order: nextSort,
@@ -606,8 +636,27 @@ const DetailCard = ({ plan, draft, setDetailDraft, saveDetails, editingSlug, pen
           </label>
           <label className="block flex-1">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Features — one per line</span>
-            <textarea rows={7} value={draft.features} onChange={(e) => setDetailDraft(plan.slug, "features", e.target.value)} placeholder={"Unlimited trades\nAdvanced analytics\nPriority support"} data-test-id={`admin-plan-features-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y" />
+            <textarea rows={6} value={draft.features} onChange={(e) => setDetailDraft(plan.slug, "features", e.target.value)} placeholder={"Unlimited trades\nAdvanced analytics\nPriority support"} data-test-id={`admin-plan-features-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y" />
           </label>
+
+          {/* Usage limits — the numeric caps enforced by usePlanLimits + the DB
+              triggers. 0 = unlimited; when a user on this plan hits a cap the
+              PlanLimitModal prompts them to upgrade to the next tier up. */}
+          <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Usage limits</span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500">— 0 = unlimited</span>
+            </div>
+            <label className="block">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Manual trades / month</span>
+              <input type="number" min="0" step="1" inputMode="numeric" value={draft.maxTrades} onChange={(e) => setDetailDraft(plan.slug, "maxTrades", e.target.value)} placeholder="0" data-test-id={`admin-plan-max-trades-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Saved backtest sessions</span>
+              <input type="number" min="0" step="1" inputMode="numeric" value={draft.maxBacktest} onChange={(e) => setDetailDraft(plan.slug, "maxBacktest", e.target.value)} placeholder="0" data-test-id={`admin-plan-max-backtest-input-${plan.slug}`} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </label>
+          </div>
+
           <div className="flex gap-2">
             <button type="button" disabled={busy} onClick={() => saveDetails(plan)} data-test-id={`admin-plan-details-save-${plan.slug}`} className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium btn-gradient focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed">
               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Save details
@@ -626,6 +675,18 @@ const DetailCard = ({ plan, draft, setDetailDraft, saveDetails, editingSlug, pen
               </li>
             )) : <li className="text-sm italic text-gray-400 dark:text-gray-500">No features yet</li>}
           </ul>
+
+          {/* Usage limits read-out — what this plan actually enforces. */}
+          <div className="mt-auto flex flex-wrap gap-2 pt-2" data-test-id={`admin-plan-limits-${plan.slug}`}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300" data-test-id={`admin-plan-limit-trades-${plan.slug}`}>
+              <span className="text-gray-400 dark:text-gray-500">Trades/mo:</span>
+              <span className="font-semibold">{capLabel(plan.max_trades_per_month, "")}</span>
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300" data-test-id={`admin-plan-limit-backtest-${plan.slug}`}>
+              <span className="text-gray-400 dark:text-gray-500">Backtests:</span>
+              <span className="font-semibold">{capLabel(plan.max_backtest_sessions, "")}</span>
+            </span>
+          </div>
         </div>
       )}
     </div>
