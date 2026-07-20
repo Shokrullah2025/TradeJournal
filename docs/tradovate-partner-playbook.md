@@ -8,6 +8,67 @@
 
 ---
 
+## 0. Live status log (most recent first)
+
+### NinjaTrader / Tradovate — ✅ ACCEPTED (green light)
+Reply from **Michaelanne Chapel, Business Development Manager – North America**
+(michaelanne.chapel@ninjatrader.com). Key terms offered:
+- The **same API serves both NinjaTrader and Tradovate users** — one build, no
+  per-platform branching ("it is the same path").
+- Access is via the **NinjaTrader Vendor Program**, which is **free to join**.
+- As a Vendor Program member they will **waive the API fee AND the financial
+  requirements** (the $1,000-funded-account + paid add-on barrier that blocks
+  the retail tier — see §1 — is removed for us).
+- It's a **co-marketing program**: we must have a public-facing website/landing
+  page and agree to be listed as a **Connection / Integration (not a
+  Brokerage)**. Free directory exposure for us.
+- ⚠️ **No dedicated API support** — build independently from the provided docs.
+  Acceptable for us: we already shipped the ProjectX/TopstepX adapter from
+  public docs, and Tradovate OAuth is simpler.
+
+**Next step:** reply YES, confirm the integration listing + our live site,
+enroll in the Vendor Program, request API docs + OAuth app credentials
+(client ID/secret). Then wire into the existing `tradovate` adapter slot
+(`BrokerContext.jsx` / `broker-oauth`). **Blocker on our side:** public website
+must be live for the co-marketing listing.
+
+### Rithmic — 🟡 ENGAGED, dev kit released, commercial conformance required
+Reply from **Shyam** — released the **RProtocol dev kit** to our download
+directory. Answers received:
+- **Conformance depends on personal vs. product use.** We're a product for
+  customers ⇒ **commercial conformance** (formal certification) is required.
+  Process details still to be clarified.
+- **Auth: the trader's own Rithmic login suffices** (we don't provision
+  accounts). BUT there **may be a third-party API fee charged to the trader**
+  (monthly, discussed with their broker/IB — reference ~$100+/mo via FCMs).
+- **Trade history is exposed** as long as trades occurred on the Rithmic
+  platform; **searchable by date** — good for journaling.
+- ⚠️ **Concurrent-session risk:** an API login may **kick the trader out of
+  RTrader Pro** if it exceeds their max concurrent session count. Must confirm a
+  read-only history pull can avoid consuming a live session slot. This is the
+  key architecture risk.
+- Access is scoped to the **systems we're permissioned for** (per firm/FCM).
+- One question still pending ("we will get back to you").
+
+**Open follow-ups sent to Shyam:** commercial conformance process/timeline/cost;
+concurrent-session avoidance for read-only sync; the per-trader API fee amount;
+vendor permissioning across firms; history depth/date-range limits; test vs.
+production environments.
+
+**Architecture note:** Rithmic needs stateful WebSocket/protobuf sessions and
+careful concurrent-session handling — does **not** fit Supabase Edge Functions.
+A Rithmic adapter requires a small always-on worker service holding the
+connections and writing normalized trades into Supabase.
+
+### Sequencing decision
+Land **NinjaTrader/Tradovate first** (green light, waived fees, cleaner OAuth
+model, covers NT + Tradovate in one build). Keep **Rithmic warm** as the second
+integration — dev kit is already in hand at no cost. **TopstepX/ProjectX** stays
+the shipped-dark path (flip `projectx_broker` after live verify). **CSV** remains
+the universal fallback throughout.
+
+---
+
 ## 1. Know which program you're applying to (don't mix these up)
 
 | Program | Who it's for | Is it us? |
