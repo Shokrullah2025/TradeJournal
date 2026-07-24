@@ -1,6 +1,18 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { FileText, FileArchive, File, ImageOff, Paperclip, Download } from "lucide-react";
+import {
+  FileText,
+  FileArchive,
+  File,
+  ImageOff,
+  Paperclip,
+  Download,
+  ExternalLink,
+} from "lucide-react";
+
+// Where the untouched original email — every attachment included — can always
+// be found. Resend keeps received mail for 30 days.
+const RESEND_INBOX_URL = "https://resend.com/emails";
 
 // Files attached to an inbound contact message (contact-inbound stores them in
 // the private contact-attachments bucket and records them on
@@ -36,10 +48,18 @@ const SKIP_REASONS = {
   upload: "file couldn't be saved",
 };
 
-function ContactAttachments({ attachments = [], skipped = [], urls = {}, testIdPrefix }) {
+function ContactAttachments({
+  attachments = [],
+  skipped = [],
+  truncated = 0,
+  urls = {},
+  testIdPrefix,
+}) {
   const files = Array.isArray(attachments) ? attachments : [];
   const blocked = Array.isArray(skipped) ? skipped : [];
-  if (files.length === 0 && blocked.length === 0) return null;
+  // The email carried more files than we store, so some were never fetched.
+  const overflow = Number(truncated) > files.length ? Number(truncated) : 0;
+  if (files.length === 0 && blocked.length === 0 && overflow === 0) return null;
 
   const images = files.filter((f) => IMAGE_TYPES.test(f.contentType ?? ""));
   const others = files.filter((f) => !IMAGE_TYPES.test(f.contentType ?? ""));
@@ -127,17 +147,40 @@ function ContactAttachments({ attachments = [], skipped = [], urls = {}, testIdP
         </div>
       )}
 
-      {blocked.length > 0 && (
-        <p
+      {/* Anything we couldn't keep — too many files, or one we refused. The
+          sender's original is still on Resend for 30 days, so point there
+          rather than leaving the admin with a dead end. */}
+      {(blocked.length > 0 || overflow > 0) && (
+        <div
           data-test-id={`${testIdPrefix}-attachments-skipped`}
-          className="mt-2 text-xs text-warning-700 dark:text-warning-400"
+          className="mt-2 rounded-lg bg-warning-50 dark:bg-warning-900/15 px-2.5 py-2 text-xs text-warning-800 dark:text-warning-300"
         >
-          {blocked.length === 1
-            ? `“${blocked[0].filename}” wasn't saved — the ${
-                SKIP_REASONS[blocked[0].reason] ?? "file couldn't be saved"
-              }.`
-            : `${blocked.length} files weren't saved (unsupported type or too large).`}
-        </p>
+          {overflow > 0 && (
+            <p>
+              This email had <strong>{overflow} files</strong> — the first{" "}
+              {files.length} are here.
+            </p>
+          )}
+          {blocked.length > 0 && (
+            <p className={overflow > 0 ? "mt-1" : undefined}>
+              {blocked.length === 1
+                ? `“${blocked[0].filename}” wasn't saved — the ${
+                    SKIP_REASONS[blocked[0].reason] ?? "file couldn't be saved"
+                  }.`
+                : `${blocked.length} files weren't saved (unsupported type or too large).`}
+            </p>
+          )}
+          <a
+            data-test-id={`${testIdPrefix}-attachments-resend-link`}
+            href={RESEND_INBOX_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-flex items-center gap-1 font-medium underline underline-offset-2 hover:text-warning-900 dark:hover:text-warning-200"
+          >
+            Open the full email in the Resend dashboard
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
       )}
     </div>
   );
@@ -158,6 +201,8 @@ ContactAttachments.propTypes = {
       reason: PropTypes.string,
     }),
   ),
+  // Total files on the original email, when it carried more than we store.
+  truncated: PropTypes.number,
   urls: PropTypes.objectOf(PropTypes.string),
   testIdPrefix: PropTypes.string.isRequired,
 };

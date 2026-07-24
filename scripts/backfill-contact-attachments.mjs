@@ -278,8 +278,15 @@ async function processEmail(email, receivedAt) {
     console.log(`      stored ${filename} (${contentType}, ${bytes.byteLength} bytes)`);
   }
 
+  // More files than we take: record the real total so the inbox can point the
+  // admin at Resend for the rest.
+  const truncated = files.length > MAX_ATTACHMENTS ? files.length : 0;
+  if (truncated > 0) {
+    console.log(`      note: ${truncated} files on the email, storing the first ${MAX_ATTACHMENTS}`);
+  }
+
   summary.filesSkipped += skipped.length;
-  if (stored.length === 0 && skipped.length === 0) return;
+  if (stored.length === 0 && skipped.length === 0 && truncated === 0) return;
 
   if (!apply) {
     summary.messagesUpdated += 1;
@@ -293,6 +300,7 @@ async function processEmail(email, receivedAt) {
         ...(row.metadata ?? {}),
         ...(stored.length > 0 ? { attachments: stored } : {}),
         ...(skipped.length > 0 ? { attachments_skipped: skipped } : {}),
+        ...(truncated > 0 ? { attachments_truncated: truncated } : {}),
         // Marks the row as touched by this script rather than by the webhook.
         attachments_backfilled_at: new Date().toISOString(),
       },
