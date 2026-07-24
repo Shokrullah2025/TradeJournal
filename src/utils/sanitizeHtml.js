@@ -23,20 +23,31 @@ const NOTE_CONFIG = {
 };
 
 // Any link that survives sanitization opens in a new tab and can't reach back
-// into this window (`noopener`) or leak the app URL as a referrer. Registered
-// once at module load — DOMPurify hooks are global to the singleton.
-DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-  if (node.tagName === "A" && node.hasAttribute("href")) {
-    node.setAttribute("target", "_blank");
-    node.setAttribute("rel", "noopener noreferrer nofollow");
-  }
-});
+// into this window (`noopener`) or leak the app URL as a referrer.
+//
+// Registered on first sanitize rather than at module load: the prerender build
+// imports this module in Node, where DOMPurify has no DOM to bind to and
+// exposes no `addHook` — a module-level call there fails the whole SSR bundle.
+// The hook is global to the DOMPurify singleton, so it is only added once.
+let linkHookRegistered = false;
+
+function ensureLinkHook() {
+  if (linkHookRegistered || typeof DOMPurify.addHook !== "function") return;
+  linkHookRegistered = true;
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if (node.tagName === "A" && node.hasAttribute("href")) {
+      node.setAttribute("target", "_blank");
+      node.setAttribute("rel", "noopener noreferrer nofollow");
+    }
+  });
+}
 
 /**
  * Sanitize note HTML for safe storage/rendering. Returns a clean HTML string.
  */
 export function sanitizeNoteHtml(html) {
   if (typeof html !== "string" || html.length === 0) return "";
+  ensureLinkHook();
   return DOMPurify.sanitize(html, NOTE_CONFIG);
 }
 
