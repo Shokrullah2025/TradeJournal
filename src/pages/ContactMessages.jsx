@@ -705,6 +705,9 @@ const ContactMessages = () => {
         attachmentsSkipped: Array.isArray(m.metadata?.attachments_skipped)
           ? m.metadata.attachments_skipped
           : [],
+        // Total files on the original email when it carried more than we
+        // store — the inbox points at Resend for the rest.
+        attachmentsTruncated: Number(m.metadata?.attachments_truncated) || 0,
         at: m.created_at,
       });
       const replies = Array.isArray(m.metadata?.replies) ? m.metadata.replies : [];
@@ -1462,16 +1465,6 @@ const ContactMessages = () => {
                           })}
                         </div>
                       )}
-                      {/* Anything the sender attached — image previews and
-                          download chips, opened through signed URLs. */}
-                      {!isEditing && (
-                        <ContactAttachments
-                          attachments={entry.attachments}
-                          skipped={entry.attachmentsSkipped}
-                          urls={attachmentUrls}
-                          testIdPrefix={`admin-contact-message-${entry.key}`}
-                        />
-                      )}
                       {/* What this reply is answering — the quoted history the
                           visitor's mail client appended. Sits below the message
                           with breathing room so the reply reads first and the
@@ -1492,6 +1485,18 @@ const ContactMessages = () => {
                             {linkifyText(body.quoted ?? entry.quoted, { className: LINK_CLASS })}
                           </div>
                         </details>
+                      )}
+                      {/* Attachments close the message — last thing in the
+                          bubble, after the body and the quoted chain, so the
+                          files are exactly where a reader expects them. */}
+                      {!isEditing && (
+                        <ContactAttachments
+                          attachments={entry.attachments}
+                          skipped={entry.attachmentsSkipped}
+                          truncated={entry.attachmentsTruncated}
+                          urls={attachmentUrls}
+                          testIdPrefix={`admin-contact-message-${entry.key}`}
+                        />
                       )}
                       </div>
                     </div>

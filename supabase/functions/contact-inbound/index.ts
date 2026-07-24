@@ -469,7 +469,10 @@ async function attachFiles(
       stored.push({ path, filename, contentType, size: bytes.byteLength, inline });
     }
 
-    if (stored.length === 0 && skipped.length === 0) return;
+    // More files than we take: record the real total so the inbox can say how
+    // many there were and send the admin to Resend for the rest.
+    const truncated = listed.length > MAX_ATTACHMENTS ? listed.length : 0;
+    if (stored.length === 0 && skipped.length === 0 && truncated === 0) return;
 
     const { error: updateError } = await supabase
       .from("contact_submissions")
@@ -478,6 +481,7 @@ async function attachFiles(
           ...metadata,
           ...(stored.length > 0 ? { attachments: stored } : {}),
           ...(skipped.length > 0 ? { attachments_skipped: skipped } : {}),
+          ...(truncated > 0 ? { attachments_truncated: truncated } : {}),
         },
       })
       .eq("id", submissionId);
