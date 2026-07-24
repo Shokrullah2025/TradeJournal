@@ -4,6 +4,7 @@ import RichTextEditor from "../components/common/RichTextEditor";
 import ContactAttachments from "../components/admin/ContactAttachments";
 import { sanitizeNoteHtml, noteTextLength } from "../utils/sanitizeHtml";
 import { linkifyText } from "../utils/linkify";
+import { tidyEmailText } from "../utils/emailText";
 import {
   Mail,
   Inbox,
@@ -16,6 +17,8 @@ import {
   MessagesSquare,
   Pencil,
   Send,
+  Sparkles,
+  FileText,
   Trash2,
   X,
 } from "lucide-react";
@@ -114,6 +117,11 @@ const ContactMessages = () => {
   const [threadLoading, setThreadLoading] = useState(false);
   // Signed URLs for the open thread's attachments, keyed by storage path.
   const [attachmentUrls, setAttachmentUrls] = useState({});
+  // How message bodies are rendered. "tidy" strips the whitespace noise an HTML
+  // email leaves behind (deep indentation, page-long gaps); "original" shows the
+  // body exactly as it was stored. Kept across threads so a preference sticks
+  // for the whole triage session.
+  const [readingMode, setReadingMode] = useState("tidy");
   // In-app reply composer (sent via the contact-reply Edge Function).
   // Holds sanitized rich-text HTML from RichTextEditor.
   const [replyText, setReplyText] = useState("");
@@ -719,6 +727,26 @@ const ContactMessages = () => {
     return entries.sort((a, b) => new Date(a.at) - new Date(b.at));
   }, [threadMessages]);
 
+  // Bodies as they will actually be rendered, keyed by conversation entry.
+  // Tidying walks every line of every message, so it runs once per thread/mode
+  // rather than on each render (CLAUDE.md §3). Admin replies that carry HTML
+  // are already formatted — only plain-text bodies and quoted chains are
+  // reflowed.
+  const displayBodies = useMemo(() => {
+    const map = new Map();
+    for (const entry of conversation) {
+      map.set(entry.key, {
+        message:
+          readingMode === "tidy" ? tidyEmailText(entry.message) : entry.message,
+        quoted:
+          entry.quoted && readingMode === "tidy"
+            ? tidyEmailText(entry.quoted)
+            : entry.quoted,
+      });
+    }
+    return map;
+  }, [conversation, readingMode]);
+
   // Mint signed URLs for the open thread's attachments in one batch call. The
   // bucket is private, so without these the previews and download links have
   // nothing to point at. Re-runs whenever the loaded messages change (open,
@@ -1234,13 +1262,47 @@ const ContactMessages = () => {
                   {threadCount} {threadCount === 1 ? "message" : "messages"}
                 </p>
               </div>
-              <button
-                data-test-id="admin-contact-modal-close-btn"
-                onClick={closeThread}
-                className="shrink-0 rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {/* Reading mode. Emails from bulk senders arrive as HTML that
+                    was flattened to text, keeping the source indentation and
+                    huge blank runs — "Tidy" strips that noise, "Original"
+                    shows exactly what was stored. */}
+                <div
+                  data-test-id="admin-contact-reading-mode"
+                  role="group"
+                  aria-label="Message reading mode"
+                  className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5"
+                >
+                  {[
+                    { value: "tidy", label: "Tidy", Icon: Sparkles, title: "Readable — strip the email's indentation and blank runs" },
+                    { value: "original", label: "Original", Icon: FileText, title: "Original — exactly as the sender's email arrived" },
+                  ].map(({ value, label, Icon, title }) => (
+                    <button
+                      key={value}
+                      data-test-id={`admin-contact-reading-mode-${value}-btn`}
+                      onClick={() => setReadingMode(value)}
+                      title={title}
+                      aria-pressed={readingMode === value}
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                        readingMode === value
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {/* Label collapses to the icon on a phone. */}
+                      <span className="hidden sm:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  data-test-id="admin-contact-modal-close-btn"
+                  onClick={closeThread}
+                  className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             <div ref={threadListRef} className="mt-4 flex-1 min-h-0 space-y-3 overflow-y-auto">
@@ -1273,6 +1335,11 @@ const ContactMessages = () => {
                     entry.kind === "admin"
                       ? "text-gray-800 dark:text-gray-100"
                       : "text-gray-800 dark:text-gray-200";
+                  // Whitespace-cleaned or untouched, per the header toggle.
+                  const body = displayBodies.get(entry.key) ?? {
+                    message: entry.message,
+                    quoted: entry.quoted,
+                  };
                   return (
                     <div
                       key={entry.key}
@@ -1386,10 +1453,10 @@ const ContactMessages = () => {
                         // The body is nudged inward (pl-3) on both sides of the
                         // conversation so it reads distinctly from the subject
                         // line above and the "Replying to" context below.
-                        <div className={`mt-2 pl-3 max-h-56 overflow-y-auto whitespace-pre-wrap break-words text-sm ${bodyClass}`}>
+                        <div className={`mt-2 pl-3 max-h-72 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed ${bodyClass}`}>
                           {/* URLs and email addresses in a plain-text body are
                               turned into real links (React nodes, never HTML). */}
-                          {linkifyText(entry.message, {
+                          {linkifyText(body.message, {
                             className: LINK_CLASS,
                             testIdPrefix: `admin-contact-message-${entry.key}`,
                           })}
@@ -1418,11 +1485,11 @@ const ContactMessages = () => {
                           <summary className="cursor-pointer select-none text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                             <span className="font-medium">Replying to:</span>{" "}
                             <span className="italic group-open:hidden">
-                              {quotedSnippet(entry.quoted)}
+                              {quotedSnippet(body.quoted ?? entry.quoted)}
                             </span>
                           </summary>
-                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs text-gray-500 dark:text-gray-400">
-                            {linkifyText(entry.quoted, { className: LINK_CLASS })}
+                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                            {linkifyText(body.quoted ?? entry.quoted, { className: LINK_CLASS })}
                           </div>
                         </details>
                       )}

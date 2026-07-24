@@ -663,18 +663,44 @@ function cleanQuoted(quoted: string): string {
 }
 
 function stripHtml(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'");
+  return collapseWhitespace(
+    html
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li|h[1-6]|tr|table)>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'"),
+  );
+}
+
+// Removing tags leaves the HTML file's own layout behind: every line carries
+// the source indentation, and the whitespace between elements becomes runs of
+// blank lines. Stored raw, a newsletter renders in the inbox as a deeply
+// indented column with page-sized gaps. Strip that noise at ingest — the words,
+// their order and their line breaks are untouched.
+//
+// The inbox's "Tidy" reading mode (src/utils/emailText.js) applies the same
+// rules at render time, which is what rescues messages stored before this.
+function collapseWhitespace(text: string): string {
+  const lines = text
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\u00a0/g, " ")
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/[ \t]{2,}/g, " "));
+
+  const out: string[] = [];
+  for (const line of lines) {
+    if (line === "" && (out.length === 0 || out[out.length - 1] === "")) continue;
+    out.push(line);
+  }
+  while (out.length > 0 && out[out.length - 1] === "") out.pop();
+  return out.join("\n");
 }
 
 function successResponse(data: unknown) {
