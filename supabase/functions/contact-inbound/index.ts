@@ -29,6 +29,41 @@ const MAX_MESSAGE_LENGTH = 20000;
 // context only, so it can be tighter than the message itself.
 const MAX_QUOTED_LENGTH = 10000;
 
+// ---------------------------------------------------------------------------
+// Attachment limits. Files arrive from unauthenticated senders, so every one is
+// checked against an allow-list of types and hard size caps before it is stored
+// in the private contact-attachments bucket (migration 20260724120000).
+// ---------------------------------------------------------------------------
+const ATTACHMENT_BUCKET = "contact-attachments";
+// Must stay <= the bucket's file_size_limit, or the upload is rejected.
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+// Ceiling across one email, so a single message can't fill the bucket.
+const MAX_ATTACHMENTS_TOTAL_BYTES = 25 * 1024 * 1024;
+const MAX_ATTACHMENTS = 10;
+// Inline images below this size are almost always signature logos or tracking
+// pixels — storing them would clutter every message with junk thumbnails.
+const INLINE_IMAGE_MIN_BYTES = 10 * 1024;
+// Mirrors the bucket's allowed_mime_types. Anything else is recorded as
+// skipped so the admin still sees that something was attached.
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/bmp",
+  "image/tiff",
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/zip",
+]);
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -93,12 +128,13 @@ Deno.serve(async (req: Request) => {
     const content = await fetchReceivedEmail(apiKey, emailId);
     const parsed = buildInbound(content, meta);
     if (!parsed) {
-      // Genuinely empty/unparseable message — acknowledge so Resend stops retrying.
+      // No identifiable sender — acknowledge so Resend stops retrying.
       console.warn("contact-inbound: no usable content for", emailId);
       return successResponse({ id: null, skipped: "no-content" });
     }
 
-    const { name, email, subject, message, quoted } = parsed;
+    const { name, email, subject, quoted } = parsed;
+    let { message } = parsed;
 
     // Loop guard: when the receiving domain is also our sending domain, our own
     // outbound mail (e.g. contact-submit's team notification from noreply@, or an
@@ -129,6 +165,18 @@ Deno.serve(async (req: Request) => {
       return successResponse({ id: null, skipped: "blocked" });
     }
 
+    // Files the sender attached, listed once and reused below. Fetched before
+    // the insert because an email can be nothing but a screenshot or a PDF —
+    // with no body text that message used to be dropped as "no content".
+    const attachmentList = await listReceivedAttachments(apiKey, emailId);
+    if (!message) {
+      if (attachmentList.length === 0) {
+        console.warn("contact-inbound: empty message and no attachments for", emailId);
+        return successResponse({ id: null, skipped: "no-content" });
+      }
+      message = "(no message — see attachments)";
+    }
+
     // Keep this reply in the sender's existing thread. contact_threads groups by
     // the exact email string, and form submissions preserve the original casing
     // (the schema trims but doesn't lowercase). Reuse the stored casing of the
@@ -145,6 +193,14 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     const threadEmail = existing?.email ?? email;
 
+    const metadata: Record<string, unknown> = {
+      source: "inbound-email",
+      email_status: "received",
+      // The quoted chain from the sender's mail client, shown as
+      // collapsible context under the message in the inbox.
+      ...(quoted ? { quoted } : {}),
+    };
+
     const { data: inserted, error: insertError } = await supabase
       .from("contact_submissions")
       .insert({
@@ -153,13 +209,7 @@ Deno.serve(async (req: Request) => {
         subject,
         message,
         status: "new",
-        metadata: {
-          source: "inbound-email",
-          email_status: "received",
-          // The quoted chain from the sender's mail client, shown as
-          // collapsible context under the message in the inbox.
-          ...(quoted ? { quoted } : {}),
-        },
+        metadata,
       })
       .select("id")
       .single();
@@ -168,6 +218,12 @@ Deno.serve(async (req: Request) => {
       console.error("contact-inbound insert error:", insertError?.message);
       return errorResponse("Could not store inbound message", 500);
     }
+
+    // Copy the attachments into storage. Best-effort and after the insert: the
+    // message itself is already safe, so a storage hiccup costs the
+    // attachments, never the reply. Recorded on metadata.attachments, which the
+    // inbox renders as previews/download links.
+    await attachFiles(supabase, apiKey, inserted.id, metadata, attachmentList);
 
     // Best-effort admin bell notification: one aggregated entry with a running
     // count (mirrors contact-submit) — never fails the request once saved.
@@ -275,8 +331,11 @@ async function fetchReceivedEmail(
   apiKey: string,
   emailId: string,
 ): Promise<Record<string, unknown>> {
+  // html_format=cid keeps inline images as `cid:` references instead of
+  // inlining them as base64 data: URIs — the body is only used as a plain-text
+  // fallback here, so there's no reason to pull megabytes of image data.
   const res = await fetch(
-    `https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}`,
+    `https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}?html_format=cid`,
     { headers: { Authorization: `Bearer ${apiKey}` } },
   );
   if (!res.ok) {
@@ -286,9 +345,191 @@ async function fetchReceivedEmail(
   return (await res.json()) as Record<string, unknown>;
 }
 
+// ---------------------------------------------------------------------------
+// Attachments.
+//
+// The received-email payload lists attachment metadata only; the bytes come
+// from the attachments endpoint, which returns a short-lived signed
+// `download_url` per file. Each one is validated (type + size), copied into the
+// private contact-attachments bucket, and recorded on the submission's metadata
+// so the inbox can show a preview / download link.
+//
+// Every failure here is non-fatal: the visitor's message is already stored, and
+// losing an attachment must never make Resend retry (which would duplicate the
+// message).
+// ---------------------------------------------------------------------------
+interface StoredAttachment {
+  path: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  inline: boolean;
+}
+
+// A file we deliberately did not store — surfaced in the inbox so the admin
+// knows something came through and can ask the sender to resend it another way.
+interface SkippedAttachment {
+  filename: string;
+  contentType: string;
+  size: number;
+  reason: "type" | "size" | "download" | "upload";
+}
+
+async function attachFiles(
+  supabase: ReturnType<typeof createClient>,
+  apiKey: string,
+  submissionId: string,
+  metadata: Record<string, unknown>,
+  listed: unknown[],
+): Promise<void> {
+  try {
+    if (listed.length === 0) return;
+
+    const stored: StoredAttachment[] = [];
+    const skipped: SkippedAttachment[] = [];
+    let totalBytes = 0;
+
+    for (const [index, raw] of listed.slice(0, MAX_ATTACHMENTS).entries()) {
+      const att = raw as Record<string, unknown>;
+      const filename = safeFilename(att.filename);
+      // "image/png; name=x.png" → "image/png"
+      const contentType = String(att.content_type ?? "")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+      const declaredSize = Number(att.size) || 0;
+      // May carry parameters: `inline; filename="logo.png"`.
+      const inline = String(att.content_disposition ?? "")
+        .trim()
+        .toLowerCase()
+        .startsWith("inline");
+      const downloadUrl =
+        typeof att.download_url === "string" ? att.download_url
+        : typeof att.url === "string" ? att.url
+        : "";
+
+      // Signature logos and tracking pixels ride along as tiny inline images on
+      // almost every email — drop them silently rather than showing them as
+      // attachments on every message.
+      if (inline && contentType.startsWith("image/") && declaredSize > 0 &&
+          declaredSize < INLINE_IMAGE_MIN_BYTES) {
+        continue;
+      }
+      if (!ALLOWED_ATTACHMENT_TYPES.has(contentType)) {
+        skipped.push({ filename, contentType, size: declaredSize, reason: "type" });
+        continue;
+      }
+      if (declaredSize > MAX_ATTACHMENT_BYTES ||
+          totalBytes + declaredSize > MAX_ATTACHMENTS_TOTAL_BYTES) {
+        skipped.push({ filename, contentType, size: declaredSize, reason: "size" });
+        continue;
+      }
+      if (!downloadUrl) {
+        skipped.push({ filename, contentType, size: declaredSize, reason: "download" });
+        continue;
+      }
+
+      let bytes: Uint8Array;
+      try {
+        // The download URL is normally a pre-signed storage link, which must be
+        // fetched *without* an Authorization header (two auth mechanisms is an
+        // error). Only Resend's own API host gets the key.
+        const res = await fetch(
+          downloadUrl,
+          new URL(downloadUrl).hostname === "api.resend.com"
+            ? { headers: { Authorization: `Bearer ${apiKey}` } }
+            : {},
+        );
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        bytes = new Uint8Array(await res.arrayBuffer());
+      } catch (err) {
+        console.error(`contact-inbound attachment download failed (${filename}):`, err);
+        skipped.push({ filename, contentType, size: declaredSize, reason: "download" });
+        continue;
+      }
+
+      // Re-check against the real byte length — `size` is the sender's claim.
+      if (bytes.byteLength > MAX_ATTACHMENT_BYTES ||
+          totalBytes + bytes.byteLength > MAX_ATTACHMENTS_TOTAL_BYTES) {
+        skipped.push({ filename, contentType, size: bytes.byteLength, reason: "size" });
+        continue;
+      }
+
+      const path = `${submissionId}/${index}-${filename}`;
+      const { error: uploadError } = await supabase.storage
+        .from(ATTACHMENT_BUCKET)
+        .upload(path, bytes, { contentType, upsert: true });
+      if (uploadError) {
+        console.error(`contact-inbound attachment upload failed (${filename}):`, uploadError.message);
+        skipped.push({ filename, contentType, size: bytes.byteLength, reason: "upload" });
+        continue;
+      }
+
+      totalBytes += bytes.byteLength;
+      stored.push({ path, filename, contentType, size: bytes.byteLength, inline });
+    }
+
+    if (stored.length === 0 && skipped.length === 0) return;
+
+    const { error: updateError } = await supabase
+      .from("contact_submissions")
+      .update({
+        metadata: {
+          ...metadata,
+          ...(stored.length > 0 ? { attachments: stored } : {}),
+          ...(skipped.length > 0 ? { attachments_skipped: skipped } : {}),
+        },
+      })
+      .eq("id", submissionId);
+    if (updateError) {
+      console.error("contact-inbound attachment metadata error:", updateError.message);
+    }
+  } catch (err) {
+    console.error("contact-inbound attachments error:", err);
+  }
+}
+
+// Attachment metadata + signed download URLs for a received email. Returns []
+// on any failure — attachments are a bonus, never a reason to fail the webhook.
+async function listReceivedAttachments(
+  apiKey: string,
+  emailId: string,
+): Promise<unknown[]> {
+  try {
+    const res = await fetch(
+      `https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}/attachments?limit=${MAX_ATTACHMENTS}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } },
+    );
+    if (!res.ok) {
+      // 404 simply means "no attachments" on some accounts — log at warn level.
+      console.warn(`contact-inbound list attachments ${emailId}: ${res.status}`);
+      return [];
+    }
+    const body = (await res.json()) as Record<string, unknown>;
+    return Array.isArray(body.data) ? body.data : [];
+  } catch (err) {
+    console.error("contact-inbound list attachments error:", err);
+    return [];
+  }
+}
+
+// Storage keys must be predictable and safe: strip directory separators and any
+// character outside a conservative set, keep the extension, cap the length.
+function safeFilename(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim() : "";
+  const base = raw.split(/[\\/]/).pop() ?? "";
+  const cleaned = base
+    .replace(/[^A-Za-z0-9._-]+/g, "_")
+    .replace(/_{2,}/g, "_")
+    .replace(/^[._-]+/, "")
+    .slice(0, 100);
+  return cleaned || "attachment";
+}
+
 // Builds the inbound record from the retrieved email, falling back to the
 // webhook metadata (which also carries from/subject) where the body response is
-// thin. Returns null when there's no usable sender or body to store.
+// thin. Returns null only when there's no identifiable sender; an empty
+// `message` is left for the caller to judge (attachment-only emails are kept).
 function buildInbound(
   content: Record<string, unknown>,
   meta: Record<string, unknown>,
@@ -303,8 +544,9 @@ function buildInbound(
   const html = typeof content.html === "string" ? content.html : "";
   const rawText = text.trim() ? text : html ? stripHtml(html) : "";
   const { reply, quoted } = splitQuotedReply(rawText);
+  // May be empty — an attachment-only email is still worth storing, so the
+  // caller decides (it knows whether any files came with it).
   const message = reply.trim().slice(0, MAX_MESSAGE_LENGTH);
-  if (!message) return null;
 
   const subjectSource =
     (typeof content.subject === "string" && content.subject.trim() && content.subject) ||
