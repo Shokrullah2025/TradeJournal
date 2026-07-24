@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import ModalPortal from "../components/common/ModalPortal";
 import RichTextEditor from "../components/common/RichTextEditor";
+import ContactAttachments from "../components/admin/ContactAttachments";
 import { sanitizeNoteHtml, noteTextLength } from "../utils/sanitizeHtml";
+import { linkifyText } from "../utils/linkify";
 import {
   Mail,
   Inbox,
@@ -39,6 +41,26 @@ const MESSAGE_COLUMNS =
 // Safety cap when loading a thread's history — a single sender should never
 // have anywhere near this many messages (rate limit is 5/hour).
 const THREAD_MESSAGE_LIMIT = 200;
+
+// Inbound attachments live in a private bucket (migration 20260724120000) —
+// they're only reachable through short-lived signed URLs, minted per open
+// thread. One hour comfortably outlives a triage session.
+const ATTACHMENT_BUCKET = "contact-attachments";
+const ATTACHMENT_URL_TTL_SECONDS = 3600;
+
+// Storage paths of every file attached to a set of messages — used both to sign
+// previews and to clean the bucket up when messages are deleted.
+const attachmentPathsOf = (messages) =>
+  messages.flatMap((m) =>
+    (Array.isArray(m.metadata?.attachments) ? m.metadata.attachments : [])
+      .map((a) => a?.path)
+      .filter((p) => typeof p === "string" && p.length > 0),
+  );
+
+// Links inside a message body — visible enough to spot at a glance without
+// fighting the text around them.
+const LINK_CLASS =
+  "font-medium text-primary-600 dark:text-primary-400 underline decoration-primary-300 dark:decoration-primary-700 underline-offset-2 hover:text-primary-700 dark:hover:text-primary-300 hover:decoration-primary-500 break-all";
 
 // First line of real content from a quoted chain, for the always-visible
 // "Replying to:" preview. Skips the mail client's "On <date> … wrote:"
@@ -90,6 +112,8 @@ const ContactMessages = () => {
   const [selectedThread, setSelectedThread] = useState(null);
   const [threadMessages, setThreadMessages] = useState([]);
   const [threadLoading, setThreadLoading] = useState(false);
+  // Signed URLs for the open thread's attachments, keyed by storage path.
+  const [attachmentUrls, setAttachmentUrls] = useState({});
   // In-app reply composer (sent via the contact-reply Edge Function).
   // Holds sanitized rich-text HTML from RichTextEditor.
   const [replyText, setReplyText] = useState("");
@@ -239,6 +263,20 @@ const ContactMessages = () => {
     );
   };
 
+  // Deleting a message must not leave its files behind in the bucket — the
+  // admin storage DELETE policy (migration 20260724120000) allows this. Failure
+  // is logged, never surfaced: the message row is already gone, and a stray
+  // object is not something the admin can act on.
+  const removeAttachments = async (paths) => {
+    if (paths.length === 0) return;
+    const { error: removeError } = await supabase.storage
+      .from(ATTACHMENT_BUCKET)
+      .remove(paths);
+    if (removeError) {
+      console.error("[ContactMessages] attachment cleanup error:", removeError.message);
+    }
+  };
+
   // Permanently delete every message from the selected senders (RLS: admin
   // delete policy from migration 20260709140509). Destructive — confirmed first.
   const deleteSelected = async () => {
@@ -256,11 +294,21 @@ const ContactMessages = () => {
 
     setDeleting(true);
     try {
+      // Collect the files first — once the rows are gone their metadata (and
+      // with it the storage paths) is unrecoverable.
+      const { data: doomed, error: lookupError } = await supabase
+        .from("contact_submissions")
+        .select("metadata")
+        .in("email", emails);
+      if (lookupError) throw new Error(lookupError.message);
+
       const { error: deleteError } = await supabase
         .from("contact_submissions")
         .delete()
         .in("email", emails);
       if (deleteError) throw new Error(deleteError.message);
+
+      await removeAttachments(attachmentPathsOf(doomed ?? []));
 
       if (selectedThread && emails.includes(selectedThread.email)) closeThread();
       setSelectedEmails(new Set());
@@ -501,6 +549,8 @@ const ContactMessages = () => {
           .delete()
           .eq("id", entry.id);
         if (deleteError) throw new Error(deleteError.message);
+        // The row is gone — take its attachments with it.
+        await removeAttachments(attachmentPathsOf([parent]));
       } else {
         const replies = parent.metadata.replies.filter((_, i) => i !== entry.replyIndex);
         const { error: updateError } = await supabase
@@ -639,6 +689,14 @@ const ContactMessages = () => {
         // client — shown as collapsible context under the message.
         quoted:
           typeof m.metadata?.quoted === "string" ? m.metadata.quoted : null,
+        // Files the sender attached, stored by contact-inbound. `skipped`
+        // records the ones we deliberately didn't keep (unsupported/too large).
+        attachments: Array.isArray(m.metadata?.attachments)
+          ? m.metadata.attachments
+          : [],
+        attachmentsSkipped: Array.isArray(m.metadata?.attachments_skipped)
+          ? m.metadata.attachments_skipped
+          : [],
         at: m.created_at,
       });
       const replies = Array.isArray(m.metadata?.replies) ? m.metadata.replies : [];
@@ -659,6 +717,40 @@ const ContactMessages = () => {
       });
     }
     return entries.sort((a, b) => new Date(a.at) - new Date(b.at));
+  }, [threadMessages]);
+
+  // Mint signed URLs for the open thread's attachments in one batch call. The
+  // bucket is private, so without these the previews and download links have
+  // nothing to point at. Re-runs whenever the loaded messages change (open,
+  // reply, delete); failures leave the map empty and the tiles render as
+  // "Preview unavailable" rather than breaking the thread.
+  useEffect(() => {
+    const paths = attachmentPathsOf(threadMessages);
+    if (paths.length === 0) {
+      setAttachmentUrls({});
+      return undefined;
+    }
+    let cancelled = false;
+    supabase.storage
+      .from(ATTACHMENT_BUCKET)
+      .createSignedUrls(paths, ATTACHMENT_URL_TTL_SECONDS)
+      .then(({ data, error: signError }) => {
+        if (cancelled) return;
+        if (signError) throw new Error(signError.message);
+        const next = {};
+        for (const item of data ?? []) {
+          if (item.signedUrl) next[item.path] = item.signedUrl;
+        }
+        setAttachmentUrls(next);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("[ContactMessages] attachment sign error:", err.message);
+        setAttachmentUrls({});
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [threadMessages]);
 
   // Position the thread whenever it (re)renders: scroll to the first unread
@@ -690,14 +782,76 @@ const ContactMessages = () => {
     ? selectedThread?.message_count ?? 0
     : conversation.length;
 
+  // Triage actions for one conversation. Rendered twice — in the desktop table
+  // row and in the mobile card — so the test ids take a prefix and stay unique
+  // across both layouts. The desktop prefix keeps the original ids.
+  const renderRowActions = (t, testIdPrefix) => (
+    <div className="inline-flex items-center gap-1">
+      <button
+        data-test-id={`${testIdPrefix}-read-btn-${t.latest_id}`}
+        onClick={() => applyRowStatus(t.email, "read")}
+        disabled={busyEmail === t.email}
+        title="Mark read"
+        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <CheckCircle className="h-4 w-4" />
+      </button>
+      <button
+        data-test-id={`${testIdPrefix}-archive-btn-${t.latest_id}`}
+        onClick={() => applyRowStatus(t.email, "archived")}
+        disabled={busyEmail === t.email}
+        title="Archive"
+        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Archive className="h-4 w-4" />
+      </button>
+      <button
+        data-test-id={`${testIdPrefix}-spam-btn-${t.latest_id}`}
+        onClick={() => applyRowStatus(t.email, "spam")}
+        disabled={busyEmail === t.email}
+        title="Mark as spam"
+        className="rounded p-1.5 text-gray-400 hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <ShieldAlert className="h-4 w-4" />
+      </button>
+      <button
+        data-test-id={`${testIdPrefix}-block-btn-${t.latest_id}`}
+        onClick={() => toggleBlockEmail(t.email)}
+        disabled={busyEmail === t.email}
+        title={
+          blockedEmails.has(t.email.toLowerCase()) ? "Unblock sender" : "Block sender"
+        }
+        className={`rounded p-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+          blockedEmails.has(t.email.toLowerCase())
+            ? "text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
+            : "text-gray-400 hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400"
+        }`}
+      >
+        <Ban className="h-4 w-4" />
+      </button>
+    </div>
+  );
+
+  // Shared list states, so the mobile card list and the desktop table always
+  // agree about what's on screen.
+  const listState = loading
+    ? "loading"
+    : error
+    ? "error"
+    : threads.length === 0
+    ? "empty"
+    : "rows";
+
   return (
     // 2xl:max-w-[90%] 2xl:mx-auto matches Dashboard, Trades, Backtest and
     // Analytics so the page caps at the same width and centers on very wide
     // screens instead of stretching edge to edge.
-    <div className="space-y-6 2xl:max-w-[90%] 2xl:mx-auto" data-test-id="admin-contact-page">
+    // Tighter vertical rhythm on phones — the desktop spacing left the header,
+    // tabs and list floating far apart on a small screen.
+    <div className="space-y-4 sm:space-y-6 2xl:max-w-[90%] 2xl:mx-auto" data-test-id="admin-contact-page">
       <div className="flex items-center gap-3">
-        <Mail className="h-6 w-6 text-primary-600 dark:text-primary-400" />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <Mail className="h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400 sm:h-6 sm:w-6" />
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 sm:text-2xl">
           Contact Inbox
         </h1>
       </div>
@@ -766,7 +920,112 @@ const ContactMessages = () => {
         </div>
       )}
 
-      <div className="card overflow-hidden">
+      {/* p-0: the rows bring their own padding, and on phones the card's own
+          p-4 plus the cell padding left the content squeezed into a sliver. */}
+      <div className="card overflow-hidden p-0">
+        {/* Phones: one tappable card per conversation. A 7-column table can't
+            fit a phone — it either overflowed sideways or wrapped every cell. */}
+        <div
+          data-test-id="admin-contact-card-list"
+          className="divide-y divide-gray-200 dark:divide-gray-700 md:hidden"
+        >
+          {listState === "loading" ? (
+            <div
+              data-test-id="admin-contact-loading-mobile"
+              className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-sm text-gray-500 dark:text-gray-400"
+            >
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+              <span>Loading conversations…</span>
+            </div>
+          ) : listState === "error" ? (
+            <p
+              data-test-id="admin-contact-error-mobile"
+              className="px-4 py-10 text-center text-sm text-danger-600 dark:text-danger-400"
+            >
+              Couldn't load conversations. Please refresh and try again.
+            </p>
+          ) : listState === "empty" ? (
+            <div
+              data-test-id="admin-contact-empty-mobile"
+              className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+            >
+              <Inbox className="mx-auto mb-2 h-8 w-8 text-gray-400 dark:text-gray-500" />
+              No conversations yet.
+            </div>
+          ) : (
+            threads.map((t) => (
+              <div
+                key={t.email}
+                data-test-id={`admin-contact-card-${t.latest_id}`}
+                onClick={() => openThread(t)}
+                className="flex gap-3 px-4 py-3 active:bg-gray-50 dark:active:bg-gray-700/40"
+              >
+                <input
+                  type="checkbox"
+                  data-test-id={`admin-contact-card-select-${t.latest_id}`}
+                  aria-label={`Select conversation with ${t.email}`}
+                  checked={selectedEmails.has(t.email)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleSelected(t.email)}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-900"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p
+                      className={`truncate text-sm text-gray-900 dark:text-gray-100 ${
+                        t.new_count > 0 ? "font-semibold" : "font-medium"
+                      }`}
+                    >
+                      {t.latest_name}
+                    </p>
+                    <span className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
+                      {new Date(t.last_message_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {t.email}
+                  </p>
+                  <p className="mt-1 truncate text-sm text-gray-800 dark:text-gray-200">
+                    {t.latest_subject}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span
+                      data-test-id={`admin-contact-card-status-${t.latest_id}`}
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${
+                        STATUS_BADGE[t.new_count > 0 ? "new" : t.latest_status] ??
+                        STATUS_BADGE.read
+                      }`}
+                    >
+                      {t.new_count > 0 ? "new" : t.latest_status}
+                    </span>
+                    <span
+                      data-test-id={`admin-contact-card-thread-count-${t.latest_id}`}
+                      className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                      <MessagesSquare className="h-3.5 w-3.5" />
+                      {t.message_count}
+                    </span>
+                    {t.new_count > 0 && (
+                      <span
+                        data-test-id={`admin-contact-card-new-badge-${t.latest_id}`}
+                        className="inline-flex rounded-full bg-danger-600 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                      >
+                        {t.new_count > 99 ? "99+" : t.new_count} new
+                      </span>
+                    )}
+                  </div>
+                  {/* stopPropagation: tapping an action must not open the thread */}
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    {renderRowActions(t, "admin-contact-card")}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Tablet and up: the full table. */}
+        <div className="hidden overflow-x-auto md:block">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
@@ -801,7 +1060,7 @@ const ContactMessages = () => {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {loading ? (
+            {listState === "loading" ? (
               <tr>
                 <td colSpan={7} data-test-id="admin-contact-loading" className="px-6 py-12">
                   <div className="flex flex-col items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400">
@@ -810,7 +1069,7 @@ const ContactMessages = () => {
                   </div>
                 </td>
               </tr>
-            ) : error ? (
+            ) : listState === "error" ? (
               <tr>
                 <td
                   colSpan={7}
@@ -820,7 +1079,7 @@ const ContactMessages = () => {
                   Couldn't load conversations. Please refresh and try again.
                 </td>
               </tr>
-            ) : threads.length === 0 ? (
+            ) : listState === "empty" ? (
               <tr>
                 <td
                   colSpan={7}
@@ -905,62 +1164,18 @@ const ContactMessages = () => {
                     className="px-6 py-4 whitespace-nowrap text-right"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="inline-flex items-center gap-1">
-                      <button
-                        data-test-id={`admin-contact-row-read-btn-${t.latest_id}`}
-                        onClick={() => applyRowStatus(t.email, "read")}
-                        disabled={busyEmail === t.email}
-                        title="Mark read"
-                        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </button>
-                      <button
-                        data-test-id={`admin-contact-row-archive-btn-${t.latest_id}`}
-                        onClick={() => applyRowStatus(t.email, "archived")}
-                        disabled={busyEmail === t.email}
-                        title="Archive"
-                        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Archive className="h-4 w-4" />
-                      </button>
-                      <button
-                        data-test-id={`admin-contact-row-spam-btn-${t.latest_id}`}
-                        onClick={() => applyRowStatus(t.email, "spam")}
-                        disabled={busyEmail === t.email}
-                        title="Mark as spam"
-                        className="rounded p-1.5 text-gray-400 hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ShieldAlert className="h-4 w-4" />
-                      </button>
-                      <button
-                        data-test-id={`admin-contact-row-block-btn-${t.latest_id}`}
-                        onClick={() => toggleBlockEmail(t.email)}
-                        disabled={busyEmail === t.email}
-                        title={
-                          blockedEmails.has(t.email.toLowerCase())
-                            ? "Unblock sender"
-                            : "Block sender"
-                        }
-                        className={`rounded p-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
-                          blockedEmails.has(t.email.toLowerCase())
-                            ? "text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20"
-                            : "text-gray-400 hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/20 dark:hover:text-danger-400"
-                        }`}
-                      >
-                        <Ban className="h-4 w-4" />
-                      </button>
-                    </div>
+                    {renderRowActions(t, "admin-contact-row")}
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination */}
         {!loading && !error && total > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-6 py-3">
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-4 py-3 sm:px-6">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Page {page + 1} of {totalPages}
             </p>
@@ -990,20 +1205,27 @@ const ContactMessages = () => {
       {selectedThread && (
         <ModalPortal>
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-2 sm:p-4"
           onClick={closeThread}
         >
           <div
             data-test-id="admin-contact-detail-modal"
             // Fixed height so the modal doesn't grow/shrink with the thread —
-            // the message list flexes and scrolls inside it.
-            className="flex h-[min(85vh,46rem)] w-full max-w-2xl flex-col rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl"
+            // the message list flexes and scrolls inside it. Phones get more of
+            // the viewport and tighter padding, so the conversation (not the
+            // chrome around it) fills the screen.
+            className="flex h-[min(92vh,46rem)] w-full max-w-2xl flex-col rounded-2xl bg-white dark:bg-gray-800 p-4 shadow-xl sm:h-[min(85vh,46rem)] sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {selectedThread.latest_name} &lt;{selectedThread.email}&gt;
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                {/* A long name + address must wrap inside the modal rather than
+                    push the close button off the edge on a phone. */}
+                <h2 className="break-words text-base font-semibold text-gray-900 dark:text-gray-100 sm:text-lg">
+                  {selectedThread.latest_name}{" "}
+                  <span className="break-all font-normal text-gray-500 dark:text-gray-400">
+                    &lt;{selectedThread.email}&gt;
+                  </span>
                 </h2>
                 <p
                   data-test-id="admin-contact-thread-message-count"
@@ -1015,7 +1237,7 @@ const ContactMessages = () => {
               <button
                 data-test-id="admin-contact-modal-close-btn"
                 onClick={closeThread}
-                className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="shrink-0 rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1054,7 +1276,7 @@ const ContactMessages = () => {
                   return (
                     <div
                       key={entry.key}
-                      className={`w-[88%] sm:w-3/4 lg:w-2/3 ${
+                      className={`w-[96%] sm:w-3/4 lg:w-2/3 ${
                         entry.kind === "admin" ? "ml-auto" : "mr-auto"
                       }`}
                     >
@@ -1069,7 +1291,7 @@ const ContactMessages = () => {
                       </p>
                       <div
                         data-test-id={`admin-contact-thread-message-${entry.key}`}
-                        className={`rounded-lg p-4 ${
+                        className={`rounded-lg p-3 sm:p-4 ${
                           entry.kind === "admin"
                             ? "bg-primary-50 dark:bg-primary-900/15 border border-primary-100 dark:border-primary-900/40"
                             : "bg-gray-50 dark:bg-gray-900"
@@ -1081,7 +1303,7 @@ const ContactMessages = () => {
                         </p>
                         <div className="flex shrink-0 items-center gap-1.5">
                           <span
-                            className={`max-w-[7rem] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            className={`max-w-[5rem] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:max-w-[7rem] ${
                               entry.kind === "admin"
                                 ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
                                 : isNewest
@@ -1164,9 +1386,24 @@ const ContactMessages = () => {
                         // The body is nudged inward (pl-3) on both sides of the
                         // conversation so it reads distinctly from the subject
                         // line above and the "Replying to" context below.
-                        <div className={`mt-2 pl-3 max-h-56 overflow-y-auto whitespace-pre-wrap text-sm ${bodyClass}`}>
-                          {entry.message}
+                        <div className={`mt-2 pl-3 max-h-56 overflow-y-auto whitespace-pre-wrap break-words text-sm ${bodyClass}`}>
+                          {/* URLs and email addresses in a plain-text body are
+                              turned into real links (React nodes, never HTML). */}
+                          {linkifyText(entry.message, {
+                            className: LINK_CLASS,
+                            testIdPrefix: `admin-contact-message-${entry.key}`,
+                          })}
                         </div>
+                      )}
+                      {/* Anything the sender attached — image previews and
+                          download chips, opened through signed URLs. */}
+                      {!isEditing && (
+                        <ContactAttachments
+                          attachments={entry.attachments}
+                          skipped={entry.attachmentsSkipped}
+                          urls={attachmentUrls}
+                          testIdPrefix={`admin-contact-message-${entry.key}`}
+                        />
                       )}
                       {/* What this reply is answering — the quoted history the
                           visitor's mail client appended. Sits below the message
@@ -1184,8 +1421,8 @@ const ContactMessages = () => {
                               {quotedSnippet(entry.quoted)}
                             </span>
                           </summary>
-                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">
-                            {entry.quoted}
+                          <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs text-gray-500 dark:text-gray-400">
+                            {linkifyText(entry.quoted, { className: LINK_CLASS })}
                           </div>
                         </details>
                       )}

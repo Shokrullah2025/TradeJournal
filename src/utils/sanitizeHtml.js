@@ -10,13 +10,27 @@ import DOMPurify from "dompurify";
 
 const NOTE_CONFIG = {
   // h1–h3 are produced by the Contact Inbox reply composer (withHeadings).
-  ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "ul", "ol", "li", "p", "br", "span", "div", "h1", "h2", "h3"],
-  // `style` is the only attribute we keep — DOMPurify still sanitizes the CSS it
-  // contains, so only safe declarations (e.g. `color`) survive.
-  ALLOWED_ATTR: ["style"],
+  // `a` keeps links that were pasted or typed into a reply clickable — without
+  // it DOMPurify unwrapped them and the URL rendered as dead text.
+  ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "ul", "ol", "li", "p", "br", "span", "div", "h1", "h2", "h3", "a"],
+  // `style` is kept — DOMPurify still sanitizes the CSS it contains, so only
+  // safe declarations (e.g. `color`) survive. The link attributes are forced to
+  // safe values by the hook below; DOMPurify's own URI check already rejects
+  // `javascript:` and other script-bearing schemes in `href`.
+  ALLOWED_ATTR: ["style", "href", "target", "rel"],
   // Defense in depth: no data:, no external resource loading of any kind.
   ALLOW_DATA_ATTR: false,
 };
+
+// Any link that survives sanitization opens in a new tab and can't reach back
+// into this window (`noopener`) or leak the app URL as a referrer. Registered
+// once at module load — DOMPurify hooks are global to the singleton.
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node.tagName === "A" && node.hasAttribute("href")) {
+    node.setAttribute("target", "_blank");
+    node.setAttribute("rel", "noopener noreferrer nofollow");
+  }
+});
 
 /**
  * Sanitize note HTML for safe storage/rendering. Returns a clean HTML string.

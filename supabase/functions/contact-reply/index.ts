@@ -22,13 +22,23 @@ const replySchema = z.object({
 });
 
 // Same allowlist the app's RichTextEditor / sanitizeNoteHtml produces:
-// inline formatting, lists, headings, and a color style — nothing else.
+// inline formatting, lists, headings, links, and a color style — nothing else.
+// Links must survive here too: stripping the anchor left the recipient with a
+// dead URL in the email and dead text in the inbox copy.
 const SANITIZE_OPTIONS = {
   allowedTags: [
     "b", "strong", "i", "em", "u", "ul", "ol", "li",
-    "p", "br", "span", "div", "h1", "h2", "h3",
+    "p", "br", "span", "div", "h1", "h2", "h3", "a",
   ],
-  allowedAttributes: { "*": ["style"] },
+  allowedAttributes: { "*": ["style"], a: ["href", "target", "rel"] },
+  // No `ftp:`/`data:`; anything else is dropped along with the href.
+  allowedSchemes: ["http", "https", "mailto"],
+  transformTags: {
+    a: sanitizeHtml.simpleTransform("a", {
+      target: "_blank",
+      rel: "noopener noreferrer nofollow",
+    }),
+  },
   allowedStyles: {
     "*": { color: [/^#[0-9a-fA-F]{3,8}$/, /^rgba?\([\d\s,./%]+\)$/, /^inherit$/] },
   },
