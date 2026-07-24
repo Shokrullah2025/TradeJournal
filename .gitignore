@@ -41,3 +41,7 @@ supabase/.temp/
 *.key
 *.p12
 *.pfx
+
+# Local downloads from scripts/download-inbound-attachments.mjs — never commit
+# files people emailed us.
+inbound-attachments/
